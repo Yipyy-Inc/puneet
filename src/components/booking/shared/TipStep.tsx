@@ -80,10 +80,7 @@ export function TipStep({
 
   const handlePercent = (pct: number) => {
     onTipPercentageSelect(pct);
-    const amount = Math.min(
-      (subtotal * pct) / 100,
-      (subtotal * maxPct) / 100
-    );
+    const amount = Math.min((subtotal * pct) / 100, (subtotal * maxPct) / 100);
     onTipAmountChange(Math.round(amount * 100) / 100);
   };
 
@@ -103,16 +100,14 @@ export function TipStep({
 
   return (
     <div className="space-y-6 py-4">
-      <div className="text-center space-y-2">
+      <div className="space-y-2 text-center">
         <h3 className="text-2xl font-semibold">{title}</h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          {description}
-        </p>
+        <p className="text-muted-foreground mx-auto max-w-md">{description}</p>
       </div>
-      <Card className="max-w-lg mx-auto">
-        <CardContent className="p-6 space-y-6">
+      <Card className="mx-auto max-w-lg">
+        <CardContent className="space-y-6 p-6">
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3">
+            <p className="text-muted-foreground mb-3 text-sm font-medium">
               Select an amount
             </p>
             <div className="grid grid-cols-3 gap-3">
@@ -128,18 +123,18 @@ export function TipStep({
                     type="button"
                     variant={isSelected ? "default" : "outline"}
                     size="lg"
-                    className={`h-14 text-base font-semibold relative ${
+                    className={`relative h-14 text-base font-semibold ${
                       isRecommended && !isSelected
-                        ? "ring-2 ring-primary ring-offset-2"
+                        ? "ring-primary ring-2 ring-offset-2"
                         : ""
-                    }`}
+                    } `}
                     onClick={() =>
                       isPercent ? handlePercent(s.value) : handleFixed(s.value)
                     }
                   >
                     {s.label}
                     {isRecommended && (
-                      <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[10px] font-normal bg-primary text-primary-foreground px-1.5 py-0.5 rounded">
+                      <span className="bg-primary text-primary-foreground absolute -top-1.5 left-1/2 -translate-x-1/2 rounded-sm px-1.5 py-0.5 text-[10px] font-normal">
                         Recommended
                       </span>
                     )}
@@ -151,7 +146,7 @@ export function TipStep({
           <div className="space-y-2">
             <Label className="text-sm">Or enter a custom amount</Label>
             <div className="flex gap-2">
-              <span className="flex items-center px-3 rounded-md border bg-muted/50 text-muted-foreground text-sm">
+              <span className="bg-muted/50 text-muted-foreground flex items-center rounded-md border px-3 text-sm">
                 $
               </span>
               <Input
@@ -166,9 +161,9 @@ export function TipStep({
             </div>
           </div>
           {tipAmount > 0 && (
-            <p className="text-sm text-green-600 font-medium text-center">
-              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to the
-              team.
+            <p className="text-center text-sm font-medium text-green-600">
+              Thank you! Your ${tipAmount.toFixed(2)} tip will go directly to
+              the team.
             </p>
           )}
           {onNoTip && (
@@ -176,7 +171,7 @@ export function TipStep({
               <button
                 type="button"
                 onClick={onNoTip}
-                className="text-sm text-muted-foreground hover:text-foreground underline"
+                className="text-muted-foreground hover:text-foreground text-sm underline"
               >
                 {noTipLabel}
               </button>

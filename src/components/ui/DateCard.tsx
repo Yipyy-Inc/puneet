@@ -34,14 +34,14 @@ export function InfoCard({
 }: InfoCardProps) {
   return (
     <Card
-      className={`border-l-4 ${variantStyles[variant]} hover:shadow-md transition-all duration-200 group`}
+      className={`border-l-4 ${variantStyles[variant]} group transition-all duration-200 hover:shadow-md`}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 pt-4">
-        <CardTitle className="text-xs font-medium text-muted-foreground">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 pt-4 pb-2">
+        <CardTitle className="text-muted-foreground text-xs font-medium">
           {title}
         </CardTitle>
         <div
-          className={`p-1.5 rounded-md ${iconVariantStyles[variant]} group-hover:scale-110 transition-transform duration-200`}
+          className={`rounded-md p-1.5 ${iconVariantStyles[variant]} transition-transform duration-200 group-hover:scale-110`}
         >
           <Icon className="h-3.5 w-3.5" />
         </div>
@@ -49,7 +49,7 @@ export function InfoCard({
       <CardContent className="px-4 pb-4">
         <div className="text-xl font-bold tracking-tight">{value}</div>
         {subtitle && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="text-muted-foreground mt-0.5 text-[10px]">{subtitle}</p>
         )}
       </CardContent>
     </Card>

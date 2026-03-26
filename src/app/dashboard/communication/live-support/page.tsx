@@ -122,10 +122,10 @@ export default function LiveSupportPage() {
         <Badge
           className={
             ticket.status === "Resolved" || ticket.status === "Closed"
-              ? "bg-success/10 text-success hover:bg-success/20 border-0"
+              ? `bg-success/10 text-success hover:bg-success/20 border-0`
               : ticket.status === "In Progress"
-                ? "bg-info/10 text-info hover:bg-info/20 border-0"
-                : "bg-warning/10 text-warning hover:bg-warning/20 border-0"
+                ? `bg-info/10 text-info hover:bg-info/20 border-0`
+                : `bg-warning/10 text-warning hover:bg-warning/20 border-0`
           }
         >
           {ticket.status}
@@ -141,11 +141,11 @@ export default function LiveSupportPage() {
         <Badge
           className={
             ticket.priority === "Urgent"
-              ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border-0"
+              ? `bg-destructive/10 text-destructive hover:bg-destructive/20 border-0`
               : ticket.priority === "High"
-                ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border-0"
+                ? `bg-destructive/10 text-destructive hover:bg-destructive/20 border-0`
                 : ticket.priority === "Medium"
-                  ? "bg-warning/10 text-warning hover:bg-warning/20 border-0"
+                  ? `bg-warning/10 text-warning hover:bg-warning/20 border-0`
                   : "bg-muted text-muted-foreground border-0"
           }
         >
@@ -160,10 +160,10 @@ export default function LiveSupportPage() {
       defaultVisible: true,
       render: (ticket) => {
         const categoryIcons: Record<string, React.ReactNode> = {
-          Technical: <Bug className="h-3 w-3 mr-1" />,
-          Billing: <Ticket className="h-3 w-3 mr-1" />,
-          Service: <Headphones className="h-3 w-3 mr-1" />,
-          "Feature Request": <Lightbulb className="h-3 w-3 mr-1" />,
+          Technical: <Bug className="mr-1 h-3 w-3" />,
+          Billing: <Ticket className="mr-1 h-3 w-3" />,
+          Service: <Headphones className="mr-1 h-3 w-3" />,
+          "Feature Request": <Lightbulb className="mr-1 h-3 w-3" />,
         };
         return (
           <span className="flex items-center text-sm">
@@ -297,7 +297,7 @@ export default function LiveSupportPage() {
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6 pt-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Live Support</h1>
             <p className="text-muted-foreground mt-1">
@@ -305,13 +305,13 @@ export default function LiveSupportPage() {
             </p>
           </div>
           <Button className="shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             Create Ticket
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Open Tickets"
             value={openTickets.toString()}
@@ -343,19 +343,19 @@ export default function LiveSupportPage() {
         </div>
 
         <Tabs defaultValue="tickets" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-12 max-w-md">
+          <TabsList className="grid h-12 w-full max-w-md grid-cols-2">
             <TabsTrigger
               value="tickets"
-              className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
             >
-              <Ticket className="h-4 w-4" />
+              <Ticket className="size-4" />
               Support Tickets ({ticketsState.length})
             </TabsTrigger>
             <TabsTrigger
               value="chat"
-              className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
             >
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="size-4" />
               Chat History ({chatConversations.length})
             </TabsTrigger>
           </TabsList>
@@ -366,7 +366,7 @@ export default function LiveSupportPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg">Support Tickets</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       Manage and track support requests from facilities
                     </p>
                   </div>
@@ -391,18 +391,18 @@ export default function LiveSupportPage() {
                             setSelectedTicket(ticket);
                             setIsTicketModalOpen(true);
                           }}
-                          className="hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                          className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="size-4" />
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="size-8 p-0"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              <MoreVertical className="size-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -412,11 +412,11 @@ export default function LiveSupportPage() {
                                 onClick={action.onClick}
                                 className={
                                   action.variant === "success"
-                                    ? "text-success focus:text-success"
+                                    ? `text-success focus:text-success`
                                     : ""
                                 }
                               >
-                                <action.icon className="h-4 w-4 mr-2" />
+                                <action.icon className="mr-2 size-4" />
                                 {action.label}
                               </DropdownMenuItem>
                             ))}
@@ -427,7 +427,7 @@ export default function LiveSupportPage() {
                                 setIsTicketModalOpen(true);
                               }}
                             >
-                              <Eye className="h-4 w-4 mr-2" />
+                              <Eye className="mr-2 size-4" />
                               View Details
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -451,25 +451,25 @@ export default function LiveSupportPage() {
                 return (
                   <Card
                     key={chat.id}
-                    className="hover:shadow-elevated transition-all hover-lift cursor-pointer"
+                    className="hover:shadow-elevated hover-lift cursor-pointer transition-all"
                     onClick={() => setSelectedChat(chat)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center text-primary-foreground font-medium">
+                            <div className="bg-gradient-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-full font-medium">
                               {participantName.charAt(0)}
                             </div>
                             {isActive && (
-                              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-background status-online" />
+                              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2" />
                             )}
                           </div>
                           <div>
                             <CardTitle className="text-base">
                               {participantName}
                             </CardTitle>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {chat.facility}
                             </p>
                           </div>
@@ -477,7 +477,7 @@ export default function LiveSupportPage() {
                         <Badge
                           className={
                             isActive
-                              ? "bg-success/10 text-success hover:bg-success/20 border-0"
+                              ? `bg-success/10 text-success hover:bg-success/20 border-0`
                               : "bg-muted text-muted-foreground border-0"
                           }
                         >
@@ -486,15 +486,15 @@ export default function LiveSupportPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-muted-foreground line-clamp-2 text-sm">
                         {chat.messages[chat.messages.length - 1]?.message ||
                           "No messages yet"}
                       </p>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground">
+                      <div className="mt-3 flex items-center justify-between border-t pt-3">
+                        <p className="text-muted-foreground text-xs">
                           {chat.messages.length} messages
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {new Date(chat.updatedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -508,25 +508,25 @@ export default function LiveSupportPage() {
 
         {/* Ticket Detail Modal */}
         <Dialog open={isTicketModalOpen} onOpenChange={setIsTicketModalOpen}>
-          <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-            <div className="p-6 flex-1 overflow-y-auto">
+          <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+            <div className="flex-1 overflow-y-auto p-6">
               <DialogHeader className="mb-4">
                 <DialogTitle className="text-xl">
                   {selectedTicket?.title}
                 </DialogTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {selectedTicket?.id} • {selectedTicket?.category}
                 </p>
               </DialogHeader>
               {selectedTicket && (
                 <div className="space-y-6">
-                  <div className="p-4 bg-muted/50 rounded-xl">
+                  <div className="bg-muted/50 rounded-xl p-4">
                     <p className="text-sm">{selectedTicket.description}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                        <span className="text-muted-foreground text-sm">
                           Status
                         </span>
                         <Badge
@@ -542,8 +542,8 @@ export default function LiveSupportPage() {
                           {selectedTicket.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                        <span className="text-muted-foreground text-sm">
                           Priority
                         </span>
                         <Badge
@@ -561,16 +561,16 @@ export default function LiveSupportPage() {
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                        <span className="text-muted-foreground text-sm">
                           Requester
                         </span>
                         <span className="text-sm font-medium">
                           {selectedTicket.requester}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                        <span className="text-muted-foreground text-sm">
                           Facility
                         </span>
                         <span className="text-sm font-medium">
@@ -580,16 +580,16 @@ export default function LiveSupportPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <span className="text-sm text-muted-foreground">
+                    <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                      <span className="text-muted-foreground text-sm">
                         Created
                       </span>
                       <span className="text-sm">
                         {new Date(selectedTicket.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <span className="text-sm text-muted-foreground">
+                    <div className="bg-muted/30 flex items-center justify-between rounded-lg p-3">
+                      <span className="text-muted-foreground text-sm">
                         Assigned To
                       </span>
                       <span className="text-sm">
@@ -600,8 +600,8 @@ export default function LiveSupportPage() {
                   {selectedTicket.messages &&
                     selectedTicket.messages.length > 0 && (
                       <div>
-                        <h4 className="font-semibold mb-3 flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4" />
+                        <h4 className="mb-3 flex items-center gap-2 font-semibold">
+                          <MessageSquare className="size-4" />
                           Conversation ({selectedTicket.messages.length})
                         </h4>
                         <div className="space-y-3">
@@ -612,17 +612,17 @@ export default function LiveSupportPage() {
                             return (
                               <div
                                 key={msg.id}
-                                className={`p-4 rounded-xl ${
+                                className={`rounded-xl p-4 ${
                                   isSupport
                                     ? "bg-primary/10 ml-8"
                                     : "bg-muted/50 mr-8"
-                                }`}
+                                } `}
                               >
-                                <div className="flex justify-between items-start mb-2">
-                                  <span className="font-medium text-sm">
+                                <div className="mb-2 flex items-start justify-between">
+                                  <span className="text-sm font-medium">
                                     {msg.sender}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     {new Date(msg.timestamp).toLocaleString()}
                                   </span>
                                 </div>
@@ -636,13 +636,13 @@ export default function LiveSupportPage() {
 
                   {/* Action Buttons */}
                   {selectedTicket.status !== "Closed" && (
-                    <div className="flex items-center gap-2 pt-4 border-t">
+                    <div className="flex items-center gap-2 border-t pt-4">
                       {selectedTicket.status === "Open" && (
                         <Button
                           variant="outline"
                           onClick={() => handleStartProgress(selectedTicket.id)}
                         >
-                          <Play className="h-4 w-4 mr-2" />
+                          <Play className="mr-2 size-4" />
                           Start Progress
                         </Button>
                       )}
@@ -652,7 +652,7 @@ export default function LiveSupportPage() {
                           className="bg-success hover:bg-success/90"
                           onClick={() => setIsResolveDialogOpen(true)}
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          <CheckCircle2 className="mr-2 size-4" />
                           Resolve Ticket
                         </Button>
                       )}
@@ -662,7 +662,7 @@ export default function LiveSupportPage() {
                             variant="outline"
                             onClick={() => handleCloseTicket(selectedTicket.id)}
                           >
-                            <XCircle className="h-4 w-4 mr-2" />
+                            <XCircle className="mr-2 size-4" />
                             Close Ticket
                           </Button>
                           <Button
@@ -671,7 +671,7 @@ export default function LiveSupportPage() {
                               handleReopenTicket(selectedTicket.id)
                             }
                           >
-                            <Play className="h-4 w-4 mr-2" />
+                            <Play className="mr-2 size-4" />
                             Reopen
                           </Button>
                         </>
@@ -692,14 +692,14 @@ export default function LiveSupportPage() {
           <DialogContent className="min-w-5xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-success" />
+                <CheckCircle2 className="text-success h-5 w-5" />
                 Resolve Ticket
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 You are about to resolve ticket:{" "}
-                <span className="font-medium text-foreground">
+                <span className="text-foreground font-medium">
                   {selectedTicket?.title}
                 </span>
               </p>
@@ -731,7 +731,7 @@ export default function LiveSupportPage() {
                 className="bg-success hover:bg-success/90"
                 onClick={handleResolveTicket}
               >
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <CheckCircle2 className="mr-2 size-4" />
                 Resolve Ticket
               </Button>
             </DialogFooter>

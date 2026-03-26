@@ -37,14 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  CheckCircle2,
-  XCircle,
-  BookOpen,
-} from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import {
   type TrainingCourseType,
   defaultTrainingCourseTypes,
@@ -55,10 +48,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export default function TrainingCourseCatalogPage() {
   const [courseTypes, setCourseTypes] = useState<TrainingCourseType[]>(
-    defaultTrainingCourseTypes
+    defaultTrainingCourseTypes,
   );
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<TrainingCourseType | null>(null);
+  const [editingCourse, setEditingCourse] = useState<TrainingCourseType | null>(
+    null,
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingCourseId, setDeletingCourseId] = useState<string | null>(null);
 
@@ -111,15 +106,15 @@ export default function TrainingCourseCatalogPage() {
 
   const confirmDelete = () => {
     if (!deletingCourseId) return;
-    
+
     // Check if any other courses depend on this one
-    const hasDependencies = courseTypes.some(
-      (course) => course.prerequisites.includes(deletingCourseId)
+    const hasDependencies = courseTypes.some((course) =>
+      course.prerequisites.includes(deletingCourseId),
     );
 
     if (hasDependencies) {
       toast.error(
-        "Cannot delete course type. Other courses depend on it as a prerequisite."
+        "Cannot delete course type. Other courses depend on it as a prerequisite.",
       );
       setIsDeleteModalOpen(false);
       setDeletingCourseId(null);
@@ -158,7 +153,7 @@ export default function TrainingCourseCatalogPage() {
 
     if (editingCourse) {
       setCourseTypes(
-        courseTypes.map((c) => (c.id === editingCourse.id ? courseData : c))
+        courseTypes.map((c) => (c.id === editingCourse.id ? courseData : c)),
       );
       toast.success("Course type updated successfully");
     } else {
@@ -173,15 +168,15 @@ export default function TrainingCourseCatalogPage() {
   // Get available courses for prerequisites (exclude self and courses that would create circular dependencies)
   const availablePrerequisites = useMemo(() => {
     if (!editingCourse) return courseTypes;
-    
+
     return courseTypes.filter(
       (course) =>
         course.id !== editingCourse.id &&
-        !course.prerequisites.includes(editingCourse.id) // Prevent circular dependencies
+        !course.prerequisites.includes(editingCourse.id), // Prevent circular dependencies
     );
   }, [courseTypes, editingCourse]);
 
-  const getPrerequisiteNames = (prerequisiteIds: string[]) => {
+  const _getPrerequisiteNames = (prerequisiteIds: string[]) => {
     return prerequisiteIds
       .map((id) => courseTypes.find((c) => c.id === id)?.name)
       .filter(Boolean)
@@ -198,7 +193,7 @@ export default function TrainingCourseCatalogPage() {
           </p>
         </div>
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add Course Type
         </Button>
       </div>
@@ -208,7 +203,8 @@ export default function TrainingCourseCatalogPage() {
         <CardHeader>
           <CardTitle>Course Types</CardTitle>
           <CardDescription>
-            Manage your training course catalog. These are the class types you offer to clients.
+            Manage your training course catalog. These are the class types you
+            offer to clients.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -227,8 +223,12 @@ export default function TrainingCourseCatalogPage() {
             <TableBody>
               {courseTypes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No course types configured. Click "Add Course Type" to get started.
+                  <TableCell
+                    colSpan={7}
+                    className="text-muted-foreground py-8 text-center"
+                  >
+                    No course types configured. Click &quot;Add Course
+                    Type&quot; to get started.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -236,14 +236,15 @@ export default function TrainingCourseCatalogPage() {
                   <TableRow key={course.id}>
                     <TableCell className="font-medium">{course.name}</TableCell>
                     <TableCell className="max-w-md">
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-muted-foreground truncate text-sm">
                         {course.description}
                       </p>
                     </TableCell>
                     <TableCell>{course.defaultWeeks} weeks</TableCell>
                     <TableCell>
                       {course.ageRange.minWeeks}+ weeks
-                      {course.ageRange.maxWeeks && ` - ${course.ageRange.maxWeeks} weeks`}
+                      {course.ageRange.maxWeeks &&
+                        ` - ${course.ageRange.maxWeeks} weeks`}
                     </TableCell>
                     <TableCell>
                       {course.prerequisites.length > 0 ? (
@@ -251,18 +252,23 @@ export default function TrainingCourseCatalogPage() {
                           {course.prerequisites.length} required
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground text-sm">None</span>
+                        <span className="text-muted-foreground text-sm">
+                          None
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
                       {course.isActive ? (
-                        <Badge variant="default" className="bg-green-100 text-green-700">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <Badge
+                          variant="default"
+                          className="bg-green-100 text-green-700"
+                        >
+                          <CheckCircle2 className="mr-1 h-3 w-3" />
                           Active
                         </Badge>
                       ) : (
                         <Badge variant="secondary">
-                          <XCircle className="h-3 w-3 mr-1" />
+                          <XCircle className="mr-1 h-3 w-3" />
                           Inactive
                         </Badge>
                       )}
@@ -274,14 +280,14 @@ export default function TrainingCourseCatalogPage() {
                           size="sm"
                           onClick={() => handleEdit(course)}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="size-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(course.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="text-destructive size-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -295,7 +301,7 @@ export default function TrainingCourseCatalogPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCourse ? "Edit Course Type" : "Add New Course Type"}
@@ -341,7 +347,8 @@ export default function TrainingCourseCatalogPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="defaultWeeks">
-                  Default Duration (weeks) <span className="text-destructive">*</span>
+                  Default Duration (weeks){" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="defaultWeeks"
@@ -358,7 +365,8 @@ export default function TrainingCourseCatalogPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="minAgeWeeks">
-                  Minimum Age (weeks) <span className="text-destructive">*</span>
+                  Minimum Age (weeks){" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="minAgeWeeks"
@@ -394,7 +402,7 @@ export default function TrainingCourseCatalogPage() {
             {/* Required Vaccines */}
             <div className="space-y-2">
               <Label>Required Vaccines</Label>
-              <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg">
+              <div className="grid grid-cols-2 gap-3 rounded-lg border p-4">
                 {AVAILABLE_VACCINES.map((vaccine) => (
                   <div key={vaccine} className="flex items-center space-x-2">
                     <Checkbox
@@ -404,13 +412,16 @@ export default function TrainingCourseCatalogPage() {
                         if (checked) {
                           setFormData({
                             ...formData,
-                            requiredVaccines: [...formData.requiredVaccines, vaccine],
+                            requiredVaccines: [
+                              ...formData.requiredVaccines,
+                              vaccine,
+                            ],
                           });
                         } else {
                           setFormData({
                             ...formData,
                             requiredVaccines: formData.requiredVaccines.filter(
-                              (v) => v !== vaccine
+                              (v) => v !== vaccine,
                             ),
                           });
                         }
@@ -418,7 +429,7 @@ export default function TrainingCourseCatalogPage() {
                     />
                     <Label
                       htmlFor={`vaccine-${vaccine}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="cursor-pointer text-sm font-normal"
                     >
                       {vaccine}
                     </Label>
@@ -453,7 +464,7 @@ export default function TrainingCourseCatalogPage() {
                 </SelectContent>
               </Select>
               {formData.prerequisites.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {formData.prerequisites.map((prereqId) => {
                     const prereq = courseTypes.find((c) => c.id === prereqId);
                     return (
@@ -468,11 +479,11 @@ export default function TrainingCourseCatalogPage() {
                             setFormData({
                               ...formData,
                               prerequisites: formData.prerequisites.filter(
-                                (id) => id !== prereqId
+                                (id) => id !== prereqId,
                               ),
                             });
                           }}
-                          className="ml-1 hover:text-destructive"
+                          className="hover:text-destructive ml-1"
                         >
                           <XCircle className="h-3 w-3" />
                         </button>
@@ -481,17 +492,18 @@ export default function TrainingCourseCatalogPage() {
                   })}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                Select courses that must be completed before enrolling in this course.
+              <p className="text-muted-foreground text-xs">
+                Select courses that must be completed before enrolling in this
+                course.
               </p>
             </div>
 
             {/* Active Status */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-4">
               <div>
                 <Label htmlFor="isActive">Course Active</Label>
-                <p className="text-sm text-muted-foreground">
-                  Inactive courses won't appear in client booking options
+                <p className="text-muted-foreground text-sm">
+                  Inactive courses won&apos;t appear in client booking options
                 </p>
               </div>
               <Switch
@@ -527,9 +539,10 @@ export default function TrainingCourseCatalogPage() {
           <DialogHeader>
             <DialogTitle>Delete Course Type</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this course type? This action cannot be undone.
-              Students enrolled in this course type will be preserved, but the course will no
-              longer be available for new enrollments.
+              Are you sure you want to delete this course type? This action
+              cannot be undone. Students enrolled in this course type will be
+              preserved, but the course will no longer be available for new
+              enrollments.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

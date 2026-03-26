@@ -102,7 +102,7 @@ export default function ReportsPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <div className="w-16">{row.original.occupancyRate.toFixed(1)}%</div>
-          <div className="w-32 bg-muted rounded-full h-2">
+          <div className="bg-muted h-2 w-32 rounded-full">
             <div
               className="bg-primary h-2 rounded-full"
               style={{ width: `${Math.min(row.original.occupancyRate, 100)}%` }}
@@ -220,7 +220,7 @@ export default function ReportsPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.client.name}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {row.original.client.email}
           </div>
         </div>
@@ -249,7 +249,7 @@ export default function ReportsPage() {
       accessorKey: "clv",
       header: "CLV (Est.)",
       cell: ({ row }) => (
-        <span className="font-semibold text-primary">
+        <span className="text-primary font-semibold">
           ${row.original.clv.toFixed(2)}
         </span>
       ),
@@ -270,7 +270,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -286,7 +286,7 @@ export default function ReportsPage() {
             onChange={(e) =>
               setDateRange({ ...dateRange, start: e.target.value })
             }
-            className="px-3 py-2 border rounded-md"
+            className="rounded-md border px-3 py-2"
           />
           <span className="text-muted-foreground">to</span>
           <input
@@ -295,23 +295,23 @@ export default function ReportsPage() {
             onChange={(e) =>
               setDateRange({ ...dateRange, end: e.target.value })
             }
-            className="px-3 py-2 border rounded-md"
+            className="rounded-md border px-3 py-2"
           />
         </div>
       </div>
 
       {/* KPI Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Bookings
             </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               For selected period
             </p>
           </CardContent>
@@ -322,13 +322,13 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">
               Occupancy Rate
             </CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <BarChart3 className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {occupancy.rate.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               {occupancy.occupiedDays} / {occupancy.totalCapacity} kennel-days
             </p>
           </CardContent>
@@ -339,11 +339,11 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">
               Average Order Value
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${aov.aov.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               ${aov.totalRevenue.toFixed(2)} total revenue
             </p>
           </CardContent>
@@ -354,13 +354,13 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">
               Retention Rate
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {retention.rate.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               {retention.returningClients} / {retention.totalClients} clients
               returning
             </p>
@@ -373,27 +373,27 @@ export default function ReportsPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="occupancy">
-              <BarChart3 className="h-4 w-4 mr-2" />
+              <BarChart3 className="mr-2 size-4" />
               Occupancy
             </TabsTrigger>
             <TabsTrigger value="no-show">
-              <AlertCircle className="h-4 w-4 mr-2" />
+              <AlertCircle className="mr-2 size-4" />
               No-Show
             </TabsTrigger>
             <TabsTrigger value="cancellation">
-              <XCircle className="h-4 w-4 mr-2" />
+              <XCircle className="mr-2 size-4" />
               Cancellation
             </TabsTrigger>
             <TabsTrigger value="top-customers">
-              <Trophy className="h-4 w-4 mr-2" />
+              <Trophy className="mr-2 size-4" />
               Top Customers
             </TabsTrigger>
             <TabsTrigger value="retail">
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="mr-2 size-4" />
               Retail / POS
             </TabsTrigger>
             <TabsTrigger value="custom">
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings className="mr-2 size-4" />
               Custom Reports
             </TabsTrigger>
           </TabsList>
@@ -406,7 +406,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Occupancy Report</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Daily kennel occupancy rates and revenue
                   </p>
                 </div>
@@ -418,7 +418,7 @@ export default function ReportsPage() {
                     )
                   }
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 size-4" />
                   Export
                 </Button>
               </div>
@@ -441,7 +441,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>No-Show Report</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Clients who didn&apos;t show up for appointments
                   </p>
                 </div>
@@ -450,7 +450,7 @@ export default function ReportsPage() {
                     <span className="text-muted-foreground">
                       Total Lost Revenue:
                     </span>
-                    <span className="ml-2 font-semibold text-destructive">
+                    <span className="text-destructive ml-2 font-semibold">
                       $
                       {noShowData
                         .reduce((sum, d) => sum + d.revenue, 0)
@@ -465,7 +465,7 @@ export default function ReportsPage() {
                       )
                     }
                   >
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="mr-2 size-4" />
                     Export
                   </Button>
                 </div>
@@ -489,7 +489,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Cancellation Report</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Booking cancellations with reasons and refund details
                   </p>
                 </div>
@@ -498,7 +498,7 @@ export default function ReportsPage() {
                     <span className="text-muted-foreground">
                       Total Refunds:
                     </span>
-                    <span className="ml-2 font-semibold text-destructive">
+                    <span className="text-destructive ml-2 font-semibold">
                       $
                       {cancellationData
                         .reduce((sum, d) => sum + d.refundAmount, 0)
@@ -516,7 +516,7 @@ export default function ReportsPage() {
                       )
                     }
                   >
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="mr-2 size-4" />
                     Export
                   </Button>
                 </div>
@@ -540,7 +540,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Top Customers & Customer Lifetime Value</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Your most valuable customers and their spending patterns
                   </p>
                 </div>
@@ -552,7 +552,7 @@ export default function ReportsPage() {
                     )
                   }
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 size-4" />
                   Export
                 </Button>
               </div>
@@ -575,13 +575,13 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Custom Reports</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Create and manage custom reports with your own fields and
                     filters
                   </p>
                 </div>
                 <Button onClick={() => setShowCustomBuilder(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Custom Report
                 </Button>
               </div>
@@ -591,30 +591,30 @@ export default function ReportsPage() {
                 {savedCustomReports.map((report) => (
                   <div
                     key={report.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <FileText className="text-muted-foreground h-5 w-5" />
                         <div>
                           <div className="font-medium">{report.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-muted-foreground text-sm">
                             {report.description}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 ml-8">
-                        <div className="text-xs text-muted-foreground">
+                      <div className="mt-2 ml-8 flex items-center gap-4">
+                        <div className="text-muted-foreground text-xs">
                           <span className="font-medium">Data Source:</span>{" "}
                           <Badge variant="outline" className="ml-1 capitalize">
                             {report.dataSource}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           <span className="font-medium">Fields:</span>{" "}
                           {report.selectedFields.length}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           <span className="font-medium">Filters:</span>{" "}
                           {report.filters.length}
                         </div>
@@ -635,7 +635,7 @@ export default function ReportsPage() {
                           );
                         }}
                       >
-                        <FileText className="h-4 w-4 mr-2" />
+                        <FileText className="mr-2 size-4" />
                         Run
                       </Button>
                       <Button
@@ -646,7 +646,7 @@ export default function ReportsPage() {
                           alert(`Edit settings for report "${report.name}"`);
                         }}
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -661,9 +661,9 @@ export default function ReportsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Retail / POS Reports</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Comprehensive retail performance, sales, and inventory analytics.
-                For detailed reports, visit the{" "}
+              <p className="text-muted-foreground text-sm">
+                Comprehensive retail performance, sales, and inventory
+                analytics. For detailed reports, visit the{" "}
                 <a
                   href="/facility/dashboard/services/retail/reports"
                   className="text-primary hover:underline"
@@ -682,7 +682,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       View daily, weekly, or monthly sales trends
                     </p>
                     <Button
@@ -704,7 +704,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Best performing products by revenue or quantity
                     </p>
                     <Button
@@ -726,7 +726,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Revenue, cost, and profit analysis
                     </p>
                     <Button
@@ -748,7 +748,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Performance metrics by cashier/staff member
                     </p>
                     <Button
@@ -770,7 +770,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Revenue and profit breakdown by product category
                     </p>
                     <Button
@@ -792,7 +792,7 @@ export default function ReportsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Retail items sold as add-ons to services
                     </p>
                     <Button
@@ -815,14 +815,14 @@ export default function ReportsPage() {
 
       {/* Custom Report Builder Modal */}
       <Dialog open={showCustomBuilder} onOpenChange={setShowCustomBuilder}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <CustomReportBuilder onClose={() => setShowCustomBuilder(false)} />
         </DialogContent>
       </Dialog>
 
       {/* Export Modal */}
       <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           {exportData && (
             <ExportReportModal
               type={exportData.type}

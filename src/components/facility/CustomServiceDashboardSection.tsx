@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CustomServiceModule } from "@/lib/types";
-import { resolveIcon } from "@/lib/service-registry";
-import { getGradientStyle, getCategoryMeta, COLOR_HEX_MAP } from "@/data/custom-services";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
+import {
+  getGradientStyle,
+  getCategoryMeta,
+  COLOR_HEX_MAP,
+} from "@/data/custom-services";
 
 interface CustomServiceDashboardSectionProps {
   module: CustomServiceModule;
@@ -45,113 +49,118 @@ const STATUS_STYLES: Record<string, string> = {
     "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
   pending:
     "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  cancelled:
-    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
-export const CustomServiceDashboardSection = memo(function CustomServiceDashboardSection({
-  module,
-}: CustomServiceDashboardSectionProps) {
-  const Icon = resolveIcon(module.icon);
-  const catMeta = getCategoryMeta(module.category);
-  const viewAllUrl = `/facility/dashboard/services/custom/${module.slug}`;
-  const borderStyle = useMemo(
-    () => ({ borderLeftColor: COLOR_HEX_MAP[module.iconColor] ?? undefined }),
-    [module.iconColor],
-  );
-  const gradientStyle = useMemo(
-    () => getGradientStyle(module.iconColor, module.iconColorTo),
-    [module.iconColor, module.iconColorTo],
-  );
+export const CustomServiceDashboardSection = memo(
+  function CustomServiceDashboardSection({
+    module,
+  }: CustomServiceDashboardSectionProps) {
+    const catMeta = getCategoryMeta(module.category);
+    const viewAllUrl = `/facility/dashboard/services/custom/${module.slug}`;
+    const borderStyle = useMemo(
+      () => ({ borderLeftColor: COLOR_HEX_MAP[module.iconColor] ?? undefined }),
+      [module.iconColor],
+    );
+    const gradientStyle = useMemo(
+      () => getGradientStyle(module.iconColor, module.iconColorTo),
+      [module.iconColor, module.iconColorTo],
+    );
 
-  return (
-    <Card
-      className="animate-in fade-in duration-300 border-l-4"
-      style={borderStyle}
-    >
-      <CardContent className="pt-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                "bg-gradient-to-br",
-              )}
-              style={gradientStyle}
-            >
-              <Icon className="h-5 w-5 text-white" />
+    return (
+      <Card
+        className="animate-in fade-in border-l-4 duration-300"
+        style={borderStyle}
+      >
+        <CardContent className="space-y-4 pt-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  `flex h-10 w-10 shrink-0 items-center justify-center rounded-xl`,
+                  "bg-linear-to-br",
+                )}
+                style={gradientStyle}
+              >
+                <DynamicIcon
+                  name={module.icon}
+                  className="h-5 w-5 text-white"
+                />
+              </div>
+              <div>
+                <h3 className={cn("text-lg font-semibold", catMeta?.textClass)}>
+                  {module.name}
+                </h3>
+                <p className="text-muted-foreground text-xs">
+                  {module.description}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className={cn("text-lg font-semibold", catMeta?.textClass)}>{module.name}</h3>
-              <p className="text-xs text-muted-foreground">
-                {module.description}
+            <Link href={viewAllUrl}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                View All
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Stats Row */}
+          <div className="flex gap-4">
+            <div className="bg-muted/50 flex-1 rounded-lg px-4 py-3 text-center">
+              <p className="text-2xl font-bold">3</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Today&apos;s Bookings
               </p>
             </div>
-          </div>
-          <Link href={viewAllUrl}>
-            <Button variant="outline" size="sm" className="gap-1.5">
-              View All
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
-
-        {/* Stats Row */}
-        <div className="flex gap-4">
-          <div className="rounded-lg bg-muted/50 px-4 py-3 flex-1 text-center">
-            <p className="text-2xl font-bold">3</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Today&apos;s Bookings
-            </p>
-          </div>
-          <div className="rounded-lg bg-muted/50 px-4 py-3 flex-1 text-center">
-            <p className="text-2xl font-bold">12</p>
-            <p className="text-xs text-muted-foreground mt-0.5">This Week</p>
-          </div>
-        </div>
-
-        {/* Upcoming Bookings */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Upcoming Today
-          </p>
-          {MOCK_BOOKINGS.map((booking) => (
-            <div
-              key={booking.id}
-              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <User className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {booking.petName}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {booking.client}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 ml-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  {booking.time}
-                </div>
-                <Badge
-                  className={cn(
-                    "text-xs capitalize",
-                    STATUS_STYLES[booking.status] ?? "bg-secondary",
-                  )}
-                >
-                  {booking.status}
-                </Badge>
-              </div>
+            <div className="bg-muted/50 flex-1 rounded-lg px-4 py-3 text-center">
+              <p className="text-2xl font-bold">12</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">This Week</p>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-});
+          </div>
+
+          {/* Upcoming Bookings */}
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-sm font-medium">
+              Upcoming Today
+            </p>
+            {MOCK_BOOKINGS.map((booking) => (
+              <div
+                key={booking.id}
+                className="bg-card hover:bg-muted/30 flex items-center justify-between rounded-lg border p-3 transition-colors"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="bg-primary/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                    <User className="text-primary size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {booking.petName}
+                    </p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {booking.client}
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-2 flex shrink-0 items-center gap-2">
+                  <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                    <Clock className="h-3 w-3" />
+                    {booking.time}
+                  </div>
+                  <Badge
+                    className={cn(
+                      "text-xs capitalize",
+                      STATUS_STYLES[booking.status] ?? "bg-secondary",
+                    )}
+                  >
+                    {booking.status}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  },
+);

@@ -2,7 +2,7 @@ import { SubscriptionTiersGrid } from "@/components/subscriptions/SubscriptionTi
 
 export default function TiersPage() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <SubscriptionTiersGrid />
     </div>
   );

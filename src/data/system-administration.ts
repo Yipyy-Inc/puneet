@@ -45,7 +45,7 @@ interface AuditStatistics {
 }
 
 // Data Management Models
-interface DataBackup {
+export interface DataBackup {
   id: string;
   backupName: string;
   backupType: "Full" | "Incremental" | "Differential";
@@ -67,7 +67,7 @@ interface DataBackup {
   compressionRatio: number;
 }
 
-interface DataRecovery {
+export interface DataRecovery {
   id: string;
   recoveryName: string;
   backupId: string;
@@ -88,7 +88,7 @@ interface DataRecovery {
   errorMessage?: string;
 }
 
-interface RetentionPolicy {
+export interface RetentionPolicy {
   id: string;
   policyName: string;
   dataType: string;
@@ -105,7 +105,7 @@ interface RetentionPolicy {
 }
 
 // System Configuration Models
-interface Integration {
+export interface Integration {
   id: string;
   name: string;
   type:
@@ -137,7 +137,7 @@ interface Integration {
   testStatus?: "Passed" | "Failed" | "Not Tested";
 }
 
-interface ApiKey {
+export interface ApiKey {
   id: string;
   name: string;
   key: string;
@@ -163,7 +163,7 @@ interface ApiKey {
   description: string;
 }
 
-interface SystemSetting {
+export interface SystemSetting {
   id: string;
   category: "General" | "Security" | "Performance" | "Features" | "Maintenance";
   name: string;
@@ -179,7 +179,7 @@ interface SystemSetting {
   validationRules?: string[];
 }
 
-interface FeatureFlag {
+export interface FeatureFlag {
   id: string;
   name: string;
   key: string;

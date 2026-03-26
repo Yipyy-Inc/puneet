@@ -101,30 +101,30 @@ export function BillingTab({ facility }: BillingTabProps) {
     setShowLimitsDialog(true);
   };
   return (
-    <Card className="border-0 shadow-card">
+    <Card className="shadow-card border-0">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <CreditCard className="h-5 w-5" />
           Billing & Subscription
         </CardTitle>
         <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
+          <Download className="mr-2 size-4" />
           Export
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Subscription Info */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-3 rounded-lg bg-muted/50">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="bg-muted/50 rounded-lg p-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Current Plan</p>
+              <p className="text-muted-foreground text-xs">Current Plan</p>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 px-2 text-xs"
                 onClick={() => setShowSubscriptionDialog(true)}
               >
-                <Edit className="h-3 w-3 mr-1" />
+                <Edit className="mr-1 h-3 w-3" />
                 Change
               </Button>
             </div>
@@ -132,22 +132,22 @@ export function BillingTab({ facility }: BillingTabProps) {
               <StatusBadge type="plan" value={facility.plan} />
             </div>
           </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <p className="text-xs text-muted-foreground">Member Since</p>
-            <p className="font-semibold mt-1">{facility.dayJoined}</p>
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-muted-foreground text-xs">Member Since</p>
+            <p className="mt-1 font-semibold">{facility.dayJoined}</p>
           </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <p className="text-xs text-muted-foreground">Next Billing</p>
-            <p className="font-semibold mt-1">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-muted-foreground text-xs">Next Billing</p>
+            <p className="mt-1 font-semibold">
               {facility.subscriptionEnd || "N/A"}
             </p>
           </div>
-          <div className="p-3 rounded-lg bg-muted/50">
-            <p className="text-xs text-muted-foreground">Monthly Cost</p>
-            <p className="font-bold text-lg mt-1">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-muted-foreground text-xs">Monthly Cost</p>
+            <p className="mt-1 text-lg font-bold">
               ${monthlySubscriptionCost.toFixed(2)}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground text-[10px]">
               Base: ${planPrices[facility.plan]?.toFixed(2) ?? "0.00"} + Modules
             </p>
           </div>
@@ -155,79 +155,79 @@ export function BillingTab({ facility }: BillingTabProps) {
 
         {/* Plan Limits */}
         <div className="border-t pt-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex items-center justify-between">
             <h4 className="font-medium">Plan Limits</h4>
             <Button variant="outline" size="sm" onClick={handleEditLimits}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="mr-2 size-4" />
               Edit Limits
             </Button>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <Building2 className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+            <div className="bg-muted/50 rounded-xl p-4 text-center">
+              <Building2 className="text-muted-foreground mx-auto mb-2 h-5 w-5" />
               <p className="text-lg font-bold">
                 {facility.limits?.locations === -1
                   ? "∞"
                   : (facility.limits?.locations ?? "N/A")}
               </p>
-              <p className="text-xs text-muted-foreground">Locations</p>
-              <p className="text-[10px] text-primary mt-1">
+              <p className="text-muted-foreground text-xs">Locations</p>
+              <p className="text-primary mt-1 text-[10px]">
                 {facility.locationsList.length} used
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <Users className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+            <div className="bg-muted/50 rounded-xl p-4 text-center">
+              <Users className="text-muted-foreground mx-auto mb-2 h-5 w-5" />
               <p className="text-lg font-bold">
                 {facility.limits?.staff === -1
                   ? "∞"
                   : (facility.limits?.staff ?? "N/A")}
               </p>
-              <p className="text-xs text-muted-foreground">Staff</p>
-              <p className="text-[10px] text-primary mt-1">
+              <p className="text-muted-foreground text-xs">Staff</p>
+              <p className="text-primary mt-1 text-[10px]">
                 {facility.usersList.length} used
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <UserCheck className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+            <div className="bg-muted/50 rounded-xl p-4 text-center">
+              <UserCheck className="text-muted-foreground mx-auto mb-2 h-5 w-5" />
               <p className="text-lg font-bold">
                 {facility.limits?.clients === -1
                   ? "∞"
                   : (facility.limits?.clients ?? "N/A")}
               </p>
-              <p className="text-xs text-muted-foreground">Clients</p>
-              <p className="text-[10px] text-primary mt-1">
+              <p className="text-muted-foreground text-xs">Clients</p>
+              <p className="text-primary mt-1 text-[10px]">
                 {facility.clients.length} used
               </p>
             </div>
-            <div className="p-4 rounded-xl bg-muted/50 text-center">
-              <PawPrint className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+            <div className="bg-muted/50 rounded-xl p-4 text-center">
+              <PawPrint className="text-muted-foreground mx-auto mb-2 h-5 w-5" />
               <p className="text-lg font-bold">
                 {facility.limits?.pets === -1
                   ? "∞"
                   : (facility.limits?.pets ?? "N/A")}
               </p>
-              <p className="text-xs text-muted-foreground">Pets</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Per plan</p>
+              <p className="text-muted-foreground text-xs">Pets</p>
+              <p className="text-muted-foreground mt-1 text-[10px]">Per plan</p>
             </div>
           </div>
         </div>
 
         {/* Billing History */}
         <div className="border-t pt-4">
-          <h4 className="font-medium mb-3">Billing History</h4>
+          <h4 className="mb-3 font-medium">Billing History</h4>
           <div className="space-y-3">
             {billingHistory.map((bill) => (
               <div
                 key={bill.id}
-                className="flex items-center justify-between p-4 rounded-xl bg-muted/50"
+                className="bg-muted/50 flex items-center justify-between rounded-xl p-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-success/10">
-                    <CheckCircle className="h-5 w-5 text-success" />
+                  <div className="bg-success/10 flex h-10 w-10 items-center justify-center rounded-xl">
+                    <CheckCircle className="text-success h-5 w-5" />
                   </div>
                   <div>
                     <h4 className="font-medium">{bill.description}</h4>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {bill.date} • {bill.invoice}
                     </p>
                   </div>
@@ -250,7 +250,7 @@ export function BillingTab({ facility }: BillingTabProps) {
           className="w-full"
           onClick={() => setShowSubscriptionDialog(true)}
         >
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="mr-2 size-4" />
           Manage Subscription
         </Button>
       </CardContent>
@@ -260,7 +260,7 @@ export function BillingTab({ facility }: BillingTabProps) {
         open={showSubscriptionDialog}
         onOpenChange={setShowSubscriptionDialog}
       >
-        <DialogContent className="min-w-5xl max-h-[85vh] flex flex-col">
+        <DialogContent className="flex max-h-[85vh] min-w-5xl flex-col">
           <DialogHeader>
             <DialogTitle>Manage Subscription</DialogTitle>
             <DialogDescription>
@@ -268,7 +268,7 @@ export function BillingTab({ facility }: BillingTabProps) {
               <span className="font-semibold">{facility.plan}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <div className="grid gap-3">
               {plans.map((plan) => {
                 const isCurrentPlan =
@@ -280,26 +280,24 @@ export function BillingTab({ facility }: BillingTabProps) {
                 return (
                   <div
                     key={plan.id}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
                       isSelected
                         ? "border-primary bg-primary/5"
-                        : "border-transparent bg-muted/50 hover:bg-muted"
-                    }`}
+                        : `bg-muted/50 hover:bg-muted border-transparent`
+                    } `}
                     onClick={() => setSelectedPlan(plan.name)}
                   >
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div
-                          className={`flex items-center justify-center w-10 h-10 rounded-xl ${
-                            isSelected ? "bg-primary/10" : "bg-muted"
-                          }`}
+                          className={`flex h-10 w-10 items-center justify-center rounded-xl ${isSelected ? "bg-primary/10" : "bg-muted"} `}
                         >
                           <CreditCard
                             className={`h-5 w-5 ${
                               isSelected
                                 ? "text-primary"
                                 : "text-muted-foreground"
-                            }`}
+                            } `}
                           />
                         </div>
                         <div>
@@ -314,7 +312,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {plan.description}
                           </p>
                         </div>
@@ -323,25 +321,25 @@ export function BillingTab({ facility }: BillingTabProps) {
                         <p className="text-xl font-bold">
                           ${plan.pricing[0]?.basePrice ?? 0}
                         </p>
-                        <p className="text-xs text-muted-foreground">/month</p>
+                        <p className="text-muted-foreground text-xs">/month</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-2 pt-3 border-t">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="grid grid-cols-4 gap-2 border-t pt-3">
+                      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <Building2 className="h-3.5 w-3.5" />
                         <span>
                           {formatLimit(plan.limits.locations)} locations
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <Users className="h-3.5 w-3.5" />
                         <span>{formatLimit(plan.limits?.staff)} staff</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <UserCheck className="h-3.5 w-3.5" />
                         <span>{formatLimit(plan.limits?.clients)} clients</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <PawPrint className="h-3.5 w-3.5" />
                         <span>{formatLimit(plan.limits.pets)} pets</span>
                       </div>
@@ -351,12 +349,12 @@ export function BillingTab({ facility }: BillingTabProps) {
               })}
             </div>
             {selectedPlan.toLowerCase() !== facility.plan.toLowerCase() && (
-              <div className="mt-4 p-4 rounded-xl bg-warning/10 border border-warning/20">
+              <div className="border-warning/20 bg-warning/10 mt-4 rounded-xl border p-4">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
+                  <AlertCircle className="text-warning mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="font-medium text-sm">Plan Change Notice</p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-sm font-medium">Plan Change Notice</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
                       Changing from <strong>{facility.plan}</strong> to{" "}
                       <strong>{selectedPlan}</strong> will take effect
                       immediately. The billing will be prorated for the
@@ -368,8 +366,8 @@ export function BillingTab({ facility }: BillingTabProps) {
             )}
           </div>
           <DialogFooter className="border-t pt-4">
-            <div className="flex items-center gap-2 mr-auto text-xs text-muted-foreground">
-              <CreditCard className="h-4 w-4" />
+            <div className="text-muted-foreground mr-auto flex items-center gap-2 text-xs">
+              <CreditCard className="size-4" />
               Next billing: {facility.subscriptionEnd || "N/A"}
             </div>
             <Button
@@ -404,14 +402,14 @@ export function BillingTab({ facility }: BillingTabProps) {
               Adjust the limits for {facility.name}. Use -1 for unlimited.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label
                   htmlFor="limit-locations"
                   className="flex items-center gap-2"
                 >
-                  <Building2 className="h-4 w-4" />
+                  <Building2 className="size-4" />
                   Locations
                 </Label>
                 <Input
@@ -426,7 +424,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                     }))
                   }
                 />
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground text-[10px]">
                   Currently using: {facility.locationsList.length}
                 </p>
               </div>
@@ -435,7 +433,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                   htmlFor="limit-staff"
                   className="flex items-center gap-2"
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="size-4" />
                   Staff
                 </Label>
                 <Input
@@ -450,7 +448,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                     }))
                   }
                 />
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground text-[10px]">
                   Currently using: {facility.usersList.length}
                 </p>
               </div>
@@ -459,7 +457,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                   htmlFor="limit-clients"
                   className="flex items-center gap-2"
                 >
-                  <UserCheck className="h-4 w-4" />
+                  <UserCheck className="size-4" />
                   Clients
                 </Label>
                 <Input
@@ -474,13 +472,13 @@ export function BillingTab({ facility }: BillingTabProps) {
                     }))
                   }
                 />
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground text-[10px]">
                   Currently using: {facility.clients.length}
                 </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="limit-pets" className="flex items-center gap-2">
-                  <PawPrint className="h-4 w-4" />
+                  <PawPrint className="size-4" />
                   Pets
                 </Label>
                 <Input
@@ -497,7 +495,7 @@ export function BillingTab({ facility }: BillingTabProps) {
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            <p className="bg-muted/50 text-muted-foreground rounded-lg p-3 text-xs">
               <strong>Note:</strong> Enter -1 for unlimited. Changes will apply
               immediately to this facility&apos;s subscription.
             </p>

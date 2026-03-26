@@ -12,7 +12,8 @@ import { Check, QrCode, X, Plus, Clock } from "lucide-react";
 
 function statusBadge(status: YipyyGoPreCheckForm["status"]) {
   if (status === "approved") return <Badge variant="success">Approved</Badge>;
-  if (status === "submitted") return <Badge variant="secondary">Submitted</Badge>;
+  if (status === "submitted")
+    return <Badge variant="secondary">Submitted</Badge>;
   if (status === "corrections-requested")
     return <Badge variant="destructive">Corrections requested</Badge>;
   return <Badge variant="warning">Not submitted</Badge>;
@@ -70,14 +71,14 @@ export function PreCheckReviewPanel({
           <div className="flex items-start justify-between gap-4">
             <div>
               <CardTitle className="text-base">YipyyGo PreCheck</CardTitle>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="text-muted-foreground mt-1 text-xs">
                 Staff can review, edit, approve, or request corrections.
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 justify-end">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {statusBadge(form.status)}
               <Badge variant="outline" className="font-mono">
-                <QrCode className="h-3.5 w-3.5 mr-1 inline" />
+                <QrCode className="mr-1 inline h-3.5 w-3.5" />
                 {form.qrCodeToken}
               </Badge>
             </div>
@@ -89,25 +90,29 @@ export function PreCheckReviewPanel({
               <div className="text-sm font-medium">Belongings</div>
               <div className="grid gap-2">
                 {form.belongings.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">None listed.</div>
+                  <div className="text-muted-foreground text-xs">
+                    None listed.
+                  </div>
                 ) : (
                   form.belongings.map((item, idx) => (
                     <div
                       key={`${item}-${idx}`}
-                      className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-2 py-1.5"
+                      className="bg-muted/20 flex items-center justify-between gap-2 rounded-md border px-2 py-1.5"
                     >
-                      <div className="text-sm truncate">{item}</div>
+                      <div className="truncate text-sm">{item}</div>
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         className="h-7 w-7"
                         onClick={() => {
-                          const next = form.belongings.filter((_, i) => i !== idx);
+                          const next = form.belongings.filter(
+                            (_, i) => i !== idx,
+                          );
                           onChange({ ...form, belongings: next });
                         }}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                   ))
@@ -125,11 +130,14 @@ export function PreCheckReviewPanel({
                   onClick={() => {
                     const trimmed = newBelonging.trim();
                     if (!trimmed) return;
-                    onChange({ ...form, belongings: [...form.belongings, trimmed] });
+                    onChange({
+                      ...form,
+                      belongings: [...form.belongings, trimmed],
+                    });
                     setNewBelonging("");
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Add
                 </Button>
               </div>
@@ -139,7 +147,9 @@ export function PreCheckReviewPanel({
               <div className="text-sm font-medium">Staff Notes</div>
               <Textarea
                 value={form.staffNotes}
-                onChange={(e) => onChange({ ...form, staffNotes: e.target.value })}
+                onChange={(e) =>
+                  onChange({ ...form, staffNotes: e.target.value })
+                }
                 placeholder="Internal notes (not visible to customers)..."
                 rows={6}
               />
@@ -175,20 +185,22 @@ export function PreCheckReviewPanel({
             <div className="text-sm font-medium">Behavior notes</div>
             <Textarea
               value={form.behaviorNotes}
-              onChange={(e) => onChange({ ...form, behaviorNotes: e.target.value })}
+              onChange={(e) =>
+                onChange({ ...form, behaviorNotes: e.target.value })
+              }
               placeholder="Behavior flags, triggers, handling guidance..."
               rows={4}
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
               variant="destructive"
               className="sm:flex-1"
               onClick={onRequestCorrections}
             >
-              <X className="h-4 w-4 mr-2" />
+              <X className="mr-2 size-4" />
               Request corrections
             </Button>
             <Button
@@ -197,7 +209,7 @@ export function PreCheckReviewPanel({
               className="sm:flex-1"
               onClick={onApprove}
             >
-              <Check className="h-4 w-4 mr-2" />
+              <Check className="mr-2 size-4" />
               Approve PreCheck
             </Button>
           </div>
@@ -221,4 +233,3 @@ export function PreCheckReviewPanel({
     </div>
   );
 }
-

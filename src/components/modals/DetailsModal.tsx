@@ -28,7 +28,7 @@ export function DetailsModal({
       <Separator className="my-2" />
       {children}
       {linkHref && linkText && (
-        <div className="mt-3 border-t pt-3 flex justify-end">
+        <div className="mt-3 flex justify-end border-t pt-3">
           <Link href={linkHref}>
             <Button size="sm">{linkText}</Button>
           </Link>

@@ -1,10 +1,8 @@
 /**
  * Training Enrollment and Attendance
- * 
+ *
  * Defines structures for training enrollments, session attendance, and progress tracking
  */
-
-import { type TrainingSeries, type TrainingSeriesSession } from "./training-series";
 
 export interface TrainingEnrollment {
   id: string;
@@ -85,7 +83,7 @@ export interface TrainingHomework {
  */
 export function calculateProgress(
   sessionsAttended: number,
-  totalSessions: number
+  totalSessions: number,
 ): number {
   if (totalSessions === 0) return 0;
   return Math.round((sessionsAttended / totalSessions) * 100);
@@ -108,7 +106,7 @@ export function isSessionToday(sessionDate: string): boolean {
 export function generateCertificateNumber(
   courseTypeId: string,
   petId: number,
-  completionDate: string
+  completionDate: string,
 ): string {
   const date = new Date(completionDate);
   const year = date.getFullYear();

@@ -1,6 +1,6 @@
 /**
  * Fiserv Payment Integration
- * 
+ *
  * Handles all payment processing through Fiserv with:
  * - Tokenized card storage (card on file)
  * - Online payments
@@ -170,14 +170,24 @@ export interface FiservPaymentConfig {
     enabled: boolean;
     requireConsent: boolean;
     defaultToAutoPay: boolean;
-    allowedServices: ("grooming" | "membership" | "package" | "boarding" | "daycare" | "training")[];
+    allowedServices: (
+      | "grooming"
+      | "membership"
+      | "package"
+      | "boarding"
+      | "daycare"
+      | "training"
+    )[];
   };
   // Card on file settings
   cardOnFileSettings: {
     enabled: boolean;
     requireCvv: boolean;
     allowMultipleCards: boolean;
-    defaultCardBehavior: "use_default" | "prompt_selection" | "require_selection";
+    defaultCardBehavior:
+      | "use_default"
+      | "prompt_selection"
+      | "require_selection";
   };
   // Payment processing settings
   processingSettings: {
@@ -243,7 +253,14 @@ export interface TokenizedCard {
   // Fiserv token
   fiservToken: string; // Tokenized card reference from Fiserv
   // Card display info
-  cardBrand: "visa" | "mastercard" | "amex" | "discover" | "jcb" | "diners" | "unknown";
+  cardBrand:
+    | "visa"
+    | "mastercard"
+    | "amex"
+    | "discover"
+    | "jcb"
+    | "diners"
+    | "unknown";
   cardLast4: string;
   cardExpMonth: number;
   cardExpYear: number;
@@ -254,7 +271,14 @@ export interface TokenizedCard {
   isExpired: boolean;
   // Auto-pay settings
   autoPayEnabled: boolean;
-  autoPayServices: ("grooming" | "membership" | "package" | "boarding" | "daycare" | "training")[];
+  autoPayServices: (
+    | "grooming"
+    | "membership"
+    | "package"
+    | "boarding"
+    | "daycare"
+    | "training"
+  )[];
   // Billing address (optional, for AVS)
   billingAddress?: {
     street: string;
@@ -307,7 +331,14 @@ export interface FiservPaymentRequest {
   amount: number;
   currency: "USD" | "CAD";
   // Payment source
-  paymentSource: "new_card" | "tokenized_card" | "cash" | "gift_card" | "store_credit" | "split" | "clover_terminal";
+  paymentSource:
+    | "new_card"
+    | "tokenized_card"
+    | "cash"
+    | "gift_card"
+    | "store_credit"
+    | "split"
+    | "clover_terminal";
   // Clover terminal payment
   cloverTerminalId?: string;
   cloverPaymentMethod?: "tap" | "chip" | "swipe";
@@ -340,7 +371,13 @@ export interface FiservPaymentRequest {
   tipAmount?: number;
   description: string;
   // Context
-  context: "pos" | "online" | "invoice" | "membership" | "recurring_grooming" | "booking";
+  context:
+    | "pos"
+    | "online"
+    | "invoice"
+    | "membership"
+    | "recurring_grooming"
+    | "booking";
   bookingId?: number;
   invoiceId?: string;
   membershipId?: string;
@@ -690,28 +727,36 @@ export const mockTokenizedCards: TokenizedCard[] = [
 ];
 
 // Helper functions
-export function getFiservConfig(facilityId: number): FiservPaymentConfig | undefined {
+export function getFiservConfig(
+  facilityId: number,
+): FiservPaymentConfig | undefined {
   return mockFiservConfigs.find((config) => config.facilityId === facilityId);
 }
 
 export function getTokenizedCardsByClient(
   facilityId: number,
-  clientId: number
+  clientId: number,
 ): TokenizedCard[] {
   return mockTokenizedCards.filter(
-    (card) => card.facilityId === facilityId && card.clientId === clientId && card.isActive && !card.isExpired
+    (card) =>
+      card.facilityId === facilityId &&
+      card.clientId === clientId &&
+      card.isActive &&
+      !card.isExpired,
   );
 }
 
 export function getDefaultTokenizedCard(
   facilityId: number,
-  clientId: number
+  clientId: number,
 ): TokenizedCard | undefined {
   const cards = getTokenizedCardsByClient(facilityId, clientId);
   return cards.find((card) => card.isDefault) || cards[0];
 }
 
-export function addTokenizedCard(card: Omit<TokenizedCard, "id" | "createdAt">): TokenizedCard {
+export function addTokenizedCard(
+  card: Omit<TokenizedCard, "id" | "createdAt">,
+): TokenizedCard {
   const newCard: TokenizedCard = {
     ...card,
     id: `token-card-${Date.now()}`,
@@ -723,11 +768,11 @@ export function addTokenizedCard(card: Omit<TokenizedCard, "id" | "createdAt">):
 
 export function updateTokenizedCard(
   cardId: string,
-  updates: Partial<TokenizedCard>
+  updates: Partial<TokenizedCard>,
 ): TokenizedCard | undefined {
   const index = mockTokenizedCards.findIndex((card) => card.id === cardId);
   if (index === -1) return undefined;
-  
+
   mockTokenizedCards[index] = {
     ...mockTokenizedCards[index],
     ...updates,
@@ -738,7 +783,7 @@ export function updateTokenizedCard(
 export function deleteTokenizedCard(cardId: string): boolean {
   const index = mockTokenizedCards.findIndex((card) => card.id === cardId);
   if (index === -1) return false;
-  
+
   // Soft delete - mark as inactive
   mockTokenizedCards[index].isActive = false;
   return true;
@@ -747,10 +792,10 @@ export function deleteTokenizedCard(cardId: string): boolean {
 // Clover Terminal helper functions
 export function getCloverTerminal(
   facilityId: number,
-  terminalId?: string
+  terminalId?: string,
 ): CloverTerminalConfig | undefined {
   const terminals = mockCloverTerminals.filter(
-    (t) => t.facilityId === facilityId && t.isActive
+    (t) => t.facilityId === facilityId && t.isActive,
   );
   if (terminalId) {
     return terminals.find((t) => t.terminalId === terminalId);
@@ -759,15 +804,15 @@ export function getCloverTerminal(
 }
 
 export function getCloverTerminalsByFacility(
-  facilityId: number
+  facilityId: number,
 ): CloverTerminalConfig[] {
   return mockCloverTerminals.filter(
-    (t) => t.facilityId === facilityId && t.isActive
+    (t) => t.facilityId === facilityId && t.isActive,
   );
 }
 
 export function addCloverTerminal(
-  terminal: Omit<CloverTerminalConfig, "id" | "createdAt" | "updatedAt">
+  terminal: Omit<CloverTerminalConfig, "id" | "createdAt" | "updatedAt">,
 ): CloverTerminalConfig {
   const newTerminal: CloverTerminalConfig = {
     ...terminal,
@@ -780,11 +825,13 @@ export function addCloverTerminal(
 
 export function updateCloverTerminal(
   terminalId: string,
-  updates: Partial<CloverTerminalConfig>
+  updates: Partial<CloverTerminalConfig>,
 ): CloverTerminalConfig | undefined {
-  const index = mockCloverTerminals.findIndex((t) => t.terminalId === terminalId);
+  const index = mockCloverTerminals.findIndex(
+    (t) => t.terminalId === terminalId,
+  );
   if (index === -1) return undefined;
-  
+
   mockCloverTerminals[index] = {
     ...mockCloverTerminals[index],
     ...updates,
@@ -794,7 +841,7 @@ export function updateCloverTerminal(
 }
 
 export function addCloverTransaction(
-  transaction: Omit<CloverTerminalTransaction, "id" | "createdAt">
+  transaction: Omit<CloverTerminalTransaction, "id" | "createdAt">,
 ): CloverTerminalTransaction {
   const newTransaction: CloverTerminalTransaction = {
     ...transaction,
@@ -806,47 +853,56 @@ export function addCloverTransaction(
 }
 
 export function getCloverTransactionsByInvoice(
-  invoiceId: string
+  invoiceId: string,
 ): CloverTerminalTransaction[] {
   return mockCloverTransactions.filter((t) => t.invoiceId === invoiceId);
 }
 
 export function getCloverTransactionsByCustomer(
-  customerId: number
+  customerId: number,
 ): CloverTerminalTransaction[] {
   return mockCloverTransactions.filter((t) => t.customerId === customerId);
 }
 
 export function getCloverTransactionsByBooking(
-  bookingId: number
+  bookingId: number,
 ): CloverTerminalTransaction[] {
   return mockCloverTransactions.filter((t) => t.bookingId === bookingId);
 }
 
 // Yipyy Pay helper functions
-export function getYipyyPayConfig(facilityId: number): YipyyPayConfig | undefined {
+export function getYipyyPayConfig(
+  facilityId: number,
+): YipyyPayConfig | undefined {
   return mockYipyyPayConfigs.find((config) => config.facilityId === facilityId);
 }
 
 export function getYipyyPayDevicesByFacility(
-  facilityId: number
+  facilityId: number,
 ): YipyyPayDevice[] {
   return mockYipyyPayDevices.filter(
-    (device) => device.facilityId === facilityId && device.isActive && device.isAuthorized
+    (device) =>
+      device.facilityId === facilityId &&
+      device.isActive &&
+      device.isAuthorized,
   );
 }
 
 export function getYipyyPayDevice(
   facilityId: number,
-  deviceId: string
+  deviceId: string,
 ): YipyyPayDevice | undefined {
   return mockYipyyPayDevices.find(
-    (device) => device.facilityId === facilityId && device.deviceId === deviceId && device.isActive && device.isAuthorized
+    (device) =>
+      device.facilityId === facilityId &&
+      device.deviceId === deviceId &&
+      device.isActive &&
+      device.isAuthorized,
   );
 }
 
 export function addYipyyPayDevice(
-  device: Omit<YipyyPayDevice, "id" | "createdAt">
+  device: Omit<YipyyPayDevice, "id" | "createdAt">,
 ): YipyyPayDevice {
   const newDevice: YipyyPayDevice = {
     ...device,
@@ -858,7 +914,7 @@ export function addYipyyPayDevice(
 }
 
 export function addYipyyPayTransaction(
-  transaction: Omit<YipyyPayTransaction, "id" | "createdAt">
+  transaction: Omit<YipyyPayTransaction, "id" | "createdAt">,
 ): YipyyPayTransaction {
   const newTransaction: YipyyPayTransaction = {
     ...transaction,
@@ -870,31 +926,35 @@ export function addYipyyPayTransaction(
 }
 
 export function getYipyyPayTransactionsByInvoice(
-  invoiceId: string
+  invoiceId: string,
 ): YipyyPayTransaction[] {
   return mockYipyyPayTransactions.filter((t) => t.invoiceId === invoiceId);
 }
 
 export function getYipyyPayTransactionsByCustomer(
-  customerId: number
+  customerId: number,
 ): YipyyPayTransaction[] {
   return mockYipyyPayTransactions.filter((t) => t.customerId === customerId);
 }
 
 export function getYipyyPayTransactionsByBooking(
-  bookingId: number
+  bookingId: number,
 ): YipyyPayTransaction[] {
   return mockYipyyPayTransactions.filter((t) => t.bookingId === bookingId);
 }
 
 export function getYipyyPayTransactionByTransactionId(
-  transactionId: string
+  transactionId: string,
 ): YipyyPayTransaction | undefined {
-  return mockYipyyPayTransactions.find((t) => t.id === transactionId || t.yipyyTransactionId === transactionId);
+  return mockYipyyPayTransactions.find(
+    (t) => t.id === transactionId || t.yipyyTransactionId === transactionId,
+  );
 }
 
 export function getCloverTerminalTransactionByTransactionId(
-  transactionId: string
+  transactionId: string,
 ): CloverTerminalTransaction | undefined {
-  return mockCloverTransactions.find((t) => t.id === transactionId || t.cloverTransactionId === transactionId);
+  return mockCloverTransactions.find(
+    (t) => t.id === transactionId || t.cloverTransactionId === transactionId,
+  );
 }

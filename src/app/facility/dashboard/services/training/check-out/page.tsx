@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -28,15 +29,21 @@ import {
   LogOut,
   Search,
   Clock,
-  User,
   Calendar,
   CheckCircle2,
   XCircle,
   FileText,
   Award,
 } from "lucide-react";
-import { type TrainingEnrollment, type SessionAttendance } from "@/lib/training-enrollment";
-import { type TrainingSeries, calculateSessionDates, getDayName } from "@/lib/training-series";
+import {
+  type TrainingEnrollment,
+  type SessionAttendance,
+} from "@/lib/training-enrollment";
+import {
+  type TrainingSeries,
+  calculateSessionDates,
+  getDayName,
+} from "@/lib/training-series";
 import { clients } from "@/data/clients";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -109,18 +116,18 @@ interface TodaySession {
 }
 
 export default function TrainingCheckOutPage() {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const [searchQuery, setSearchQuery] = useState("");
   const [enrollments] = useState<TrainingEnrollment[]>(mockEnrollments);
   const [series] = useState<TrainingSeries[]>(mockSeries);
   const [isCheckOutModalOpen, setIsCheckOutModalOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<TodaySession | null>(null);
-  const [attendanceStatus, setAttendanceStatus] = useState<"present" | "absent" | "late" | "excused">("present");
+  const [selectedSession, setSelectedSession] = useState<TodaySession | null>(
+    null,
+  );
+  const [attendanceStatus, setAttendanceStatus] = useState<
+    "present" | "absent" | "late" | "excused"
+  >("present");
   const [trainerNotes, setTrainerNotes] = useState("");
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Get today's sessions (checked in pets)
   const todaySessions = useMemo(() => {
@@ -139,7 +146,7 @@ export default function TrainingCheckOutPage() {
       const sessionDates = calculateSessionDates(
         seriesItem.startDate,
         seriesItem.dayOfWeek,
-        seriesItem.numberOfWeeks
+        seriesItem.numberOfWeeks,
       );
 
       const sessionIndex = enrollment.currentSessionNumber - 1;
@@ -168,7 +175,7 @@ export default function TrainingCheckOutPage() {
       (session) =>
         session.enrollment.petName.toLowerCase().includes(query) ||
         session.enrollment.ownerName.toLowerCase().includes(query) ||
-        session.series.seriesName.toLowerCase().includes(query)
+        session.series.seriesName.toLowerCase().includes(query),
     );
   }, [todaySessions, searchQuery]);
 
@@ -186,21 +193,35 @@ export default function TrainingCheckOutPage() {
       // TODO: API call to check out and update attendance
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const isFinalSession = selectedSession.sessionNumber === selectedSession.enrollment.totalSessions;
-      const newSessionsAttended = selectedSession.enrollment.sessionsAttended + 1;
-      const newProgress = Math.round((newSessionsAttended / selectedSession.enrollment.totalSessions) * 100);
+      const isFinalSession =
+        selectedSession.sessionNumber ===
+        selectedSession.enrollment.totalSessions;
+      const newSessionsAttended =
+        selectedSession.enrollment.sessionsAttended + 1;
+      const _newProgress = Math.round(
+        (newSessionsAttended / selectedSession.enrollment.totalSessions) * 100,
+      );
 
       // Simulate actions
       if (isFinalSession) {
-        console.log("Generating certificate for", selectedSession.enrollment.petName);
+        console.log(
+          "Generating certificate for",
+          selectedSession.enrollment.petName,
+        );
         console.log("Unlocking Advanced Obedience booking");
-        console.log("Sending certificate email to", selectedSession.enrollment.ownerEmail);
+        console.log(
+          "Sending certificate email to",
+          selectedSession.enrollment.ownerEmail,
+        );
       } else {
-        console.log("Unlocking homework for Week", selectedSession.sessionNumber);
+        console.log(
+          "Unlocking homework for Week",
+          selectedSession.sessionNumber,
+        );
       }
 
       toast.success(
-        `Check-out complete! ${isFinalSession ? "Certificate generated and sent." : `Week ${selectedSession.sessionNumber} homework unlocked.`}`
+        `Check-out complete! ${isFinalSession ? "Certificate generated and sent." : `Week ${selectedSession.sessionNumber} homework unlocked.`}`,
       );
 
       setIsCheckOutModalOpen(false);
@@ -219,16 +240,18 @@ export default function TrainingCheckOutPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Training Check-Out</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Training Check-Out
+        </h2>
         <p className="text-muted-foreground">
-          Mark attendance and complete today's training sessions
+          Mark attendance and complete today&apos;s training sessions
         </p>
       </div>
 
       {/* Search */}
       <div className="flex gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2 transform" />
           <Input
             placeholder="Search by pet name, owner, or series..."
             value={searchQuery}
@@ -241,14 +264,14 @@ export default function TrainingCheckOutPage() {
       {/* Sessions List */}
       {filteredSessions.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
+          <CardContent className="text-muted-foreground py-12 text-center">
             No training sessions to check out today.
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {filteredSessions.map((session) => {
-            const pet = clients
+            const _pet = clients
               .flatMap((c) => c.pets)
               .find((p) => p.id === session.enrollment.petId);
             const finalSession = isFinalSession(session);
@@ -257,50 +280,65 @@ export default function TrainingCheckOutPage() {
               <Card key={session.enrollment.id}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                        <GraduationCap className="h-6 w-6 text-primary" />
+                    <div className="flex flex-1 items-center gap-4">
+                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                        <GraduationCap className="text-primary h-6 w-6" />
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="mb-1 flex items-center gap-3">
                           <h3 className="text-lg font-semibold">
-                            {session.enrollment.petName} ({session.enrollment.petBreed})
+                            {session.enrollment.petName} (
+                            {session.enrollment.petBreed})
                           </h3>
                           <Badge variant="outline">
                             {session.series.courseTypeName}
                           </Badge>
-                          <Badge variant={finalSession ? "default" : "secondary"}>
-                            Week {session.sessionNumber} {finalSession && "(Final)"}
+                          <Badge
+                            variant={finalSession ? "default" : "secondary"}
+                          >
+                            Week {session.sessionNumber}{" "}
+                            {finalSession && "(Final)"}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                        <div className="text-muted-foreground mb-2 flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {getDayName(session.series.dayOfWeek)} {session.series.startTime} - {session.series.endTime}
+                            <Clock className="size-4" />
+                            {getDayName(session.series.dayOfWeek)}{" "}
+                            {session.series.startTime} -{" "}
+                            {session.series.endTime}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
+                            <Calendar className="size-4" />
                             {isMounted &&
-                              new Date(session.sessionDate).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                              })}
+                              new Date(session.sessionDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )}
                           </div>
                         </div>
                         <div className="mt-2">
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-muted-foreground">Progress</span>
+                          <div className="mb-1 flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Progress
+                            </span>
                             <span className="font-medium">
-                              {session.enrollment.sessionsAttended} of {session.enrollment.totalSessions} sessions
+                              {session.enrollment.sessionsAttended} of{" "}
+                              {session.enrollment.totalSessions} sessions
                             </span>
                           </div>
-                          <Progress value={session.enrollment.progress} className="h-2" />
+                          <Progress
+                            value={session.enrollment.progress}
+                            className="h-2"
+                          />
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button onClick={() => handleCheckOut(session)}>
-                        <LogOut className="mr-2 h-4 w-4" />
+                        <LogOut className="mr-2 size-4" />
                         Check Out
                       </Button>
                     </div>
@@ -324,20 +362,27 @@ export default function TrainingCheckOutPage() {
 
           {selectedSession && (
             <div className="space-y-6 py-4">
-              <div className="p-4 border rounded-lg space-y-2">
-                <div className="font-medium">{selectedSession.enrollment.petName}</div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedSession.series.courseTypeName} - Week {selectedSession.sessionNumber}
+              <div className="space-y-2 rounded-lg border p-4">
+                <div className="font-medium">
+                  {selectedSession.enrollment.petName}
+                </div>
+                <div className="text-muted-foreground text-sm">
+                  {selectedSession.series.courseTypeName} - Week{" "}
+                  {selectedSession.sessionNumber}
                   {isFinalSession(selectedSession) && " (Final Session)"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Attendance Status <span className="text-destructive">*</span></Label>
+                <Label>
+                  Attendance Status <span className="text-destructive">*</span>
+                </Label>
                 <Select
                   value={attendanceStatus}
                   onValueChange={(value) =>
-                    setAttendanceStatus(value as "present" | "absent" | "late" | "excused")
+                    setAttendanceStatus(
+                      value as "present" | "absent" | "late" | "excused",
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -346,13 +391,13 @@ export default function TrainingCheckOutPage() {
                   <SelectContent>
                     <SelectItem value="present">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <CheckCircle2 className="size-4 text-green-600" />
                         Present
                       </div>
                     </SelectItem>
                     <SelectItem value="absent">
                       <div className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="size-4 text-red-600" />
                         Absent
                       </div>
                     </SelectItem>
@@ -371,28 +416,39 @@ export default function TrainingCheckOutPage() {
                   placeholder="e.g., Mastered stay command, Struggled with distractions, Excellent progress..."
                   rows={4}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Notes will be visible to the pet owner in their portal
                 </p>
               </div>
 
               <Separator />
 
-              <div className="p-4 bg-muted rounded-lg space-y-2 text-sm">
+              <div className="bg-muted space-y-2 rounded-lg p-4 text-sm">
                 <p className="font-medium">Actions that will occur:</p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Update progress: Week {selectedSession.sessionNumber} of {selectedSession.enrollment.totalSessions} Complete</li>
+                <ul className="text-muted-foreground list-inside list-disc space-y-1">
+                  <li>
+                    Update progress: Week {selectedSession.sessionNumber} of{" "}
+                    {selectedSession.enrollment.totalSessions} Complete
+                  </li>
                   {isFinalSession(selectedSession) ? (
                     <>
                       <li className="flex items-center gap-2">
-                        <Award className="h-4 w-4" />
+                        <Award className="size-4" />
                         Generate digital certificate
                       </li>
-                      <li>Email certificate to {selectedSession.enrollment.ownerEmail}</li>
-                      <li>Unlock "Advanced Obedience" booking option</li>
+                      <li>
+                        Email certificate to{" "}
+                        {selectedSession.enrollment.ownerEmail}
+                      </li>
+                      <li>
+                        Unlock &quot;Advanced Obedience&quot; booking option
+                      </li>
                     </>
                   ) : (
-                    <li>Unlock homework for Week {selectedSession.sessionNumber} in customer portal</li>
+                    <li>
+                      Unlock homework for Week {selectedSession.sessionNumber}{" "}
+                      in customer portal
+                    </li>
                   )}
                 </ul>
               </div>
@@ -412,7 +468,7 @@ export default function TrainingCheckOutPage() {
               Cancel
             </Button>
             <Button onClick={confirmCheckOut}>
-              <FileText className="mr-2 h-4 w-4" />
+              <FileText className="mr-2 size-4" />
               Complete Check-Out
             </Button>
           </DialogFooter>

@@ -259,7 +259,7 @@ export function IssueGiftCardModal({
           <Card className="border-2 bg-green-50">
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm">
                   Gift Card Value
                 </p>
                 <p className="text-3xl font-bold text-green-600">
@@ -275,7 +275,7 @@ export function IssueGiftCardModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            <Gift className="h-4 w-4 mr-2" />
+            <Gift className="mr-2 size-4" />
             Issue Gift Card
           </Button>
         </DialogFooter>

@@ -75,10 +75,10 @@ export function NotesList({
                   aria-label={`Filter by ${st.label} notes`}
                   onClick={() => setFilterSubType(st.value)}
                   className={cn(
-                    "text-xs px-2 py-1 rounded-md transition-colors",
+                    "rounded-md px-2 py-1 text-xs transition-colors",
                     filterSubType === st.value
                       ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent",
+                      : `bg-muted text-muted-foreground hover:bg-accent`,
                   )}
                 >
                   {st.label}
@@ -91,7 +91,7 @@ export function NotesList({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs gap-1"
+            className="h-7 gap-1 text-xs"
             onClick={() => setAddModalOpen(true)}
           >
             <Plus className="h-3 w-3" />
@@ -102,15 +102,15 @@ export function NotesList({
 
       {/* Notes list */}
       {filteredNotes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+        <div className="text-muted-foreground flex flex-col items-center justify-center py-8">
           {compact ? (
-            <MessageSquare className="h-6 w-6 mb-1" />
+            <MessageSquare className="mb-1 h-6 w-6" />
           ) : (
-            <StickyNote className="h-8 w-8 mb-2" />
+            <StickyNote className="mb-2 h-8 w-8" />
           )}
           <p className="text-sm">No notes yet</p>
           {!readOnly && (
-            <p className="text-xs mt-1">
+            <p className="mt-1 text-xs">
               Click &quot;Add Note&quot; to create one
             </p>
           )}
@@ -145,7 +145,7 @@ export function NotesList({
                 {pinned.length > 0 && (
                   <>
                     {hasBothSections && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                      <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
                         <Pin className="h-3 w-3" />
                         Pinned
                       </div>
@@ -154,7 +154,7 @@ export function NotesList({
                   </>
                 )}
                 {hasBothSections && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground uppercase tracking-wider font-medium pt-2">
+                  <div className="text-muted-foreground flex items-center gap-2 pt-2 text-xs font-medium tracking-wider uppercase">
                     All Notes
                   </div>
                 )}

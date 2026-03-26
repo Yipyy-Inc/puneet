@@ -232,7 +232,7 @@ export function BookingRulesSettings({
               Booking Rules
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="text-muted-foreground size-4 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-sm">
                   <div className="space-y-2">
@@ -249,9 +249,9 @@ export function BookingRulesSettings({
               </Tooltip>
             </div>
             {isOpen ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="size-4" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             )}
           </CardTitle>
         </CardHeader>
@@ -260,7 +260,7 @@ export function BookingRulesSettings({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-base font-medium">Booking Rules</h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Configure booking policies and requirements
                 </p>
               </div>
@@ -275,7 +275,7 @@ export function BookingRulesSettings({
                 </Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    <Info className="text-muted-foreground size-4 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm">
                     <div className="space-y-2">
@@ -303,7 +303,7 @@ export function BookingRulesSettings({
                     size="sm"
                     onClick={() => startEditing("cutOffTimes")}
                   >
-                    <Edit className="h-3 w-3 mr-1" />
+                    <Edit className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
                 )}
@@ -314,11 +314,11 @@ export function BookingRulesSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="h-3 w-3 mr-1" />
+                      <Check className="mr-1 h-3 w-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="h-3 w-3 mr-1" />
+                      <X className="mr-1 h-3 w-3" />
                       Cancel
                     </Button>
                   </div>
@@ -359,7 +359,7 @@ export function BookingRulesSettings({
                     size="sm"
                     onClick={() => startEditing("deposits")}
                   >
-                    <Edit className="h-3 w-3 mr-1" />
+                    <Edit className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
                 )}
@@ -370,11 +370,11 @@ export function BookingRulesSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="h-3 w-3 mr-1" />
+                      <Check className="mr-1 h-3 w-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="h-3 w-3 mr-1" />
+                      <X className="mr-1 h-3 w-3" />
                       Cancel
                     </Button>
                   </div>

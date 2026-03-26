@@ -1,10 +1,13 @@
 /**
  * Training Makeup Session Workflow
- * 
+ *
  * Handles makeup sessions for missed training classes
  */
 
-import { type TrainingEnrollment, type SessionAttendance } from "./training-enrollment";
+import {
+  type TrainingEnrollment,
+  type SessionAttendance,
+} from "./training-enrollment";
 import { type TrainingSeries } from "./training-series";
 
 export interface MakeupSession {
@@ -46,12 +49,11 @@ export function isSessionMissed(attendance: SessionAttendance | null): boolean {
  */
 export function getMissedSessions(
   enrollment: TrainingEnrollment,
-  attendances: SessionAttendance[]
+  attendances: SessionAttendance[],
 ): SessionAttendance[] {
   return attendances.filter(
     (attendance) =>
-      attendance.enrollmentId === enrollment.id &&
-      isSessionMissed(attendance)
+      attendance.enrollmentId === enrollment.id && isSessionMissed(attendance),
   );
 }
 
@@ -60,17 +62,20 @@ export function getMissedSessions(
  */
 export function canScheduleMakeup(
   missedSession: SessionAttendance,
-  makeupSessions: MakeupSession[]
+  makeupSessions: MakeupSession[],
 ): boolean {
   // Check if makeup already scheduled or completed
   const existingMakeup = makeupSessions.find(
-    (makeup) => makeup.missedSessionId === missedSession.sessionId
+    (makeup) => makeup.missedSessionId === missedSession.sessionId,
   );
-  
+
   if (existingMakeup) {
-    return existingMakeup.status === "pending" || existingMakeup.status === "scheduled";
+    return (
+      existingMakeup.status === "pending" ||
+      existingMakeup.status === "scheduled"
+    );
   }
-  
+
   return true;
 }
 
@@ -80,11 +85,11 @@ export function canScheduleMakeup(
 export function calculateMakeupPrice(
   series: TrainingSeries,
   sessionNumber: number,
-  facilityConfig?: any
+  facilityConfig?: any,
 ): number {
   // Get makeup pricing rules from facility config
   const makeupConfig = facilityConfig?.training?.makeupSessions;
-  
+
   if (!makeupConfig?.pricingRules) {
     // Default price if no config
     return 40;
@@ -98,7 +103,9 @@ export function calculateMakeupPrice(
     case "percentage":
       // Calculate percentage of series price
       const seriesPrice = series.enrollmentRules.fullPaymentAmount;
-      return Math.round(seriesPrice * (pricingRules.percentageOfSeries || 0.15));
+      return Math.round(
+        seriesPrice * (pricingRules.percentageOfSeries || 0.15),
+      );
     case "per_session":
       return pricingRules.perSessionPrice || 40;
     default:
@@ -111,10 +118,10 @@ export function calculateMakeupPrice(
  */
 export function getAvailableMakeupCredits(
   enrollmentId: string,
-  makeupCredits: MakeupCredit[]
+  makeupCredits: MakeupCredit[],
 ): number {
   const credit = makeupCredits.find((c) => c.enrollmentId === enrollmentId);
   if (!credit) return 0;
-  
+
   return Math.max(0, credit.creditsAvailable - credit.creditsUsed);
 }

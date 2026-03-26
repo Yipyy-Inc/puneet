@@ -115,14 +115,12 @@ export function QuickReplyModal({ onClose }: QuickReplyModalProps) {
             placeholder="Hi {{customer_first_name}}! Thanks for reaching out..."
             rows={4}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {formData.body.length} characters
           </p>
         </div>
 
-        {hasVariables && (
-          <TemplatePreviewPanel template={formData.body} />
-        )}
+        {hasVariables && <TemplatePreviewPanel template={formData.body} />}
       </div>
 
       <DialogFooter>
@@ -133,7 +131,7 @@ export function QuickReplyModal({ onClose }: QuickReplyModalProps) {
           onClick={handleSave}
           disabled={!formData.name || !formData.body}
         >
-          <MessageSquare className="h-4 w-4 mr-2" />
+          <MessageSquare className="mr-2 size-4" />
           Save Quick Reply
         </Button>
       </DialogFooter>

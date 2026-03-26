@@ -112,7 +112,7 @@ export default function FacilitiesRequestsPage() {
           className="w-min"
           onClick={() => router.push("/dashboard/facilities")}
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 size-4" />
           Back to Facilities
         </Button>
         <h2 className="text-3xl font-bold tracking-tight">Facility Requests</h2>
@@ -134,7 +134,7 @@ export default function FacilitiesRequestsPage() {
               setIsModalOpen(true);
             }}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           </Button>
         )}
         rowClassName={(request) =>
@@ -143,8 +143,8 @@ export default function FacilitiesRequestsPage() {
       />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="min-w-7xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-7xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-0">
               <DialogTitle>
                 {selectedRequest?.facilityName} - {selectedRequest?.requestType}{" "}
@@ -152,7 +152,7 @@ export default function FacilitiesRequestsPage() {
               </DialogTitle>
             </DialogHeader>
             {selectedRequest && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="col-span-1 lg:col-span-2">
                   <CardHeader>
                     <CardTitle>Basic Information</CardTitle>
@@ -294,11 +294,11 @@ export default function FacilitiesRequestsPage() {
                 variant="outline"
                 onClick={() => handleDeny(selectedRequest.id)}
               >
-                <X className="mr-2 h-4 w-4" />
+                <X className="mr-2 size-4" />
                 Deny
               </Button>
               <Button onClick={() => handleApprove(selectedRequest.id)}>
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="mr-2 size-4" />
                 Approve
               </Button>
             </DialogFooter>

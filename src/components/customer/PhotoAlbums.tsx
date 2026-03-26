@@ -1,17 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Calendar, Image as ImageIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
+  Calendar,
+  Image as ImageIcon,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import type { PetPhoto, ReportCard } from "@/data/pet-data";
 import type { Booking } from "@/lib/types";
 
@@ -43,7 +50,12 @@ interface PhotoAlbum {
   title: string;
 }
 
-export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: PhotoAlbumsProps) {
+export function PhotoAlbums({
+  photos,
+  bookings,
+  reportCards,
+  formatDate,
+}: PhotoAlbumsProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<UnifiedPhoto | null>(null);
   const [viewMode, setViewMode] = useState<"albums" | "grid">("albums");
 
@@ -68,8 +80,6 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
     reportCards.forEach((report) => {
       report.photos.forEach((photoUrl, index) => {
         // Try to find matching booking for this report card
-        const matchingBooking = bookings.find((b) => b.id === report.bookingId);
-        
         unified.push({
           id: `report-${report.id}-photo-${index}`,
           url: photoUrl,
@@ -85,7 +95,7 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
     });
 
     return unified;
-  }, [photos, reportCards, bookings, formatDate]);
+  }, [photos, reportCards, formatDate]);
 
   // Organize photos by date/stay
   const albums = useMemo(() => {
@@ -102,8 +112,11 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
         }
         const bookingDate = new Date(booking.startDate);
         const bookingDateKey = bookingDate.toISOString().split("T")[0];
-        return bookingDateKey === dateKey || 
-               (booking.endDate && new Date(booking.endDate).toISOString().split("T")[0] === dateKey);
+        return (
+          bookingDateKey === dateKey ||
+          (booking.endDate &&
+            new Date(booking.endDate).toISOString().split("T")[0] === dateKey)
+        );
       });
 
       // If photo has bookingId, use that booking
@@ -136,7 +149,9 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
   // All photos for grid view (sorted by date)
   const allPhotos = useMemo(() => {
     return [...allUnifiedPhotos].sort((a, b) => {
-      return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+      return (
+        new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+      );
     });
   }, [allUnifiedPhotos]);
 
@@ -159,36 +174,37 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
   if (viewMode === "grid") {
     return (
       <>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setViewMode("albums")}
             >
-              <Calendar className="h-4 w-4 mr-2" />
+              <Calendar className="mr-2 size-4" />
               View by Date
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               {allPhotos.length} photo{allPhotos.length !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {allPhotos.map((photo) => (
             <div
               key={photo.id}
-              className="aspect-square rounded-lg bg-muted overflow-hidden cursor-pointer hover:opacity-80 transition-opacity group relative"
+              className="group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-80"
               onClick={() => setSelectedPhoto(photo)}
             >
-              <img
+              <Image
                 src={photo.thumbnail || photo.url}
                 alt={photo.caption || "Pet photo"}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
               {photo.caption && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end">
-                  <p className="text-white text-xs p-2 truncate w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
+                  <p className="w-full truncate p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                     {photo.caption}
                   </p>
                 </div>
@@ -199,54 +215,60 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
 
         {/* Photo Viewer Dialog */}
         {selectedPhoto && (
-          <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <Dialog
+            open={!!selectedPhoto}
+            onOpenChange={() => setSelectedPhoto(null)}
+          >
+            <DialogContent className="max-h-[90vh] max-w-4xl p-0">
               <div className="relative">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-4 right-4 z-10 bg-background/80"
+                  className="bg-background/80 absolute top-4 right-4 z-10"
                   onClick={() => setSelectedPhoto(null)}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="size-4" />
                 </Button>
                 {currentPhotoIndex > 0 && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-background/80"
+                    className="bg-background/80 absolute top-1/2 left-4 z-10 -translate-y-1/2"
                     onClick={handlePreviousPhoto}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="size-4" />
                   </Button>
                 )}
                 {currentPhotoIndex < allPhotos.length - 1 && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-background/80"
+                    className="bg-background/80 absolute top-1/2 right-4 z-10 -translate-y-1/2"
                     onClick={handleNextPhoto}
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="size-4" />
                   </Button>
                 )}
-                <div className="aspect-video bg-muted flex items-center justify-center">
-                  <img
+                <div className="bg-muted relative flex aspect-video items-center justify-center">
+                  <Image
                     src={selectedPhoto.url}
                     alt={selectedPhoto.caption || "Pet photo"}
-                    className="max-w-full max-h-[80vh] object-contain"
+                    fill
+                    className="object-contain"
                   />
                 </div>
-                <div className="p-4 border-t">
+                <div className="border-t p-4">
                   {selectedPhoto.caption && (
-                    <p className="font-medium mb-1">{selectedPhoto.caption}</p>
+                    <p className="mb-1 font-medium">{selectedPhoto.caption}</p>
                   )}
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="text-muted-foreground flex items-center justify-between text-sm">
                     <span>{formatDate(selectedPhoto.uploadedAt)}</span>
-                    <span>Photo {currentPhotoIndex + 1} of {allPhotos.length}</span>
+                    <span>
+                      Photo {currentPhotoIndex + 1} of {allPhotos.length}
+                    </span>
                   </div>
                   {selectedPhoto.uploadedBy && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-xs">
                       Uploaded by {selectedPhoto.uploadedBy}
                     </p>
                   )}
@@ -261,18 +283,20 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
 
   return (
     <>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setViewMode("grid")}
           >
-            <ImageIcon className="h-4 w-4 mr-2" />
+            <ImageIcon className="mr-2 size-4" />
             View All
           </Button>
-          <span className="text-sm text-muted-foreground">
-            {albums.length} album{albums.length !== 1 ? "s" : ""} • {allUnifiedPhotos.length} photo{allUnifiedPhotos.length !== 1 ? "s" : ""}
+          <span className="text-muted-foreground text-sm">
+            {albums.length} album{albums.length !== 1 ? "s" : ""} •{" "}
+            {allUnifiedPhotos.length} photo
+            {allUnifiedPhotos.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -285,7 +309,8 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
                 <div>
                   <CardTitle className="text-base">{album.title}</CardTitle>
                   <CardDescription>
-                    {formatDate(album.date)} • {album.photos.length} photo{album.photos.length !== 1 ? "s" : ""}
+                    {formatDate(album.date)} • {album.photos.length} photo
+                    {album.photos.length !== 1 ? "s" : ""}
                   </CardDescription>
                 </div>
                 {album.service && (
@@ -296,21 +321,22 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {album.photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="aspect-square rounded-lg bg-muted overflow-hidden cursor-pointer hover:opacity-80 transition-opacity group relative"
+                    className="group bg-muted relative aspect-square cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-80"
                     onClick={() => setSelectedPhoto(photo)}
                   >
-                    <img
+                    <Image
                       src={photo.thumbnail || photo.url}
                       alt={photo.caption || "Pet photo"}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                     {photo.caption && (
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end">
-                        <p className="text-white text-xs p-2 truncate w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 flex items-end bg-black/0 transition-colors group-hover:bg-black/40">
+                        <p className="w-full truncate p-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
                           {photo.caption}
                         </p>
                       </div>
@@ -325,54 +351,60 @@ export function PhotoAlbums({ photos, bookings, reportCards, formatDate }: Photo
 
       {/* Photo Viewer Dialog */}
       {selectedPhoto && (
-        <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+        <Dialog
+          open={!!selectedPhoto}
+          onOpenChange={() => setSelectedPhoto(null)}
+        >
+          <DialogContent className="max-h-[90vh] max-w-4xl p-0">
             <div className="relative">
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4 z-10 bg-background/80"
+                className="bg-background/80 absolute top-4 right-4 z-10"
                 onClick={() => setSelectedPhoto(null)}
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
               {currentPhotoIndex > 0 && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-background/80"
+                  className="bg-background/80 absolute top-1/2 left-4 z-10 -translate-y-1/2"
                   onClick={handlePreviousPhoto}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="size-4" />
                 </Button>
               )}
               {currentPhotoIndex < allPhotos.length - 1 && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-background/80"
+                  className="bg-background/80 absolute top-1/2 right-4 z-10 -translate-y-1/2"
                   onClick={handleNextPhoto}
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="size-4" />
                 </Button>
               )}
-              <div className="aspect-video bg-muted flex items-center justify-center">
-                <img
+              <div className="bg-muted relative flex aspect-video items-center justify-center">
+                <Image
                   src={selectedPhoto.url}
                   alt={selectedPhoto.caption || "Pet photo"}
-                  className="max-w-full max-h-[80vh] object-contain"
+                  fill
+                  className="object-contain"
                 />
               </div>
-              <div className="p-4 border-t">
+              <div className="border-t p-4">
                 {selectedPhoto.caption && (
-                  <p className="font-medium mb-1">{selectedPhoto.caption}</p>
+                  <p className="mb-1 font-medium">{selectedPhoto.caption}</p>
                 )}
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="text-muted-foreground flex items-center justify-between text-sm">
                   <span>{formatDate(selectedPhoto.uploadedAt)}</span>
-                  <span>Photo {currentPhotoIndex + 1} of {allPhotos.length}</span>
+                  <span>
+                    Photo {currentPhotoIndex + 1} of {allPhotos.length}
+                  </span>
                 </div>
                 {selectedPhoto.uploadedBy && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     Uploaded by {selectedPhoto.uploadedBy}
                   </p>
                 )}

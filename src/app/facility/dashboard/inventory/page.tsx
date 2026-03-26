@@ -215,7 +215,7 @@ export default function InventoryPage() {
             <span className={isLow ? "text-warning font-semibold" : ""}>
               {item.quantity} {item.unit}
             </span>
-            {isLow && <TrendingDown className="h-4 w-4 text-warning" />}
+            {isLow && <TrendingDown className="text-warning size-4" />}
           </div>
         );
       },
@@ -301,14 +301,14 @@ export default function InventoryPage() {
         </div>
         <div className="flex items-center space-x-2">
           <Button onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             {"Add Item"}
           </Button>
           <Button
             variant="outline"
             onClick={() => exportInventoryToCSV(facilityInventory)}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             Export
           </Button>
         </div>
@@ -318,8 +318,8 @@ export default function InventoryPage() {
       {lowStockItems > 0 && (
         <Card className="border-warning">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <AlertTriangle className="text-warning h-5 w-5" />
               Low Stock Alert
             </CardTitle>
           </CardHeader>
@@ -343,7 +343,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalItems}</div>
-            <p className="text-xs text-muted-foreground">In inventory</p>
+            <p className="text-muted-foreground text-xs">In inventory</p>
           </CardContent>
         </Card>
         <Card>
@@ -353,10 +353,10 @@ export default function InventoryPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">
+            <div className="text-warning text-2xl font-bold">
               {lowStockItems}
             </div>
-            <p className="text-xs text-muted-foreground">Need reordering</p>
+            <p className="text-muted-foreground text-xs">Need reordering</p>
           </CardContent>
         </Card>
         <Card>
@@ -367,7 +367,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Current inventory value
             </p>
           </CardContent>
@@ -378,7 +378,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{uniqueCategories}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Different categories
             </p>
           </CardContent>
@@ -399,7 +399,7 @@ export default function InventoryPage() {
               size="sm"
               onClick={() => handleEdit(item)}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="size-4" />
             </Button>
             {item.quantity <= item.reorderPoint && (
               <Button
@@ -407,7 +407,7 @@ export default function InventoryPage() {
                 size="sm"
                 onClick={() => handleReorderClick(item)}
               >
-                <ShoppingCart className="h-4 w-4" />
+                <ShoppingCart className="size-4" />
               </Button>
             )}
             <Button
@@ -415,7 +415,7 @@ export default function InventoryPage() {
               size="sm"
               onClick={() => handleDeleteClick(item)}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="text-destructive size-4" />
             </Button>
           </div>
         )}
@@ -437,7 +437,7 @@ export default function InventoryPage() {
 
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 col-span-2">
+              <div className="col-span-2 space-y-2">
                 <Label htmlFor="name">Item Name *</Label>
                 <Input
                   id="name"
@@ -537,7 +537,7 @@ export default function InventoryPage() {
                     })
                   }
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Alert when stock falls below this level
                 </p>
               </div>
@@ -594,7 +594,7 @@ export default function InventoryPage() {
               </div>
               <div className="space-y-2">
                 <Label>Reorder Point</Label>
-                <div className="text-2xl font-bold text-warning">
+                <div className="text-warning text-2xl font-bold">
                   {reorderingItem?.reorderPoint} {reorderingItem?.unit}
                 </div>
               </div>
@@ -611,13 +611,13 @@ export default function InventoryPage() {
                   setReorderQuantity(parseInt(e.target.value) || 0)
                 }
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Suggested: {(reorderingItem?.reorderPoint || 0) * 2}{" "}
                 {reorderingItem?.unit}
               </p>
             </div>
 
-            <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="bg-muted space-y-2 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span>Cost per unit:</span>
                 <span className="font-medium">
@@ -628,7 +628,7 @@ export default function InventoryPage() {
                 <span>Quantity:</span>
                 <span className="font-medium">{reorderQuantity}</span>
               </div>
-              <div className="border-t pt-2 flex justify-between font-bold">
+              <div className="flex justify-between border-t pt-2 font-bold">
                 <span>Total Cost:</span>
                 <span>
                   $

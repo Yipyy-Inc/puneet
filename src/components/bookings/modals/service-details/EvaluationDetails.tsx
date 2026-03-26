@@ -101,9 +101,8 @@ export function EvaluationDetails({
   const durationOptions = evaluation.schedule.durationOptionsMinutes;
   const defaultDuration =
     evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
-  const [selectedDuration, setSelectedDuration] = React.useState<number>(
-    defaultDuration,
-  );
+  const [selectedDuration, setSelectedDuration] =
+    React.useState<number>(defaultDuration);
 
   const selectedDates = React.useMemo(() => {
     if (!startDate) return [];
@@ -144,10 +143,20 @@ export function EvaluationDetails({
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
 
-  const timeWindows =
-    evaluation.schedule.timeWindows.length > 0
-      ? evaluation.schedule.timeWindows
-      : [{ id: "all-day", label: "All day", startTime: "00:00", endTime: "23:59" }];
+  const timeWindows = React.useMemo(
+    () =>
+      evaluation.schedule.timeWindows.length > 0
+        ? evaluation.schedule.timeWindows
+        : [
+            {
+              id: "all-day",
+              label: "All day",
+              startTime: "00:00",
+              endTime: "23:59",
+            },
+          ],
+    [evaluation.schedule.timeWindows],
+  );
 
   const slots = React.useMemo(() => {
     const duration = selectedDuration || defaultDuration;
@@ -169,10 +178,18 @@ export function EvaluationDetails({
             duration,
           };
         })
-        .filter(Boolean) as Array<{ startTime: string; endTime: string; duration: number }>;
+        .filter(Boolean) as Array<{
+        startTime: string;
+        endTime: string;
+        duration: number;
+      }>;
     }
 
-    const generated: Array<{ startTime: string; endTime: string; duration: number }> = [];
+    const generated: Array<{
+      startTime: string;
+      endTime: string;
+      duration: number;
+    }> = [];
     windows.forEach((window) => {
       const start = timeToMinutes(window.startTime);
       const end = timeToMinutes(window.endTime);
@@ -205,7 +222,7 @@ export function EvaluationDetails({
           <div className="space-y-6">
             <div>
               <Label className="text-base">Select Evaluation Date</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
+              <p className="text-muted-foreground mt-1 mb-2 text-xs">
                 Choose a date for your pet evaluation. {evaluation.description}
               </p>
               <DateSelectionCalendar
@@ -260,16 +277,16 @@ export function EvaluationDetails({
                       </div>
                     )}
                     <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-muted-foreground" />
+                      <Clock className="text-muted-foreground h-5 w-5" />
                       <Label className="text-base">
                         Select Available Time Slot
                       </Label>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Choose from the available evaluation time slots below
                     </p>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                       {slots.map((slot) => {
                         const isSelected = selectedSlot === slot.startTime;
                         return (
@@ -277,10 +294,10 @@ export function EvaluationDetails({
                             key={slot.startTime}
                             type="button"
                             variant={isSelected ? "default" : "outline"}
-                            className="h-auto p-3 flex flex-col items-center gap-2"
+                            className="flex h-auto flex-col items-center gap-2 p-3"
                             onClick={() => handleSlotSelect(slot.startTime)}
                           >
-                            <span className="font-medium text-sm">
+                            <span className="text-sm font-medium">
                               {slot.startTime} - {slot.endTime}
                             </span>
                             <Badge
@@ -295,25 +312,23 @@ export function EvaluationDetails({
                     </div>
 
                     {slots.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
+                      <p className="text-muted-foreground py-4 text-center text-sm">
                         No time slots available for evaluation.
                       </p>
                     )}
 
                     {selectedSlot && (
-                      <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                        <p className="text-sm font-medium text-primary">
+                      <div className="border-primary/20 bg-primary/5 mt-4 rounded-lg border p-3">
+                        <p className="text-primary text-sm font-medium">
                           Selected:{" "}
                           {
-                            slots.find(
-                              (s) => s.startTime === selectedSlot,
-                            )?.startTime
+                            slots.find((s) => s.startTime === selectedSlot)
+                              ?.startTime
                           }{" "}
                           -{" "}
                           {
-                            slots.find(
-                              (s) => s.startTime === selectedSlot,
-                            )?.endTime
+                            slots.find((s) => s.startTime === selectedSlot)
+                              ?.endTime
                           }
                         </p>
                       </div>

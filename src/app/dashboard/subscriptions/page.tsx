@@ -50,8 +50,8 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm border-b">
+    <div className="flex h-full flex-col">
+      <div className="bg-muted/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">
@@ -64,7 +64,7 @@ export default function SubscriptionsPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <nav className="px-6 flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -74,14 +74,14 @@ export default function SubscriptionsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? "bg-background border-b-2 border-primary text-primary"
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 {tab.name}
               </button>
             );

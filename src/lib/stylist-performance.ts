@@ -1,6 +1,6 @@
 /**
  * Stylist Performance Tracking
- * 
+ *
  * Calculates performance metrics for grooming stylists including:
  * - Today's appointments
  * - Revenue per stylist
@@ -8,10 +8,7 @@
  * - Cancellation rate
  */
 
-import type {
-  GroomingAppointment,
-  Stylist,
-} from "@/data/grooming";
+import type { GroomingAppointment, Stylist } from "@/data/grooming";
 import { groomingAppointments } from "@/data/grooming";
 
 export interface StylistPerformanceMetrics {
@@ -31,10 +28,10 @@ export interface StylistPerformanceMetrics {
 function timeDifferenceInMinutes(startTime: string, endTime: string): number {
   const [startHours, startMins] = startTime.split(":").map(Number);
   const [endHours, endMins] = endTime.split(":").map(Number);
-  
+
   const startTotal = startHours * 60 + startMins;
   const endTotal = endHours * 60 + endMins;
-  
+
   return endTotal - startTotal;
 }
 
@@ -53,7 +50,7 @@ export function calculateStylistPerformance(
   appointments: GroomingAppointment[] = groomingAppointments,
 ): StylistPerformanceMetrics {
   const today = getTodayDateString();
-  
+
   // Filter appointments for this stylist
   const stylistAppointments = appointments.filter(
     (apt) => apt.stylistId === stylistId,
@@ -61,7 +58,10 @@ export function calculateStylistPerformance(
 
   // Today's appointments
   const todayAppointments = stylistAppointments.filter(
-    (apt) => apt.date === today && apt.status !== "cancelled" && apt.status !== "no-show",
+    (apt) =>
+      apt.date === today &&
+      apt.status !== "cancelled" &&
+      apt.status !== "no-show",
   ).length;
 
   // Completed appointments (for revenue and average time)
@@ -85,7 +85,9 @@ export function calculateStylistPerformance(
 
   const averageGroomTime =
     groomTimes.length > 0
-      ? Math.round(groomTimes.reduce((sum, time) => sum + time, 0) / groomTimes.length)
+      ? Math.round(
+          groomTimes.reduce((sum, time) => sum + time, 0) / groomTimes.length,
+        )
       : 0;
 
   // Calculate cancellation rate

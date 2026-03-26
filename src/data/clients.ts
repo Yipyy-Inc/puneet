@@ -6,7 +6,7 @@ export const clients = [
     phone: "123-456-7890",
     status: "active",
     facility: "Paws & Play Daycare",
-    imageUrl: "/people/person-1",
+    imageUrl: "/people/person-1.jpg",
     address: {
       street: "123 Main Street",
       city: "Springfield",

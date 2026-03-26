@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { resolveIcon } from "@/lib/service-registry";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { getGradientStyle, getCategoryMeta } from "@/data/custom-services";
 import {
   LayoutDashboard,
@@ -32,27 +32,27 @@ export default function CustomServiceLayout({
   const pathname = usePathname();
   const { getModuleBySlug, setModuleStatus } = useCustomServices();
 
-  const module = getModuleBySlug(slug ?? "");
+  const serviceModule = getModuleBySlug(slug ?? "");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingEnabled, setPendingEnabled] = useState<boolean | null>(null);
   const [disableReason, setDisableReason] = useState("");
 
-  if (!module) {
+  if (!serviceModule) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-12 text-center">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted">
-          <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+        <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
+          <AlertTriangle className="text-muted-foreground h-8 w-8" />
         </div>
         <div>
           <h2 className="text-xl font-semibold">Service Not Found</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             No custom service module exists for slug &ldquo;{slug}&rdquo;.
           </p>
         </div>
         <Link
           href="/facility/dashboard/services"
-          className="text-sm text-primary hover:underline"
+          className="text-primary text-sm hover:underline"
         >
           Back to Services
         </Link>
@@ -60,11 +60,9 @@ export default function CustomServiceLayout({
     );
   }
 
-  const catMeta = getCategoryMeta(module.category);
-  const basePath = `/facility/dashboard/services/custom/${module.slug}`;
-  const isEnabled = module.status === "active";
-
-  const Icon = resolveIcon(module.icon);
+  const catMeta = getCategoryMeta(serviceModule.category);
+  const basePath = `/facility/dashboard/services/custom/${serviceModule.slug}`;
+  const isEnabled = serviceModule.status === "active";
 
   // Build tabs dynamically from module config
   const tabs = [
@@ -78,13 +76,13 @@ export default function CustomServiceLayout({
       name: "Bookings",
       href: `${basePath}/bookings`,
       icon: CalendarDays,
-      show: module.calendar.enabled,
+      show: serviceModule.calendar.enabled,
     },
     {
       name: "Check-In/Out",
       href: `${basePath}/check-in`,
       icon: LogIn,
-      show: module.checkInOut.enabled,
+      show: serviceModule.checkInOut.enabled,
     },
     {
       name: "Rates",
@@ -96,7 +94,7 @@ export default function CustomServiceLayout({
       name: "Tasks",
       href: `${basePath}/tasks`,
       icon: ClipboardList,
-      show: module.staffAssignment.taskGeneration.length > 0,
+      show: serviceModule.staffAssignment.taskGeneration.length > 0,
     },
     {
       name: "Settings",
@@ -114,7 +112,7 @@ export default function CustomServiceLayout({
   const handleConfirmToggle = () => {
     if (pendingEnabled !== null) {
       setModuleStatus(
-        module.id,
+        serviceModule.id,
         pendingEnabled ? "active" : "disabled",
         !pendingEnabled ? disableReason : undefined,
       );
@@ -132,51 +130,64 @@ export default function CustomServiceLayout({
 
   // Status badge
   const statusVariant =
-    module.status === "active"
+    serviceModule.status === "active"
       ? "default"
-      : module.status === "disabled"
+      : serviceModule.status === "disabled"
         ? "destructive"
         : "secondary";
 
   const statusLabel =
-    module.status === "active"
+    serviceModule.status === "active"
       ? "Enabled"
-      : module.status === "disabled"
+      : serviceModule.status === "disabled"
         ? "Disabled"
-        : module.status === "draft"
+        : serviceModule.status === "draft"
           ? "Draft"
           : "Archived";
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="sticky top-16 z-10 border-b bg-background">
-        <div className="px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+      <div className="bg-background sticky top-16 z-10 border-b">
+        <div className="p-4 sm:px-6">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-center gap-3">
               <div
-                className="flex items-center justify-center w-10 h-10 shrink-0 rounded-lg"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                 style={{
-                  ...getGradientStyle(module.iconColor, module.iconColorTo),
+                  ...getGradientStyle(
+                    serviceModule.iconColor,
+                    serviceModule.iconColorTo,
+                  ),
                 }}
               >
-                <Icon className="h-5 w-5 text-white" />
+                <DynamicIcon
+                  name={serviceModule.icon}
+                  className="h-5 w-5 text-white"
+                />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 truncate">
-                  {module.name}
-                  <Badge variant={statusVariant} className="shrink-0">{statusLabel}</Badge>
+                <h1 className="flex items-center gap-2 truncate text-xl font-bold tracking-tight sm:text-2xl">
+                  {serviceModule.name}
+                  <Badge variant={statusVariant} className="shrink-0">
+                    {statusLabel}
+                  </Badge>
                 </h1>
-                <p className="text-sm text-muted-foreground truncate flex items-center">
+                <p className="text-muted-foreground flex items-center truncate text-sm">
                   {catMeta && (
-                    <Badge className={cn("text-[10px] mr-2 shrink-0", catMeta.badgeClass)}>
+                    <Badge
+                      className={cn(
+                        "mr-2 shrink-0 text-[10px]",
+                        catMeta.badgeClass,
+                      )}
+                    >
                       {catMeta.name}
                     </Badge>
                   )}
-                  {module.description}
+                  {serviceModule.description}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
               <span className="text-sm font-medium">Enabled</span>
               <Switch
                 checked={isEnabled}
@@ -186,7 +197,10 @@ export default function CustomServiceLayout({
           </div>
         </div>
 
-        <nav aria-label="Service navigation" className="px-4 sm:px-6 flex gap-1 overflow-x-auto scrollbar-none">
+        <nav
+          aria-label="Service navigation"
+          className="scrollbar-none flex gap-1 overflow-x-auto px-4 sm:px-6"
+        >
           {tabs.map((tab) => {
             const isActive =
               pathname === tab.href ||
@@ -198,14 +212,17 @@ export default function CustomServiceLayout({
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? cn("bg-background border-b-2 border-primary", catMeta?.textClass ?? "text-primary")
+                    ? cn(
+                        "border-primary bg-background border-b-2",
+                        catMeta?.textClass ?? "text-primary",
+                      )
                     : "text-muted-foreground",
                 )}
               >
-                <TabIcon className="h-4 w-4" />
+                <TabIcon className="size-4" />
                 {tab.name}
               </Link>
             );
@@ -221,13 +238,13 @@ export default function CustomServiceLayout({
         type={pendingEnabled ? "confirmation" : "warning"}
         title={
           pendingEnabled
-            ? `Enable ${module.name}`
-            : `Disable ${module.name}`
+            ? `Enable ${serviceModule.name}`
+            : `Disable ${serviceModule.name}`
         }
         description={
           pendingEnabled
-            ? `Are you sure you want to enable ${module.name}? This will make the service available for booking.`
-            : `Are you sure you want to disable ${module.name}? This will prevent new bookings and may affect existing operations.`
+            ? `Are you sure you want to enable ${serviceModule.name}? This will make the service available for booking.`
+            : `Are you sure you want to disable ${serviceModule.name}? This will prevent new bookings and may affect existing operations.`
         }
         actions={{
           primary: {
@@ -250,7 +267,7 @@ export default function CustomServiceLayout({
               id="disable-reason"
               value={disableReason}
               onChange={(e) => setDisableReason(e.target.value)}
-              placeholder={`Please provide a reason for disabling ${module.name}...`}
+              placeholder={`Please provide a reason for disabling ${serviceModule.name}...`}
               rows={3}
             />
           </div>

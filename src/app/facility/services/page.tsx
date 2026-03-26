@@ -238,13 +238,13 @@ export default function ServicesCatalogPage() {
             <CardTitle className="text-sm font-medium">
               Total Services
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {servicesPricingStats.totalServices}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {servicesPricingStats.activeServices} active
             </p>
           </CardContent>
@@ -252,25 +252,25 @@ export default function ServicesCatalogPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Add-Ons</CardTitle>
-            <Layers className="h-4 w-4 text-muted-foreground" />
+            <Layers className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {servicesPricingStats.totalAddOns}
             </div>
-            <p className="text-xs text-muted-foreground">Available extras</p>
+            <p className="text-muted-foreground text-xs">Available extras</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Packages Sold</CardTitle>
-            <Tag className="h-4 w-4 text-muted-foreground" />
+            <Tag className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {servicesPricingStats.packagesSold}
             </div>
-            <p className="text-xs text-muted-foreground">All time</p>
+            <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
         <Card>
@@ -278,13 +278,13 @@ export default function ServicesCatalogPage() {
             <CardTitle className="text-sm font-medium">
               Active Promo Codes
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {servicesPricingStats.activePromoCodes}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {servicesPricingStats.totalPromoRedemptions} redemptions
             </p>
           </CardContent>
@@ -298,19 +298,19 @@ export default function ServicesCatalogPage() {
             variant={activeTab === "services" ? "default" : "outline"}
             onClick={() => setActiveTab("services")}
           >
-            <Package className="mr-2 h-4 w-4" />
+            <Package className="mr-2 size-4" />
             Services ({mainServices.length})
           </Button>
           <Button
             variant={activeTab === "addons" ? "default" : "outline"}
             onClick={() => setActiveTab("addons")}
           >
-            <Layers className="mr-2 h-4 w-4" />
+            <Layers className="mr-2 size-4" />
             Add-Ons ({addOnServices.length})
           </Button>
         </div>
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add {activeTab === "services" ? "Service" : "Add-On"}
         </Button>
       </div>
@@ -326,19 +326,19 @@ export default function ServicesCatalogPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleEdit(item as Service)}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleDeleteClick(item as Service)}
                 className="text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -348,7 +348,7 @@ export default function ServicesCatalogPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingService ? "Edit" : "Add"}{" "}
@@ -500,7 +500,7 @@ export default function ServicesCatalogPage() {
                   <div className="space-y-1">
                     <Label
                       htmlFor="sizeSmall"
-                      className="text-xs text-muted-foreground"
+                      className="text-muted-foreground text-xs"
                     >
                       Small
                     </Label>
@@ -523,7 +523,7 @@ export default function ServicesCatalogPage() {
                   <div className="space-y-1">
                     <Label
                       htmlFor="sizeMedium"
-                      className="text-xs text-muted-foreground"
+                      className="text-muted-foreground text-xs"
                     >
                       Medium
                     </Label>
@@ -546,7 +546,7 @@ export default function ServicesCatalogPage() {
                   <div className="space-y-1">
                     <Label
                       htmlFor="sizeLarge"
-                      className="text-xs text-muted-foreground"
+                      className="text-muted-foreground text-xs"
                     >
                       Large
                     </Label>
@@ -569,7 +569,7 @@ export default function ServicesCatalogPage() {
                   <div className="space-y-1">
                     <Label
                       htmlFor="sizeGiant"
-                      className="text-xs text-muted-foreground"
+                      className="text-muted-foreground text-xs"
                     >
                       Giant
                     </Label>

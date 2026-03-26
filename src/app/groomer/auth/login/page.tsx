@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Mail, Lock, Loader2, Scissors } from "lucide-react";
 import { setCurrentUserId } from "@/lib/role-utils";
@@ -52,7 +58,7 @@ export default function GroomerLoginPage() {
     try {
       // Find groomer by email
       const groomer = stylists.find(
-        (s) => s.email.toLowerCase() === formData.email.toLowerCase()
+        (s) => s.email.toLowerCase() === formData.email.toLowerCase(),
       );
 
       if (!groomer) {
@@ -70,19 +76,21 @@ export default function GroomerLoginPage() {
 
       toast.success("Welcome back!");
       router.push("/groomer/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Invalid email or password");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Invalid email or password",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+    <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-linear-to-br from-pink-500 to-rose-500">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-pink-500 to-rose-500">
               <Scissors className="h-8 w-8 text-white" />
             </div>
           </div>
@@ -96,7 +104,7 @@ export default function GroomerLoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Mail className="text-muted-foreground absolute top-3 left-3 size-4" />
                 <Input
                   id="email"
                   type="email"
@@ -105,19 +113,19 @@ export default function GroomerLoginPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
+                  className={`pl-10 ${errors.email ? "border-destructive" : ""} `}
                   disabled={isLoading}
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
+                <p className="text-destructive text-sm">{errors.email}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-3 left-3 size-4" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -126,24 +134,24 @@ export default function GroomerLoginPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  className={`px-10 ${errors.password ? "border-destructive" : ""} `}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute top-3 right-3"
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
+                <p className="text-destructive text-sm">{errors.password}</p>
               )}
             </div>
 
@@ -159,7 +167,7 @@ export default function GroomerLoginPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
@@ -170,11 +178,9 @@ export default function GroomerLoginPage() {
 
           <div className="mt-6">
             <Separator />
-            <div className="mt-4 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground mt-4 text-center text-sm">
               <p>Demo: Use any groomer email from the system</p>
-              <p className="mt-2 text-xs">
-                Example: jessica@pawsplay.com
-              </p>
+              <p className="mt-2 text-xs">Example: jessica@pawsplay.com</p>
             </div>
           </div>
         </CardContent>

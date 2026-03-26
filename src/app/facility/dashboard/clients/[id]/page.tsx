@@ -150,7 +150,7 @@ export default function ClientDetailPage({
 
   if (!client) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Client not found</h2>
           <Button
@@ -158,7 +158,7 @@ export default function ClientDetailPage({
             className="mt-4"
             onClick={() => router.push("/facility/dashboard/clients")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to Clients
           </Button>
         </div>
@@ -246,17 +246,17 @@ export default function ClientDetailPage({
   const getCommunicationIcon = (type: string) => {
     switch (type) {
       case "email":
-        return <Mail className="h-4 w-4" />;
+        return <Mail className="size-4" />;
       case "sms":
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className="size-4" />;
       case "call":
-        return <PhoneCall className="h-4 w-4" />;
+        return <PhoneCall className="size-4" />;
       case "in-app":
-        return <MessageCircle className="h-4 w-4" />;
+        return <MessageCircle className="size-4" />;
       case "note":
-        return <FileText className="h-4 w-4" />;
+        return <FileText className="size-4" />;
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className="size-4" />;
     }
   };
 
@@ -386,17 +386,17 @@ export default function ClientDetailPage({
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-4 flex-1">
+        <div className="flex flex-1 items-center gap-4">
           {/* Client Avatar */}
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-              <User className="h-8 w-8 text-muted-foreground" />
+            <div className="bg-muted flex h-16 w-16 items-center justify-center overflow-hidden rounded-full">
+              <User className="text-muted-foreground h-8 w-8" />
             </div>
             {isEditing && (
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full"
+                className="absolute -right-1 -bottom-1 h-6 w-6 rounded-full"
               >
                 <Camera className="h-3 w-3" />
               </Button>
@@ -415,17 +415,17 @@ export default function ClientDetailPage({
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-              <Building className="h-4 w-4" />
+            <div className="text-muted-foreground mt-1 flex items-center gap-2">
+              <Building className="size-4" />
               <span>{client.facility}</span>
             </div>
             {clientBanRecord && (
-              <div className="mt-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
-                <p className="text-xs font-medium text-destructive">
+              <div className="border-destructive/20 bg-destructive/10 mt-2 rounded-md border p-2">
+                <p className="text-destructive text-xs font-medium">
                   Ban Reason: {clientBanRecord.reason}
                 </p>
                 {clientBanRecord.notes && (
-                  <p className="text-xs text-destructive/80 mt-1">
+                  <p className="text-destructive/80 mt-1 text-xs">
                     {clientBanRecord.notes}
                   </p>
                 )}
@@ -437,11 +437,11 @@ export default function ClientDetailPage({
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={handleCancel}>
-                <X className="h-4 w-4 mr-1" />
+                <X className="mr-1 size-4" />
                 Cancel
               </Button>
               <Button size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-1" />
+                <Save className="mr-1 size-4" />
                 Save
               </Button>
             </>
@@ -452,15 +452,15 @@ export default function ClientDetailPage({
                 size="sm"
                 onClick={() => setIsEditing(true)}
               >
-                <Edit className="h-4 w-4 mr-1" />
+                <Edit className="mr-1 size-4" />
                 Edit
               </Button>
               <Button variant="outline" size="sm">
-                <Mail className="h-4 w-4 mr-1" />
+                <Mail className="mr-1 size-4" />
                 Email
               </Button>
               <Button variant="outline" size="sm">
-                <PhoneCall className="h-4 w-4 mr-1" />
+                <PhoneCall className="mr-1 size-4" />
                 Call
               </Button>
               <Button
@@ -479,7 +479,7 @@ export default function ClientDetailPage({
                   }
                 }}
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 size-4" />
                 Book
               </Button>
             </>
@@ -493,29 +493,29 @@ export default function ClientDetailPage({
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{totalBookings}</div>
-            <div className="text-xs text-muted-foreground">Total Bookings</div>
+            <div className="text-muted-foreground text-xs">Total Bookings</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{client.pets.length}</div>
-            <div className="text-xs text-muted-foreground">Pets</div>
+            <div className="text-muted-foreground text-xs">Pets</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">${totalSpent}</div>
-            <div className="text-xs text-muted-foreground">Total Spent</div>
+            <div className="text-muted-foreground text-xs">Total Spent</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{clientDocs.length}</div>
-            <div className="text-xs text-muted-foreground">Documents</div>
+            <div className="text-muted-foreground text-xs">Documents</div>
           </CardContent>
         </Card>
         <Card>
@@ -523,7 +523,7 @@ export default function ClientDetailPage({
             <div className="text-2xl font-bold">
               ${totalRetailSpent.toFixed(2)}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               Retail Purchases ({clientRetailPurchases.length})
             </div>
           </CardContent>
@@ -549,8 +549,8 @@ export default function ClientDetailPage({
           <div className="grid grid-cols-3 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <User className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <User className="size-4" />
                   Contact Information
                 </CardTitle>
               </CardHeader>
@@ -618,22 +618,22 @@ export default function ClientDetailPage({
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                      <Mail className="text-muted-foreground size-4" />
                       <span className="text-sm font-medium">
                         {client.email}
                       </span>
                     </div>
                     {client.phone && (
-                      <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
+                      <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                        <Phone className="text-muted-foreground size-4" />
                         <span className="text-sm font-medium">
                           {client.phone}
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                      <Building className="h-4 w-4 text-muted-foreground" />
+                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                      <Building className="text-muted-foreground size-4" />
                       <span className="text-sm font-medium">
                         {client.facility}
                       </span>
@@ -645,8 +645,8 @@ export default function ClientDetailPage({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <MapPin className="size-4" />
                   Address
                 </CardTitle>
               </CardHeader>
@@ -739,20 +739,20 @@ export default function ClientDetailPage({
                     </div>
                   </>
                 ) : client.address ? (
-                  <div className="p-2.5 rounded-lg bg-muted/50">
+                  <div className="bg-muted/50 rounded-lg p-2.5">
                     <p className="text-sm font-medium">
                       {client.address.street}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {client.address.city}, {client.address.state}{" "}
                       {client.address.zip}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {client.address.country}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No address on file
                   </p>
                 )}
@@ -761,8 +761,8 @@ export default function ClientDetailPage({
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <AlertTriangle className="size-4" />
                   Emergency Contact
                 </CardTitle>
               </CardHeader>
@@ -839,26 +839,26 @@ export default function ClientDetailPage({
                   </>
                 ) : client.emergencyContact ? (
                   <>
-                    <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                      <User className="h-4 w-4 text-muted-foreground" />
+                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                      <User className="text-muted-foreground size-4" />
                       <div>
                         <span className="text-sm font-medium">
                           {client.emergencyContact.name}
                         </span>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {client.emergencyContact.relationship}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                      <Phone className="text-muted-foreground size-4" />
                       <span className="text-sm font-medium">
                         {client.emergencyContact.phone}
                       </span>
                     </div>
                     {client.emergencyContact.email && (
-                      <div className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
+                      <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-2.5">
+                        <Mail className="text-muted-foreground size-4" />
                         <span className="text-sm font-medium">
                           {client.emergencyContact.email}
                         </span>
@@ -866,7 +866,7 @@ export default function ClientDetailPage({
                     )}
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No emergency contact on file
                   </p>
                 )}
@@ -877,17 +877,17 @@ export default function ClientDetailPage({
           {/* Communication Preferences */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Bell className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Bell className="size-4" />
                 Communication Preferences
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <div className="text-sm font-medium">Marketing Emails</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Campaigns, promos, newsletters
                     </div>
                   </div>
@@ -895,10 +895,10 @@ export default function ClientDetailPage({
                     Opted In
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <div className="text-sm font-medium">Playdate Alerts</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Friend booking notifications
                     </div>
                   </div>
@@ -906,12 +906,12 @@ export default function ClientDetailPage({
                     Opted In
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
                     <div className="text-sm font-medium">
                       Channel Preference
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       How to reach this customer
                     </div>
                   </div>
@@ -926,8 +926,8 @@ export default function ClientDetailPage({
           {/* Quick Pet Overview */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Heart className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Heart className="size-4" />
                 Pets ({client.pets.length})
               </CardTitle>
               <Button
@@ -946,7 +946,7 @@ export default function ClientDetailPage({
                     return (
                       <div
                         key={pet.id}
-                        className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                        className="bg-muted/50 hover:bg-muted cursor-pointer rounded-lg p-3 transition-colors"
                         onClick={() =>
                           router.push(
                             `/facility/dashboard/clients/${id}/pets/${pet.id}`,
@@ -956,25 +956,25 @@ export default function ClientDetailPage({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             {pet.type === "Dog" ? (
-                              <Dog className="h-4 w-4 text-muted-foreground" />
+                              <Dog className="text-muted-foreground size-4" />
                             ) : (
-                              <Cat className="h-4 w-4 text-muted-foreground" />
+                              <Cat className="text-muted-foreground size-4" />
                             )}
                             <div>
                               <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-sm">
+                                <h4 className="text-sm font-semibold">
                                   {pet.name}
                                 </h4>
                                 {petData.banRecord && (
                                   <Badge
                                     variant="destructive"
-                                    className="text-[10px] px-1 py-0"
+                                    className="px-1 py-0 text-[10px]"
                                   >
                                     Banned
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 {pet.breed} • {pet.age}{" "}
                                 {pet.age === 1 ? "year" : "years"}
                               </p>
@@ -995,7 +995,7 @@ export default function ClientDetailPage({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-muted-foreground py-4 text-center text-sm">
                   No pets registered
                 </p>
               )}
@@ -1005,8 +1005,8 @@ export default function ClientDetailPage({
           {/* Bookings History */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <History className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <History className="size-4" />
                 Bookings History
               </CardTitle>
             </CardHeader>
@@ -1027,11 +1027,11 @@ export default function ClientDetailPage({
                       return (
                         <div
                           key={booking.id}
-                          className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                          className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
                         >
                           <div className="flex items-start gap-3">
                             <div
-                              className={`p-2 rounded-lg ${
+                              className={`rounded-lg p-2 ${
                                 booking.status === "completed"
                                   ? "bg-green-100"
                                   : booking.status === "confirmed"
@@ -1039,23 +1039,23 @@ export default function ClientDetailPage({
                                     : booking.status === "pending"
                                       ? "bg-amber-100"
                                       : "bg-red-100"
-                              }`}
+                              } `}
                             >
                               {booking.status === "completed" && (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <CheckCircle className="size-4 text-green-600" />
                               )}
                               {booking.status === "confirmed" && (
-                                <Clock className="h-4 w-4 text-blue-600" />
+                                <Clock className="size-4 text-blue-600" />
                               )}
                               {booking.status === "pending" && (
-                                <Clock className="h-4 w-4 text-amber-600" />
+                                <Clock className="size-4 text-amber-600" />
                               )}
                               {booking.status === "cancelled" && (
-                                <X className="h-4 w-4 text-red-600" />
+                                <X className="size-4 text-red-600" />
                               )}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm capitalize">
+                              <h4 className="text-sm font-semibold capitalize">
                                 {booking.service}
                                 {pet && (
                                   <span className="text-muted-foreground font-normal">
@@ -1064,23 +1064,23 @@ export default function ClientDetailPage({
                                   </span>
                                 )}
                               </h4>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 {formatDate(booking.startDate)}
                                 {booking.startDate !== booking.endDate &&
                                   ` - ${formatDate(booking.endDate)}`}
                               </p>
                               {booking.specialRequests && (
-                                <p className="text-xs text-muted-foreground italic mt-1">
+                                <p className="text-muted-foreground mt-1 text-xs italic">
                                   {booking.specialRequests}
                                 </p>
                               )}
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-sm">
+                            <p className="text-sm font-semibold">
                               ${booking.totalCost}
                             </p>
-                            <Badge variant="outline" className="text-xs mt-1">
+                            <Badge variant="outline" className="mt-1 text-xs">
                               {booking.paymentStatus}
                             </Badge>
                           </div>
@@ -1088,13 +1088,13 @@ export default function ClientDetailPage({
                       );
                     })}
                   {clientBookings.length > 5 && (
-                    <p className="text-xs text-muted-foreground text-center pt-2">
+                    <p className="text-muted-foreground pt-2 text-center text-xs">
                       Showing 5 of {clientBookings.length} bookings
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-muted-foreground py-4 text-center text-sm">
                   No bookings yet
                 </p>
               )}
@@ -1104,8 +1104,8 @@ export default function ClientDetailPage({
           {/* Purchase History (Retail) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <ShoppingBag className="size-4" />
                 Purchase History
               </CardTitle>
               {clientRetailPurchases.length > 0 && (
@@ -1124,17 +1124,17 @@ export default function ClientDetailPage({
                   {clientRetailPurchases.slice(0, 5).map((txn) => (
                     <div
                       key={txn.id}
-                      className="flex items-start justify-between p-3 rounded-lg border bg-card hover:bg-muted transition-colors"
+                      className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-3 transition-colors"
                     >
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-amber-100">
-                          <Receipt className="h-4 w-4 text-amber-600" />
+                        <div className="rounded-lg bg-amber-100 p-2">
+                          <Receipt className="size-4 text-amber-600" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-sm">
+                          <h4 className="text-sm font-semibold">
                             {txn.transactionNumber}
                           </h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-muted-foreground mt-0.5 text-xs">
                             {txn.items.length} item
                             {txn.items.length !== 1 ? "s" : ""} •{" "}
                             {txn.items
@@ -1143,34 +1143,34 @@ export default function ClientDetailPage({
                               .join(", ")}
                             {txn.items.length > 2 && "..."}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-xs">
                             {formatDateTime(txn.createdAt)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-sm">
+                        <p className="text-sm font-semibold">
                           ${txn.total.toFixed(2)}
                         </p>
-                        <Badge variant="outline" className="text-xs mt-1">
+                        <Badge variant="outline" className="mt-1 text-xs">
                           {txn.paymentMethod}
                         </Badge>
                       </div>
                     </div>
                   ))}
                   {clientRetailPurchases.length > 5 && (
-                    <p className="text-xs text-muted-foreground text-center pt-2">
+                    <p className="text-muted-foreground pt-2 text-center text-xs">
                       Showing 5 of {clientRetailPurchases.length} purchases
                     </p>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <ShoppingBag className="h-10 w-10 mx-auto mb-2 text-muted-foreground opacity-50" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-6 text-center">
+                  <ShoppingBag className="text-muted-foreground mx-auto mb-2 h-10 w-10 opacity-50" />
+                  <p className="text-muted-foreground text-sm">
                     No retail purchases yet
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     Purchases from the store will appear here
                   </p>
                 </div>
@@ -1181,8 +1181,8 @@ export default function ClientDetailPage({
           {/* Customer Notes */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <MessageSquare className="size-4" />
                 Customer Notes
               </CardTitle>
             </CardHeader>
@@ -1200,7 +1200,7 @@ export default function ClientDetailPage({
                 All Pets ({client.pets.length})
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 size-4" />
                 Add Pet
               </Button>
             </CardHeader>
@@ -1212,7 +1212,7 @@ export default function ClientDetailPage({
                     return (
                       <div
                         key={pet.id}
-                        className="p-4 rounded-lg border bg-card hover:bg-muted transition-colors cursor-pointer"
+                        className="bg-card hover:bg-muted cursor-pointer rounded-lg border p-4 transition-colors"
                         onClick={() =>
                           router.push(
                             `/facility/dashboard/clients/${id}/pets/${pet.id}`,
@@ -1220,22 +1220,22 @@ export default function ClientDetailPage({
                         }
                       >
                         <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
+                          <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
                             {pet.type === "Dog" ? (
-                              <Dog className="h-8 w-8 text-muted-foreground" />
+                              <Dog className="text-muted-foreground h-8 w-8" />
                             ) : (
-                              <Cat className="h-8 w-8 text-muted-foreground" />
+                              <Cat className="text-muted-foreground h-8 w-8" />
                             )}
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-semibold text-lg">
+                            <h4 className="text-lg font-semibold">
                               {pet.name}
                             </h4>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {pet.breed} • {pet.age}{" "}
                               {pet.age === 1 ? "year" : "years"}
                             </p>
-                            <div className="flex flex-wrap gap-2 mt-2">
+                            <div className="mt-2 flex flex-wrap gap-2">
                               <Badge variant="secondary">{pet.type}</Badge>
                               <Badge variant="outline">{pet.weight} kg</Badge>
                               {petData.banRecord && (
@@ -1255,8 +1255,8 @@ export default function ClientDetailPage({
                           </div>
                         </div>
                         {petData.banRecord && (
-                          <div className="flex items-start gap-2 mt-3 p-2 rounded bg-destructive/10 text-destructive text-xs">
-                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                          <div className="bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-sm p-2 text-xs">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                             <div>
                               <span className="font-medium">
                                 {petData.banRecord.reason}
@@ -1269,12 +1269,12 @@ export default function ClientDetailPage({
                             </div>
                           </div>
                         )}
-                        <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t">
+                        <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4">
                           <div className="text-center">
                             <div className="text-lg font-bold">
                               {petData.totalStays}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               Stays
                             </div>
                           </div>
@@ -1282,7 +1282,7 @@ export default function ClientDetailPage({
                             <div className="text-lg font-bold">
                               {petData.vaccinations.length}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               Vaccines
                             </div>
                           </div>
@@ -1290,13 +1290,13 @@ export default function ClientDetailPage({
                             <div className="text-lg font-bold">
                               {petData.reports.length}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               Reports
                             </div>
                           </div>
                         </div>
                         {petData.expiredVaccinations.length > 0 && (
-                          <div className="flex items-center gap-2 mt-3 p-2 rounded bg-destructive/10 text-destructive text-xs">
+                          <div className="bg-destructive/10 text-destructive mt-3 flex items-center gap-2 rounded-sm p-2 text-xs">
                             <AlertCircle className="h-3 w-3" />
                             {petData.expiredVaccinations.length} expired
                             vaccination(s)
@@ -1307,13 +1307,13 @@ export default function ClientDetailPage({
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Heart className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No pets registered
                   </p>
                   <Button variant="outline" size="sm" className="mt-4">
-                    <Plus className="h-4 w-4 mr-1" />
+                    <Plus className="mr-1 size-4" />
                     Add First Pet
                   </Button>
                 </div>
@@ -1326,43 +1326,43 @@ export default function ClientDetailPage({
         <TabsContent value="billing" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <DollarSign className="size-4" />
                 Billing & Payments
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Billing Stats */}
               <div className="grid grid-cols-4 gap-4">
-                <div className="p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-green-600">
                     ${totalRevenue.toFixed(2)}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     Total Paid
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-amber-600">
                     ${totalOutstanding.toFixed(2)}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     Outstanding
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold text-green-600">
                     ${totalCredits.toFixed(2)}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     Credit Balance
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 rounded-lg p-3">
                   <div className="text-xl font-bold">
                     {clientPayments.length}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-xs">
                     Transactions
                   </div>
                 </div>
@@ -1370,8 +1370,8 @@ export default function ClientDetailPage({
 
               {/* Outstanding Alert */}
               {outstandingInvoices.length > 0 && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <AlertCircle className="size-4 text-amber-600" />
                   <span className="text-sm font-medium text-amber-800">
                     {outstandingInvoices.length} outstanding invoice(s) totaling
                     ${totalOutstanding.toFixed(2)}
@@ -1408,36 +1408,36 @@ export default function ClientDetailPage({
                         .map((payment) => (
                           <div
                             key={payment.id}
-                            className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                            className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
                           >
                             <div className="flex items-start gap-3">
                               <div
-                                className={`p-2 rounded-lg ${
+                                className={`rounded-lg p-2 ${
                                   payment.status === "completed"
                                     ? "bg-green-100"
                                     : payment.status === "refunded"
                                       ? "bg-red-100"
                                       : "bg-amber-100"
-                                }`}
+                                } `}
                               >
                                 {payment.paymentMethod === "card" && (
-                                  <CreditCard className="h-4 w-4" />
+                                  <CreditCard className="size-4" />
                                 )}
                                 {payment.paymentMethod === "cash" && (
-                                  <Wallet className="h-4 w-4" />
+                                  <Wallet className="size-4" />
                                 )}
                                 {payment.paymentMethod === "gift_card" && (
-                                  <Gift className="h-4 w-4" />
+                                  <Gift className="size-4" />
                                 )}
                                 {!["card", "cash", "gift_card"].includes(
                                   payment.paymentMethod,
-                                ) && <DollarSign className="h-4 w-4" />}
+                                ) && <DollarSign className="size-4" />}
                               </div>
                               <div>
-                                <h4 className="font-semibold text-sm">
+                                <h4 className="text-sm font-semibold">
                                   {payment.description}
                                 </h4>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-muted-foreground mt-1 text-xs">
                                   {formatDate(payment.createdAt)} •{" "}
                                   {payment.paymentMethod.replace("_", " ")}
                                 </p>
@@ -1445,11 +1445,11 @@ export default function ClientDetailPage({
                             </div>
                             <div className="text-right">
                               <div
-                                className={`font-semibold text-sm ${
+                                className={`text-sm font-semibold ${
                                   payment.status === "refunded"
                                     ? "text-red-600"
                                     : "text-green-600"
-                                }`}
+                                } `}
                               >
                                 {payment.status === "refunded" ? "-" : ""}$
                                 {payment.totalAmount.toFixed(2)}
@@ -1462,7 +1462,7 @@ export default function ClientDetailPage({
                                       ? "destructive"
                                       : "secondary"
                                 }
-                                className="text-xs mt-1"
+                                className="mt-1 text-xs"
                               >
                                 {payment.status}
                               </Badge>
@@ -1471,7 +1471,7 @@ export default function ClientDetailPage({
                         ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground py-8 text-center text-sm">
                       No payment history
                     </p>
                   )}
@@ -1499,11 +1499,11 @@ export default function ClientDetailPage({
                           return (
                             <div
                               key={invoice.id}
-                              className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                              className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
                             >
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <h4 className="font-semibold text-sm">
+                                  <h4 className="text-sm font-semibold">
                                     {invoice.invoiceNumber}
                                   </h4>
                                   <Badge
@@ -1518,7 +1518,7 @@ export default function ClientDetailPage({
                                     {invoice.status}
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-muted-foreground mt-1 text-xs">
                                   Issued: {formatDate(invoice.issuedDate)} •
                                   Due: {formatDate(invoice.dueDate)}
                                   {daysOverdue > 0 &&
@@ -1526,11 +1526,11 @@ export default function ClientDetailPage({
                                 </p>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-sm">
+                                <div className="text-sm font-semibold">
                                   ${invoice.total.toFixed(2)}
                                 </div>
                                 {invoice.amountDue > 0 && (
-                                  <div className="flex items-center gap-2 mt-1">
+                                  <div className="mt-1 flex items-center gap-2">
                                     <span className="text-xs text-amber-600">
                                       ${invoice.amountDue.toFixed(2)} due
                                     </span>
@@ -1545,7 +1545,7 @@ export default function ClientDetailPage({
                         })}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground py-8 text-center text-sm">
                       No invoices
                     </p>
                   )}
@@ -1558,7 +1558,7 @@ export default function ClientDetailPage({
                       {clientCredits.map((credit) => (
                         <div
                           key={credit.id}
-                          className="flex items-start justify-between p-4 rounded-lg border bg-card"
+                          className="bg-card flex items-start justify-between rounded-lg border p-4"
                         >
                           <div>
                             <div className="flex items-center gap-2">
@@ -1575,9 +1575,9 @@ export default function ClientDetailPage({
                                 {credit.status}
                               </Badge>
                             </div>
-                            <p className="text-sm mt-1">{credit.description}</p>
+                            <p className="mt-1 text-sm">{credit.description}</p>
                             {credit.expiryDate && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 Expires: {formatDate(credit.expiryDate)}
                               </p>
                             )}
@@ -1586,7 +1586,7 @@ export default function ClientDetailPage({
                             <div className="font-bold text-green-600">
                               ${credit.remainingAmount.toFixed(2)}
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               of ${credit.amount.toFixed(2)}
                             </p>
                           </div>
@@ -1594,7 +1594,7 @@ export default function ClientDetailPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground py-8 text-center text-sm">
                       No credits
                     </p>
                   )}
@@ -1607,11 +1607,11 @@ export default function ClientDetailPage({
                       {clientGiftCards.map((gc) => (
                         <div
                           key={gc.id}
-                          className="flex items-start justify-between p-4 rounded-lg border bg-card"
+                          className="bg-card flex items-start justify-between rounded-lg border p-4"
                         >
                           <div>
                             <div className="flex items-center gap-2">
-                              <Gift className="h-4 w-4 text-muted-foreground" />
+                              <Gift className="text-muted-foreground size-4" />
                               <span className="font-mono text-sm font-medium">
                                 {gc.code}
                               </span>
@@ -1625,7 +1625,7 @@ export default function ClientDetailPage({
                               {gc.status}
                             </Badge>
                             {gc.expiryDate && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 Expires: {formatDate(gc.expiryDate)}
                               </p>
                             )}
@@ -1634,7 +1634,7 @@ export default function ClientDetailPage({
                             <div className="font-bold">
                               ${gc.currentBalance.toFixed(2)}
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               of ${gc.initialAmount.toFixed(2)}
                             </p>
                           </div>
@@ -1642,7 +1642,7 @@ export default function ClientDetailPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground py-8 text-center text-sm">
                       No gift cards
                     </p>
                   )}
@@ -1657,11 +1657,11 @@ export default function ClientDetailPage({
           <Card>
             <CardHeader className="flex flex-row items-start justify-between">
               <div>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <ShoppingBag className="size-4" />
                   Retail Purchase History
                 </CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Food, accessories, and other items purchased from the store
                 </p>
               </div>
@@ -1669,7 +1669,7 @@ export default function ClientDetailPage({
                 <Link
                   href={`/facility/dashboard/services/retail?clientId=${client.id}`}
                 >
-                  <ExternalLink className="h-4 w-4 mr-1" />
+                  <ExternalLink className="mr-1 size-4" />
                   New Sale
                 </Link>
               </Button>
@@ -1677,7 +1677,7 @@ export default function ClientDetailPage({
             <CardContent>
               {clientRetailPurchases.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                     <span className="text-sm font-medium">Total Spent</span>
                     <span className="text-xl font-bold text-amber-600">
                       ${totalRetailSpent.toFixed(2)}
@@ -1687,18 +1687,18 @@ export default function ClientDetailPage({
                     {clientRetailPurchases.map((txn) => (
                       <div
                         key={txn.id}
-                        className="rounded-lg border bg-card overflow-hidden"
+                        className="bg-card overflow-hidden rounded-lg border"
                       >
-                        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+                        <div className="bg-muted/30 flex items-center justify-between border-b p-4">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-amber-100">
-                              <Receipt className="h-4 w-4 text-amber-600" />
+                            <div className="rounded-lg bg-amber-100 p-2">
+                              <Receipt className="size-4 text-amber-600" />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm">
+                              <h4 className="text-sm font-semibold">
                                 {txn.transactionNumber}
                               </h4>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 {formatDateTime(txn.createdAt)} •{" "}
                                 {txn.paymentMethod}
                               </p>
@@ -1714,7 +1714,7 @@ export default function ClientDetailPage({
                           </div>
                         </div>
                         <div className="p-4">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
                             Items
                           </p>
                           <div className="space-y-2">
@@ -1742,7 +1742,7 @@ export default function ClientDetailPage({
                             ))}
                           </div>
                           {txn.discountTotal > 0 && (
-                            <div className="flex justify-between text-sm mt-2 pt-2 border-t text-muted-foreground">
+                            <div className="text-muted-foreground mt-2 flex justify-between border-t pt-2 text-sm">
                               <span>Discount</span>
                               <span>-${txn.discountTotal.toFixed(2)}</span>
                             </div>
@@ -1753,12 +1753,12 @@ export default function ClientDetailPage({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
-                  <h3 className="font-semibold text-lg mb-2">
+                <div className="py-12 text-center">
+                  <ShoppingBag className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-30" />
+                  <h3 className="mb-2 text-lg font-semibold">
                     No retail purchases yet
                   </h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  <p className="text-muted-foreground mx-auto max-w-sm text-sm">
                     When this customer buys food, accessories, or other products
                     from your store, their purchases will appear here.
                   </p>
@@ -1776,7 +1776,7 @@ export default function ClientDetailPage({
                 Documents & Agreements
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="mr-1 size-4" />
                 Upload
               </Button>
             </CardHeader>
@@ -1791,32 +1791,32 @@ export default function ClientDetailPage({
                     return (
                       <div
                         key={doc.id}
-                        className="p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                        className="bg-card hover:bg-muted rounded-lg border p-4 transition-colors"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
+                          <div className="flex flex-1 items-start gap-3">
                             <div
-                              className={`p-2 rounded-lg ${
+                              className={`rounded-lg p-2 ${
                                 isAgreement
                                   ? isDigital
                                     ? "bg-blue-100"
                                     : "bg-green-100"
                                   : "bg-muted"
-                              }`}
+                              } `}
                             >
                               {isAgreement ? (
                                 isDigital ? (
-                                  <Globe className="h-4 w-4 text-blue-600" />
+                                  <Globe className="size-4 text-blue-600" />
                                 ) : (
-                                  <PenLine className="h-4 w-4 text-green-600" />
+                                  <PenLine className="size-4 text-green-600" />
                                 )
                               ) : (
-                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <FileText className="text-muted-foreground size-4" />
                               )}
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-medium text-sm">
+                                <h4 className="text-sm font-medium">
                                   {doc.name}
                                 </h4>
                                 {isAgreement && (
@@ -1830,7 +1830,7 @@ export default function ClientDetailPage({
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="mt-1 flex items-center gap-2">
                                 <Badge
                                   variant="outline"
                                   className="text-xs capitalize"
@@ -1838,11 +1838,11 @@ export default function ClientDetailPage({
                                   {doc.type}
                                 </Badge>
                                 {doc.fileSize && (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     {formatFileSize(doc.fileSize)}
                                   </span>
                                 )}
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   {formatDate(doc.uploadedAt)}
                                 </span>
                                 {doc.expiryDate && (
@@ -1861,7 +1861,7 @@ export default function ClientDetailPage({
 
                               {/* Signature Info for Agreements */}
                               {isAgreement && doc.signedAt && (
-                                <div className="mt-2 p-2 rounded bg-muted/50 text-xs">
+                                <div className="bg-muted/50 mt-2 rounded-sm p-2 text-xs">
                                   <div className="flex items-center gap-4">
                                     <div>
                                       <span className="text-muted-foreground">
@@ -1900,7 +1900,7 @@ export default function ClientDetailPage({
                                             variant="secondary"
                                             className="text-xs"
                                           >
-                                            <CheckCircle className="h-3 w-3 mr-1" />
+                                            <CheckCircle className="mr-1 h-3 w-3" />
                                             {term}
                                           </Badge>
                                         ))}
@@ -1910,7 +1910,7 @@ export default function ClientDetailPage({
                               )}
 
                               {doc.notes && (
-                                <p className="text-xs text-muted-foreground mt-2">
+                                <p className="text-muted-foreground mt-2 text-xs">
                                   {doc.notes}
                                 </p>
                               )}
@@ -1919,11 +1919,11 @@ export default function ClientDetailPage({
                           <div className="flex gap-1">
                             {doc.fileUrl && (
                               <Button variant="ghost" size="sm">
-                                <Download className="h-4 w-4" />
+                                <Download className="size-4" />
                               </Button>
                             )}
                             <Button variant="ghost" size="sm">
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="size-4" />
                             </Button>
                           </div>
                         </div>
@@ -1932,7 +1932,7 @@ export default function ClientDetailPage({
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-muted-foreground py-4 text-center text-sm">
                   No documents uploaded
                 </p>
               )}
@@ -1946,8 +1946,8 @@ export default function ClientDetailPage({
           {clientPlaydateAlerts.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Heart className="size-4" />
                   Playdate Alert History
                 </CardTitle>
               </CardHeader>
@@ -1963,11 +1963,11 @@ export default function ClientDetailPage({
                     .map((alert) => (
                       <div
                         key={alert.id}
-                        className="p-4 rounded-lg border bg-card space-y-2"
+                        className="bg-card space-y-2 rounded-lg border p-4"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-2">
-                            <Heart className="h-4 w-4 text-pink-500" />
+                            <Heart className="size-4 text-pink-500" />
                             <div>
                               <Badge
                                 variant="outline"
@@ -1977,27 +1977,27 @@ export default function ClientDetailPage({
                               </Badge>
                               <Badge
                                 variant={getAlertStatusVariant(alert.status)}
-                                className="text-xs ml-1"
+                                className="ml-1 text-xs"
                               >
                                 {alert.status}
                               </Badge>
                             </div>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             {formatDateTime(alert.sentAt)}
                           </span>
                         </div>
                         <div>
-                          <h4 className="font-semibold text-sm">
+                          <h4 className="text-sm font-semibold">
                             Playdate alert: {alert.triggerPetName} booked
                           </h4>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-sm">
                             {alert.triggerPetName} is coming — alert sent for{" "}
                             {alert.recipientPetName}
                           </p>
                         </div>
                         {alert.reasonSuppressed && (
-                          <div className="text-xs text-muted-foreground pt-2 border-t">
+                          <div className="text-muted-foreground border-t pt-2 text-xs">
                             Suppressed: {alert.reasonSuppressed}
                           </div>
                         )}
@@ -2029,11 +2029,11 @@ export default function ClientDetailPage({
                       .map((call) => (
                         <div
                           key={call.id}
-                          className="p-4 rounded-lg border bg-card space-y-2"
+                          className="bg-card space-y-2 rounded-lg border p-4"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
-                              <PhoneCall className="h-4 w-4" />
+                              <PhoneCall className="size-4" />
                               <div>
                                 <Badge
                                   variant={
@@ -2053,13 +2053,13 @@ export default function ClientDetailPage({
                                         ? "destructive"
                                         : "secondary"
                                   }
-                                  className="text-xs ml-1"
+                                  className="ml-1 text-xs"
                                 >
                                   {call.status}
                                 </Badge>
                               </div>
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {formatDateTime(call.timestamp)}
                             </span>
                           </div>
@@ -2069,21 +2069,21 @@ export default function ClientDetailPage({
                                 Duration: {formatDuration(call.duration)}
                               </div>
                               {call.staffName && (
-                                <div className="text-xs text-muted-foreground mt-1">
+                                <div className="text-muted-foreground mt-1 text-xs">
                                   Handled by: {call.staffName}
                                 </div>
                               )}
                             </div>
                             {call.recordingUrl && (
                               <Button variant="outline" size="sm">
-                                <Play className="h-3 w-3 mr-1" />
+                                <Play className="mr-1 h-3 w-3" />
                                 Play Recording
                               </Button>
                             )}
                           </div>
                           {call.notes && (
-                            <div className="pt-2 border-t">
-                              <p className="text-sm text-muted-foreground">
+                            <div className="border-t pt-2">
+                              <p className="text-muted-foreground text-sm">
                                 {call.notes}
                               </p>
                             </div>
@@ -2092,7 +2092,7 @@ export default function ClientDetailPage({
                       ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No call history
                   </p>
                 )}
@@ -2119,7 +2119,7 @@ export default function ClientDetailPage({
                       .map((comm) => (
                         <div
                           key={comm.id}
-                          className="p-4 rounded-lg border bg-card space-y-2"
+                          className="bg-card space-y-2 rounded-lg border p-4"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-2">
@@ -2134,14 +2134,14 @@ export default function ClientDetailPage({
                                 {comm.direction === "outbound" ? (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs ml-1"
+                                    className="ml-1 text-xs"
                                   >
                                     Sent
                                   </Badge>
                                 ) : (
                                   <Badge
                                     variant="secondary"
-                                    className="text-xs ml-1"
+                                    className="ml-1 text-xs"
                                   >
                                     Received
                                   </Badge>
@@ -2149,27 +2149,27 @@ export default function ClientDetailPage({
                                 {comm.status && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs ml-1"
+                                    className="ml-1 text-xs"
                                   >
                                     {comm.status}
                                   </Badge>
                                 )}
                               </div>
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {formatDateTime(comm.timestamp)}
                             </span>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-sm">
+                            <h4 className="text-sm font-semibold">
                               {comm.subject}
                             </h4>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-sm">
                               {comm.content}
                             </p>
                           </div>
                           {comm.staffName && (
-                            <div className="text-xs text-muted-foreground pt-2 border-t">
+                            <div className="text-muted-foreground border-t pt-2 text-xs">
                               By: {comm.staffName}
                             </div>
                           )}
@@ -2177,7 +2177,7 @@ export default function ClientDetailPage({
                       ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No message history
                   </p>
                 )}
@@ -2189,8 +2189,8 @@ export default function ClientDetailPage({
 
       {/* Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>
-        <DialogContent className="min-w-6xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-6xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-4">
               <DialogTitle className="sr-only">
                 {selectedPet?.name} - Pet Details
@@ -2260,16 +2260,16 @@ function PetDetailContent({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
+          <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-lg">
             {pet.type === "Dog" ? (
-              <Dog className="h-8 w-8 text-muted-foreground" />
+              <Dog className="text-muted-foreground h-8 w-8" />
             ) : (
-              <Cat className="h-8 w-8 text-muted-foreground" />
+              <Cat className="text-muted-foreground h-8 w-8" />
             )}
           </div>
           <div>
             <h2 className="text-2xl font-bold">{pet.name}</h2>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="mt-2 flex items-center gap-2">
               <Badge variant="outline">
                 {pet.type} • {pet.breed}
               </Badge>
@@ -2281,7 +2281,7 @@ function PetDetailContent({
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
-            <FileText className="h-4 w-4 mr-1" />
+            <FileText className="mr-1 size-4" />
             Report
           </Button>
         </div>
@@ -2292,25 +2292,25 @@ function PetDetailContent({
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{totalStays}</div>
-            <div className="text-xs text-muted-foreground">Total Stays</div>
+            <div className="text-muted-foreground text-xs">Total Stays</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{photos.length}</div>
-            <div className="text-xs text-muted-foreground">Photos</div>
+            <div className="text-muted-foreground text-xs">Photos</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{vaccinations.length}</div>
-            <div className="text-xs text-muted-foreground">Vaccinations</div>
+            <div className="text-muted-foreground text-xs">Vaccinations</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{reports.length}</div>
-            <div className="text-xs text-muted-foreground">Report Cards</div>
+            <div className="text-muted-foreground text-xs">Report Cards</div>
           </CardContent>
         </Card>
       </div>
@@ -2319,9 +2319,9 @@ function PetDetailContent({
       {(expiredVaccinations.length > 0 || upcomingVaccinations.length > 0) && (
         <div className="space-y-2">
           {expiredVaccinations.length > 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">
+            <div className="border-destructive/20 bg-destructive/10 flex items-center gap-2 rounded-lg border p-3">
+              <AlertCircle className="text-destructive size-4" />
+              <span className="text-destructive text-sm font-medium">
                 {expiredVaccinations.length} vaccination
                 {expiredVaccinations.length > 1 ? "s" : ""} expired - Update
                 required
@@ -2330,8 +2330,8 @@ function PetDetailContent({
           )}
           {upcomingVaccinations.length > 0 &&
             expiredVaccinations.length === 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                <Clock className="h-4 w-4 text-yellow-600" />
+              <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                <Clock className="size-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-800">
                   {upcomingVaccinations.length} vaccination
                   {upcomingVaccinations.length > 1 ? "s" : ""} expiring within
@@ -2364,30 +2364,30 @@ function PetDetailContent({
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p className="text-muted-foreground text-sm">Type</p>
                   <p className="font-medium">{pet.type}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Breed</p>
+                  <p className="text-muted-foreground text-sm">Breed</p>
                   <p className="font-medium">{pet.breed}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Age</p>
+                  <p className="text-muted-foreground text-sm">Age</p>
                   <p className="font-medium">
                     {pet.age} {pet.age === 1 ? "year" : "years"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Weight</p>
+                  <p className="text-muted-foreground text-sm">Weight</p>
                   <p className="font-medium">{pet.weight} kg</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Color</p>
+                  <p className="text-muted-foreground text-sm">Color</p>
                   <p className="font-medium">{pet.color}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Microchip</p>
-                  <p className="font-medium font-mono text-sm">
+                  <p className="text-muted-foreground text-sm">Microchip</p>
+                  <p className="font-mono text-sm font-medium">
                     {pet.microchip}
                   </p>
                 </div>
@@ -2403,7 +2403,7 @@ function PetDetailContent({
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Allergies</p>
+                <p className="text-muted-foreground mb-1 text-sm">Allergies</p>
                 <Badge
                   variant={
                     pet.allergies !== "None" ? "destructive" : "secondary"
@@ -2413,7 +2413,7 @@ function PetDetailContent({
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm">
                   Special Needs
                 </p>
                 <p className="text-sm">{pet.specialNeeds}</p>
@@ -2430,7 +2430,7 @@ function PetDetailContent({
                 Photo Gallery
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="mr-1 size-4" />
                 Upload Photo
               </Button>
             </CardHeader>
@@ -2440,10 +2440,10 @@ function PetDetailContent({
                   {photos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="relative group cursor-pointer"
+                      className="group relative cursor-pointer"
                     >
-                      <div className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
+                        <ImageIcon className="text-muted-foreground h-12 w-12" />
                       </div>
                       {photo.isPrimary && (
                         <Badge className="absolute top-2 right-2 text-xs">
@@ -2452,11 +2452,11 @@ function PetDetailContent({
                       )}
                       <div className="mt-2">
                         {photo.caption && (
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-muted-foreground truncate text-xs">
                             {photo.caption}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {formatDate(photo.uploadedAt)}
                         </p>
                       </div>
@@ -2464,9 +2464,9 @@ function PetDetailContent({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No photos yet</p>
+                <div className="py-8 text-center">
+                  <Camera className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">No photos yet</p>
                 </div>
               )}
             </CardContent>
@@ -2493,7 +2493,7 @@ function PetDetailContent({
                 Vaccination Records
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="mr-1 size-4" />
                 Add Record
               </Button>
             </CardHeader>
@@ -2511,17 +2511,17 @@ function PetDetailContent({
                       return (
                         <div
                           key={vacc.id}
-                          className="p-4 rounded-lg border bg-card space-y-2"
+                          className="bg-card space-y-2 rounded-lg border p-4"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex items-start gap-3">
-                              <Syringe className="h-4 w-4 mt-1 text-muted-foreground" />
+                              <Syringe className="text-muted-foreground mt-1 size-4" />
                               <div className="flex-1">
-                                <h4 className="font-semibold text-sm">
+                                <h4 className="text-sm font-semibold">
                                   {vacc.vaccineName}
                                 </h4>
                                 {vacc.veterinarianName && (
-                                  <p className="text-xs text-muted-foreground mt-1">
+                                  <p className="text-muted-foreground mt-1 text-xs">
                                     Dr. {vacc.veterinarianName}
                                     {vacc.veterinaryClinic &&
                                       ` • ${vacc.veterinaryClinic}`}
@@ -2563,7 +2563,7 @@ function PetDetailContent({
                             </div>
                           </div>
                           {vacc.notes && (
-                            <p className="text-xs text-muted-foreground pt-2 border-t">
+                            <p className="text-muted-foreground border-t pt-2 text-xs">
                               {vacc.notes}
                             </p>
                           )}
@@ -2571,9 +2571,9 @@ function PetDetailContent({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="w-full mt-2"
+                              className="mt-2 w-full"
                             >
-                              <Download className="h-3 w-3 mr-1" />
+                              <Download className="mr-1 h-3 w-3" />
                               Download Certificate
                             </Button>
                           )}
@@ -2582,9 +2582,9 @@ function PetDetailContent({
                     })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Syringe className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Syringe className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No vaccination records
                   </p>
                 </div>
@@ -2613,11 +2613,11 @@ function PetDetailContent({
                     .map((booking) => (
                       <div
                         key={booking.id}
-                        className="p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                        className="bg-card hover:bg-muted rounded-lg border p-4 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="mb-2 flex items-start justify-between">
                           <div>
-                            <h4 className="font-semibold text-sm capitalize flex items-center gap-2">
+                            <h4 className="flex items-center gap-2 text-sm font-semibold capitalize">
                               {booking.service}
                               {booking.status === "completed" && (
                                 <CheckCircle className="h-3 w-3 text-green-500" />
@@ -2626,23 +2626,23 @@ function PetDetailContent({
                                 <Clock className="h-3 w-3 text-yellow-500" />
                               )}
                             </h4>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               {formatDate(booking.startDate)}
                               {booking.startDate !== booking.endDate &&
                                 ` - ${formatDate(booking.endDate)}`}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-sm">
+                            <p className="text-sm font-semibold">
                               ${booking.totalCost}
                             </p>
-                            <Badge variant="outline" className="text-xs mt-1">
+                            <Badge variant="outline" className="mt-1 text-xs">
                               {booking.paymentStatus}
                             </Badge>
                           </div>
                         </div>
                         {booking.specialRequests && (
-                          <p className="text-xs text-muted-foreground italic pt-2 border-t">
+                          <p className="text-muted-foreground border-t pt-2 text-xs italic">
                             {booking.specialRequests}
                           </p>
                         )}
@@ -2650,9 +2650,9 @@ function PetDetailContent({
                     ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <History className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <History className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No stay history
                   </p>
                 </div>
@@ -2677,7 +2677,7 @@ function PetDetailContent({
                         <CardTitle className="text-base capitalize">
                           {report.serviceType} Report
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-sm">
                           {formatDate(report.date)} • By {report.createdBy}
                         </p>
                       </div>
@@ -2690,15 +2690,15 @@ function PetDetailContent({
                     {/* Activities */}
                     {report.activities.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Activity className="h-4 w-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                          <Activity className="size-4" />
                           Activities
                         </h4>
                         <ul className="space-y-1">
                           {report.activities.map((activity, idx) => (
                             <li
                               key={idx}
-                              className="text-sm text-muted-foreground flex items-start gap-2"
+                              className="text-muted-foreground flex items-start gap-2 text-sm"
                             >
                               <span className="text-primary mt-1">•</span>
                               {activity}
@@ -2711,21 +2711,21 @@ function PetDetailContent({
                     {/* Meals */}
                     {report.meals.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Utensils className="h-4 w-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                          <Utensils className="size-4" />
                           Meals
                         </h4>
                         <div className="space-y-2">
                           {report.meals.map((meal, idx) => (
                             <div
                               key={idx}
-                              className="flex items-center justify-between p-2 rounded bg-muted/50"
+                              className="bg-muted/50 flex items-center justify-between rounded-sm p-2"
                             >
                               <div>
                                 <p className="text-sm font-medium">
                                   {meal.time} - {meal.food}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                   {meal.amount}
                                 </p>
                               </div>
@@ -2741,8 +2741,8 @@ function PetDetailContent({
                     {/* Potty Breaks */}
                     {report.pottyBreaks.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                          <CheckCircle className="size-4" />
                           Potty Breaks
                         </h4>
                         <div className="flex flex-wrap gap-2">
@@ -2762,17 +2762,17 @@ function PetDetailContent({
                     {/* Photos */}
                     {report.photos.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                          <Camera className="h-4 w-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                          <Camera className="size-4" />
                           Photos ({report.photos.length})
                         </h4>
                         <div className="grid grid-cols-4 gap-2">
                           {report.photos.map((photo, idx) => (
                             <div
                               key={idx}
-                              className="aspect-square rounded-lg bg-muted flex items-center justify-center"
+                              className="bg-muted flex aspect-square items-center justify-center rounded-lg"
                             >
-                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                              <ImageIcon className="text-muted-foreground h-8 w-8" />
                             </div>
                           ))}
                         </div>
@@ -2781,18 +2781,18 @@ function PetDetailContent({
 
                     {/* Staff Notes */}
                     {report.staffNotes && (
-                      <div className="pt-3 border-t">
-                        <h4 className="text-sm font-semibold mb-1">
+                      <div className="border-t pt-3">
+                        <h4 className="mb-1 text-sm font-semibold">
                           Staff Notes
                         </h4>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {report.staffNotes}
                         </p>
                       </div>
                     )}
 
                     {report.sentToOwner && report.sentAt && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                      <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
                         <CheckCircle className="h-3 w-3" />
                         Sent to owner on {formatDateTime(report.sentAt)}
                       </div>
@@ -2802,9 +2802,9 @@ function PetDetailContent({
               ))
           ) : (
             <Card>
-              <CardContent className="text-center py-8">
-                <Award className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="py-8 text-center">
+                <Award className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                <p className="text-muted-foreground text-sm">
                   No report cards yet
                 </p>
               </CardContent>

@@ -8,13 +8,13 @@ export default function CreateCustomServicePage() {
   return (
     <div>
       {/* Breadcrumb header */}
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div className="mx-auto max-w-4xl flex items-center gap-2">
+      <div className="border-border bg-card border-b px-4 py-3">
+        <div className="mx-auto flex max-w-4xl items-center gap-2">
           <Link
             href="/facility/dashboard/services/custom"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
             Custom Services
           </Link>
           <span className="text-muted-foreground">/</span>

@@ -69,13 +69,13 @@ export function FinancialReports() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${currentMonth.totalRevenue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               <span
                 className={
                   monthOverMonthGrowth > 0 ? "text-green-600" : "text-red-600"
@@ -94,13 +94,13 @@ export function FinancialReports() {
             <CardTitle className="text-sm font-medium">
               Active Facilities
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {currentMonth.activeFacilities}
             </div>
-            <p className="text-xs text-muted-foreground">Revenue-generating</p>
+            <p className="text-muted-foreground text-xs">Revenue-generating</p>
           </CardContent>
         </Card>
 
@@ -109,13 +109,13 @@ export function FinancialReports() {
             <CardTitle className="text-sm font-medium">
               Avg Transaction
             </CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${averageTransactionValue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Per successful transaction
             </p>
           </CardContent>
@@ -124,16 +124,16 @@ export function FinancialReports() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${monthOverMonthGrowth > 0 ? "text-green-600" : "text-red-600"}`}
+              className={`text-2xl font-bold ${monthOverMonthGrowth > 0 ? `text-green-600` : `text-red-600`} `}
             >
               {monthOverMonthGrowth > 0 ? "+" : ""}
               {monthOverMonthGrowth.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground">Month-over-month</p>
+            <p className="text-muted-foreground text-xs">Month-over-month</p>
           </CardContent>
         </Card>
       </div>
@@ -217,7 +217,7 @@ export function FinancialReports() {
                 <div className="text-3xl font-bold">
                   ${currentMonth.subscriptionRevenue.toLocaleString()}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-sm">
                   {(
                     (currentMonth.subscriptionRevenue /
                       currentMonth.totalRevenue) *
@@ -235,7 +235,7 @@ export function FinancialReports() {
                 <div className="text-3xl font-bold">
                   ${currentMonth.transactionRevenue.toLocaleString()}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-sm">
                   {(
                     (currentMonth.transactionRevenue /
                       currentMonth.totalRevenue) *
@@ -253,7 +253,7 @@ export function FinancialReports() {
                 <div className="text-3xl font-bold">
                   ${currentMonth.moduleRevenue.toLocaleString()}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-sm">
                   {(
                     (currentMonth.moduleRevenue / currentMonth.totalRevenue) *
                     100
@@ -318,7 +318,7 @@ export function FinancialReports() {
               <div className="space-y-4">
                 {facilityPerformance.map((facility) => (
                   <div key={facility.name}>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2 flex items-center justify-between">
                       <span className="text-sm font-medium">
                         {facility.name}
                       </span>
@@ -327,22 +327,24 @@ export function FinancialReports() {
                           facility.growth > 0
                             ? "text-green-600"
                             : "text-red-600"
-                        }`}
+                        } `}
                       >
                         {facility.growth > 0 ? "+" : ""}
                         {facility.growth}%
                       </span>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
                         <div
-                          className={`h-full ${facility.growth > 0 ? "bg-green-500" : "bg-red-500"}`}
+                          className={`h-full ${
+                            facility.growth > 0 ? `bg-green-500` : `bg-red-500`
+                          } `}
                           style={{
                             width: `${Math.min(Math.abs(facility.growth) * 10, 100)}%`,
                           }}
                         />
                       </div>
-                      <span className="text-sm text-muted-foreground w-24 text-right">
+                      <span className="text-muted-foreground w-24 text-right text-sm">
                         ${facility.revenue.toLocaleString()}
                       </span>
                     </div>
@@ -383,18 +385,18 @@ export function FinancialReports() {
                       (item.value / currentMonth.totalRevenue) * 100;
                     return (
                       <div key={item.label}>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="mb-2 flex items-center justify-between">
                           <span className="text-sm font-medium">
                             {item.label}
                           </span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             ${item.value.toLocaleString()} (
                             {percentage.toFixed(1)}%)
                           </span>
                         </div>
-                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                        <div className="bg-muted h-3 overflow-hidden rounded-full">
                           <div
-                            className={`h-full ${item.color}`}
+                            className={`h-full ${item.color} `}
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -412,7 +414,7 @@ export function FinancialReports() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <p className="text-sm font-medium">
                         Total Revenue (Current)
@@ -423,7 +425,7 @@ export function FinancialReports() {
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-600" />
                   </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <p className="text-sm font-medium">Growth Rate</p>
                       <p className="text-2xl font-bold text-green-600">
@@ -431,7 +433,7 @@ export function FinancialReports() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
                     <div>
                       <p className="text-sm font-medium">Active Facilities</p>
                       <p className="text-2xl font-bold">

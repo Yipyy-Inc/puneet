@@ -3,15 +3,19 @@
 import { useState, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -28,7 +32,6 @@ import {
   Bell,
   Save,
   Edit,
-  CheckCircle2,
   AlertCircle,
   Loader2,
 } from "lucide-react";
@@ -38,14 +41,14 @@ import { toast } from "sonner";
 const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerSettingsPage() {
-  const { selectedFacility } = useCustomerFacility();
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Get customer data
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
 
   const [profileData, setProfileData] = useState({
@@ -108,7 +111,6 @@ export default function CustomerSettingsPage() {
     return customer?.pets || [];
   }, [customer]);
 
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -151,9 +153,13 @@ export default function CustomerSettingsPage() {
       // This should update the customer profile and sync to all facilities
       await updateCustomerProfile(profileData, notificationPreferences);
       setIsEditing(false);
-      toast.success("Profile updated successfully! Changes will reflect on the facility side.");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+      toast.success(
+        "Profile updated successfully! Changes will reflect on the facility side.",
+      );
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update profile",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -189,8 +195,8 @@ export default function CustomerSettingsPage() {
 
   // Placeholder function - replace with actual API call
   const updateCustomerProfile = async (
-    data: typeof profileData,
-    notifications: typeof notificationPreferences
+    _data: typeof profileData,
+    _notifications: typeof notificationPreferences,
   ) => {
     // TODO: API call to update customer profile
     // This should sync to all facilities automatically
@@ -198,8 +204,8 @@ export default function CustomerSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -210,23 +216,27 @@ export default function CustomerSettingsPage() {
           </div>
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="mr-2 size-4" />
               Edit Profile
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="mr-2 size-4" />
                     Save Changes
                   </>
                 )}
@@ -243,11 +253,12 @@ export default function CustomerSettingsPage() {
               Profile Information
             </CardTitle>
             <CardDescription>
-              Your personal information. Updates will reflect on the facility side automatically.
+              Your personal information. Updates will reflect on the facility
+              side automatically.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">
                   Full Name <span className="text-destructive">*</span>
@@ -262,7 +273,7 @@ export default function CustomerSettingsPage() {
                   aria-invalid={errors.name ? "true" : "false"}
                 />
                 {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
+                  <p className="text-destructive text-sm">{errors.name}</p>
                 )}
               </div>
 
@@ -271,7 +282,7 @@ export default function CustomerSettingsPage() {
                   Email <span className="text-destructive">*</span>
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     id="email"
                     type="email"
@@ -285,14 +296,14 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
+                  <p className="text-destructive text-sm">{errors.email}</p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     id="phone"
                     type="tel"
@@ -307,7 +318,7 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
                 {errors.phone && (
-                  <p className="text-sm text-destructive">{errors.phone}</p>
+                  <p className="text-destructive text-sm">{errors.phone}</p>
                 )}
               </div>
             </div>
@@ -317,11 +328,11 @@ export default function CustomerSettingsPage() {
             {/* Address */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <MapPin className="text-muted-foreground h-5 w-5" />
                 <Label className="text-base font-semibold">Address</Label>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2 space-y-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="street">Street Address</Label>
                   <Input
                     id="street"
@@ -329,7 +340,10 @@ export default function CustomerSettingsPage() {
                     onChange={(e) =>
                       setProfileData({
                         ...profileData,
-                        address: { ...profileData.address, street: e.target.value },
+                        address: {
+                          ...profileData.address,
+                          street: e.target.value,
+                        },
                       })
                     }
                     disabled={!isEditing}
@@ -345,7 +359,10 @@ export default function CustomerSettingsPage() {
                     onChange={(e) =>
                       setProfileData({
                         ...profileData,
-                        address: { ...profileData.address, city: e.target.value },
+                        address: {
+                          ...profileData.address,
+                          city: e.target.value,
+                        },
                       })
                     }
                     disabled={!isEditing}
@@ -361,7 +378,10 @@ export default function CustomerSettingsPage() {
                     onChange={(e) =>
                       setProfileData({
                         ...profileData,
-                        address: { ...profileData.address, state: e.target.value },
+                        address: {
+                          ...profileData.address,
+                          state: e.target.value,
+                        },
                       })
                     }
                     disabled={!isEditing}
@@ -377,7 +397,10 @@ export default function CustomerSettingsPage() {
                     onChange={(e) =>
                       setProfileData({
                         ...profileData,
-                        address: { ...profileData.address, zip: e.target.value },
+                        address: {
+                          ...profileData.address,
+                          zip: e.target.value,
+                        },
                       })
                     }
                     disabled={!isEditing}
@@ -416,10 +439,12 @@ export default function CustomerSettingsPage() {
             {/* Emergency Contact */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <UserCircle className="h-5 w-5 text-muted-foreground" />
-                <Label className="text-base font-semibold">Emergency Contact</Label>
+                <UserCircle className="text-muted-foreground h-5 w-5" />
+                <Label className="text-base font-semibold">
+                  Emergency Contact
+                </Label>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="emergencyName">
                     Name <span className="text-destructive">*</span>
@@ -437,10 +462,12 @@ export default function CustomerSettingsPage() {
                       })
                     }
                     disabled={!isEditing}
-                    aria-invalid={errors.emergencyContactName ? "true" : "false"}
+                    aria-invalid={
+                      errors.emergencyContactName ? "true" : "false"
+                    }
                   />
                   {errors.emergencyContactName && (
-                    <p className="text-sm text-destructive">
+                    <p className="text-destructive text-sm">
                       {errors.emergencyContactName}
                     </p>
                   )}
@@ -480,7 +507,7 @@ export default function CustomerSettingsPage() {
                     Phone <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="emergencyPhone"
                       type="tel"
@@ -497,11 +524,13 @@ export default function CustomerSettingsPage() {
                       disabled={!isEditing}
                       className="pl-9"
                       placeholder="(555) 123-4567"
-                      aria-invalid={errors.emergencyContactPhone ? "true" : "false"}
+                      aria-invalid={
+                        errors.emergencyContactPhone ? "true" : "false"
+                      }
                     />
                   </div>
                   {errors.emergencyContactPhone && (
-                    <p className="text-sm text-destructive">
+                    <p className="text-destructive text-sm">
                       {errors.emergencyContactPhone}
                     </p>
                   )}
@@ -510,7 +539,7 @@ export default function CustomerSettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="emergencyEmail">Email (Optional)</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="emergencyEmail"
                       type="email"
@@ -543,16 +572,16 @@ export default function CustomerSettingsPage() {
               Pick-up & Drop-off Instructions
             </CardTitle>
             <CardDescription>
-              Let the facility know who is allowed to pick up your pets and any special
-              instructions for boarding or daycare.
+              Let the facility know who is allowed to pick up your pets and any
+              special instructions for boarding or daycare.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="authorizedPickup">
                   Who is allowed to pick up?{" "}
-                  <span className="text-xs text-muted-foreground font-normal">
+                  <span className="text-muted-foreground text-xs font-normal">
                     (Names of family, friends, pet transport services)
                   </span>
                 </Label>
@@ -574,7 +603,9 @@ export default function CustomerSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pickupNotes">Additional instructions (optional)</Label>
+                <Label htmlFor="pickupNotes">
+                  Additional instructions (optional)
+                </Label>
                 <Textarea
                   id="pickupNotes"
                   placeholder="Gate code, parking details, which door to use, special handling notes..."
@@ -593,9 +624,9 @@ export default function CustomerSettingsPage() {
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Staff will use this information at check-in and pick-up. Make sure the people you
-              list bring a valid ID when picking up your pet.
+            <p className="text-muted-foreground text-xs">
+              Staff will use this information at check-in and pick-up. Make sure
+              the people you list bring a valid ID when picking up your pet.
             </p>
           </CardContent>
         </Card>
@@ -614,15 +645,15 @@ export default function CustomerSettingsPage() {
           <CardContent className="space-y-6">
             {/* Email Notifications */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Mail className="h-5 w-5 text-muted-foreground" />
+              <div className="mb-4 flex items-center gap-2">
+                <Mail className="text-muted-foreground h-5 w-5" />
                 <h3 className="text-lg font-semibold">Email Notifications</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Booking Confirmations</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Receive emails when bookings are confirmed or updated
                     </p>
                   </div>
@@ -638,10 +669,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Booking Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       24-hour reminder before appointments
                     </p>
                   </div>
@@ -657,10 +688,12 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
-                    <Label className="text-base">Check-In/Out Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <Label className="text-base">
+                      Check-In/Out Notifications
+                    </Label>
+                    <p className="text-muted-foreground text-sm">
                       Notify when your pet is checked in or out
                     </p>
                   </div>
@@ -676,10 +709,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Report Cards</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Daily updates and photos from the facility
                     </p>
                   </div>
@@ -695,10 +728,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Payment Receipts</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Email receipts after payments
                     </p>
                   </div>
@@ -714,10 +747,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Marketing Emails</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Promotions, special offers, and facility news
                     </p>
                   </div>
@@ -741,34 +774,44 @@ export default function CustomerSettingsPage() {
             {customerPets.length > 0 && (
               <>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <UserCircle className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold">Per-Pet Report Cards</h3>
+                  <div className="mb-2 flex items-center gap-2">
+                    <UserCircle className="text-muted-foreground h-5 w-5" />
+                    <h3 className="text-lg font-semibold">
+                      Per-Pet Report Cards
+                    </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Choose which pets should receive report cards and photo updates. This is
-                    optional and can be different for each pet.
+                  <p className="text-muted-foreground mb-2 text-sm">
+                    Choose which pets should receive report cards and photo
+                    updates. This is optional and can be different for each pet.
                   </p>
                   <div className="grid gap-3 md:grid-cols-2">
                     {customerPets.map((pet) => (
                       <div
                         key={pet.id}
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors"
+                        className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-3 transition-colors"
                       >
                         <div className="space-y-0.5">
-                          <p className="text-sm font-medium flex items-center gap-2">
-                            {pet.type === "Dog" ? "🐶" : pet.type === "Cat" ? "🐱" : "🐾"} {pet.name}
+                          <p className="flex items-center gap-2 text-sm font-medium">
+                            {pet.type === "Dog"
+                              ? "🐶"
+                              : pet.type === "Cat"
+                                ? "🐱"
+                                : "🐾"}{" "}
+                            {pet.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {pet.breed} • Report cards{" "}
-                            {notificationPreferences.perPetReportCards[pet.id] ?? true
+                            {(notificationPreferences.perPetReportCards[
+                              pet.id
+                            ] ?? true)
                               ? "enabled"
                               : "disabled"}
                           </p>
                         </div>
                         <Switch
                           checked={
-                            notificationPreferences.perPetReportCards[pet.id] ?? true
+                            notificationPreferences.perPetReportCards[pet.id] ??
+                            true
                           }
                           onCheckedChange={(checked) =>
                             setNotificationPreferences({
@@ -792,15 +835,15 @@ export default function CustomerSettingsPage() {
 
             {/* SMS Notifications */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Phone className="h-5 w-5 text-muted-foreground" />
+              <div className="mb-4 flex items-center gap-2">
+                <Phone className="text-muted-foreground h-5 w-5" />
                 <h3 className="text-lg font-semibold">SMS Notifications</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Booking Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Text reminders before appointments
                     </p>
                   </div>
@@ -816,10 +859,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Emergency Alerts</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Critical alerts and urgent notifications
                     </p>
                   </div>
@@ -835,11 +878,12 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Marketing SMS</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Occasional offers and updates by text. Standard message and data rates may apply.
+                    <p className="text-muted-foreground text-sm">
+                      Occasional offers and updates by text. Standard message
+                      and data rates may apply.
                     </p>
                   </div>
                   <Switch
@@ -854,10 +898,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Check-In/Out</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Text when your pet is checked in or out
                     </p>
                   </div>
@@ -879,15 +923,15 @@ export default function CustomerSettingsPage() {
 
             {/* Push Notifications */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Bell className="h-5 w-5 text-muted-foreground" />
+              <div className="mb-4 flex items-center gap-2">
+                <Bell className="text-muted-foreground h-5 w-5" />
                 <h3 className="text-lg font-semibold">Push Notifications</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Booking Confirmations</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Push notifications for booking updates
                     </p>
                   </div>
@@ -903,10 +947,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Booking Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Push reminders before appointments
                     </p>
                   </div>
@@ -922,10 +966,10 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Report Cards</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Daily updates and photos
                     </p>
                   </div>
@@ -941,11 +985,11 @@ export default function CustomerSettingsPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                   <div className="space-y-0.5">
                     <Label className="text-base">Pet Updates</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Real-time updates during your pet's stay
+                    <p className="text-muted-foreground text-sm">
+                      Real-time updates during your pet&apos;s stay
                     </p>
                   </div>
                   <Switch
@@ -968,18 +1012,21 @@ export default function CustomerSettingsPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {/* Quiet Hours */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Bell className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">Quiet Hours (SMS & Push)</h3>
+                <div className="mb-1 flex items-center gap-2">
+                  <Bell className="text-muted-foreground h-5 w-5" />
+                  <h3 className="text-lg font-semibold">
+                    Quiet Hours (SMS & Push)
+                  </h3>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  During quiet hours, non‑urgent SMS and push notifications will be held and sent
-                  after your quiet period ends. Emergency alerts may still be delivered.
+                <p className="text-muted-foreground text-sm">
+                  During quiet hours, non‑urgent SMS and push notifications will
+                  be held and sent after your quiet period ends. Emergency
+                  alerts may still be delivered.
                 </p>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
                     <Label className="text-sm">Enable Quiet Hours</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Temporarily mute reminders and updates overnight.
                     </p>
                   </div>
@@ -1032,15 +1079,16 @@ export default function CustomerSettingsPage() {
 
               {/* Language Preference */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <UserCircle className="h-5 w-5 text-muted-foreground" />
+                <div className="mb-1 flex items-center gap-2">
+                  <UserCircle className="text-muted-foreground h-5 w-5" />
                   <h3 className="text-lg font-semibold">Language Preference</h3>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Choose the language you prefer for emails, SMS (where supported), and in‑app
-                  communications for facilities that support multiple languages.
+                <p className="text-muted-foreground text-sm">
+                  Choose the language you prefer for emails, SMS (where
+                  supported), and in‑app communications for facilities that
+                  support multiple languages.
                 </p>
-                <div className="space-y-2 max-w-xs">
+                <div className="max-w-xs space-y-2">
                   <Label htmlFor="language">Language</Label>
                   <Select
                     value={notificationPreferences.language}
@@ -1073,14 +1121,15 @@ export default function CustomerSettingsPage() {
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+                <AlertCircle className="text-primary mt-0.5 h-5 w-5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium mb-1">
+                  <p className="mb-1 text-sm font-medium">
                     Changes sync automatically
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Any updates you make will automatically reflect on the facility side.
-                    The facility staff will see your updated information immediately.
+                  <p className="text-muted-foreground text-sm">
+                    Any updates you make will automatically reflect on the
+                    facility side. The facility staff will see your updated
+                    information immediately.
                   </p>
                 </div>
               </div>

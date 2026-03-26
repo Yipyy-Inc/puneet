@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,8 +39,14 @@ const ENERGY_LEVELS = [
 ] as const;
 
 const SOCIALIZATION_OPTIONS: {
-  withDogs: { value: BehaviorNotes["socialization"]["withDogs"]; label: string }[];
-  withHumans: { value: BehaviorNotes["socialization"]["withHumans"]; label: string }[];
+  withDogs: {
+    value: BehaviorNotes["socialization"]["withDogs"];
+    label: string;
+  }[];
+  withHumans: {
+    value: BehaviorNotes["socialization"]["withHumans"];
+    label: string;
+  }[];
 } = {
   withDogs: [
     { value: "friendly", label: "Friendly" },
@@ -96,7 +108,9 @@ export function BehaviorSection({
 
   const handleRemoveTrigger = (trigger: string) => {
     handleUpdate({
-      anxietyTriggers: (behavior.anxietyTriggers || []).filter((t) => t !== trigger),
+      anxietyTriggers: (behavior.anxietyTriggers || []).filter(
+        (t) => t !== trigger,
+      ),
     });
   };
 
@@ -105,7 +119,7 @@ export function BehaviorSection({
       <CardHeader>
         <CardTitle>Behavior & Special Notes</CardTitle>
         <CardDescription>
-          Help us understand {formData.petName}'s behavior and preferences
+          Help us understand {formData.petName}&apos;s behavior and preferences
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -115,7 +129,9 @@ export function BehaviorSection({
             {ENERGY_LEVELS.map((level) => (
               <Button
                 key={level.value}
-                variant={behavior.energyLevel === level.value ? "default" : "outline"}
+                variant={
+                  behavior.energyLevel === level.value ? "default" : "outline"
+                }
                 onClick={() => handleUpdate({ energyLevel: level.value })}
                 className="w-full"
               >
@@ -134,14 +150,17 @@ export function BehaviorSection({
                 type="button"
                 onClick={() =>
                   handleUpdate({
-                    socialization: { ...behavior.socialization, withDogs: option.value },
+                    socialization: {
+                      ...behavior.socialization,
+                      withDogs: option.value,
+                    },
                   })
                 }
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                   behavior.socialization.withDogs === option.value
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-input hover:bg-accent"
-                }`}
+                    : `border-input hover:bg-accent`
+                } `}
               >
                 {option.label}
               </button>
@@ -155,14 +174,17 @@ export function BehaviorSection({
                 type="button"
                 onClick={() =>
                   handleUpdate({
-                    socialization: { ...behavior.socialization, withHumans: option.value },
+                    socialization: {
+                      ...behavior.socialization,
+                      withHumans: option.value,
+                    },
                   })
                 }
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                   behavior.socialization.withHumans === option.value
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-input hover:bg-accent"
-                }`}
+                    : `border-input hover:bg-accent`
+                } `}
               >
                 {option.label}
               </button>
@@ -172,13 +194,17 @@ export function BehaviorSection({
 
         <div className="space-y-2">
           <Label>Anxiety Triggers (optional)</Label>
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="mb-2 flex flex-wrap gap-2">
             {behavior.anxietyTriggers?.map((trigger) => (
-              <Badge key={trigger} variant="secondary" className="flex items-center gap-1">
+              <Badge
+                key={trigger}
+                variant="secondary"
+                className="flex items-center gap-1"
+              >
                 {trigger}
                 <button
                   onClick={() => handleRemoveTrigger(trigger)}
-                  className="ml-1 hover:bg-muted rounded"
+                  className="hover:bg-muted ml-1 rounded-sm"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -201,7 +227,7 @@ export function BehaviorSection({
               Add
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {COMMON_ANXIETY_TRIGGERS.map((trigger) => (
               <Button
                 key={trigger}
@@ -222,7 +248,9 @@ export function BehaviorSection({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-muted-foreground">Anything else? (optional)</Label>
+          <Label className="text-muted-foreground">
+            Anything else? (optional)
+          </Label>
           <Textarea
             value={behavior.specialNotes || ""}
             onChange={(e) => handleUpdate({ specialNotes: e.target.value })}
@@ -235,9 +263,7 @@ export function BehaviorSection({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? "Review" : "Next"}
-          </Button>
+          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
         </div>
       </CardContent>
     </Card>

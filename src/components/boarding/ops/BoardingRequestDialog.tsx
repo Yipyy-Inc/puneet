@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import { ColumnDef } from "@/components/ui/DataTable";
 import { clients } from "@/data/clients";
 import { clientDocuments } from "@/data/documents";
 import {
@@ -70,9 +70,8 @@ export function BoardingRequestDialog({
 }) {
   const [allowOverride, setAllowOverride] = useState(false);
   const [assignments, setAssignments] = useState<RoomAssignments>({});
-  const [workingPreCheck, setWorkingPreCheck] = useState<YipyyGoPreCheckForm | null>(
-    null,
-  );
+  const [workingPreCheck, setWorkingPreCheck] =
+    useState<YipyyGoPreCheckForm | null>(null);
   const [staffPaymentNote, setStaffPaymentNote] = useState("");
 
   const eligibilityRows: EligibilityRow[] = useMemo(() => {
@@ -132,10 +131,24 @@ export function BoardingRequestDialog({
     }));
   }, [eligibilityRows]);
 
-  const auditColumns: ColumnDef<PreCheckAuditEvent>[] = useMemo(
+  const _auditColumns: ColumnDef<PreCheckAuditEvent>[] = useMemo(
     () => [
-      { key: "at", label: "At", sortable: true, render: (e) => new Date(e.at).toLocaleString() },
-      { key: "actorType", label: "Type", sortable: true, render: (e) => <Badge variant="outline" className="capitalize">{e.actorType}</Badge> },
+      {
+        key: "at",
+        label: "At",
+        sortable: true,
+        render: (e) => new Date(e.at).toLocaleString(),
+      },
+      {
+        key: "actorType",
+        label: "Type",
+        sortable: true,
+        render: (e) => (
+          <Badge variant="outline" className="capitalize">
+            {e.actorType}
+          </Badge>
+        ),
+      },
       { key: "actorName", label: "Actor", sortable: true },
       { key: "action", label: "Action", sortable: true },
     ],
@@ -155,19 +168,22 @@ export function BoardingRequestDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="w-[98vw] max-w-none sm:max-w-none max-h-[94vh] overflow-y-auto">
+      <DialogContent className="max-h-[94vh] w-[98vw] max-w-none overflow-y-auto sm:max-w-none">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3">
             <span className="truncate">Boarding Request • {request?.id}</span>
             {request ? paymentBadge(request.paymentStatus) : null}
           </DialogTitle>
           <DialogDescription>
-            Staff review: eligibility, schedule, room assignment, add-ons, payment, and PreCheck.
+            Staff review: eligibility, schedule, room assignment, add-ons,
+            payment, and PreCheck.
           </DialogDescription>
         </DialogHeader>
 
         {!request ? (
-          <div className="text-sm text-muted-foreground">No request selected.</div>
+          <div className="text-muted-foreground text-sm">
+            No request selected.
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-3">
@@ -177,11 +193,11 @@ export function BoardingRequestDialog({
                 </CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-md border p-3">
-                    <div className="text-xs text-muted-foreground">Client</div>
+                    <div className="text-muted-foreground text-xs">Client</div>
                     <div className="font-medium">{request.clientName}</div>
                   </div>
                   <div className="rounded-md border p-3">
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <div className="text-muted-foreground flex items-center gap-1 text-xs">
                       <Calendar className="h-3.5 w-3.5" /> Check-in / out
                     </div>
                     <div className="font-medium">
@@ -189,8 +205,12 @@ export function BoardingRequestDialog({
                     </div>
                   </div>
                   <div className="rounded-md border p-3">
-                    <div className="text-xs text-muted-foreground">PreCheck</div>
-                    <div className="font-medium capitalize">{request.preCheck.status.replace("-", " ")}</div>
+                    <div className="text-muted-foreground text-xs">
+                      PreCheck
+                    </div>
+                    <div className="font-medium capitalize">
+                      {request.preCheck.status.replace("-", " ")}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -201,11 +221,11 @@ export function BoardingRequestDialog({
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   {eligibilityRows.some((r) => !r.eligible) ? (
-                    <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-2">
-                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5" />
+                    <div className="border-warning/40 bg-warning/5 flex items-start gap-2 rounded-md border p-2">
+                      <AlertTriangle className="text-warning mt-0.5 size-4" />
                       <div>
                         <div className="font-medium">Eligibility issues</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           Some pets are blocked. Fix before accepting.
                         </div>
                       </div>
@@ -216,11 +236,11 @@ export function BoardingRequestDialog({
                     </div>
                   )}
                   {request.preCheck.status === "not-submitted" && (
-                    <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2">
-                      <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
+                    <div className="border-destructive/30 bg-destructive/5 flex items-start gap-2 rounded-md border p-2">
+                      <AlertTriangle className="text-destructive mt-0.5 size-4" />
                       <div>
                         <div className="font-medium">PreCheck missing</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           Staff can add details or request submission.
                         </div>
                       </div>
@@ -234,7 +254,9 @@ export function BoardingRequestDialog({
               <TabsList className="flex flex-wrap">
                 <TabsTrigger value="eligibility">Eligibility</TabsTrigger>
                 <TabsTrigger value="rooms">Rooms</TabsTrigger>
-                <TabsTrigger value="add-ons">Add-ons & Instructions</TabsTrigger>
+                <TabsTrigger value="add-ons">
+                  Add-ons & Instructions
+                </TabsTrigger>
                 <TabsTrigger value="payment">Payment</TabsTrigger>
                 <TabsTrigger value="precheck">PreCheck</TabsTrigger>
               </TabsList>
@@ -255,7 +277,9 @@ export function BoardingRequestDialog({
                       const next: RoomAssignments = {};
                       // remove from any room
                       Object.keys(prev).forEach((rid) => {
-                        next[rid] = (prev[rid] ?? []).filter((id) => id !== petId);
+                        next[rid] = (prev[rid] ?? []).filter(
+                          (id) => id !== petId,
+                        );
                       });
                       // add to target
                       next[roomId] = [...(next[roomId] ?? []), petId];
@@ -266,7 +290,9 @@ export function BoardingRequestDialog({
                     setAssignments((prev) => {
                       const next: RoomAssignments = {};
                       Object.keys(prev).forEach((rid) => {
-                        next[rid] = (prev[rid] ?? []).filter((id) => id !== petId);
+                        next[rid] = (prev[rid] ?? []).filter(
+                          (id) => id !== petId,
+                        );
                       });
                       return next;
                     });
@@ -277,7 +303,9 @@ export function BoardingRequestDialog({
               <TabsContent value="add-ons" className="space-y-4">
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Add-ons (per pet)</CardTitle>
+                    <CardTitle className="text-base">
+                      Add-ons (per pet)
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {request.pets.map((p) => {
@@ -291,11 +319,13 @@ export function BoardingRequestDialog({
                                 ({p.breed})
                               </span>
                             </div>
-                            <Badge variant="outline">{addOns.length} add-ons</Badge>
+                            <Badge variant="outline">
+                              {addOns.length} add-ons
+                            </Badge>
                           </div>
                           <div className="mt-2 grid gap-2">
                             {addOns.length === 0 ? (
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-muted-foreground text-xs">
                                 None selected.
                               </div>
                             ) : (
@@ -326,7 +356,9 @@ export function BoardingRequestDialog({
 
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Staff-editable instructions</CardTitle>
+                    <CardTitle className="text-base">
+                      Staff-editable instructions
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -338,7 +370,9 @@ export function BoardingRequestDialog({
                       <Textarea placeholder="Staff edits override customer notes..." />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <div className="text-sm font-medium">Internal staff notes</div>
+                      <div className="text-sm font-medium">
+                        Internal staff notes
+                      </div>
                       <Textarea placeholder="Internal notes..." />
                     </div>
                   </CardContent>
@@ -352,19 +386,29 @@ export function BoardingRequestDialog({
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">Status</div>
-                      <div className="mt-1">{paymentBadge(request.paymentStatus)}</div>
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Estimate: <span className="font-medium text-foreground">${request.totalEstimate}</span>
+                      <div className="text-muted-foreground text-xs">
+                        Status
+                      </div>
+                      <div className="mt-1">
+                        {paymentBadge(request.paymentStatus)}
+                      </div>
+                      <div className="text-muted-foreground mt-2 text-xs">
+                        Estimate:{" "}
+                        <span className="text-foreground font-medium">
+                          ${request.totalEstimate}
+                        </span>
                       </div>
                     </div>
                     <div className="rounded-md border p-3">
-                      <div className="text-xs text-muted-foreground">Tip</div>
+                      <div className="text-muted-foreground text-xs">Tip</div>
                       <div className="mt-2 flex items-center gap-2">
                         <div className="text-sm font-medium">$</div>
-                        <Input defaultValue={String(request.tipAmount)} className="max-w-[160px]" />
+                        <Input
+                          defaultValue={String(request.tipAmount)}
+                          className="max-w-[160px]"
+                        />
                       </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground mt-2 text-xs">
                         Staff can adjust tip for in-person checkout.
                       </div>
                     </div>
@@ -376,12 +420,16 @@ export function BoardingRequestDialog({
                         placeholder="Internal payment note..."
                       />
                       <div className="flex gap-2">
-                        <Button type="button" variant="outline" className="flex-1">
-                          <DollarSign className="h-4 w-4 mr-2" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <DollarSign className="mr-2 size-4" />
                           Process in-person
                         </Button>
                         <Button type="button" className="flex-1">
-                          <DollarSign className="h-4 w-4 mr-2" />
+                          <DollarSign className="mr-2 size-4" />
                           Process online
                         </Button>
                       </div>
@@ -440,7 +488,7 @@ export function BoardingRequestDialog({
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Request Actions</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-2">
+              <CardContent className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="destructive"
@@ -450,13 +498,15 @@ export function BoardingRequestDialog({
                     onOpenChange(false);
                   }}
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="mr-2 size-4" />
                   Decline
                 </Button>
                 <Button
                   type="button"
                   className="flex-1"
-                  disabled={!allowOverride && eligibilityRows.some((r) => !r.eligible)}
+                  disabled={
+                    !allowOverride && eligibilityRows.some((r) => !r.eligible)
+                  }
                   onClick={() => {
                     const preCheck = workingPreCheck ?? request.preCheck;
                     onUpdateRequest({
@@ -467,13 +517,14 @@ export function BoardingRequestDialog({
                     onOpenChange(false);
                   }}
                 >
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="mr-2 size-4" />
                   Accept
                 </Button>
               </CardContent>
               {!allowOverride && eligibilityRows.some((r) => !r.eligible) && (
-                <div className="px-6 pb-6 text-xs text-muted-foreground">
-                  Accept is disabled until eligibility issues are resolved (or override is enabled).
+                <div className="text-muted-foreground px-6 pb-6 text-xs">
+                  Accept is disabled until eligibility issues are resolved (or
+                  override is enabled).
                 </div>
               )}
             </Card>
@@ -491,4 +542,3 @@ export function BoardingRequestDialog({
     </Dialog>
   );
 }
-

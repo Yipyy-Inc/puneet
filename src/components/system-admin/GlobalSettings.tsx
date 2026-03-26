@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -102,7 +101,10 @@ export function GlobalSettings() {
     }, 1500);
   };
 
-  const handleBrandingChange = (field: keyof BrandingSettings, value: any) => {
+  const handleBrandingChange = (
+    field: keyof BrandingSettings,
+    value: BrandingSettings[keyof BrandingSettings],
+  ) => {
     setBranding((prev) => ({ ...prev, [field]: value }));
     setUnsavedChanges(true);
   };
@@ -155,7 +157,10 @@ export function GlobalSettings() {
     setUnsavedChanges(true);
   };
 
-  const handleDefaultsChange = (field: keyof SystemDefaults, value: any) => {
+  const handleDefaultsChange = (
+    field: keyof SystemDefaults,
+    value: SystemDefaults[keyof SystemDefaults],
+  ) => {
     setDefaults((prev) => ({ ...prev, [field]: value }));
     setUnsavedChanges(true);
   };
@@ -190,11 +195,11 @@ export function GlobalSettings() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-semibold flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-xl font-semibold">
             <Settings className="h-5 w-5" />
             Global Settings
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Configure branding, languages, currencies, and system defaults
           </p>
         </div>
@@ -202,18 +207,18 @@ export function GlobalSettings() {
           {unsavedChanges && (
             <Badge
               variant="secondary"
-              className="bg-yellow-100 text-yellow-700 gap-1"
+              className="gap-1 bg-yellow-100 text-yellow-700"
             >
               <AlertTriangle className="h-3 w-3" />
               Unsaved changes
             </Badge>
           )}
           <Button variant="outline" onClick={() => setShowPreview(true)}>
-            <Eye className="h-4 w-4 mr-2" />
+            <Eye className="mr-2 size-4" />
             Preview
           </Button>
           <Button onClick={handleSave} disabled={!unsavedChanges}>
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="mr-2 size-4" />
             Save Changes
           </Button>
         </div>
@@ -221,22 +226,22 @@ export function GlobalSettings() {
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Languages
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {enabledLanguagesCount}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   of {languages.length} available
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -248,22 +253,22 @@ export function GlobalSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Currencies
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {enabledCurrenciesCount}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   of {currencies.length} available
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -275,22 +280,22 @@ export function GlobalSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Email Templates
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {emailTemplates.filter((e) => e.enabled).length}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Active templates
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -302,24 +307,24 @@ export function GlobalSettings() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   System Status
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight text-green-600">
                   {defaults.maintenanceMode ? "Maintenance" : "Online"}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {defaults.registrationEnabled
                     ? "Registration open"
                     : "Registration closed"}
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background: defaults.maintenanceMode
                     ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
@@ -335,21 +340,21 @@ export function GlobalSettings() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="branding" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-4 lg:inline-grid lg:w-auto">
           <TabsTrigger value="branding" className="gap-2">
-            <Palette className="h-4 w-4" />
+            <Palette className="size-4" />
             Branding
           </TabsTrigger>
           <TabsTrigger value="localization" className="gap-2">
-            <Globe className="h-4 w-4" />
+            <Globe className="size-4" />
             Localization
           </TabsTrigger>
           <TabsTrigger value="defaults" className="gap-2">
-            <Settings className="h-4 w-4" />
+            <Settings className="size-4" />
             System Defaults
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="h-4 w-4" />
+            <Bell className="size-4" />
             Notifications
           </TabsTrigger>
         </TabsList>
@@ -358,13 +363,13 @@ export function GlobalSettings() {
         <TabsContent value="branding" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Platform Identity */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <FileText className="h-5 w-5" />
                   Platform Identity
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Basic platform information and branding
                 </p>
               </CardHeader>
@@ -393,7 +398,7 @@ export function GlobalSettings() {
                   <Label htmlFor="websiteUrl">Website URL</Label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Link className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                       <Input
                         id="websiteUrl"
                         className="pl-9"
@@ -408,18 +413,18 @@ export function GlobalSettings() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Logo</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-xs text-muted-foreground">
+                    <div className="border-muted-foreground/25 hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors">
+                      <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                      <p className="text-muted-foreground text-xs">
                         Click to upload
                       </p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Favicon</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                      <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-xs text-muted-foreground">32x32 PNG</p>
+                    <div className="border-muted-foreground/25 hover:border-primary/50 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center transition-colors">
+                      <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                      <p className="text-muted-foreground text-xs">32x32 PNG</p>
                     </div>
                   </div>
                 </div>
@@ -427,13 +432,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Colors & Theme */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Palette className="h-5 w-5" />
                   Colors & Theme
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Customize the platform color scheme
                 </p>
               </CardHeader>
@@ -443,7 +448,7 @@ export function GlobalSettings() {
                     <Label>Primary Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-8 h-8 rounded-lg border cursor-pointer"
+                        className="h-8 w-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.primaryColor }}
                         onClick={() => {
                           setSelectedColorType("primary");
@@ -463,7 +468,7 @@ export function GlobalSettings() {
                     <Label>Secondary Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-8 h-8 rounded-lg border cursor-pointer"
+                        className="h-8 w-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.secondaryColor }}
                         onClick={() => {
                           setSelectedColorType("secondary");
@@ -483,7 +488,7 @@ export function GlobalSettings() {
                     <Label>Accent Color</Label>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-8 h-8 rounded-lg border cursor-pointer"
+                        className="h-8 w-8 cursor-pointer rounded-lg border"
                         style={{ backgroundColor: branding.accentColor }}
                         onClick={() => {
                           setSelectedColorType("accent");
@@ -501,30 +506,30 @@ export function GlobalSettings() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t">
+                <div className="border-t pt-4">
                   <Label className="mb-3 block">Color Presets</Label>
                   <div className="grid grid-cols-4 gap-2">
                     {colorPresets.map((preset) => (
                       <button
                         key={preset.name}
-                        className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-muted transition-colors"
+                        className="hover:bg-muted flex flex-col items-center gap-1 rounded-lg p-2 transition-colors"
                         onClick={() => applyColorPreset(preset)}
                       >
                         <div className="flex gap-1">
                           <div
-                            className="w-4 h-4 rounded"
+                            className="size-4 rounded-sm"
                             style={{ backgroundColor: preset.primary }}
                           />
                           <div
-                            className="w-4 h-4 rounded"
+                            className="size-4 rounded-sm"
                             style={{ backgroundColor: preset.secondary }}
                           />
                           <div
-                            className="w-4 h-4 rounded"
+                            className="size-4 rounded-sm"
                             style={{ backgroundColor: preset.accent }}
                           />
                         </div>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-muted-foreground text-[10px]">
                           {preset.name}
                         </span>
                       </button>
@@ -532,13 +537,13 @@ export function GlobalSettings() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center justify-between border-t pt-4">
                   <div className="space-y-0.5">
                     <Label className="flex items-center gap-2">
-                      <Moon className="h-4 w-4" />
+                      <Moon className="size-4" />
                       Dark Mode
                     </Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Allow users to switch to dark theme
                     </p>
                   </div>
@@ -553,13 +558,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Contact Information */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Mail className="h-5 w-5" />
                   Support Contact
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Contact information displayed to users
                 </p>
               </CardHeader>
@@ -600,13 +605,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Social Links */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Link className="h-5 w-5" />
                   Social Links
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Links to social media profiles
                 </p>
               </CardHeader>
@@ -660,13 +665,13 @@ export function GlobalSettings() {
         <TabsContent value="localization" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Languages */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Languages className="h-5 w-5" />
                   Supported Languages
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enable languages for your platform
                 </p>
               </CardHeader>
@@ -675,18 +680,16 @@ export function GlobalSettings() {
                   {languages.map((lang) => (
                     <div
                       key={lang.code}
-                      className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                        lang.enabled ? "bg-primary/5" : "bg-muted/50"
-                      }`}
+                      className={`flex items-center justify-between rounded-lg p-3 transition-colors ${lang.enabled ? "bg-primary/5" : "bg-muted/50"} `}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="shrink-0 w-8 text-center font-mono text-xs text-muted-foreground uppercase">
+                        <div className="text-muted-foreground w-8 shrink-0 text-center font-mono text-xs uppercase">
                           {lang.code}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{lang.name}</span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               ({lang.nativeName})
                             </span>
                             {lang.isDefault && (
@@ -695,16 +698,16 @@ export function GlobalSettings() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="mt-1 flex items-center gap-2">
+                            <div className="bg-muted h-1.5 w-20 overflow-hidden rounded-full">
                               <div
-                                className="h-full bg-primary rounded-full"
+                                className="bg-primary h-full rounded-full"
                                 style={{
                                   width: `${lang.completionPercentage}%`,
                                 }}
                               />
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {lang.completionPercentage}% translated
                             </span>
                           </div>
@@ -736,13 +739,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Currencies */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <DollarSign className="h-5 w-5" />
                   Supported Currencies
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enable currencies for transactions
                 </p>
               </CardHeader>
@@ -751,18 +754,16 @@ export function GlobalSettings() {
                   {currencies.map((curr) => (
                     <div
                       key={curr.code}
-                      className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                        curr.enabled ? "bg-primary/5" : "bg-muted/50"
-                      }`}
+                      className={`flex items-center justify-between rounded-lg p-3 transition-colors ${curr.enabled ? "bg-primary/5" : "bg-muted/50"} `}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="shrink-0 w-12 h-8 flex items-center justify-center rounded bg-muted font-mono text-sm font-bold">
+                        <div className="bg-muted flex h-8 w-12 shrink-0 items-center justify-center rounded-sm font-mono text-sm font-bold">
                           {curr.symbol}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{curr.code}</span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               {curr.name}
                             </span>
                             {curr.isDefault && (
@@ -771,7 +772,7 @@ export function GlobalSettings() {
                               </Badge>
                             )}
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
+                          <div className="text-muted-foreground mt-0.5 text-xs">
                             Exchange rate: {curr.exchangeRate} (vs USD)
                           </div>
                         </div>
@@ -798,8 +799,8 @@ export function GlobalSettings() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
+                <div className="mt-4 flex items-center justify-between border-t pt-4">
+                  <span className="text-muted-foreground text-sm">
                     Exchange rates last updated
                   </span>
                   <Button
@@ -810,7 +811,7 @@ export function GlobalSettings() {
                     disabled={isUpdatingRates}
                   >
                     <RefreshCw
-                      className={`h-4 w-4 ${isUpdatingRates ? "animate-spin" : ""}`}
+                      className={`size-4 ${isUpdatingRates ? "animate-spin" : ""} `}
                     />
                     {isUpdatingRates ? "Updating..." : "Update Rates"}
                   </Button>
@@ -824,13 +825,13 @@ export function GlobalSettings() {
         <TabsContent value="defaults" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Date & Time */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Clock className="h-5 w-5" />
                   Date & Time Settings
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Default date, time, and timezone settings
                 </p>
               </CardHeader>
@@ -899,13 +900,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Security Settings */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Shield className="h-5 w-5" />
                   Security Settings
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Authentication and access controls
                 </p>
               </CardHeader>
@@ -969,7 +970,7 @@ export function GlobalSettings() {
                 <div className="flex items-center justify-between pt-2">
                   <div>
                     <Label>Require MFA</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Enforce two-factor authentication
                     </p>
                   </div>
@@ -983,7 +984,7 @@ export function GlobalSettings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Allow Social Login</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Enable Google, Facebook login
                     </p>
                   </div>
@@ -998,13 +999,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Registration & Trials */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Calendar className="h-5 w-5" />
                   Registration & Trials
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   User registration and trial settings
                 </p>
               </CardHeader>
@@ -1012,7 +1013,7 @@ export function GlobalSettings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Enable Registration</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Allow new users to sign up
                     </p>
                   </div>
@@ -1035,7 +1036,7 @@ export function GlobalSettings() {
                       )
                     }
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Duration of free trial for new facilities
                   </p>
                 </div>
@@ -1043,13 +1044,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Maintenance Mode */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <AlertTriangle className="h-5 w-5" />
                   Maintenance Mode
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Control system availability
                 </p>
               </CardHeader>
@@ -1057,7 +1058,7 @@ export function GlobalSettings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Enable Maintenance Mode</Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Show maintenance page to all users
                     </p>
                   </div>
@@ -1087,25 +1088,25 @@ export function GlobalSettings() {
         <TabsContent value="notifications" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Notification Channels */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Bell className="h-5 w-5" />
                   Notification Channels
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enable/disable notification methods
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
                       <Mail className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
                       <Label>Email Notifications</Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Send notifications via email
                       </p>
                     </div>
@@ -1117,14 +1118,14 @@ export function GlobalSettings() {
                     }
                   />
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
                       <Bell className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
                       <Label>SMS Notifications</Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Send notifications via SMS
                       </p>
                     </div>
@@ -1136,14 +1137,14 @@ export function GlobalSettings() {
                     }
                   />
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                       <Bell className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
                       <Label>Push Notifications</Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Send browser/app push notifications
                       </p>
                     </div>
@@ -1159,13 +1160,13 @@ export function GlobalSettings() {
             </Card>
 
             {/* Email Templates */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <FileText className="h-5 w-5" />
                   Email Templates
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Manage email notification templates
                 </p>
               </CardHeader>
@@ -1174,11 +1175,11 @@ export function GlobalSettings() {
                   {emailTemplates.map((template) => (
                     <div
                       key={template.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                      className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-lg p-3 transition-colors"
                     >
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
+                          <span className="text-sm font-medium">
                             {template.name}
                           </span>
                           <Badge
@@ -1188,15 +1189,15 @@ export function GlobalSettings() {
                             {template.category}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
                           {template.description}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 ml-2">
+                      <div className="ml-2 flex items-center gap-2">
                         {template.enabled ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <CheckCircle className="size-4 text-green-500" />
                         ) : (
-                          <X className="h-4 w-4 text-muted-foreground" />
+                          <X className="text-muted-foreground size-4" />
                         )}
                         <Button
                           variant="ghost"
@@ -1206,7 +1207,7 @@ export function GlobalSettings() {
                             setShowEditTemplateModal(true);
                           }}
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -1251,7 +1252,7 @@ export function GlobalSettings() {
               ].map((color) => (
                 <button
                   key={color}
-                  className="w-8 h-8 rounded-lg border-2 border-transparent hover:border-primary transition-colors"
+                  className="hover:border-primary h-8 w-8 rounded-lg border-2 border-transparent transition-colors"
                   style={{ backgroundColor: color }}
                   onClick={() => {
                     handleBrandingChange(
@@ -1267,7 +1268,7 @@ export function GlobalSettings() {
               <Label>Custom Color</Label>
               <Input
                 type="color"
-                className="w-full h-10"
+                className="h-10 w-full"
                 onChange={(e) => {
                   handleBrandingChange(
                     `${selectedColorType}Color` as keyof BrandingSettings,
@@ -1291,15 +1292,15 @@ export function GlobalSettings() {
           </DialogHeader>
           <div className="space-y-4">
             <div
-              className="p-6 rounded-lg"
+              className="rounded-lg p-6"
               style={{ backgroundColor: branding.primaryColor + "10" }}
             >
-              <div className="flex items-center gap-3 mb-4">
+              <div className="mb-4 flex items-center gap-3">
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  className="flex h-12 w-12 items-center justify-center rounded-xl"
                   style={{ backgroundColor: branding.primaryColor }}
                 >
-                  <span className="text-white text-xl font-bold">
+                  <span className="text-xl font-bold text-white">
                     {branding.platformName[0]}
                   </span>
                 </div>
@@ -1310,7 +1311,7 @@ export function GlobalSettings() {
                   >
                     {branding.platformName}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {branding.tagline}
                   </p>
                 </div>
@@ -1348,8 +1349,8 @@ export function GlobalSettings() {
       {/* Save Success Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent className="min-w-5xl">
-          <div className="flex flex-col items-center text-center py-4">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+          <div className="flex flex-col items-center py-4 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <Check className="h-8 w-8 text-green-600" />
             </div>
             <DialogTitle>Settings Saved</DialogTitle>
@@ -1390,10 +1391,10 @@ export function GlobalSettings() {
                 <Label>Subject Line</Label>
                 <Input defaultValue={selectedTemplate.subject} />
               </div>
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
                 <div>
                   <p className="text-sm font-medium">Template Enabled</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Allow this template to be sent
                   </p>
                 </div>

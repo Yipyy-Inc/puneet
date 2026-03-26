@@ -311,13 +311,13 @@ export function KennelCalendarView({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={handlePrevious}>
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
           </Button>
-          <span className="font-medium min-w-[180px] text-center">
+          <span className="min-w-[180px] text-center font-medium">
             {formatDateRange()}
           </span>
           <Button variant="ghost" size="icon" onClick={handleNext}>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="size-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={handleToday}>
             Today
@@ -338,7 +338,7 @@ export function KennelCalendarView({
             </SelectContent>
           </Select>
 
-          <div className="flex rounded-lg border overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border">
             <Button
               variant={timeFrame === "1week" ? "secondary" : "ghost"}
               size="sm"
@@ -361,7 +361,7 @@ export function KennelCalendarView({
 
       {/* Calendar Grid */}
       <div
-        className="border rounded-lg overflow-hidden"
+        className="overflow-hidden rounded-lg border"
         ref={gridRef}
         onMouseMove={dragging ? handleDragMove : undefined}
         onMouseUp={dragging ? handleDragEnd : undefined}
@@ -370,8 +370,8 @@ export function KennelCalendarView({
         <div className="overflow-x-auto select-none">
           <div className="min-w-[800px]">
             {/* Date Header */}
-            <div className="flex border-b bg-muted/30">
-              <div className="w-[140px] min-w-[140px] p-2 border-r shrink-0" />
+            <div className="bg-muted/30 flex border-b">
+              <div className="w-[140px] min-w-[140px] shrink-0 border-r p-2" />
               {dates.map((date, i) => {
                 const dayName = date.toLocaleDateString("en-US", {
                   weekday: "short",
@@ -383,7 +383,7 @@ export function KennelCalendarView({
                   <div
                     key={i}
                     className={cn(
-                      "flex-1 text-center p-2 min-w-[60px]",
+                      "min-w-[60px] flex-1 p-2 text-center",
                       isTodayDate && "bg-primary/5",
                     )}
                   >
@@ -420,17 +420,17 @@ export function KennelCalendarView({
                 <div key={kennel.id} className="flex border-b last:border-b-0">
                   {/* Kennel Info */}
                   <div
-                    className="w-[140px] min-w-[140px] p-2 border-r shrink-0 cursor-pointer hover:bg-muted/50"
+                    className="hover:bg-muted/50 w-[140px] min-w-[140px] shrink-0 cursor-pointer border-r p-2"
                     onClick={() => onKennelClick?.(kennel)}
                   >
-                    <div className="font-medium text-sm">{kennel.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-sm font-medium">{kennel.name}</div>
+                    <div className="text-muted-foreground text-xs">
                       {getTypeLabel(kennel.type)}
                     </div>
                   </div>
 
                   {/* Date Cells with Bookings */}
-                  <div className="flex-1 relative">
+                  <div className="relative flex-1">
                     {/* Grid Cells */}
                     <div className="flex">
                       {dates.map((date, i) => {
@@ -442,11 +442,11 @@ export function KennelCalendarView({
                           <div
                             key={i}
                             className={cn(
-                              "flex-1 min-h-[60px] min-w-[60px] group",
+                              "group min-h-[60px] min-w-[60px] flex-1",
                               isTodayDate && "bg-primary/5",
                               isMaintenance
-                                ? "bg-red-50 dark:bg-red-950/20 cursor-not-allowed"
-                                : "cursor-pointer hover:bg-muted/30",
+                                ? `cursor-not-allowed bg-red-50 dark:bg-red-950/20`
+                                : `hover:bg-muted/30 cursor-pointer`,
                             )}
                             data-index={i}
                             onClick={() =>
@@ -455,8 +455,8 @@ export function KennelCalendarView({
                             }
                           >
                             {!isMaintenance && (
-                              <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground bg-background border rounded px-2 py-1 shadow-sm">
+                              <div className="flex h-full items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="bg-background text-muted-foreground flex items-center gap-1 rounded-sm border px-2 py-1 text-xs shadow-sm">
                                   <Plus className="h-3 w-3" />
                                   Add
                                 </div>
@@ -470,7 +470,7 @@ export function KennelCalendarView({
                     {/* Maintenance Bar */}
                     {kennel.status === "maintenance" && (
                       <div
-                        className="absolute top-2 h-10 rounded flex items-center gap-2 px-2 bg-red-100 dark:bg-red-900/30 border-l-4 border-l-red-500"
+                        className="absolute top-2 flex h-10 items-center gap-2 rounded-sm border-l-4 border-l-red-500 bg-red-100 px-2 dark:bg-red-900/30"
                         style={{
                           left: 2,
                           right: 2,
@@ -521,13 +521,13 @@ export function KennelCalendarView({
                           title={tagTooltip || undefined}
                           aria-label={`${booking.petName}${isCritical ? " - Critical alert" : ""}`}
                           className={cn(
-                            "absolute top-2 h-10 rounded flex items-center gap-2 px-2 cursor-pointer transition-shadow hover:shadow-md group",
+                            `group absolute top-2 flex h-10 cursor-pointer items-center gap-2 rounded-sm px-2 transition-shadow hover:shadow-md`,
                             isCritical
-                              ? "bg-red-100 dark:bg-red-900/30 ring-2 ring-red-400/50 dark:ring-red-500/50"
+                              ? `bg-red-100 ring-2 ring-red-400/50 dark:bg-red-900/30 dark:ring-red-500/50`
                               : isReserved
-                                ? "bg-yellow-100 dark:bg-yellow-900/30 border-l-4 border-l-yellow-500 dark:border-l-yellow-400"
-                                : "bg-blue-100 dark:bg-blue-900/30",
-                            isDragging && "shadow-lg ring-2 ring-primary/50",
+                                ? `border-l-4 border-l-yellow-500 bg-yellow-100 dark:border-l-yellow-400 dark:bg-yellow-900/30`
+                                : `bg-blue-100 dark:bg-blue-900/30`,
+                            isDragging && "ring-primary/50 shadow-lg ring-2",
                           )}
                           style={{
                             left: `calc(${leftPercent}% + 2px)`,
@@ -544,7 +544,7 @@ export function KennelCalendarView({
                         >
                           {/* Left drag handle */}
                           <div
-                            className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 rounded-l transition-opacity"
+                            className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize rounded-l opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/10"
                             onMouseDown={(e) =>
                               handleDragStart(
                                 e,
@@ -555,15 +555,15 @@ export function KennelCalendarView({
                             }
                           />
 
-                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                            <PawPrint className="h-3 w-3 text-muted-foreground" />
+                          <div className="bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                            <PawPrint className="text-muted-foreground h-3 w-3" />
                           </div>
                           <span
                             className={cn(
-                              "text-sm font-medium truncate",
+                              "truncate text-sm font-medium",
                               isReserved
-                                ? "text-yellow-800 dark:text-yellow-200"
-                                : "text-blue-800 dark:text-blue-200",
+                                ? `text-yellow-800 dark:text-yellow-200`
+                                : `text-blue-800 dark:text-blue-200`,
                             )}
                           >
                             {booking.petName}
@@ -579,7 +579,7 @@ export function KennelCalendarView({
 
                           {/* Right drag handle */}
                           <div
-                            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-black/10 rounded-r transition-opacity"
+                            className="absolute top-0 right-0 bottom-0 w-2 cursor-ew-resize rounded-r opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/10"
                             onMouseDown={(e) =>
                               handleDragStart(
                                 e,
@@ -603,15 +603,15 @@ export function KennelCalendarView({
       {/* Legend */}
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30" />
+          <div className="size-4 rounded-sm bg-blue-100 dark:bg-blue-900/30" />
           <span className="text-muted-foreground">Occupied</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-yellow-100 dark:bg-yellow-900/30 border-l-2 border-l-yellow-500" />
+          <div className="size-4 rounded-sm border-l-2 border-l-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" />
           <span className="text-muted-foreground">Reserved</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800" />
+          <div className="size-4 rounded-sm border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20" />
           <span className="text-muted-foreground">Maintenance</span>
         </div>
       </div>

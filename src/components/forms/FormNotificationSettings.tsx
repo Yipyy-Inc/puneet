@@ -39,21 +39,23 @@ export function FormNotificationSettings() {
       key: "newSubmission",
       label: "New submission received",
       description: "Alert staff when any new form submission comes in",
-      icon: <FileText className="h-4 w-4 text-blue-600" />,
+      icon: <FileText className="size-4 text-blue-600" />,
       enabled: initial?.staff?.newSubmission ?? true,
     },
     {
       key: "redFlagAnswers",
       label: "Red-flag answers detected",
-      description: "Alert when a submission triggers a logic rule alert flag (e.g. aggression, health concern)",
-      icon: <ShieldAlert className="h-4 w-4 text-red-600" />,
+      description:
+        "Alert when a submission triggers a logic rule alert flag (e.g. aggression, health concern)",
+      icon: <ShieldAlert className="size-4 text-red-600" />,
       enabled: initial?.staff?.redFlagAnswers ?? true,
     },
     {
       key: "hasFileUpload",
       label: "Submission includes file upload",
-      description: "Alert when a submission contains file attachments (vaccine records, documents)",
-      icon: <Paperclip className="h-4 w-4 text-amber-600" />,
+      description:
+        "Alert when a submission contains file attachments (vaccine records, documents)",
+      icon: <Paperclip className="size-4 text-amber-600" />,
       enabled: initial?.staff?.hasFileUpload ?? true,
     },
   ]);
@@ -62,35 +64,38 @@ export function FormNotificationSettings() {
     {
       key: "submissionConfirmed",
       label: "Submission confirmed",
-      description: "Notify customer when staff marks their submission as processed/confirmed",
-      icon: <CheckCircle className="h-4 w-4 text-green-600" />,
+      description:
+        "Notify customer when staff marks their submission as processed/confirmed",
+      icon: <CheckCircle className="size-4 text-green-600" />,
       enabled: initial?.customer?.submissionConfirmed ?? true,
     },
     {
       key: "missingRequiredFormsReminder",
       label: "Missing required forms reminder",
-      description: "Send reminder when customer has outstanding required forms before a booking",
-      icon: <Clock className="h-4 w-4 text-amber-600" />,
+      description:
+        "Send reminder when customer has outstanding required forms before a booking",
+      icon: <Clock className="size-4 text-amber-600" />,
       enabled: initial?.customer?.missingRequiredFormsReminder ?? true,
     },
     {
       key: "formRejectedNeedsCorrection",
       label: "Form rejected / needs correction",
-      description: "Notify customer when their submission is rejected and needs changes",
-      icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
+      description:
+        "Notify customer when their submission is rejected and needs changes",
+      icon: <AlertTriangle className="size-4 text-red-600" />,
       enabled: initial?.customer?.formRejectedNeedsCorrection ?? true,
     },
   ]);
 
   const toggleStaff = (key: string) => {
     setStaffToggles((prev) =>
-      prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t))
+      prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t)),
     );
   };
 
   const toggleCustomer = (key: string) => {
     setCustomerToggles((prev) =>
-      prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t))
+      prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t)),
     );
   };
 
@@ -107,27 +112,30 @@ export function FormNotificationSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-primary" />
+              <Bell className="text-primary h-5 w-5" />
               <CardTitle>Form Notifications</CardTitle>
             </div>
             <Button size="sm" onClick={handleSave}>
               Save changes
             </Button>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             Configure when staff and customers are notified about form activity.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Staff notifications */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <BellRing className="h-4 w-4 text-primary" />
+            <div className="mb-4 flex items-center gap-2">
+              <BellRing className="text-primary size-4" />
               <h3 className="text-sm font-semibold">Notify staff when</h3>
               <Badge variant="secondary" className="text-xs">
                 {activeStaffCount}/{staffToggles.length} active
               </Badge>
-              <Badge variant="outline" className="text-[10px] h-5 gap-1 ml-auto">
+              <Badge
+                variant="outline"
+                className="ml-auto h-5 gap-1 text-[10px]"
+              >
                 <Bell className="h-3 w-3" />
                 In-app
               </Badge>
@@ -136,18 +144,21 @@ export function FormNotificationSettings() {
               {staffToggles.map((toggle) => (
                 <div
                   key={toggle.key}
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                    toggle.enabled ? "bg-white" : "bg-muted/20"
-                  }`}
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${toggle.enabled ? "bg-white" : "bg-muted/20"} `}
                 >
                   <div className="mt-0.5 shrink-0">{toggle.icon}</div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium cursor-pointer" htmlFor={`staff-${toggle.key}`}>
+                      <Label
+                        className="cursor-pointer text-sm font-medium"
+                        htmlFor={`staff-${toggle.key}`}
+                      >
                         {toggle.label}
                       </Label>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{toggle.description}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {toggle.description}
+                    </p>
                   </div>
                   <Switch
                     id={`staff-${toggle.key}`}
@@ -163,18 +174,18 @@ export function FormNotificationSettings() {
 
           {/* Customer notifications */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="h-4 w-4 text-primary" />
+            <div className="mb-4 flex items-center gap-2">
+              <Users className="text-primary size-4" />
               <h3 className="text-sm font-semibold">Notify customer when</h3>
               <Badge variant="secondary" className="text-xs">
                 {activeCustomerCount}/{customerToggles.length} active
               </Badge>
-              <div className="flex gap-1 ml-auto">
-                <Badge variant="outline" className="text-[10px] h-5 gap-1">
+              <div className="ml-auto flex gap-1">
+                <Badge variant="outline" className="h-5 gap-1 text-[10px]">
                   <Mail className="h-3 w-3" />
                   Email
                 </Badge>
-                <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                <Badge variant="outline" className="h-5 gap-1 text-[10px]">
                   <MessageSquare className="h-3 w-3" />
                   SMS
                 </Badge>
@@ -184,18 +195,21 @@ export function FormNotificationSettings() {
               {customerToggles.map((toggle) => (
                 <div
                   key={toggle.key}
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                    toggle.enabled ? "bg-white" : "bg-muted/20"
-                  }`}
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${toggle.enabled ? "bg-white" : "bg-muted/20"} `}
                 >
                   <div className="mt-0.5 shrink-0">{toggle.icon}</div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium cursor-pointer" htmlFor={`cust-${toggle.key}`}>
+                      <Label
+                        className="cursor-pointer text-sm font-medium"
+                        htmlFor={`cust-${toggle.key}`}
+                      >
                         {toggle.label}
                       </Label>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{toggle.description}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {toggle.description}
+                    </p>
                   </div>
                   <Switch
                     id={`cust-${toggle.key}`}

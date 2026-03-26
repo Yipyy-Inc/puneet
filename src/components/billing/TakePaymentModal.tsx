@@ -299,7 +299,7 @@ export function TakePaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -352,7 +352,7 @@ export function TakePaymentModal({
                     Amount <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="amount"
                       type="number"
@@ -387,7 +387,7 @@ export function TakePaymentModal({
                 <Label htmlFor="tip">Tip (Optional)</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="tip"
                       type="number"
@@ -420,7 +420,7 @@ export function TakePaymentModal({
 
               {/* Apply Credit */}
               {totalAvailableCredit > 0 && (
-                <div className="space-y-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                <div className="space-y-2 rounded-lg border border-green-200 bg-green-50 p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -452,12 +452,12 @@ export function TakePaymentModal({
                     </Badge>
                   </div>
                   {applyCredit && (
-                    <div className="space-y-2 mt-2">
+                    <div className="mt-2 space-y-2">
                       <Label htmlFor="credit-amount" className="text-sm">
                         Credit Amount
                       </Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                         <Input
                           id="credit-amount"
                           type="number"
@@ -503,15 +503,15 @@ export function TakePaymentModal({
               >
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="card">
-                    <CreditCard className="h-4 w-4 mr-2" />
+                    <CreditCard className="mr-2 size-4" />
                     Card
                   </TabsTrigger>
                   <TabsTrigger value="cash">
-                    <Wallet className="h-4 w-4 mr-2" />
+                    <Wallet className="mr-2 size-4" />
                     Cash
                   </TabsTrigger>
                   <TabsTrigger value="gift_card">
-                    <Gift className="h-4 w-4 mr-2" />
+                    <Gift className="mr-2 size-4" />
                     Gift Card
                   </TabsTrigger>
                 </TabsList>
@@ -555,7 +555,7 @@ export function TakePaymentModal({
                             {clientPaymentMethods.map((pm) => (
                               <SelectItem key={pm.id} value={pm.id}>
                                 <div className="flex items-center gap-2">
-                                  <CreditCard className="h-4 w-4" />
+                                  <CreditCard className="size-4" />
                                   <span className="uppercase">
                                     {pm.cardBrand}
                                   </span>
@@ -576,7 +576,7 @@ export function TakePaymentModal({
                   )}
 
                   {useNewCard && (
-                    <div className="space-y-4 p-4 border rounded-lg">
+                    <div className="space-y-4 rounded-lg border p-4">
                       <div className="space-y-2">
                         <Label htmlFor="card-number">Card Number</Label>
                         <Input
@@ -639,8 +639,8 @@ export function TakePaymentModal({
                         </Label>
                       </div>
 
-                      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                        <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <AlertCircle className="mt-0.5 size-4 text-blue-600" />
                         <p className="text-xs text-blue-800">
                           Payments are securely processed through Stripe. Card
                           details are never stored on our servers.
@@ -652,10 +652,10 @@ export function TakePaymentModal({
 
                 {/* Cash Payment */}
                 <TabsContent value="cash" className="space-y-4">
-                  <div className="p-6 text-center rounded-lg bg-muted/50">
-                    <Wallet className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                    <h4 className="font-semibold mb-1">Cash Payment</h4>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="bg-muted/50 rounded-lg p-6 text-center">
+                    <Wallet className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
+                    <h4 className="mb-1 font-semibold">Cash Payment</h4>
+                    <p className="text-muted-foreground text-sm">
                       Record this transaction as a cash payment
                     </p>
                   </div>
@@ -682,8 +682,8 @@ export function TakePaymentModal({
                     </div>
 
                     {selectedGiftCard && (
-                      <div className="p-4 rounded-lg border bg-green-50 border-green-200">
-                        <div className="flex items-start justify-between mb-2">
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                        <div className="mb-2 flex items-start justify-between">
                           <div>
                             <h4 className="font-semibold">
                               {selectedGiftCard.code}
@@ -696,18 +696,18 @@ export function TakePaymentModal({
                             <p className="text-2xl font-bold text-green-600">
                               ${selectedGiftCard.currentBalance.toFixed(2)}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               Available Balance
                             </p>
                           </div>
                         </div>
                         {selectedGiftCard.recipientName && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Recipient: {selectedGiftCard.recipientName}
                           </p>
                         )}
                         {selectedGiftCard.currentBalance < total && (
-                          <div className="mt-3 p-2 rounded bg-red-50 border border-red-200">
+                          <div className="mt-3 rounded-sm border border-red-200 bg-red-50 p-2">
                             <p className="text-sm text-red-800">
                               ⚠️ Insufficient balance. This gift card cannot
                               cover the full amount.
@@ -758,7 +758,7 @@ export function TakePaymentModal({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2 border-t">
+                <div className="flex justify-between border-t pt-2">
                   <span className="font-bold">Total to Charge:</span>
                   <span className="text-2xl font-bold text-green-600">
                     ${total.toFixed(2)}
@@ -778,7 +778,7 @@ export function TakePaymentModal({
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit}>
-            <DollarSign className="h-4 w-4 mr-2" />
+            <DollarSign className="mr-2 size-4" />
             Process Payment ${total.toFixed(2)}
           </Button>
         </DialogFooter>

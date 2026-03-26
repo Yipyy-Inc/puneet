@@ -116,36 +116,36 @@ export default function BoardingDashboardPage() {
             </span>
             <span className="font-medium">{occupancyStats.percentage}%</span>
           </div>
-          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted">
+          <div className="bg-muted relative h-4 w-full overflow-hidden rounded-full">
             <div
-              className={`h-full transition-all ${getCapacityColor(occupancyStats.percentage)}`}
+              className={`h-full transition-all ${getCapacityColor(occupancyStats.percentage)} `}
               style={{ width: `${occupancyStats.percentage}%` }}
             />
           </div>
 
           {/* Occupancy by Suite Type */}
           <div className="grid grid-cols-3 gap-4 pt-2">
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">
                 {occupancyStats.byType.standard}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Standard / {boardingCapacity.standard}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">
                 {occupancyStats.byType.premium}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Premium / {boardingCapacity.premium}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">
                 {occupancyStats.byType.luxury}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Luxury / {boardingCapacity.luxury}
               </p>
             </div>
@@ -189,7 +189,7 @@ export default function BoardingDashboardPage() {
       {(petsWithMedications.length > 0 || petsWithAllergies.length > 0) && (
         <Card className="border-warning/50 bg-warning/5">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-warning">
+            <CardTitle className="text-warning flex items-center gap-2 text-lg font-semibold">
               <AlertTriangle className="h-5 w-5" />
               Attention Required
             </CardTitle>
@@ -197,30 +197,30 @@ export default function BoardingDashboardPage() {
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
               {petsWithMedications.length > 0 && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-background border">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                <div className="bg-background flex items-start gap-3 rounded-lg border p-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
                     <Pill className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
                     <p className="font-medium">
                       {petsWithMedications.length} pet(s) need medication
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {petsWithMedications.map((p) => p.petName).join(", ")}
                     </p>
                   </div>
                 </div>
               )}
               {petsWithAllergies.length > 0 && (
-                <div className="flex items-start gap-3 p-3 rounded-lg bg-background border">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30">
+                <div className="bg-background flex items-start gap-3 rounded-lg border p-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
                     <Utensils className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
                   <div>
                     <p className="font-medium">
                       {petsWithAllergies.length} pet(s) have allergies
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {petsWithAllergies.map((p) => p.petName).join(", ")}
                     </p>
                   </div>
@@ -235,15 +235,15 @@ export default function BoardingDashboardPage() {
         {/* Today's Arrivals */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <LogIn className="h-5 w-5 text-success" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <LogIn className="text-success h-5 w-5" />
               Today&apos;s Arrivals
             </CardTitle>
           </CardHeader>
           <CardContent>
             {todayArrivals.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <div className="text-muted-foreground py-8 text-center">
+                <Calendar className="mx-auto mb-3 h-12 w-12 opacity-50" />
                 <p>No arrivals scheduled for today</p>
               </div>
             ) : (
@@ -251,23 +251,23 @@ export default function BoardingDashboardPage() {
                 {todayArrivals.map((guest) => (
                   <div
                     key={guest.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                        <PawPrint className="h-5 w-5 text-primary" />
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                        <PawPrint className="text-primary h-5 w-5" />
                       </div>
                       <div>
                         <p className="font-medium">{guest.petName}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {guest.petBreed} • {guest.ownerName}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <Badge variant="outline">{guest.kennelName}</Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <Clock className="h-3 w-3 inline mr-1" />
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        <Clock className="mr-1 inline h-3 w-3" />
                         {formatTime(guest.checkInDate)}
                       </p>
                     </div>
@@ -281,15 +281,15 @@ export default function BoardingDashboardPage() {
         {/* Today's Departures */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <LogOut className="h-5 w-5 text-warning" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <LogOut className="text-warning h-5 w-5" />
               Today&apos;s Departures
             </CardTitle>
           </CardHeader>
           <CardContent>
             {todayDepartures.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <div className="text-muted-foreground py-8 text-center">
+                <Calendar className="mx-auto mb-3 h-12 w-12 opacity-50" />
                 <p>No departures scheduled for today</p>
               </div>
             ) : (
@@ -297,23 +297,23 @@ export default function BoardingDashboardPage() {
                 {todayDepartures.map((guest) => (
                   <div
                     key={guest.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10">
-                        <PawPrint className="h-5 w-5 text-warning" />
+                      <div className="bg-warning/10 flex h-10 w-10 items-center justify-center rounded-full">
+                        <PawPrint className="text-warning h-5 w-5" />
                       </div>
                       <div>
                         <p className="font-medium">{guest.petName}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {guest.petBreed} • {guest.totalNights} nights
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">${guest.totalPrice}</p>
-                      <p className="text-xs text-muted-foreground">
-                        <Phone className="h-3 w-3 inline mr-1" />
+                      <p className="text-muted-foreground text-xs">
+                        <Phone className="mr-1 inline h-3 w-3" />
                         {guest.ownerPhone}
                       </p>
                     </div>
@@ -329,19 +329,19 @@ export default function BoardingDashboardPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <Users className="h-5 w-5" />
               Current Boarding Guests
             </CardTitle>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               Avg. stay: {avgStayLength} nights
             </span>
           </div>
         </CardHeader>
         <CardContent>
           {currentGuests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Bed className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <div className="text-muted-foreground py-8 text-center">
+              <Bed className="mx-auto mb-3 h-12 w-12 opacity-50" />
               <p>No pets currently boarding</p>
             </div>
           ) : (
@@ -357,16 +357,16 @@ export default function BoardingDashboardPage() {
                 return (
                   <div
                     key={guest.id}
-                    className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="bg-card hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="mb-3 flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                          <PawPrint className="h-6 w-6 text-primary" />
+                        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary h-6 w-6" />
                         </div>
                         <div>
                           <p className="font-semibold">{guest.petName}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {guest.petBreed}
                           </p>
                         </div>
@@ -416,29 +416,29 @@ export default function BoardingDashboardPage() {
 
                     {(guest.medications.length > 0 ||
                       guest.allergies.length > 0) && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                      <div className="mt-3 flex gap-2 border-t pt-3">
                         {guest.medications.length > 0 && (
                           <Badge
                             variant="outline"
-                            className="text-purple-600 border-purple-300"
+                            className="border-purple-300 text-purple-600"
                           >
-                            <Pill className="h-3 w-3 mr-1" />
+                            <Pill className="mr-1 h-3 w-3" />
                             Medication
                           </Badge>
                         )}
                         {guest.allergies.length > 0 && (
                           <Badge
                             variant="outline"
-                            className="text-red-600 border-red-300"
+                            className="border-red-300 text-red-600"
                           >
-                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            <AlertTriangle className="mr-1 h-3 w-3" />
                             Allergies
                           </Badge>
                         )}
                       </div>
                     )}
 
-                    <div className="mt-3 pt-3 border-t">
+                    <div className="mt-3 border-t pt-3">
                       <Button
                         variant="outline"
                         size="sm"

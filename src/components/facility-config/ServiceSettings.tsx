@@ -169,7 +169,7 @@ export function ServiceSettings({
               Service Settings
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="text-muted-foreground size-4 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-sm">
                   <div className="space-y-2">
@@ -197,9 +197,9 @@ export function ServiceSettings({
               </Tooltip>
             </div>
             {isOpen ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="size-4" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             )}
           </CardTitle>
         </CardHeader>
@@ -218,7 +218,7 @@ export function ServiceSettings({
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
-                      <h4 className="capitalize text-base font-medium">
+                      <h4 className="text-base font-medium capitalize">
                         {service}
                       </h4>
                       <div className="flex gap-2">
@@ -228,7 +228,7 @@ export function ServiceSettings({
                             size="sm"
                             onClick={() => startEditing(service as ServiceKey)}
                           >
-                            <Edit className="h-3 w-3 mr-1" />
+                            <Edit className="mr-1 h-3 w-3" />
                             Edit
                           </Button>
                         )}
@@ -239,7 +239,7 @@ export function ServiceSettings({
                               size="sm"
                               onClick={saveService}
                             >
-                              <Check className="h-3 w-3 mr-1" />
+                              <Check className="mr-1 h-3 w-3" />
                               Save
                             </Button>
                             <Button
@@ -247,14 +247,14 @@ export function ServiceSettings({
                               size="sm"
                               onClick={cancelEditing}
                             >
-                              <X className="h-3 w-3 mr-1" />
+                              <X className="mr-1 h-3 w-3" />
                               Cancel
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {currentSettings.description}
                     </p>
                     <div className="flex items-center gap-4">
@@ -299,8 +299,8 @@ export function ServiceSettings({
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
+                        <Building className="text-muted-foreground size-4" />
+                        <span className="text-muted-foreground text-sm">
                           Used by {facilitiesUsing.length} facilit
                           {facilitiesUsing.length === 1 ? "y" : "ies"}
                         </span>

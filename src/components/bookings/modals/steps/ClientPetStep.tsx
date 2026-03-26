@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -66,7 +67,9 @@ export function ClientPetStep({
 
   const hasExpiredEvaluation = (pet: Pet) => {
     return pet.evaluations?.some(
-      (e) => (e.status === "passed" && e.isExpired === true) || e.status === "outdated",
+      (e) =>
+        (e.status === "passed" && e.isExpired === true) ||
+        e.status === "outdated",
     );
   };
 
@@ -108,57 +111,61 @@ export function ClientPetStep({
   return (
     <div className="space-y-6">
       {/* Expired Evaluation Warning (customer-facing) */}
-      {selectedService !== "evaluation" && petsWithExpiredEvaluation.length > 0 && (
-        <Alert variant="destructive">
-          <FileWarning className="h-4 w-4" />
-          <AlertTitle>Evaluation expired</AlertTitle>
-          <AlertDescription>
-            <p>
-              Evaluation expired — please book a new evaluation to unlock services.
-            </p>
-            <ul className="mt-2 space-y-1">
-              {petsWithExpiredEvaluation.map((pet) => (
-                <li key={pet.id} className="flex items-center gap-2">
-                  <PawPrint className="h-4 w-4" />
-                  {pet.name} ({pet.type})
-                </li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+      {selectedService !== "evaluation" &&
+        petsWithExpiredEvaluation.length > 0 && (
+          <Alert variant="destructive">
+            <FileWarning className="size-4" />
+            <AlertTitle>Evaluation expired</AlertTitle>
+            <AlertDescription>
+              <p>
+                Evaluation expired — please book a new evaluation to unlock
+                services.
+              </p>
+              <ul className="mt-2 space-y-1">
+                {petsWithExpiredEvaluation.map((pet) => (
+                  <li key={pet.id} className="flex items-center gap-2">
+                    <PawPrint className="size-4" />
+                    {pet.name} ({pet.type})
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Failed Evaluation Warning (customer-facing, no reason shown) */}
-      {selectedService !== "evaluation" && petsWithFailedEvaluation.length > 0 && (
-        <Alert variant="destructive">
-          <FileWarning className="h-4 w-4" />
-          <AlertTitle>Evaluation required</AlertTitle>
-          <AlertDescription>
-            <p>
-              Evaluation not passed — please book a new evaluation to unlock services.
-            </p>
-            <ul className="mt-2 space-y-1">
-              {petsWithFailedEvaluation.map((pet) => (
-                <li key={pet.id} className="flex items-center gap-2">
-                  <PawPrint className="h-4 w-4" />
-                  {pet.name} ({pet.type})
-                </li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+      {selectedService !== "evaluation" &&
+        petsWithFailedEvaluation.length > 0 && (
+          <Alert variant="destructive">
+            <FileWarning className="size-4" />
+            <AlertTitle>Evaluation required</AlertTitle>
+            <AlertDescription>
+              <p>
+                Evaluation not passed — please book a new evaluation to unlock
+                services.
+              </p>
+              <ul className="mt-2 space-y-1">
+                {petsWithFailedEvaluation.map((pet) => (
+                  <li key={pet.id} className="flex items-center gap-2">
+                    <PawPrint className="size-4" />
+                    {pet.name} ({pet.type})
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
       {/* Evaluation Warning */}
       {petsNeedingEvaluation.length > 0 && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="flex items-start gap-3">
-            <FileWarning className="h-5 w-5 text-red-600 mt-0.5" />
+            <FileWarning className="mt-0.5 h-5 w-5 text-red-600" />
             <div className="flex-1">
               <h4 className="text-sm font-semibold text-red-800">
                 Evaluation Required
               </h4>
-              <p className="text-sm text-red-700 mt-1">
+              <p className="mt-1 text-sm text-red-700">
                 The following pets require a passed evaluation before booking
                 this service:
               </p>
@@ -166,14 +173,14 @@ export function ClientPetStep({
                 {petsNeedingEvaluation.map((pet) => (
                   <li
                     key={pet.id}
-                    className="text-sm text-red-700 flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm text-red-700"
                   >
-                    <PawPrint className="h-4 w-4" />
+                    <PawPrint className="size-4" />
                     {pet.name} ({pet.type})
                   </li>
                 ))}
               </ul>
-              <p className="text-sm text-red-700 mt-2">
+              <p className="mt-2 text-sm text-red-700">
                 Please complete evaluations for these pets or select different
                 pets to proceed.
               </p>
@@ -189,7 +196,7 @@ export function ClientPetStep({
             <h3 className="text-lg font-semibold">Select Client</h3>
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 placeholder="Search by name, email, or phone..."
                 value={searchQuery}
@@ -202,7 +209,7 @@ export function ClientPetStep({
             <div>
               <div className="p-2">
                 {filteredClients.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No clients found
                   </p>
                 ) : (
@@ -212,11 +219,11 @@ export function ClientPetStep({
                       return (
                         <div
                           key={client.id}
-                          className={`p-3 rounded-lg cursor-pointer transition-all ${
+                          className={`cursor-pointer rounded-lg p-3 transition-all ${
                             isSelected
-                              ? "bg-primary/10 border-2 border-primary row-span-2"
-                              : "hover:bg-muted border-2 border-transparent"
-                          }`}
+                              ? `border-primary bg-primary/10 row-span-2 border-2`
+                              : `hover:bg-muted border-2 border-transparent`
+                          } `}
                           onClick={() => {
                             setSelectedClientId(client.id);
                             // Auto-select pet if client has only one pet
@@ -229,7 +236,7 @@ export function ClientPetStep({
                         >
                           <div className="flex items-center gap-3">
                             <Avatar
-                              className={`${isSelected ? "h-12 w-12" : "h-10 w-10"} transition-all`}
+                              className={` ${isSelected ? "h-12 w-12" : `h-10 w-10`} transition-all`}
                             >
                               <AvatarImage
                                 src={client.imageUrl}
@@ -244,17 +251,21 @@ export function ClientPetStep({
                                   .slice(0, 2)}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">
                                 {client.name}
                               </p>
                               <p
-                                className={`text-sm truncate ${isSelected ? "text-muted-foreground" : "text-muted-foreground"}`}
+                                className={`truncate text-sm ${
+                                  isSelected
+                                    ? `text-muted-foreground`
+                                    : `text-muted-foreground`
+                                } `}
                               >
                                 {client.email}
                               </p>
                               {isSelected && client.phone && (
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-muted-foreground text-sm">
                                   {client.phone}
                                 </p>
                               )}
@@ -267,7 +278,7 @@ export function ClientPetStep({
                             </Badge>
                           </div>
                           {isSelected && (
-                            <div className="mt-3 pt-3 border-t border-border">
+                            <div className="border-border mt-3 border-t pt-3">
                               <div className="text-sm">
                                 <p className="text-muted-foreground">Status</p>
                                 <p className="font-medium capitalize">
@@ -297,7 +308,7 @@ export function ClientPetStep({
             {serviceRequiresEvaluation && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground ml-2" />
+                  <Info className="text-muted-foreground ml-2 size-4" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
@@ -328,13 +339,13 @@ export function ClientPetStep({
                     return (
                       <div
                         key={pet.id}
-                        className={`p-3 rounded-lg border transition-all ${
+                        className={`rounded-lg border p-3 transition-all ${
                           isDisabled
-                            ? "opacity-50 cursor-not-allowed bg-muted"
+                            ? "bg-muted cursor-not-allowed opacity-50"
                             : isSelected
-                              ? "border-primary bg-primary/5 ring-2 ring-primary/20 cursor-pointer"
-                              : "hover:border-primary/50 cursor-pointer"
-                        }`}
+                              ? `border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2`
+                              : `hover:border-primary/50 cursor-pointer`
+                        } `}
                         onClick={() => {
                           if (isDisabled) return;
                           setSelectedPetIds((prev) =>
@@ -346,31 +357,33 @@ export function ClientPetStep({
                       >
                         <div className="flex gap-3">
                           {pet.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={pet.imageUrl}
                               alt={pet.name}
-                              className="w-16 h-16 rounded-lg object-cover"
+                              width={64}
+                              height={64}
+                              className="h-16 w-16 rounded-lg object-cover"
+                              unoptimized
                             />
                           ) : (
-                            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
+                            <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
                               {pet.type === "Cat" ? (
-                                <Cat className="h-8 w-8 text-muted-foreground" />
+                                <Cat className="text-muted-foreground h-8 w-8" />
                               ) : (
-                                <PawPrint className="h-8 w-8 text-muted-foreground" />
+                                <PawPrint className="text-muted-foreground h-8 w-8" />
                               )}
                             </div>
                           )}
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium">
                                   {pet.name}
                                 </p>
-                                <p className="text-xs text-muted-foreground truncate">
+                                <p className="text-muted-foreground truncate text-xs">
                                   {pet.type} • {pet.breed}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                   {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
                                   {pet.weight}kg
                                 </p>
@@ -382,36 +395,36 @@ export function ClientPetStep({
                                         variant="destructive"
                                         className="text-xs"
                                       >
-                                        <FileWarning className="h-3 w-3 mr-1" />
+                                        <FileWarning className="mr-1 h-3 w-3" />
                                         Evaluation Expired
                                       </Badge>
                                     ) : hasValidEvaluation(pet) ? (
                                       <Badge
                                         variant="secondary"
-                                        className="text-xs bg-green-100 text-green-800 hover:bg-green-100"
+                                        className="bg-green-100 text-xs text-green-800 hover:bg-green-100"
                                       >
-                                        <Check className="h-3 w-3 mr-1" />
+                                        <Check className="mr-1 h-3 w-3" />
                                         Evaluation Passed
                                       </Badge>
                                     ) : selectedService === "evaluation" ? (
                                       <Badge
                                         variant="secondary"
-                                        className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-100"
+                                        className="bg-blue-100 text-xs text-blue-800 hover:bg-blue-100"
                                       >
                                         Can be evaluated
                                       </Badge>
                                     ) : isEvaluationOptional ? (
                                       <Badge
                                         variant="secondary"
-                                        className="text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
+                                        className="bg-yellow-100 text-xs text-yellow-800 hover:bg-yellow-100"
                                       >
-                                        <FileWarning className="h-3 w-3 mr-1" />
+                                        <FileWarning className="mr-1 h-3 w-3" />
                                         No Evaluation
                                       </Badge>
                                     ) : (
                                       <Badge
                                         variant="secondary"
-                                        className="text-xs bg-red-100 text-red-800 hover:bg-red-100"
+                                        className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
                                       >
                                         Evaluation Required
                                       </Badge>
@@ -420,13 +433,13 @@ export function ClientPetStep({
                                 )}
                               </div>
                               {isSelected && !isDisabled && (
-                                <Check className="h-5 w-5 text-primary shrink-0" />
+                                <Check className="text-primary h-5 w-5 shrink-0" />
                               )}
                               {isDisabled &&
                                 selectedService === "evaluation" && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs shrink-0"
+                                    className="shrink-0 text-xs"
                                   >
                                     Already Evaluated
                                   </Badge>
@@ -440,16 +453,16 @@ export function ClientPetStep({
                 </div>
               </div>
             ) : (
-              <div className="p-4 bg-muted rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="bg-muted rounded-lg p-4 text-center">
+                <p className="text-muted-foreground text-sm">
                   This client has no pets registered.
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <div className="p-4 bg-muted rounded-lg text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <p className="text-muted-foreground text-sm">
               Please select a client first
             </p>
           </div>

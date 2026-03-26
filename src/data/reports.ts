@@ -467,10 +467,7 @@ export const generateServiceBreakdownReport = (
   );
 
   // Group by service
-  const serviceMap = new Map<
-    string,
-    { count: number; revenue: number }
-  >();
+  const serviceMap = new Map<string, { count: number; revenue: number }>();
   for (const b of facilityBookings) {
     const existing = serviceMap.get(b.service) ?? { count: 0, revenue: 0 };
     existing.count += 1;
@@ -486,18 +483,14 @@ export const generateServiceBreakdownReport = (
     evaluation: "Evaluation",
   };
 
-  const customNameMap = new Map(
-    customModules.map((m) => [m.slug, m.name]),
-  );
+  const customNameMap = new Map(customModules.map((m) => [m.slug, m.name]));
 
   const results: ServiceBreakdownItem[] = [];
   for (const [serviceId, data] of serviceMap) {
     results.push({
       serviceId,
       serviceName:
-        builtinNames[serviceId] ??
-        customNameMap.get(serviceId) ??
-        serviceId,
+        builtinNames[serviceId] ?? customNameMap.get(serviceId) ?? serviceId,
       bookingCount: data.count,
       revenue: data.revenue,
       aov: data.count > 0 ? data.revenue / data.count : 0,

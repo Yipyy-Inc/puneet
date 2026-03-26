@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -10,7 +10,13 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,10 +66,9 @@ import {
   Smartphone,
   History,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
-import type { FormScoringConfig, SupportedFormLocale } from "@/data/forms-phase2-types";
+import type { FormScoringConfig } from "@/data/forms-phase2-types";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
   { value: "intake", label: "Intake (new clients)" },
@@ -97,14 +102,46 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: "address", label: "Address block" },
 ];
 
-const LOGIC_ACTIONS: { value: LogicActionType; label: string; description: string }[] = [
-  { value: "show", label: "Show question(s)", description: "Make target questions visible" },
-  { value: "hide", label: "Hide question(s)", description: "Hide target questions" },
-  { value: "require", label: "Make required", description: "Make target questions required" },
-  { value: "skip_to_section", label: "Jump to section", description: "Skip ahead to a section" },
-  { value: "end_form", label: "End form early", description: "End form with a message" },
-  { value: "set_tag", label: "Add tag", description: "Add a tag to pet/customer" },
-  { value: "alert_flag", label: "Alert flag", description: "Trigger internal alert on submission" },
+const LOGIC_ACTIONS: {
+  value: LogicActionType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "show",
+    label: "Show question(s)",
+    description: "Make target questions visible",
+  },
+  {
+    value: "hide",
+    label: "Hide question(s)",
+    description: "Hide target questions",
+  },
+  {
+    value: "require",
+    label: "Make required",
+    description: "Make target questions required",
+  },
+  {
+    value: "skip_to_section",
+    label: "Jump to section",
+    description: "Skip ahead to a section",
+  },
+  {
+    value: "end_form",
+    label: "End form early",
+    description: "End form with a message",
+  },
+  {
+    value: "set_tag",
+    label: "Add tag",
+    description: "Add a tag to pet/customer",
+  },
+  {
+    value: "alert_flag",
+    label: "Alert flag",
+    description: "Trigger internal alert on submission",
+  },
 ];
 
 const CONDITION_OPERATORS: { value: string; label: string }[] = [
@@ -119,7 +156,10 @@ const CONDITION_OPERATORS: { value: string; label: string }[] = [
 ];
 
 /** Mapping targets by category (6.2: configurable per field in builder). Values are stored as target keys. */
-const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: string }[] }[] = [
+const MAPPING_TARGET_GROUPS: {
+  group: string;
+  targets: { value: string; label: string }[];
+}[] = [
   {
     group: "Customer profile",
     targets: [
@@ -130,9 +170,18 @@ const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: s
       { value: "customer.address.city", label: "Address (city)" },
       { value: "customer.address.state", label: "Address (state)" },
       { value: "customer.address.zip", label: "Address (zip)" },
-      { value: "customer.emergencyContact.name", label: "Emergency contact name" },
-      { value: "customer.emergencyContact.phone", label: "Emergency contact phone" },
-      { value: "customer.emergencyContact.email", label: "Emergency contact email" },
+      {
+        value: "customer.emergencyContact.name",
+        label: "Emergency contact name",
+      },
+      {
+        value: "customer.emergencyContact.phone",
+        label: "Emergency contact phone",
+      },
+      {
+        value: "customer.emergencyContact.email",
+        label: "Emergency contact email",
+      },
     ],
   },
   {
@@ -166,7 +215,10 @@ const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: s
     targets: [
       { value: "notes.customer", label: "Customer notes" },
       { value: "notes.pet", label: "Pet notes" },
-      { value: "notes.booking", label: "Booking notes (if submission linked to booking)" },
+      {
+        value: "notes.booking",
+        label: "Booking notes (if submission linked to booking)",
+      },
       { value: "notes", label: "General notes" },
     ],
   },
@@ -181,7 +233,9 @@ const MAPPING_TARGET_GROUPS: { group: string; targets: { value: string; label: s
   },
 ];
 
-const MAPPING_TARGETS_FLAT = MAPPING_TARGET_GROUPS.flatMap((g) => g.targets.map((t) => t.value));
+const MAPPING_TARGETS_FLAT = MAPPING_TARGET_GROUPS.flatMap((g) =>
+  g.targets.map((t) => t.value),
+);
 
 function SortableQuestionRow({
   q,
@@ -206,45 +260,76 @@ function SortableQuestionRow({
   onMoveDown: () => void;
   onRemove: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: q.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: q.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   const mappingLabel = mappingTarget
-    ? MAPPING_TARGET_GROUPS.flatMap((g) => g.targets).find((t) => t.value === mappingTarget)?.label ?? mappingTarget
+    ? (MAPPING_TARGET_GROUPS.flatMap((g) => g.targets).find(
+        (t) => t.value === mappingTarget,
+      )?.label ?? mappingTarget)
     : null;
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? "opacity-50 shadow-md" : ""} ${
-        selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""
-      }`}
+      className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? `opacity-50 shadow-md` : ""} ${selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""} `}
     >
-      <div {...attributes} {...listeners} className="shrink-0 cursor-grab active:cursor-grabbing touch-none">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <div
+        {...attributes}
+        {...listeners}
+        className="shrink-0 cursor-grab touch-none active:cursor-grabbing"
+      >
+        <GripVertical className="text-muted-foreground size-4" />
       </div>
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <Input
           value={q.label || ""}
           onChange={(e) => onUpdateLabel(e.target.value)}
           onFocus={onSelect}
           onClick={onSelect}
-          className="flex-1 min-w-0 h-8 border-0 shadow-none focus-visible:ring-0 text-sm"
+          className="h-8 min-w-0 flex-1 border-0 text-sm shadow-none focus-visible:ring-0"
           placeholder="Question text"
         />
         {mappingLabel && (
-          <Badge variant="secondary" className="shrink-0 text-[10px] h-5 px-1.5 font-normal bg-blue-50 text-blue-700 border-blue-200">
+          <Badge
+            variant="secondary"
+            className="h-5 shrink-0 border-blue-200 bg-blue-50 px-1.5 text-[10px] font-normal text-blue-700"
+          >
             {mappingLabel}
           </Badge>
         )}
       </div>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMoveUp} disabled={idx === 0}>
-        <ChevronUp className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={onMoveUp}
+        disabled={idx === 0}
+      >
+        <ChevronUp className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onMoveDown} disabled={idx === total - 1}>
-        <ChevronDown className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={onMoveDown}
+        disabled={idx === total - 1}
+      >
+        <ChevronDown className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onRemove}>
-        <Trash2 className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-destructive h-8 w-8"
+        onClick={onRemove}
+      >
+        <Trash2 className="size-4" />
       </Button>
     </div>
   );
@@ -277,44 +362,72 @@ export function FormBuilderEditor({
   const [name, setName] = useState(existing?.name ?? template?.name ?? "");
   const [slug, setSlug] = useState(existing?.slug ?? "");
   const [type, setType] = useState<FormType>(
-    existing?.type ?? template?.formType ?? "intake"
+    existing?.type ?? template?.formType ?? "intake",
   );
   const [serviceType, setServiceType] = useState<ServiceType | "">(
-    existing?.serviceType ?? ""
+    existing?.serviceType ?? "",
   );
   const [internal, setInternal] = useState(existing?.internal ?? false);
-  const [repeatPerPet, setRepeatPerPet] = useState(existing?.repeatPerPet ?? false);
-  const [requireAuth, setRequireAuth] = useState(existing?.requireAuth ?? false);
-  const defaultSectionIdRef = useRef<string>(generateSectionId());
-  const defaultSectionId = defaultSectionIdRef.current;
+  const [repeatPerPet, setRepeatPerPet] = useState(
+    existing?.repeatPerPet ?? false,
+  );
+  const [requireAuth, setRequireAuth] = useState(
+    existing?.requireAuth ?? false,
+  );
+  const [defaultSectionId] = useState(() => generateSectionId());
   const [sections, setSections] = useState<FormSectionDTO[]>(() =>
     (existing?.sections?.length ?? 0) > 0
       ? existing!.sections!
-      : [{ id: defaultSectionId, title: "Section 1", order: 0 }]
+      : [{ id: defaultSectionId, title: "Section 1", order: 0 }],
   );
   const [questions, setQuestions] = useState<FormQuestion[]>(() => {
     const base = existing?.questions ?? template?.questions ?? [];
-    const firstId = (existing?.sections?.length ?? 0) > 0 ? existing!.sections![0].id : defaultSectionId;
+    const firstId =
+      (existing?.sections?.length ?? 0) > 0
+        ? existing!.sections![0].id
+        : defaultSectionId;
     return base.map((q) => ({ ...q, sectionId: q.sectionId ?? firstId }));
   });
   const [fieldMapping, setFieldMapping] = useState<FieldMappingItem[]>(
-    existing?.fieldMapping ?? []
+    existing?.fieldMapping ?? [],
   );
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(() => {
-    const base = existing?.questions ?? template?.questions ?? [];
-    return base[0]?.id ?? null;
-  });
-  const [welcomeMessage, setWelcomeMessage] = useState(existing?.settings?.welcomeMessage ?? "");
-  const [submitMessage, setSubmitMessage] = useState(existing?.settings?.submitMessage ?? "");
-  const [themeColor, setThemeColor] = useState(existing?.settings?.themeColor ?? "");
-  const [audience, setAudience] = useState<FormAudience>(existing?.audience ?? "customer");
-  const [appliesTo, setAppliesTo] = useState<FormAppliesTo>(existing?.appliesTo ?? {});
-  const [formLogicRules, setFormLogicRules] = useState<FormLogicRule[]>(existing?.logicRules ?? []);
-  const [previewMode, setPreviewMode] = useState<"none" | "desktop" | "mobile">("none");
-  const [previewAudience, setPreviewAudience] = useState<"customer" | "staff">("customer");
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(
+    () => {
+      const base = existing?.questions ?? template?.questions ?? [];
+      return base[0]?.id ?? null;
+    },
+  );
+  const [welcomeMessage, setWelcomeMessage] = useState(
+    existing?.settings?.welcomeMessage ?? "",
+  );
+  const [submitMessage, setSubmitMessage] = useState(
+    existing?.settings?.submitMessage ?? "",
+  );
+  const [themeColor, setThemeColor] = useState(
+    existing?.settings?.themeColor ?? "",
+  );
+  const [audience, setAudience] = useState<FormAudience>(
+    existing?.audience ?? "customer",
+  );
+  const [appliesTo, setAppliesTo] = useState<FormAppliesTo>(
+    existing?.appliesTo ?? {},
+  );
+  const [formLogicRules, setFormLogicRules] = useState<FormLogicRule[]>(
+    existing?.logicRules ?? [],
+  );
+  const [previewMode, setPreviewMode] = useState<"none" | "desktop" | "mobile">(
+    "none",
+  );
+  const [previewAudience, setPreviewAudience] = useState<"customer" | "staff">(
+    "customer",
+  );
   // Phase 2 state
   const [scoringConfig, setScoringConfig] = useState<FormScoringConfig>(
-    existing?.settings?.scoring ?? { enabled: false, thresholds: { approveAbove: 80, needsReviewAbove: 50 }, rules: [] }
+    existing?.settings?.scoring ?? {
+      enabled: false,
+      thresholds: { approveAbove: 80, needsReviewAbove: 50 },
+      rules: [],
+    },
   );
   const [i18nEnabled, setI18nEnabled] = useState(false);
   const [esignEnabled, setEsignEnabled] = useState(false);
@@ -329,82 +442,83 @@ export function FormBuilderEditor({
     questions: questions.filter((q) => q.sectionId === sec.id),
   }));
 
-  const addSection = useCallback(() => {
+  const addSection = () => {
     const newSec: FormSectionDTO = {
       id: generateSectionId(),
       title: `Section ${sections.length + 1}`,
       order: sections.length,
     };
     setSections((prev) => [...prev, newSec]);
-  }, [sections.length]);
+  };
 
-  const updateSection = useCallback((sectionId: string, patch: Partial<FormSectionDTO>) => {
+  const updateSection = (sectionId: string, patch: Partial<FormSectionDTO>) => {
     setSections((prev) =>
-      prev.map((s) => (s.id === sectionId ? { ...s, ...patch } : s))
+      prev.map((s) => (s.id === sectionId ? { ...s, ...patch } : s)),
     );
-  }, []);
+  };
 
-  const removeSection = useCallback((sectionId: string) => {
-    const remaining = sections.filter((s) => s.id !== sectionId).sort((a, b) => a.order - b.order);
+  const removeSection = (sectionId: string) => {
+    const remaining = sections
+      .filter((s) => s.id !== sectionId)
+      .sort((a, b) => a.order - b.order);
     const targetId = remaining[0]?.id;
     setSections(remaining.map((s, i) => ({ ...s, order: i })));
     if (targetId) {
       setQuestions((prev) =>
-        prev.map((q) => (q.sectionId === sectionId ? { ...q, sectionId: targetId } : q))
+        prev.map((q) =>
+          q.sectionId === sectionId ? { ...q, sectionId: targetId } : q,
+        ),
       );
     } else {
       setQuestions([]);
       setSelectedQuestionId(null);
     }
-  }, [sections]);
+  };
 
-  const insertIndexForSection = useCallback(
-    (sectionId: string) => {
-      const order = sections.find((s) => s.id === sectionId)?.order ?? 0;
-      const lastInSection = questions.reduce((max, q, i) => (q.sectionId === sectionId ? i : max), -1);
-      if (lastInSection >= 0) return lastInSection + 1;
-      const firstOfLater = questions.findIndex(
-        (q) => (sections.find((s) => s.id === q.sectionId)?.order ?? 0) >= order
-      );
-      return firstOfLater === -1 ? questions.length : firstOfLater;
-    },
-    [questions, sections]
-  );
-
-  const addQuestion = useCallback(
-    (sectionId?: string) => {
-      const secId = sectionId ?? sortedSections[0]?.id;
-      if (!secId) return;
-      const q: FormQuestion = {
-        id: generateQuestionId(),
-        type: "text",
-        label: "New question",
-        required: false,
-        sectionId: secId,
-      };
-      const at = insertIndexForSection(secId);
-      setQuestions((prev) => [...prev.slice(0, at), q, ...prev.slice(at)]);
-      setSelectedQuestionId(q.id);
-    },
-    [sortedSections, insertIndexForSection]
-  );
-
-  const updateQuestion = useCallback((id: string, patch: Partial<FormQuestion>) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, ...patch } : q))
+  const insertIndexForSection = (sectionId: string) => {
+    const order = sections.find((s) => s.id === sectionId)?.order ?? 0;
+    const lastInSection = questions.reduce(
+      (max, q, i) => (q.sectionId === sectionId ? i : max),
+      -1,
     );
-  }, []);
+    if (lastInSection >= 0) return lastInSection + 1;
+    const firstOfLater = questions.findIndex(
+      (q) => (sections.find((s) => s.id === q.sectionId)?.order ?? 0) >= order,
+    );
+    return firstOfLater === -1 ? questions.length : firstOfLater;
+  };
 
-  const removeQuestion = useCallback((id: string) => {
+  const addQuestion = (sectionId?: string) => {
+    const secId = sectionId ?? sortedSections[0]?.id;
+    if (!secId) return;
+    const q: FormQuestion = {
+      id: generateQuestionId(),
+      type: "text",
+      label: "New question",
+      required: false,
+      sectionId: secId,
+    };
+    const at = insertIndexForSection(secId);
+    setQuestions((prev) => [...prev.slice(0, at), q, ...prev.slice(at)]);
+    setSelectedQuestionId(q.id);
+  };
+
+  const updateQuestion = (id: string, patch: Partial<FormQuestion>) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, ...patch } : q)),
+    );
+  };
+
+  const removeQuestion = (id: string) => {
     setQuestions((prev) => {
       const next = prev.filter((q) => q.id !== id);
       if (selectedQuestionId === id) setSelectedQuestionId(next[0]?.id ?? null);
       return next;
     });
     setFieldMapping((prev) => prev.filter((m) => m.questionId !== id));
-  }, [selectedQuestionId]);
+  };
 
-  const moveQuestion = useCallback((id: string, dir: "up" | "down") => {
+  const moveQuestion = (id: string, dir: "up" | "down") => {
     setQuestions((prev) => {
       const i = prev.findIndex((q) => q.id === id);
       if (i === -1) return prev;
@@ -421,68 +535,78 @@ export function FormBuilderEditor({
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
-  }, []);
+  };
 
-  const handleQuestionDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!over || active.id === over.id) return;
-      const activeId = String(active.id);
-      const overId = String(over.id);
-      setQuestions((prev) => {
-        const dragged = prev.find((q) => q.id === activeId);
-        if (!dragged?.sectionId) return prev;
-        const inSection = prev.filter((q) => q.sectionId === dragged.sectionId);
-        const oldIdx = inSection.findIndex((q) => q.id === activeId);
-        const newIdx = inSection.findIndex((q) => q.id === overId);
-        if (oldIdx === -1 || newIdx === -1) return prev;
-        const reordered = arrayMove(inSection, oldIdx, newIdx);
-        const sectionOrder = sortedSections.map((s) => s.id);
-        const merged: FormQuestion[] = [];
-        for (const secId of sectionOrder) {
-          if (secId === dragged.sectionId) merged.push(...reordered);
-          else merged.push(...prev.filter((q) => q.sectionId === secId));
-        }
-        return merged;
-      });
-    },
-    [sortedSections]
-  );
+  const handleQuestionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    setQuestions((prev) => {
+      const dragged = prev.find((q) => q.id === activeId);
+      if (!dragged?.sectionId) return prev;
+      const inSection = prev.filter((q) => q.sectionId === dragged.sectionId);
+      const oldIdx = inSection.findIndex((q) => q.id === activeId);
+      const newIdx = inSection.findIndex((q) => q.id === overId);
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      const reordered = arrayMove(inSection, oldIdx, newIdx);
+      const sectionOrder = sortedSections.map((s) => s.id);
+      const merged: FormQuestion[] = [];
+      for (const secId of sectionOrder) {
+        if (secId === dragged.sectionId) merged.push(...reordered);
+        else merged.push(...prev.filter((q) => q.sectionId === secId));
+      }
+      return merged;
+    });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
-  const addMapping = useCallback(() => {
+  const addMapping = () => {
     const firstId = questions[0]?.id;
     if (!firstId) return;
     setFieldMapping((prev) => [
       ...prev,
       { questionId: firstId, target: "customer.name" },
     ]);
-  }, [questions]);
+  };
 
-  const updateMapping = useCallback((questionId: string, target: string) => {
+  const updateMapping = (questionId: string, target: string) => {
     setFieldMapping((prev) => {
       const without = prev.filter((m) => m.questionId !== questionId);
       return [...without, { questionId, target }];
     });
-  }, []);
+  };
 
-  const removeMapping = useCallback((questionId: string) => {
+  const removeMapping = (questionId: string) => {
     setFieldMapping((prev) => prev.filter((m) => m.questionId !== questionId));
-  }, []);
+  };
 
-  const handleSave = useCallback(() => {
+  const handleSave = () => {
     if (!name.trim()) return;
-    const settings = (welcomeMessage || submitMessage || themeColor) ? {
-      welcomeMessage: welcomeMessage || undefined,
-      submitMessage: submitMessage || undefined,
-      themeColor: themeColor || undefined,
-    } : undefined;
-    const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
-    const appliesData = (appliesTo.petTypes?.length || appliesTo.serviceTypes?.length || appliesTo.locationIds?.length) ? appliesTo : undefined;
+    const settings =
+      welcomeMessage || submitMessage || themeColor
+        ? {
+            welcomeMessage: welcomeMessage || undefined,
+            submitMessage: submitMessage || undefined,
+            themeColor: themeColor || undefined,
+          }
+        : undefined;
+    const questionsWithSection = questions.map((q) => ({
+      ...q,
+      sectionId: q.sectionId ?? sortedSections[0]?.id,
+    }));
+    const appliesData =
+      appliesTo.petTypes?.length ||
+      appliesTo.serviceTypes?.length ||
+      appliesTo.locationIds?.length
+        ? appliesTo
+        : undefined;
     if (existing) {
       const updated = updateForm(existing.id, {
         name: name.trim(),
@@ -522,39 +646,28 @@ export function FormBuilderEditor({
       });
       onSave(created);
     }
-  }, [
-    existing,
-    facilityId,
-    name,
-    slug,
-    type,
-    serviceType,
-    internal,
-    repeatPerPet,
-    requireAuth,
-    audience,
-    appliesTo,
-    sections,
-    questions,
-    sortedSections,
-    fieldMapping,
-    formLogicRules,
-    welcomeMessage,
-    submitMessage,
-    themeColor,
-    template?.id,
-    onSave,
-  ]);
+  };
 
-  const handlePublish = useCallback(() => {
+  const handlePublish = () => {
     if (!name.trim() || !existing) return;
-    const settings = (welcomeMessage || submitMessage || themeColor) ? {
-      welcomeMessage: welcomeMessage || undefined,
-      submitMessage: submitMessage || undefined,
-      themeColor: themeColor || undefined,
-    } : undefined;
-    const questionsWithSection = questions.map((q) => ({ ...q, sectionId: q.sectionId ?? sortedSections[0]?.id }));
-    const appliesData = (appliesTo.petTypes?.length || appliesTo.serviceTypes?.length || appliesTo.locationIds?.length) ? appliesTo : undefined;
+    const settings =
+      welcomeMessage || submitMessage || themeColor
+        ? {
+            welcomeMessage: welcomeMessage || undefined,
+            submitMessage: submitMessage || undefined,
+            themeColor: themeColor || undefined,
+          }
+        : undefined;
+    const questionsWithSection = questions.map((q) => ({
+      ...q,
+      sectionId: q.sectionId ?? sortedSections[0]?.id,
+    }));
+    const appliesData =
+      appliesTo.petTypes?.length ||
+      appliesTo.serviceTypes?.length ||
+      appliesTo.locationIds?.length
+        ? appliesTo
+        : undefined;
     const updated = updateForm(existing.id, {
       name: name.trim(),
       slug: slug.trim() || undefined,
@@ -573,21 +686,24 @@ export function FormBuilderEditor({
       status: "published",
     });
     if (updated) onSave(updated);
-  }, [existing, name, slug, type, serviceType, internal, repeatPerPet, requireAuth, audience, appliesTo, sections, questions, sortedSections, fieldMapping, formLogicRules, welcomeMessage, submitMessage, themeColor, onSave]);
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-2 space-y-6">
+      <div className="space-y-6 lg:col-span-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Form settings</CardTitle>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-2 size-4" />
                 Save
               </Button>
               {existing && (
-                <Button onClick={handlePublish} disabled={existing?.status === "published"}>
+                <Button
+                  onClick={handlePublish}
+                  disabled={existing?.status === "published"}
+                >
                   Publish
                 </Button>
               )}
@@ -615,7 +731,7 @@ export function FormBuilderEditor({
             <div className="space-y-2">
               <Label>Welcome message (optional)</Label>
               <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                className="border-input flex min-h-[60px] w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                 value={welcomeMessage}
                 onChange={(e) => setWelcomeMessage(e.target.value)}
                 placeholder="Brief intro shown at the top of the form"
@@ -624,7 +740,7 @@ export function FormBuilderEditor({
             <div className="space-y-2">
               <Label>Submit confirmation message (optional)</Label>
               <textarea
-                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                className="border-input flex min-h-[60px] w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                 value={submitMessage}
                 onChange={(e) => setSubmitMessage(e.target.value)}
                 placeholder="Message shown after successful submission"
@@ -633,7 +749,10 @@ export function FormBuilderEditor({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Theme color (optional)</Label>
-                <Select value={themeColor || "default"} onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}>
+                <Select
+                  value={themeColor || "default"}
+                  onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Default" />
                   </SelectTrigger>
@@ -648,28 +767,40 @@ export function FormBuilderEditor({
               </div>
               <div className="space-y-2">
                 <Label>Audience</Label>
-                <Select value={audience} onValueChange={(v) => setAudience(v as FormAudience)}>
+                <Select
+                  value={audience}
+                  onValueChange={(v) => setAudience(v as FormAudience)}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="customer">Customer</SelectItem>
                     <SelectItem value="staff">Staff only</SelectItem>
-                    <SelectItem value="both">Both (customer &amp; staff)</SelectItem>
+                    <SelectItem value="both">
+                      Both (customer &amp; staff)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-3 rounded-lg border p-3">
-              <Label className="text-sm font-medium">Applies to (targeting)</Label>
+              <Label className="text-sm font-medium">
+                Applies to (targeting)
+              </Label>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Pet types</Label>
+                <Label className="text-muted-foreground text-xs">
+                  Pet types
+                </Label>
                 <div className="flex flex-wrap gap-3">
                   {["dog", "cat", "other"].map((pt) => (
-                    <label key={pt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <label
+                      key={pt}
+                      className="flex cursor-pointer items-center gap-1.5 text-sm"
+                    >
                       <input
                         type="checkbox"
-                        className="h-4 w-4"
+                        className="size-4"
                         checked={appliesTo.petTypes?.includes(pt) ?? false}
                         onChange={(e) => {
                           const current = appliesTo.petTypes ?? [];
@@ -687,13 +818,18 @@ export function FormBuilderEditor({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Service types</Label>
+                <Label className="text-muted-foreground text-xs">
+                  Service types
+                </Label>
                 <div className="flex flex-wrap gap-3">
                   {["boarding", "daycare", "grooming", "training"].map((st) => (
-                    <label key={st} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <label
+                      key={st}
+                      className="flex cursor-pointer items-center gap-1.5 text-sm"
+                    >
                       <input
                         type="checkbox"
-                        className="h-4 w-4"
+                        className="size-4"
                         checked={appliesTo.serviceTypes?.includes(st) ?? false}
                         onChange={(e) => {
                           const current = appliesTo.serviceTypes ?? [];
@@ -714,7 +850,10 @@ export function FormBuilderEditor({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={type} onValueChange={(v) => setType(v as FormType)}>
+                <Select
+                  value={type}
+                  onValueChange={(v) => setType(v as FormType)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -750,7 +889,11 @@ export function FormBuilderEditor({
             </div>
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center space-x-2">
-                <Switch id="internal" checked={internal} onCheckedChange={setInternal} />
+                <Switch
+                  id="internal"
+                  checked={internal}
+                  onCheckedChange={setInternal}
+                />
                 <Label htmlFor="internal">Staff only (internal)</Label>
               </div>
               <div className="flex items-center space-x-2">
@@ -778,84 +921,107 @@ export function FormBuilderEditor({
             <CardTitle>Sections & questions</CardTitle>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={addSection}>
-                <FolderOpen className="mr-2 h-4 w-4" />
+                <FolderOpen className="mr-2 size-4" />
                 Add section
               </Button>
               <Button variant="outline" size="sm" onClick={() => addQuestion()}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 Add question
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {questionsBySection.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">
+              <p className="text-muted-foreground py-4 text-sm">
                 Add a section, then add questions.
               </p>
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleQuestionDragEnd}>
-              <div className="space-y-4">
-                {questionsBySection.map(({ section, questions: secQuestions }) => (
-                  <div key={section.id} className="space-y-2 rounded-lg border p-3">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <Input
-                        value={section.title}
-                        onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                        className="h-8 font-medium border-0 shadow-none focus-visible:ring-0 px-0"
-                        placeholder="Section title"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-destructive"
-                        onClick={() => removeSection(section.id)}
-                        disabled={questionsBySection.length <= 1}
-                        title="Remove section"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleQuestionDragEnd}
+              >
+                <div className="space-y-4">
+                  {questionsBySection.map(
+                    ({ section, questions: secQuestions }) => (
+                      <div
+                        key={section.id}
+                        className="space-y-2 rounded-lg border p-3"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => addQuestion(section.id)}
-                      >
-                        <Plus className="mr-1 h-4 w-4" />
-                        Add question
-                      </Button>
-                    </div>
-                    {secQuestions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground pl-6">No questions yet.</p>
-                    ) : (
-                      <div className="space-y-2 pl-2">
-                        <SortableContext items={secQuestions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
-                          {secQuestions.map((q, idx) => (
-                            <SortableQuestionRow
-                              key={q.id}
-                              q={q}
-                              idx={idx}
-                              total={secQuestions.length}
-                              selectedQuestionId={selectedQuestionId}
-                              mappingTarget={fieldMapping.find((m) => m.questionId === q.id)?.target}
-                              onSelect={() => setSelectedQuestionId(q.id)}
-                              onUpdateLabel={(v) => updateQuestion(q.id, { label: v })}
-                              onMoveUp={() => moveQuestion(q.id, "up")}
-                              onMoveDown={() => moveQuestion(q.id, "down")}
-                              onRemove={() => removeQuestion(q.id)}
-                            />
-                          ))}
-                        </SortableContext>
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="text-muted-foreground size-4 shrink-0" />
+                          <Input
+                            value={section.title}
+                            onChange={(e) =>
+                              updateSection(section.id, {
+                                title: e.target.value,
+                              })
+                            }
+                            className="h-8 border-0 px-0 font-medium shadow-none focus-visible:ring-0"
+                            placeholder="Section title"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-8 w-8 shrink-0"
+                            onClick={() => removeSection(section.id)}
+                            disabled={questionsBySection.length <= 1}
+                            title="Remove section"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => addQuestion(section.id)}
+                          >
+                            <Plus className="mr-1 size-4" />
+                            Add question
+                          </Button>
+                        </div>
+                        {secQuestions.length === 0 ? (
+                          <p className="text-muted-foreground pl-6 text-xs">
+                            No questions yet.
+                          </p>
+                        ) : (
+                          <div className="space-y-2 pl-2">
+                            <SortableContext
+                              items={secQuestions.map((q) => q.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {secQuestions.map((q, idx) => (
+                                <SortableQuestionRow
+                                  key={q.id}
+                                  q={q}
+                                  idx={idx}
+                                  total={secQuestions.length}
+                                  selectedQuestionId={selectedQuestionId}
+                                  mappingTarget={
+                                    fieldMapping.find(
+                                      (m) => m.questionId === q.id,
+                                    )?.target
+                                  }
+                                  onSelect={() => setSelectedQuestionId(q.id)}
+                                  onUpdateLabel={(v) =>
+                                    updateQuestion(q.id, { label: v })
+                                  }
+                                  onMoveUp={() => moveQuestion(q.id, "up")}
+                                  onMoveDown={() => moveQuestion(q.id, "down")}
+                                  onRemove={() => removeQuestion(q.id)}
+                                />
+                              ))}
+                            </SortableContext>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                    ),
+                  )}
+                </div>
               </DndContext>
             )}
           </CardContent>
         </Card>
-
       </div>
 
       {/* Right: settings panel */}
@@ -870,8 +1036,15 @@ export function FormBuilderEditor({
                 question={selectedQuestion}
                 allQuestions={questions}
                 currentQuestionId={selectedQuestion.id}
-                mappingTarget={fieldMapping.find((m) => m.questionId === selectedQuestion.id)?.target}
-                onMappingChange={(t) => (t ? updateMapping(selectedQuestion.id, t) : removeMapping(selectedQuestion.id))}
+                mappingTarget={
+                  fieldMapping.find((m) => m.questionId === selectedQuestion.id)
+                    ?.target
+                }
+                onMappingChange={(t) =>
+                  t
+                    ? updateMapping(selectedQuestion.id, t)
+                    : removeMapping(selectedQuestion.id)
+                }
                 onChange={(patch) => updateQuestion(selectedQuestion.id, patch)}
               />
             </CardContent>
@@ -882,37 +1055,44 @@ export function FormBuilderEditor({
             <div className="flex items-center gap-2">
               <CardTitle className="text-base">Field mapping</CardTitle>
               {fieldMapping.length > 0 && (
-                <Badge variant="secondary" className="text-xs h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                <Badge
+                  variant="secondary"
+                  className="h-5 border-blue-200 bg-blue-50 px-1.5 text-xs text-blue-700"
+                >
                   {fieldMapping.length} mapped
                 </Badge>
               )}
             </div>
             <Button variant="outline" size="sm" onClick={addMapping}>
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
             </Button>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground mb-3">
-              Map answers to customer/pet profile fields, notes, medical/vaccine, or tags. Configurable per question in the question editor (Save answer to profile) or here.
+            <p className="text-muted-foreground mb-3 text-xs">
+              Map answers to customer/pet profile fields, notes,
+              medical/vaccine, or tags. Configurable per question in the
+              question editor (Save answer to profile) or here.
             </p>
             {fieldMapping.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No mappings yet.</p>
+              <p className="text-muted-foreground text-sm">No mappings yet.</p>
             ) : (
               <div className="space-y-2">
                 {fieldMapping.map((m) => (
                   <div
                     key={m.questionId}
-                    className="flex items-center gap-2 rounded border p-2 text-sm"
+                    className="flex items-center gap-2 rounded-sm border p-2 text-sm"
                   >
                     <Select
                       value={m.questionId}
                       onValueChange={(v) => {
-                        const cur = fieldMapping.find((x) => x.questionId === m.questionId);
+                        const cur = fieldMapping.find(
+                          (x) => x.questionId === m.questionId,
+                        );
                         removeMapping(m.questionId);
                         updateMapping(v, cur?.target ?? "customer.name");
                       }}
                     >
-                      <SelectTrigger className="flex-1 min-w-0">
+                      <SelectTrigger className="min-w-0 flex-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -927,7 +1107,7 @@ export function FormBuilderEditor({
                       value={m.target}
                       onValueChange={(v) => updateMapping(m.questionId, v)}
                     >
-                      <SelectTrigger className="flex-1 min-w-0">
+                      <SelectTrigger className="min-w-0 flex-1">
                         <SelectValue placeholder="Map to..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -941,12 +1121,15 @@ export function FormBuilderEditor({
                             ))}
                           </SelectGroup>
                         ))}
-                        {m.target && !MAPPING_TARGETS_FLAT.includes(m.target) && (
-                          <SelectGroup key="_other">
-                            <SelectLabel>Other</SelectLabel>
-                            <SelectItem value={m.target}>{m.target}</SelectItem>
-                          </SelectGroup>
-                        )}
+                        {m.target &&
+                          !MAPPING_TARGETS_FLAT.includes(m.target) && (
+                            <SelectGroup key="_other">
+                              <SelectLabel>Other</SelectLabel>
+                              <SelectItem value={m.target}>
+                                {m.target}
+                              </SelectItem>
+                            </SelectGroup>
+                          )}
                       </SelectContent>
                     </Select>
                     <Button
@@ -955,21 +1138,27 @@ export function FormBuilderEditor({
                       className="h-8 w-8 shrink-0"
                       onClick={() => removeMapping(m.questionId)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
                 ))}
                 {/* Mapping preview summary — shows grouped target counts */}
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t mt-3">
+                <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-2">
                   {(() => {
                     const counts: Record<string, number> = {};
                     for (const m of fieldMapping) {
-                      const group = MAPPING_TARGET_GROUPS.find((g) => g.targets.some((t) => t.value === m.target));
+                      const group = MAPPING_TARGET_GROUPS.find((g) =>
+                        g.targets.some((t) => t.value === m.target),
+                      );
                       const key = group?.group ?? "Other";
                       counts[key] = (counts[key] ?? 0) + 1;
                     }
                     return Object.entries(counts).map(([group, count]) => (
-                      <Badge key={group} variant="outline" className="text-[10px] h-5 font-normal">
+                      <Badge
+                        key={group}
+                        variant="outline"
+                        className="h-5 text-[10px] font-normal"
+                      >
                         {group}: {count}
                       </Badge>
                     ));
@@ -983,8 +1172,8 @@ export function FormBuilderEditor({
         {/* Logic Rules */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Zap className="size-4" />
               Logic Rules
             </CardTitle>
             <Button
@@ -1004,17 +1193,21 @@ export function FormBuilderEditor({
                 ]);
               }}
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="mr-1 size-4" />
               Add rule
             </Button>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground mb-3">
-              IF a question&apos;s answer matches a condition, THEN perform an action on other questions or sections.
-              {questions.length === 0 && " Add questions first, then create logic rules."}
+            <p className="text-muted-foreground mb-3 text-xs">
+              IF a question&apos;s answer matches a condition, THEN perform an
+              action on other questions or sections.
+              {questions.length === 0 &&
+                " Add questions first, then create logic rules."}
             </p>
             {formLogicRules.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No logic rules yet.</p>
+              <p className="text-muted-foreground text-sm">
+                No logic rules yet.
+              </p>
             ) : (
               <div className="space-y-3">
                 {formLogicRules.map((rule) => (
@@ -1025,11 +1218,13 @@ export function FormBuilderEditor({
                     allSections={sortedSections}
                     onChange={(updated) =>
                       setFormLogicRules((prev) =>
-                        prev.map((r) => (r.id === rule.id ? updated : r))
+                        prev.map((r) => (r.id === rule.id ? updated : r)),
                       )
                     }
                     onRemove={() =>
-                      setFormLogicRules((prev) => prev.filter((r) => r.id !== rule.id))
+                      setFormLogicRules((prev) =>
+                        prev.filter((r) => r.id !== rule.id),
+                      )
                     }
                   />
                 ))}
@@ -1041,8 +1236,8 @@ export function FormBuilderEditor({
         {/* Preview */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Eye className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Eye className="size-4" />
               Preview
             </CardTitle>
           </CardHeader>
@@ -1051,17 +1246,21 @@ export function FormBuilderEditor({
               <Button
                 variant={previewMode === "desktop" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPreviewMode(previewMode === "desktop" ? "none" : "desktop")}
+                onClick={() =>
+                  setPreviewMode(previewMode === "desktop" ? "none" : "desktop")
+                }
               >
-                <Monitor className="h-3.5 w-3.5 mr-1" />
+                <Monitor className="mr-1 h-3.5 w-3.5" />
                 Desktop
               </Button>
               <Button
                 variant={previewMode === "mobile" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPreviewMode(previewMode === "mobile" ? "none" : "mobile")}
+                onClick={() =>
+                  setPreviewMode(previewMode === "mobile" ? "none" : "mobile")
+                }
               >
-                <Smartphone className="h-3.5 w-3.5 mr-1" />
+                <Smartphone className="mr-1 h-3.5 w-3.5" />
                 Mobile
               </Button>
             </div>
@@ -1071,7 +1270,7 @@ export function FormBuilderEditor({
                 size="sm"
                 onClick={() => setPreviewAudience("customer")}
               >
-                <Eye className="h-3.5 w-3.5 mr-1" />
+                <Eye className="mr-1 h-3.5 w-3.5" />
                 Customer view
               </Button>
               <Button
@@ -1079,55 +1278,73 @@ export function FormBuilderEditor({
                 size="sm"
                 onClick={() => setPreviewAudience("staff")}
               >
-                <EyeOff className="h-3.5 w-3.5 mr-1" />
+                <EyeOff className="mr-1 h-3.5 w-3.5" />
                 Staff view
               </Button>
             </div>
             {previewMode !== "none" && (
               <div
-                className={`border rounded-lg overflow-hidden bg-background ${
-                  previewMode === "mobile" ? "max-w-[375px] mx-auto" : "w-full"
-                }`}
+                className={`bg-background overflow-hidden rounded-lg border ${
+                  previewMode === "mobile" ? "mx-auto max-w-[375px]" : "w-full"
+                } `}
               >
-                <div className="p-4 space-y-4">
+                <div className="space-y-4 p-4">
                   <div>
-                    <h3 className="font-semibold text-lg">{name || "Untitled form"}</h3>
+                    <h3 className="text-lg font-semibold">
+                      {name || "Untitled form"}
+                    </h3>
                     {welcomeMessage && (
-                      <p className="text-sm text-muted-foreground mt-1">{welcomeMessage}</p>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        {welcomeMessage}
+                      </p>
                     )}
                   </div>
                   {questions
                     .filter((q) =>
                       previewAudience === "customer"
                         ? q.visibility !== "staff"
-                        : true
+                        : true,
                     )
                     .map((q) => (
                       <div key={q.id} className="space-y-1.5">
                         <p className="text-sm font-medium">
                           {q.label}
-                          {q.required && <span className="text-destructive"> *</span>}
+                          {q.required && (
+                            <span className="text-destructive"> *</span>
+                          )}
                         </p>
                         {q.helpText && (
-                          <p className="text-xs text-muted-foreground">{q.helpText}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {q.helpText}
+                          </p>
                         )}
-                        <div className="h-9 rounded-md border border-input bg-muted/30 px-3 flex items-center text-sm text-muted-foreground">
-                          {q.type === "yes_no" ? "Yes / No" :
-                           q.type === "textarea" ? "Long text..." :
-                           q.type === "select" ? "Select..." :
-                           q.type === "radio" ? "Radio buttons" :
-                           q.type === "multiselect" ? "Checkboxes" :
-                           q.type === "file" ? "File upload" :
-                           q.type === "signature" ? "Signature" :
-                           q.type === "address" ? "Address block" :
-                           q.placeholder || q.type}
+                        <div className="border-input bg-muted/30 text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
+                          {q.type === "yes_no"
+                            ? "Yes / No"
+                            : q.type === "textarea"
+                              ? "Long text..."
+                              : q.type === "select"
+                                ? "Select..."
+                                : q.type === "radio"
+                                  ? "Radio buttons"
+                                  : q.type === "multiselect"
+                                    ? "Checkboxes"
+                                    : q.type === "file"
+                                      ? "File upload"
+                                      : q.type === "signature"
+                                        ? "Signature"
+                                        : q.type === "address"
+                                          ? "Address block"
+                                          : q.placeholder || q.type}
                         </div>
                         {q.visibility === "staff" && (
-                          <Badge variant="secondary" className="text-[10px]">Staff only</Badge>
+                          <Badge variant="secondary" className="text-[10px]">
+                            Staff only
+                          </Badge>
                         )}
                       </div>
                     ))}
-                  <div className="h-10 rounded-md bg-primary flex items-center justify-center text-sm font-medium text-primary-foreground">
+                  <div className="bg-primary text-primary-foreground flex h-10 items-center justify-center rounded-md text-sm font-medium">
                     Submit
                   </div>
                 </div>
@@ -1149,8 +1366,8 @@ export function FormBuilderEditor({
               prev.map((q) =>
                 q.id === qId
                   ? { ...q, labelI18n: { ...q.labelI18n, [locale]: label } }
-                  : q
-              )
+                  : q,
+              ),
             );
           }}
           esignEnabled={esignEnabled}
@@ -1162,8 +1379,8 @@ export function FormBuilderEditor({
         {versionHistory.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <History className="h-4 w-4" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="size-4" />
                 Version History
               </CardTitle>
             </CardHeader>
@@ -1176,20 +1393,23 @@ export function FormBuilderEditor({
                   >
                     <div>
                       <p className="font-medium">v{v.versionNumber}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {v.questionCount} question{v.questionCount !== 1 ? "s" : ""}
+                      <p className="text-muted-foreground text-xs">
+                        {v.questionCount} question
+                        {v.questionCount !== 1 ? "s" : ""}
                         {v.createdBy ? ` · by ${v.createdBy}` : ""}
                       </p>
                     </div>
                     <div className="text-right">
                       {v.publishedAt ? (
-                        <Badge className="text-[10px] bg-green-100 text-green-800 hover:bg-green-100 border-0">
+                        <Badge className="border-0 bg-green-100 text-[10px] text-green-800 hover:bg-green-100">
                           Published
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px]">Draft</Badge>
+                        <Badge variant="secondary" className="text-[10px]">
+                          Draft
+                        </Badge>
                       )}
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 text-[10px]">
                         {v.createdAt.slice(0, 10)}
                       </p>
                     </div>
@@ -1218,16 +1438,27 @@ function LogicRuleEditor({
   onChange: (updated: FormLogicRule) => void;
   onRemove: () => void;
 }) {
-  const needsValue = rule.operator !== "answered" && rule.operator !== "not_answered";
-  const needsTargetQuestions = rule.action === "show" || rule.action === "hide" || rule.action === "require";
+  const needsValue =
+    rule.operator !== "answered" && rule.operator !== "not_answered";
+  const needsTargetQuestions =
+    rule.action === "show" ||
+    rule.action === "hide" ||
+    rule.action === "require";
   const needsTargetSection = rule.action === "skip_to_section";
   const needsMessage = rule.action === "end_form";
   const needsTag = rule.action === "set_tag";
 
-  const triggerLabel = allQuestions.find((q) => q.id === rule.triggerQuestionId)?.label || "Question";
-  const actionLabel = LOGIC_ACTIONS.find((a) => a.value === rule.action)?.label || rule.action;
-  const operatorLabel = CONDITION_OPERATORS.find((o) => o.value === rule.operator)?.label ?? rule.operator;
-  const valueDisplay = Array.isArray(rule.value) ? rule.value.join(", ") : rule.value;
+  const triggerLabel =
+    allQuestions.find((q) => q.id === rule.triggerQuestionId)?.label ||
+    "Question";
+  const actionLabel =
+    LOGIC_ACTIONS.find((a) => a.value === rule.action)?.label || rule.action;
+  const operatorLabel =
+    CONDITION_OPERATORS.find((o) => o.value === rule.operator)?.label ??
+    rule.operator;
+  const valueDisplay = Array.isArray(rule.value)
+    ? rule.value.join(", ")
+    : rule.value;
   const noValueOps = ["answered", "not_answered"];
 
   // Build target label for plain-language summary
@@ -1236,9 +1467,10 @@ function LogicRuleEditor({
     const names = rule.targetQuestionIds
       .map((id) => allQuestions.find((q) => q.id === id)?.label)
       .filter(Boolean);
-    targetLabel = names.length > 2
-      ? `"${names[0]}" + ${names.length - 1} more`
-      : names.map((n) => `"${n}"`).join(", ");
+    targetLabel =
+      names.length > 2
+        ? `"${names[0]}" + ${names.length - 1} more`
+        : names.map((n) => `"${n}"`).join(", ");
   } else if (needsTargetSection && rule.targetSectionId) {
     targetLabel = `"${allSections.find((s) => s.id === rule.targetSectionId)?.title ?? "Section"}"`;
   } else if (needsTag && rule.tagValue) {
@@ -1246,24 +1478,36 @@ function LogicRuleEditor({
   }
 
   return (
-    <div className="rounded-lg border p-3 space-y-2.5 text-sm">
+    <div className="space-y-2.5 rounded-lg border p-3 text-sm">
       <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={onRemove}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          onClick={onRemove}
+        >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
       </div>
       {/* Plain-language summary */}
-      <div className="rounded-md bg-muted/50 px-3 py-2 text-xs leading-relaxed">
+      <div className="bg-muted/50 rounded-md px-3 py-2 text-xs/relaxed">
         <span className="font-semibold text-indigo-600">If</span>{" "}
         <span className="font-medium">&ldquo;{triggerLabel}&rdquo;</span>{" "}
         <span className="text-muted-foreground">{operatorLabel}</span>
         {!noValueOps.includes(rule.operator) && valueDisplay && (
-          <> <span className="font-medium">&ldquo;{valueDisplay}&rdquo;</span></>
+          <>
+            {" "}
+            <span className="font-medium">&ldquo;{valueDisplay}&rdquo;</span>
+          </>
         )}{" "}
         <span className="font-semibold text-indigo-600">→</span>{" "}
         <span className="font-medium text-emerald-700">{actionLabel}</span>
         {targetLabel && (
-          <> <span className="text-muted-foreground">on</span> <span className="font-medium">{targetLabel}</span></>
+          <>
+            {" "}
+            <span className="text-muted-foreground">on</span>{" "}
+            <span className="font-medium">{targetLabel}</span>
+          </>
         )}
       </div>
       {/* Trigger question */}
@@ -1276,31 +1520,49 @@ function LogicRuleEditor({
         </SelectTrigger>
         <SelectContent>
           {allQuestions.map((q) => (
-            <SelectItem key={q.id} value={q.id}>{q.label}</SelectItem>
+            <SelectItem key={q.id} value={q.id}>
+              {q.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {/* Operator */}
       <Select
         value={rule.operator}
-        onValueChange={(v) => onChange({ ...rule, operator: v as FormLogicRule["operator"] })}
+        onValueChange={(v) =>
+          onChange({ ...rule, operator: v as FormLogicRule["operator"] })
+        }
       >
         <SelectTrigger className="h-8 text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {CONDITION_OPERATORS.map((o) => (
-            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {/* Value */}
       {needsValue && (
         <Input
-          value={Array.isArray(rule.value) ? rule.value.join(", ") : (rule.value ?? "")}
+          value={
+            Array.isArray(rule.value)
+              ? rule.value.join(", ")
+              : (rule.value ?? "")
+          }
           onChange={(e) => {
             const val = e.target.value;
-            onChange({ ...rule, value: val.includes(",") ? val.split(",").map((s) => s.trim()).filter(Boolean) : val });
+            onChange({
+              ...rule,
+              value: val.includes(",")
+                ? val
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : val,
+            });
           }}
           placeholder="Value (or comma-separated for 'in list')"
           className="h-8 text-xs"
@@ -1309,7 +1571,9 @@ function LogicRuleEditor({
       {/* Action */}
       <Select
         value={rule.action}
-        onValueChange={(v) => onChange({ ...rule, action: v as LogicActionType })}
+        onValueChange={(v) =>
+          onChange({ ...rule, action: v as LogicActionType })
+        }
       >
         <SelectTrigger className="h-8 text-xs">
           <SelectValue />
@@ -1327,12 +1591,17 @@ function LogicRuleEditor({
       {/* Target questions (for show/hide/require) */}
       {needsTargetQuestions && (
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Target questions</Label>
-          <div className="max-h-32 overflow-y-auto space-y-1 rounded border p-2">
+          <Label className="text-muted-foreground text-xs">
+            Target questions
+          </Label>
+          <div className="max-h-32 space-y-1 overflow-y-auto rounded-sm border p-2">
             {allQuestions
               .filter((q) => q.id !== rule.triggerQuestionId)
               .map((q) => (
-                <label key={q.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                <label
+                  key={q.id}
+                  className="flex cursor-pointer items-center gap-2 text-xs"
+                >
                   <input
                     type="checkbox"
                     className="h-3.5 w-3.5"
@@ -1364,7 +1633,9 @@ function LogicRuleEditor({
           </SelectTrigger>
           <SelectContent>
             {allSections.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+              <SelectItem key={s.id} value={s.id}>
+                {s.title}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -1407,10 +1678,13 @@ function QuestionEditor({
   onChange: (patch: Partial<FormQuestion>) => void;
 }) {
   const needsOptions =
-    question.type === "select" || question.type === "multiselect" || question.type === "yes_no" || question.type === "radio";
+    question.type === "select" ||
+    question.type === "multiselect" ||
+    question.type === "yes_no" ||
+    question.type === "radio";
   const options = question.options ?? [];
   const [optionsText, setOptionsText] = useState(
-    options.map((o) => `${o.value}:${o.label}`).join("\n")
+    options.map((o) => `${o.value}:${o.label}`).join("\n"),
   );
 
   const syncOptions = (text: string) => {
@@ -1418,16 +1692,30 @@ function QuestionEditor({
     const lines = text.split("\n").filter(Boolean);
     const next = lines.map((line) => {
       const [value, ...labelParts] = line.split(":");
-      const label = labelParts.length ? labelParts.join(":").trim() : (value ?? "").trim();
-      return { value: (value ?? "").trim(), label: label || (value ?? "").trim() };
+      const label = labelParts.length
+        ? labelParts.join(":").trim()
+        : (value ?? "").trim();
+      return {
+        value: (value ?? "").trim(),
+        label: label || (value ?? "").trim(),
+      };
     });
     onChange({ options: next });
   };
 
   const handleTypeChange = (v: QuestionType) => {
     onChange({ type: v });
-    if (v === "yes_no" && (!question.options || question.options.length === 0)) {
-      onChange({ type: v, options: [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }] });
+    if (
+      v === "yes_no" &&
+      (!question.options || question.options.length === 0)
+    ) {
+      onChange({
+        type: v,
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+        ],
+      });
       setOptionsText("yes:Yes\nno:No");
     }
   };
@@ -1480,7 +1768,9 @@ function QuestionEditor({
         <Label>Default value (optional)</Label>
         <Input
           value={question.defaultValue ?? ""}
-          onChange={(e) => onChange({ defaultValue: e.target.value || undefined })}
+          onChange={(e) =>
+            onChange({ defaultValue: e.target.value || undefined })
+          }
           placeholder="Pre-filled answer"
         />
       </div>
@@ -1489,7 +1779,9 @@ function QuestionEditor({
           <Label>Visible to</Label>
           <Select
             value={question.visibility ?? "customer"}
-            onValueChange={(v) => onChange({ visibility: v as "customer" | "staff" })}
+            onValueChange={(v) =>
+              onChange({ visibility: v as "customer" | "staff" })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -1504,7 +1796,9 @@ function QuestionEditor({
           <Label>Applies to pet type</Label>
           <Select
             value={question.appliesToPetType ?? "all"}
-            onValueChange={(v) => onChange({ appliesToPetType: v === "all" ? undefined : v })}
+            onValueChange={(v) =>
+              onChange({ appliesToPetType: v === "all" ? undefined : v })
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -1519,14 +1813,23 @@ function QuestionEditor({
         </div>
       </div>
       <div className="space-y-2 rounded-lg border p-3">
-        <Label className="text-xs font-medium text-muted-foreground">Validation rules</Label>
+        <Label className="text-muted-foreground text-xs font-medium">
+          Validation rules
+        </Label>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="space-y-1">
             <Label className="text-xs">Min</Label>
             <Input
               type="number"
               value={question.validation?.min ?? ""}
-              onChange={(e) => onChange({ validation: { ...question.validation, min: e.target.value ? Number(e.target.value) : undefined } })}
+              onChange={(e) =>
+                onChange({
+                  validation: {
+                    ...question.validation,
+                    min: e.target.value ? Number(e.target.value) : undefined,
+                  },
+                })
+              }
               placeholder="Min value/length"
               className="h-8 text-xs"
             />
@@ -1536,7 +1839,14 @@ function QuestionEditor({
             <Input
               type="number"
               value={question.validation?.max ?? ""}
-              onChange={(e) => onChange({ validation: { ...question.validation, max: e.target.value ? Number(e.target.value) : undefined } })}
+              onChange={(e) =>
+                onChange({
+                  validation: {
+                    ...question.validation,
+                    max: e.target.value ? Number(e.target.value) : undefined,
+                  },
+                })
+              }
               placeholder="Max value/length"
               className="h-8 text-xs"
             />
@@ -1544,10 +1854,24 @@ function QuestionEditor({
         </div>
         {question.type === "file" && (
           <div className="space-y-1">
-            <Label className="text-xs">Allowed file types (comma-separated)</Label>
+            <Label className="text-xs">
+              Allowed file types (comma-separated)
+            </Label>
             <Input
               value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
-              onChange={(e) => onChange({ validation: { ...question.validation, allowedFileTypes: e.target.value ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean) : undefined } })}
+              onChange={(e) =>
+                onChange({
+                  validation: {
+                    ...question.validation,
+                    allowedFileTypes: e.target.value
+                      ? e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                      : undefined,
+                  },
+                })
+              }
               placeholder=".pdf, .jpg, .png"
               className="h-8 text-xs"
             />
@@ -1557,7 +1881,14 @@ function QuestionEditor({
           <Label className="text-xs">Regex pattern (advanced)</Label>
           <Input
             value={question.validation?.regex ?? ""}
-            onChange={(e) => onChange({ validation: { ...question.validation, regex: e.target.value || undefined } })}
+            onChange={(e) =>
+              onChange({
+                validation: {
+                  ...question.validation,
+                  regex: e.target.value || undefined,
+                },
+              })
+            }
             placeholder="e.g. ^[a-zA-Z]+$"
             className="h-8 text-xs"
           />
@@ -1569,13 +1900,19 @@ function QuestionEditor({
             <Switch
               id="save-to-profile"
               checked={!!mappingTarget}
-              onCheckedChange={(v) => onMappingChange(v ? "customer.name" : null)}
+              onCheckedChange={(v) =>
+                onMappingChange(v ? "customer.name" : null)
+              }
             />
             <Label htmlFor="save-to-profile">Save answer to profile</Label>
           </div>
           {mappingTarget && (
             <Select
-              value={MAPPING_TARGETS_FLAT.includes(mappingTarget) ? mappingTarget : MAPPING_TARGETS_FLAT[0]}
+              value={
+                MAPPING_TARGETS_FLAT.includes(mappingTarget)
+                  ? mappingTarget
+                  : MAPPING_TARGETS_FLAT[0]
+              }
               onValueChange={(v) => onMappingChange(v)}
             >
               <SelectTrigger>
@@ -1601,7 +1938,7 @@ function QuestionEditor({
         <div className="space-y-2">
           <Label>Options (one per line, optional label after colon)</Label>
           <textarea
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            className="border-input flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm"
             value={optionsText}
             onChange={(e) => syncOptions(e.target.value)}
             placeholder="Yes\nNo\nvalue:Display Label"
@@ -1617,7 +1954,7 @@ function QuestionEditor({
           onChange={(c) => onChange({ condition: c })}
         />
         {question.condition && (
-          <p className="text-xs text-muted-foreground rounded bg-muted/50 px-2 py-1.5 mt-1">
+          <p className="bg-muted/50 text-muted-foreground mt-1 rounded-sm px-2 py-1.5 text-xs">
             {formatConditionPlainLanguage(question.condition, allQuestions)}
           </p>
         )}
@@ -1628,17 +1965,33 @@ function QuestionEditor({
 
 function formatConditionPlainLanguage(
   condition: FormCondition,
-  allQuestions: FormQuestion[]
+  allQuestions: FormQuestion[],
 ): string {
-  const opLabel: Record<string, string> = { eq: "=", neq: "≠", contains: "contains", in: "is one of", gt: ">", lt: "<", answered: "is answered", not_answered: "is not answered" };
+  const opLabel: Record<string, string> = {
+    eq: "=",
+    neq: "≠",
+    contains: "contains",
+    in: "is one of",
+    gt: ">",
+    lt: "<",
+    answered: "is answered",
+    not_answered: "is not answered",
+  };
   const op = opLabel[condition.operator] ?? condition.operator;
-  const val = Array.isArray(condition.value) ? condition.value.join(", ") : condition.value;
+  const val = Array.isArray(condition.value)
+    ? condition.value.join(", ")
+    : condition.value;
   if (condition.questionId) {
     const src = allQuestions.find((q) => q.id === condition.questionId);
     const label = src?.label || "Question";
     return `If "${label}" ${op} ${val || "…"} → Show this question`;
   }
-  const ctx = condition.contextField === "petType" ? "Pet type" : condition.contextField === "serviceType" ? "Service type" : "Evaluation status";
+  const ctx =
+    condition.contextField === "petType"
+      ? "Pet type"
+      : condition.contextField === "serviceType"
+        ? "Service type"
+        : "Evaluation status";
   return `If ${ctx} ${op} ${val || "…"} → Show this question`;
 }
 
@@ -1663,9 +2016,16 @@ function ConditionEditor({
     ? condition.value.join(", ")
     : (condition?.value ?? "");
 
-  const setContext = (field: ContextField, op: FormCondition["operator"], val: string) => {
+  const setContext = (
+    field: ContextField,
+    op: FormCondition["operator"],
+    val: string,
+  ) => {
     const v = val.includes(",")
-      ? val.split(",").map((s) => s.trim()).filter(Boolean)
+      ? val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : val.trim();
     onChange({
       contextField: field,
@@ -1677,10 +2037,13 @@ function ConditionEditor({
   const setAnswer = (
     questionId: string,
     op: FormCondition["operator"],
-    val: string
+    val: string,
   ) => {
     const v = val.includes(",")
-      ? val.split(",").map((s) => s.trim()).filter(Boolean)
+      ? val
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : val.trim();
     onChange({
       questionId,
@@ -1691,21 +2054,33 @@ function ConditionEditor({
 
   if (!condition) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange({
-        contextField: "petType",
-        operator: "eq",
-        value: "",
-      })}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange({
+            contextField: "petType",
+            operator: "eq",
+            value: "",
+          })
+        }
+      >
         Add condition (show when...)
       </Button>
     );
   }
 
   return (
-    <div className="space-y-2 rounded border p-3">
+    <div className="space-y-2 rounded-sm border p-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Show when</span>
-        <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onChange(undefined)}
+        >
           Remove
         </Button>
       </div>
@@ -1713,7 +2088,9 @@ function ConditionEditor({
         <>
           <Select
             value={contextField}
-            onValueChange={(f) => setContext(f as ContextField, operator, value)}
+            onValueChange={(f) =>
+              setContext(f as ContextField, operator, value)
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -1721,12 +2098,16 @@ function ConditionEditor({
             <SelectContent>
               <SelectItem value="petType">Pet type</SelectItem>
               <SelectItem value="serviceType">Service type</SelectItem>
-              <SelectItem value="evaluationStatus">Evaluation status</SelectItem>
+              <SelectItem value="evaluationStatus">
+                Evaluation status
+              </SelectItem>
             </SelectContent>
           </Select>
           <Select
             value={operator}
-            onValueChange={(o) => setContext(contextField, o as FormCondition["operator"], value)}
+            onValueChange={(o) =>
+              setContext(contextField, o as FormCondition["operator"], value)
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -1769,7 +2150,11 @@ function ConditionEditor({
             value={operator}
             onValueChange={(o) =>
               sourceQuestionId
-                ? setAnswer(sourceQuestionId, o as FormCondition["operator"], value)
+                ? setAnswer(
+                    sourceQuestionId,
+                    o as FormCondition["operator"],
+                    value,
+                  )
                 : undefined
             }
           >
@@ -1805,13 +2190,19 @@ function ConditionEditor({
         onClick={() => {
           if (useContext) {
             const other = allQuestions.find((q) => q.id !== currentQuestionId);
-            onChange({ questionId: other?.id ?? "", operator: "eq", value: "" });
+            onChange({
+              questionId: other?.id ?? "",
+              operator: "eq",
+              value: "",
+            });
           } else {
             onChange({ contextField: "petType", operator: "eq", value: "" });
           }
         }}
       >
-        {useContext ? "Switch to: based on answer" : "Switch to: based on context"}
+        {useContext
+          ? "Switch to: based on answer"
+          : "Switch to: based on context"}
       </Button>
     </div>
   );

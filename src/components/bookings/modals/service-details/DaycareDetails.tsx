@@ -5,6 +5,7 @@ import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { PawPrint, Check } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
@@ -251,7 +252,7 @@ export function DaycareDetails({
         {currentSubStep === 0 && (
           <div>
             <Label className="text-base">Select Daycare Days</Label>
-            <p className="text-xs text-muted-foreground mt-1 mb-2">
+            <p className="text-muted-foreground mt-1 mb-2 text-xs">
               Daycare type (Half Day or Full Day) will be automatically
               determined based on check-in/out times
             </p>
@@ -297,14 +298,14 @@ export function DaycareDetails({
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold">Room Assignment</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Drag and drop pets into rooms or double-click pets and click on
                 rooms
               </p>
             </div>
 
             {!isStepAccessible(1) && (
-              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
                   Please complete the Schedule step first
                 </p>
@@ -316,7 +317,7 @@ export function DaycareDetails({
                 {/* Unassigned Pets */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Unassigned Pets</Label>
-                  <div className="flex flex-wrap gap-2 p-3 border-2 border-dashed rounded-lg min-h-20 bg-muted/30">
+                  <div className="bg-muted/30 flex min-h-20 flex-wrap gap-2 rounded-lg border-2 border-dashed p-3">
                     {selectedPets
                       .filter(
                         (pet) =>
@@ -333,17 +334,17 @@ export function DaycareDetails({
                               selectedPet?.id === pet.id ? null : pet,
                             )
                           }
-                          className={`flex items-center gap-2 px-3 py-2 bg-background border-2 rounded-lg cursor-move hover:border-primary/50 transition-colors ${
+                          className={`bg-background hover:border-primary/50 flex cursor-move items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors ${
                             selectedPet?.id === pet.id
                               ? "border-primary bg-primary/5"
                               : "border-border"
-                          }`}
+                          } `}
                         >
-                          <PawPrint className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium text-sm">
+                          <PawPrint className="text-muted-foreground size-4" />
+                          <span className="text-sm font-medium">
                             {pet.name}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             ({pet.type})
                           </span>
                         </div>
@@ -351,7 +352,7 @@ export function DaycareDetails({
                     {selectedPets.filter(
                       (pet) => !roomAssignments.find((a) => a.petId === pet.id),
                     ).length === 0 && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         All pets assigned
                       </p>
                     )}
@@ -430,65 +431,70 @@ export function DaycareDetails({
                             setSelectedPet(null);
                           }
                         }}
-                        className={`flex flex-col border-2 rounded-lg transition-all overflow-hidden ${
+                        className={`flex flex-col overflow-hidden rounded-lg border-2 transition-all ${
                           isRoomDisabled
-                            ? "opacity-60 cursor-not-allowed"
+                            ? "cursor-not-allowed opacity-60"
                             : "cursor-pointer"
-                        } ${assignedPets.length > 0 ? "border-primary bg-primary/5" : "border-border"}`}
+                        } ${
+                          assignedPets.length > 0
+                            ? `border-primary bg-primary/5`
+                            : `border-border`
+                        } `}
                       >
-                        <div className="relative w-full h-48 overflow-hidden bg-muted">
+                        <div className="bg-muted relative h-48 w-full overflow-hidden">
                           {room.imageUrl ? (
                             <>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
+                              <Image
                                 src={room.imageUrl}
                                 alt={room.name}
-                                className="w-full h-full object-cover"
+                                fill
+                                className="object-cover"
+                                unoptimized
                               />
                               {assignedPets.length > 0 && (
-                                <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full px-2 py-1 text-xs font-semibold">
+                                <div className="bg-primary text-primary-foreground absolute top-2 right-2 rounded-full px-2 py-1 text-xs font-semibold">
                                   {assignedPets.length}
                                 </div>
                               )}
                               {availableSpots === 0 && (
                                 <div className="absolute top-2 right-2">
-                                  <span className="text-xs font-semibold text-destructive bg-destructive/10 px-2 py-1 rounded backdrop-blur-sm">
+                                  <span className="bg-destructive/10 text-destructive rounded-sm px-2 py-1 text-xs font-semibold backdrop-blur-sm">
                                     Full
                                   </span>
                                 </div>
                               )}
                               {draggedPet && !isDraggedPetAllowed && (
-                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                  <span className="text-white text-sm font-semibold">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                  <span className="text-sm font-semibold text-white">
                                     Not allowed for {draggedPet.type}s
                                   </span>
                                 </div>
                               )}
                               {selectedPet && !isSelectedPetAllowed && (
-                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                  <span className="text-white text-sm font-semibold">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                                  <span className="text-sm font-semibold text-white">
                                     Not allowed for {selectedPet.type}s
                                   </span>
                                 </div>
                               )}
                             </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="flex h-full w-full items-center justify-center">
                               <div className="text-muted-foreground text-sm">
                                 No image available
                               </div>
                             </div>
                           )}
                         </div>
-                        <div className="p-4 flex-1">
+                        <div className="flex-1 p-4">
                           <div className="mb-2">
-                            <p className="font-semibold text-base">
+                            <p className="text-base font-semibold">
                               {room.name}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {room.description}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               Allowed: {room.allowedPetTypes.join(", ")}
                             </p>
                           </div>
@@ -499,7 +505,7 @@ export function DaycareDetails({
                               {assignedPets.map((pet) => (
                                 <div
                                   key={pet.id}
-                                  className="flex items-center gap-1 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-xs"
+                                  className="border-primary/20 bg-primary/10 flex items-center gap-1 rounded-sm border px-2 py-1 text-xs"
                                 >
                                   <span>{pet.name}</span>
                                   <button
@@ -519,7 +525,7 @@ export function DaycareDetails({
                             </div>
                           )}
 
-                          <div className="flex items-center gap-4 text-xs mt-2">
+                          <div className="mt-2 flex items-center gap-4 text-xs">
                             <div className="flex items-center gap-1">
                               <span className="text-muted-foreground">
                                 Available:
@@ -555,14 +561,14 @@ export function DaycareDetails({
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold">Add-ons</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Add optional services to enhance your pet&apos;s daycare
                 experience
               </p>
             </div>
 
             {!isStepAccessible(2) && (
-              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
                   Please complete the previous steps first
                 </p>
@@ -571,7 +577,7 @@ export function DaycareDetails({
 
             {isStepAccessible(2) && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {EXTRA_SERVICES.map((service) => {
                     const totalQuantity = extraServices
                       .filter((es) => es.serviceId === service.id)
@@ -582,20 +588,22 @@ export function DaycareDetails({
                         key={service.id}
                         className={cn(
                           "overflow-hidden transition-all",
-                          totalQuantity > 0 && "ring-2 ring-primary",
+                          totalQuantity > 0 && "ring-primary ring-2",
                         )}
                       >
-                        <img
+                        <Image
                           src={service.image}
                           alt={service.name}
-                          className="w-full h-32 object-cover"
+                          width={400}
+                          height={128}
+                          className="h-32 w-full object-cover"
                         />
-                        <CardContent className="p-4 space-y-3">
+                        <CardContent className="space-y-3 p-4">
                           <div>
-                            <h4 className="font-semibold text-sm">
+                            <h4 className="text-sm font-semibold">
                               {service.name}
                             </h4>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               {service.description}
                             </p>
                           </div>
@@ -626,7 +634,7 @@ export function DaycareDetails({
                                   key={pet.id}
                                   className="flex items-center justify-between"
                                 >
-                                  <span className="text-sm text-muted-foreground">
+                                  <span className="text-muted-foreground text-sm">
                                     {pet.name}
                                   </span>
 
@@ -657,7 +665,7 @@ export function DaycareDetails({
                                       >
                                         -
                                       </Button>
-                                      <span className="text-sm font-medium min-w-[2ch] text-center">
+                                      <span className="min-w-[2ch] text-center text-sm font-medium">
                                         {quantity}
                                       </span>
                                       <Button
@@ -725,7 +733,7 @@ export function DaycareDetails({
                                     >
                                       {quantity > 0 ? (
                                         <>
-                                          <Check className="h-3 w-3 mr-1" />
+                                          <Check className="mr-1 h-3 w-3" />
                                           Added
                                         </>
                                       ) : (
@@ -751,14 +759,14 @@ export function DaycareDetails({
           <div className="space-y-4">
             <div>
               <h3 className="text-base font-semibold">Feeding & Medication</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Add feeding schedules and medication details for your pet
                 (optional)
               </p>
             </div>
 
             {!isStepAccessible(3) && (
-              <div className="bg-muted/50 border border-dashed rounded-lg p-8 text-center">
+              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
                 <p className="text-muted-foreground">
                   Please complete the previous steps first
                 </p>
@@ -767,16 +775,24 @@ export function DaycareDetails({
 
             {isStepAccessible(3) && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <FeedingScheduleForm
                     feedingSchedule={feedingSchedule}
                     setFeedingSchedule={setFeedingSchedule}
-                    selectedPets={selectedPets.map((p) => ({ id: p.id, name: p.name, type: p.type }))}
+                    selectedPets={selectedPets.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      type: p.type,
+                    }))}
                   />
                   <MedicationForm
                     medications={medications}
                     setMedications={setMedications}
-                    selectedPets={selectedPets.map((p) => ({ id: p.id, name: p.name, type: p.type }))}
+                    selectedPets={selectedPets.map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      type: p.type,
+                    }))}
                   />
                 </div>
               </>

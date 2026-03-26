@@ -56,11 +56,17 @@ export function hasFormPermission(
 
 /** Check if a role can create/edit forms (Admin/Manager level) */
 export function canManageForms(role: FacilityRole, userId?: string): boolean {
-  return hasFormPermission(role, "forms_create", userId) && hasFormPermission(role, "forms_edit", userId);
+  return (
+    hasFormPermission(role, "forms_create", userId) &&
+    hasFormPermission(role, "forms_edit", userId)
+  );
 }
 
 /** Check if a role can configure mapping and logic rules */
-export function canConfigureForms(role: FacilityRole, userId?: string): boolean {
+export function canConfigureForms(
+  role: FacilityRole,
+  userId?: string,
+): boolean {
   return (
     hasFormPermission(role, "forms_configure_mapping", userId) &&
     hasFormPermission(role, "forms_configure_logic", userId)
@@ -73,17 +79,26 @@ export function canPublishForms(role: FacilityRole, userId?: string): boolean {
 }
 
 /** Check if a role can view form submissions */
-export function canViewSubmissions(role: FacilityRole, userId?: string): boolean {
+export function canViewSubmissions(
+  role: FacilityRole,
+  userId?: string,
+): boolean {
   return hasFormPermission(role, "forms_view_submissions", userId);
 }
 
 /** Check if a role can process submissions (merge, link to customer) */
-export function canProcessSubmissions(role: FacilityRole, userId?: string): boolean {
+export function canProcessSubmissions(
+  role: FacilityRole,
+  userId?: string,
+): boolean {
   return hasFormPermission(role, "forms_process_submissions", userId);
 }
 
 /** Check if a role can fill forms on behalf of a customer */
-export function canDoStaffAssistedIntake(role: FacilityRole, userId?: string): boolean {
+export function canDoStaffAssistedIntake(
+  role: FacilityRole,
+  userId?: string,
+): boolean {
   return hasFormPermission(role, "forms_staff_assisted_intake", userId);
 }
 
@@ -111,7 +126,10 @@ export function getFormPermissionsForRole(
 }
 
 /** Get a summary of form access level for display */
-export function getFormAccessLevel(role: FacilityRole, userId?: string): {
+export function getFormAccessLevel(
+  role: FacilityRole,
+  userId?: string,
+): {
   level: "full" | "process" | "view" | "none";
   label: string;
   description: string;
@@ -120,21 +138,24 @@ export function getFormAccessLevel(role: FacilityRole, userId?: string): {
     return {
       level: "full",
       label: "Full Access",
-      description: "Create, edit, publish forms. Configure mapping & logic. View and process all submissions.",
+      description:
+        "Create, edit, publish forms. Configure mapping & logic. View and process all submissions.",
     };
   }
   if (canProcessSubmissions(role, userId)) {
     return {
       level: "process",
       label: "Process & Intake",
-      description: "View and process submissions. Fill forms on behalf of customers.",
+      description:
+        "View and process submissions. Fill forms on behalf of customers.",
     };
   }
   if (canViewSubmissions(role, userId)) {
     return {
       level: "view",
       label: "View Only",
-      description: "View form submissions. Cannot create, edit, or process forms.",
+      description:
+        "View form submissions. Cannot create, edit, or process forms.",
     };
   }
   return {

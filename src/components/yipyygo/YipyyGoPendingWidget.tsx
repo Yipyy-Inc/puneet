@@ -16,17 +16,33 @@ interface YipyyGoPendingWidgetProps {
   maxItems?: number;
 }
 
-export function YipyyGoPendingWidget({ facilityId, maxItems = 5 }: YipyyGoPendingWidgetProps) {
+export function YipyyGoPendingWidget({
+  facilityId,
+  maxItems = 5,
+}: YipyyGoPendingWidgetProps) {
   const config = getYipyyGoConfig(facilityId);
   if (!config?.enabled) return null;
 
   const pendingBookings = bookings.filter((b) => {
     if (b.facilityId !== facilityId) return false;
-    const st = b.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
-    const enabled = config.serviceConfigs?.find((s) => s.serviceType === st)?.enabled;
+    const st = b.service?.toLowerCase() as
+      | "daycare"
+      | "boarding"
+      | "grooming"
+      | "training";
+    const enabled = config.serviceConfigs?.find(
+      (s) => s.serviceType === st,
+    )?.enabled;
     if (!enabled) return false;
-    const status = getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service });
-    return status === "submitted" || status === "needs_review" || status === "precheck_missing";
+    const status = getYipyyGoDisplayStatusForBooking(b.id, {
+      facilityId,
+      service: b.service,
+    });
+    return (
+      status === "submitted" ||
+      status === "needs_review" ||
+      status === "precheck_missing"
+    );
   });
 
   const displayList = pendingBookings.slice(0, maxItems);
@@ -38,7 +54,7 @@ export function YipyyGoPendingWidget({ facilityId, maxItems = 5 }: YipyyGoPendin
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="h-4 w-4 text-primary" />
+            <FileText className="text-primary size-4" />
             YipyyGo Pending
           </CardTitle>
           <Badge variant="secondary">{pendingBookings.length}</Badge>
@@ -49,22 +65,27 @@ export function YipyyGoPendingWidget({ facilityId, maxItems = 5 }: YipyyGoPendin
           const client = clients.find((c) => c.id === b.clientId);
           const petId = Array.isArray(b.petId) ? b.petId[0] : b.petId;
           const pet = client?.pets?.find((p) => p.id === petId);
-          const status = getYipyyGoDisplayStatusForBooking(b.id, { facilityId, service: b.service });
+          const status = getYipyyGoDisplayStatusForBooking(b.id, {
+            facilityId,
+            service: b.service,
+          });
           return (
             <Link
               key={b.id}
               href={`/facility/dashboard/bookings/${b.id}#yipyygo`}
-              className="flex items-center justify-between p-2 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+              className="bg-card hover:bg-muted/50 flex items-center justify-between rounded-lg border p-2 transition-colors"
             >
               <div className="min-w-0">
-                <p className="font-medium text-sm truncate">{pet?.name ?? "Pet"}</p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="truncate text-sm font-medium">
+                  {pet?.name ?? "Pet"}
+                </p>
+                <p className="text-muted-foreground truncate text-xs">
                   {client?.name} · #{b.id} · {b.startDate}
                 </p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <YipyyGoStatusBadge status={status} showIcon={false} />
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="text-muted-foreground size-4" />
               </div>
             </Link>
           );

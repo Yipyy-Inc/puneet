@@ -4,11 +4,11 @@
  */
 
 export type CheckInAuditAction =
-  | "customer_submission"   // Customer submitted YipyyGo form
-  | "staff_edit"            // Staff edited/approved/requested changes
+  | "customer_submission" // Customer submitted YipyyGo form
+  | "staff_edit" // Staff edited/approved/requested changes
   | "staff_manual_complete" // Staff marked form complete without customer
-  | "staff_override"        // Staff checked in without pre-check; reason logged
-  | "check_in_completed";   // Stay check-in completed (QR or manual)
+  | "staff_override" // Staff checked in without pre-check; reason logged
+  | "check_in_completed"; // Stay check-in completed (QR or manual)
 
 export interface CheckInAuditEntry {
   id: string;
@@ -34,7 +34,9 @@ function nextId(): string {
   return `cia-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-export function logCheckInAudit(entry: Omit<CheckInAuditEntry, "id" | "timestamp">): CheckInAuditEntry {
+export function logCheckInAudit(
+  entry: Omit<CheckInAuditEntry, "id" | "timestamp">,
+): CheckInAuditEntry {
   const full: CheckInAuditEntry = {
     ...entry,
     id: nextId(),
@@ -161,7 +163,7 @@ export function getCheckInAuditLog(filters?: {
   action?: CheckInAuditAction;
 }): CheckInAuditEntry[] {
   let list = [...auditLog].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
   if (filters?.facilityId != null)
     list = list.filter((e) => e.facilityId === filters.facilityId);

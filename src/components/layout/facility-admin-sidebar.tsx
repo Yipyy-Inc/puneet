@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   Home,
   Users,
@@ -39,7 +40,7 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { resolveIcon } from "@/lib/service-registry";
 
 export function FacilitySidebar() {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const { activeModules } = useCustomServices();
 
   // Show all menu items since permission system is removed
@@ -335,10 +336,6 @@ export function FacilitySidebar() {
       })
     : "";
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   return (
     <GenericSidebar
       header={
@@ -346,9 +343,7 @@ export function FacilitySidebar() {
           <h2 className="text-lg font-semibold">
             {facility?.name || "Facility Dashboard"}
           </h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            {dateLabel}
-          </p>
+          <p className="text-muted-foreground mt-1 text-xs">{dateLabel}</p>
         </div>
       }
       menuSections={filteredMenuSections}

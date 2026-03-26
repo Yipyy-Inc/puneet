@@ -257,12 +257,12 @@ export default function DaycarePackagesPage() {
       render: (item) => (
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full ${item.isActive ? "bg-success" : "bg-muted"}`}
+            className={`h-2 w-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
           />
           <span className="font-medium">{item.name}</span>
           {item.popular && (
             <Badge variant="warning" className="text-xs">
-              <Star className="h-3 w-3 mr-1" />
+              <Star className="mr-1 h-3 w-3" />
               Popular
             </Badge>
           )}
@@ -348,18 +348,18 @@ export default function DaycarePackagesPage() {
           <TabsTrigger value="addons">Add-ons</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="packages" className="space-y-6 mt-6">
+        <TabsContent value="packages" className="mt-6 space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <Package className="text-primary h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{packages.length}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Total Packages
                     </p>
                   </div>
@@ -369,12 +369,12 @@ export default function DaycarePackagesPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-success/10">
-                    <Package className="h-5 w-5 text-success" />
+                  <div className="bg-success/10 rounded-lg p-2">
+                    <Package className="text-success h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{activePackages}</p>
-                    <p className="text-sm text-muted-foreground">Active</p>
+                    <p className="text-muted-foreground text-sm">Active</p>
                   </div>
                 </div>
               </CardContent>
@@ -382,12 +382,12 @@ export default function DaycarePackagesPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-warning/10">
-                    <Star className="h-5 w-5 text-warning" />
+                  <div className="bg-warning/10 rounded-lg p-2">
+                    <Star className="text-warning h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{popularPackages}</p>
-                    <p className="text-sm text-muted-foreground">Featured</p>
+                    <p className="text-muted-foreground text-sm">Featured</p>
                   </div>
                 </div>
               </CardContent>
@@ -395,12 +395,12 @@ export default function DaycarePackagesPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-info/10">
-                    <TrendingUp className="h-5 w-5 text-info" />
+                  <div className="bg-info/10 rounded-lg p-2">
+                    <TrendingUp className="text-info h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold">${totalSavings}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Total Savings
                     </p>
                   </div>
@@ -416,26 +416,24 @@ export default function DaycarePackagesPage() {
               .map((pkg) => (
                 <Card
                   key={pkg.id}
-                  className={`relative overflow-hidden hover:shadow-md transition-shadow ${
-                    pkg.popular ? "ring-2 ring-warning" : ""
-                  }`}
+                  className={`relative overflow-hidden transition-shadow hover:shadow-md ${pkg.popular ? "ring-warning ring-2" : ""} `}
                 >
                   {pkg.popular && (
                     <div className="absolute top-3 right-3">
                       <Badge variant="warning">
-                        <Star className="h-3 w-3 mr-1" />
+                        <Star className="mr-1 h-3 w-3" />
                         Popular
                       </Badge>
                     </div>
                   )}
                   <div
-                    className={`absolute top-0 left-0 right-0 h-1 ${
+                    className={`absolute top-0 right-0 left-0 h-1 ${
                       pkg.rateType === "full-day"
                         ? "bg-primary"
                         : pkg.rateType === "half-day"
                           ? "bg-secondary"
                           : "bg-muted-foreground"
-                    }`}
+                    } `}
                   />
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">{pkg.name}</CardTitle>
@@ -448,10 +446,10 @@ export default function DaycarePackagesPage() {
                           Save ${pkg.savings}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {pkg.description}
                       </p>
-                      <div className="pt-2 border-t space-y-2">
+                      <div className="space-y-2 border-t pt-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
                             Includes:
@@ -485,7 +483,7 @@ export default function DaycarePackagesPage() {
                           className="flex-1"
                           onClick={() => handleEdit(pkg)}
                         >
-                          <Edit className="h-4 w-4 mr-1" />
+                          <Edit className="mr-1 size-4" />
                           Edit
                         </Button>
                         <Button
@@ -494,7 +492,7 @@ export default function DaycarePackagesPage() {
                           onClick={() => handleTogglePopular(pkg.id)}
                         >
                           <Star
-                            className={`h-4 w-4 ${pkg.popular ? "fill-warning text-warning" : ""}`}
+                            className={`size-4 ${pkg.popular ? `fill-warning text-warning` : ""} `}
                           />
                         </Button>
                       </div>
@@ -510,7 +508,7 @@ export default function DaycarePackagesPage() {
               <div className="flex items-center justify-between">
                 <CardTitle>All Packages</CardTitle>
                 <Button onClick={handleAddNew}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Add Package
                 </Button>
               </div>
@@ -528,14 +526,14 @@ export default function DaycarePackagesPage() {
                       size="icon"
                       onClick={() => handleEdit(item)}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="size-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteClick(item)}
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="text-destructive size-4" />
                     </Button>
                   </div>
                 )}
@@ -682,11 +680,11 @@ export default function DaycarePackagesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="mr-2 size-4" />
                   Cancel
                 </Button>
                 <Button onClick={handleSave} disabled={!formData.name}>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="mr-2 size-4" />
                   {editingPackage ? "Save Changes" : "Add Package"}
                 </Button>
               </DialogFooter>
@@ -712,7 +710,7 @@ export default function DaycarePackagesPage() {
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={handleDeleteConfirm}>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="mr-2 size-4" />
                   Delete
                 </Button>
               </DialogFooter>
@@ -720,16 +718,16 @@ export default function DaycarePackagesPage() {
           </Dialog>
         </TabsContent>
 
-        <TabsContent value="addons" className="space-y-6 mt-6">
+        <TabsContent value="addons" className="mt-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Add-on Services</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Additional services clients can purchase with daycare
               </p>
             </div>
             <Button onClick={() => openAddOnDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 size-4" />
               Add Service
             </Button>
           </div>
@@ -739,7 +737,7 @@ export default function DaycarePackagesPage() {
               <Card key={addOn.id}>
                 <CardContent className="p-0">
                   {addOn.image && (
-                    <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
+                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
                       <Image
                         src={addOn.image}
                         alt={addOn.name}
@@ -749,16 +747,16 @@ export default function DaycarePackagesPage() {
                     </div>
                   )}
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold mb-2">{addOn.name}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <h3 className="mb-2 text-lg font-semibold">{addOn.name}</h3>
+                    <p className="text-muted-foreground mb-4 text-sm">
                       {addOn.description}
                     </p>
                     <div className="mb-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           Pricing:
                         </span>
-                        <span className="font-semibold text-lg">
+                        <span className="text-lg font-semibold">
                           {addOn.hasUnits
                             ? `$${addOn.pricePerUnit} per ${addOn.unit}`
                             : `$${addOn.basePrice}`}
@@ -771,14 +769,14 @@ export default function DaycarePackagesPage() {
                         className="flex-1"
                         onClick={() => openAddOnDialog(addOn)}
                       >
-                        <Edit2 className="mr-2 h-4 w-4" />
+                        <Edit2 className="mr-2 size-4" />
                         Edit
                       </Button>
                       <Button
                         variant="destructive"
                         onClick={() => deleteAddOn(addOn.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -794,7 +792,7 @@ export default function DaycarePackagesPage() {
                   No add-on services configured yet
                 </p>
                 <Button onClick={() => openAddOnDialog()}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 size-4" />
                   Add Your First Service
                 </Button>
               </CardContent>
@@ -840,7 +838,7 @@ export default function DaycarePackagesPage() {
                 <div className="space-y-2">
                   <Label>Service Image</Label>
                   {addOnForm.image && (
-                    <div className="relative w-full h-32 rounded-lg overflow-hidden mb-2 border">
+                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-lg border">
                       <Image
                         src={addOnForm.image}
                         alt="Preview"
@@ -864,7 +862,7 @@ export default function DaycarePackagesPage() {
                         document.getElementById("addonImageUpload")?.click()
                       }
                     >
-                      <ImageIcon className="h-4 w-4" />
+                      <ImageIcon className="size-4" />
                     </Button>
                     <input
                       id="addonImageUpload"

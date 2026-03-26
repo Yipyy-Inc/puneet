@@ -219,19 +219,19 @@ export function DaycareCalendarView({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={handlePrevious}>
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
           </Button>
-          <span className="font-medium min-w-[280px] text-center">
+          <span className="min-w-[280px] text-center font-medium">
             {formatDate(selectedDate)}
           </span>
           <Button variant="ghost" size="icon" onClick={handleNext}>
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="size-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={handleToday}>
             Today
           </Button>
           {isToday(selectedDate) && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
               Today
             </span>
           )}
@@ -254,12 +254,12 @@ export function DaycareCalendarView({
       </div>
 
       {/* Calendar Grid */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-lg border">
         <div className="overflow-x-auto select-none">
           <div className="min-w-[1200px]">
             {/* Time Header */}
-            <div className="flex border-b bg-muted/30">
-              <div className="w-40 min-w-40 p-2 border-r shrink-0 font-medium text-sm">
+            <div className="bg-muted/30 flex border-b">
+              <div className="w-40 min-w-40 shrink-0 border-r p-2 text-sm font-medium">
                 Area / Time
               </div>
               {HOURS.map((hour) => {
@@ -271,8 +271,8 @@ export function DaycareCalendarView({
                   <div
                     key={hour}
                     className={cn(
-                      "flex-1 min-w-[70px] p-2 text-center text-sm font-medium border-r",
-                      isCurrentHour && "bg-blue-100 dark:bg-blue-900/30",
+                      `min-w-[70px] flex-1 border-r p-2 text-center text-sm font-medium`,
+                      isCurrentHour && `bg-blue-100 dark:bg-blue-900/30`,
                     )}
                   >
                     {formatHour(hour)}
@@ -296,8 +296,8 @@ export function DaycareCalendarView({
                   {/* Spot Info */}
                   <div
                     className={cn(
-                      "w-40 min-w-40 p-2 border-r shrink-0 cursor-pointer hover:bg-muted/50 transition-colors flex flex-col justify-center",
-                      isMaintenance && "bg-red-50 dark:bg-red-950/20",
+                      `hover:bg-muted/50 flex w-40 min-w-40 shrink-0 cursor-pointer flex-col justify-center border-r p-2 transition-colors`,
+                      isMaintenance && `bg-red-50 dark:bg-red-950/20`,
                       isExpanded && "bg-muted/30",
                     )}
                     style={{ minHeight: rowHeight }}
@@ -312,13 +312,13 @@ export function DaycareCalendarView({
                       >
                         ▶
                       </span>
-                      <span className="font-medium text-sm">{spot.name}</span>
+                      <span className="text-sm font-medium">{spot.name}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground ml-4">
+                    <div className="text-muted-foreground ml-4 text-xs">
                       {getTypeLabel(spot.type)} • Cap: {spot.capacity}
                     </div>
                     {reservationCount > 0 && (
-                      <div className="text-xs text-muted-foreground mt-1 ml-4">
+                      <div className="text-muted-foreground mt-1 ml-4 text-xs">
                         {reservationCount} pet{reservationCount > 1 ? "s" : ""}{" "}
                         today
                       </div>
@@ -326,7 +326,7 @@ export function DaycareCalendarView({
                   </div>
 
                   {/* Hour Cells with Reservations */}
-                  <div className="flex-1 relative">
+                  <div className="relative flex-1">
                     {/* Background cells */}
                     <div className="flex" style={{ minHeight: rowHeight }}>
                       {HOURS.map((hour) => {
@@ -339,12 +339,12 @@ export function DaycareCalendarView({
                           <div
                             key={hour}
                             className={cn(
-                              "flex-1 min-w-[70px] border-r group relative",
+                              "group relative min-w-[70px] flex-1 border-r",
                               isMaintenance
-                                ? "bg-red-50/50 dark:bg-red-950/10 cursor-not-allowed"
+                                ? `cursor-not-allowed bg-red-50/50 dark:bg-red-950/10`
                                 : isCurrentHour
-                                  ? "bg-blue-50/50 dark:bg-blue-950/10"
-                                  : "hover:bg-muted/30 cursor-pointer",
+                                  ? `bg-blue-50/50 dark:bg-blue-950/10`
+                                  : `hover:bg-muted/30 cursor-pointer`,
                             )}
                             style={{ minHeight: rowHeight }}
                             onClick={() => {
@@ -359,19 +359,19 @@ export function DaycareCalendarView({
                               statusCounts.total > 0 && (
                                 <div className="absolute inset-0 flex items-center justify-center gap-1">
                                   {statusCounts.checkedIn > 0 && (
-                                    <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                    <div className="flex items-center gap-0.5 rounded-sm bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                                       <PawPrint className="h-2.5 w-2.5" />
                                       {statusCounts.checkedIn}
                                     </div>
                                   )}
                                   {statusCounts.reserved > 0 && (
-                                    <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                    <div className="flex items-center gap-0.5 rounded-sm bg-yellow-100 px-1.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
                                       <PawPrint className="h-2.5 w-2.5" />
                                       {statusCounts.reserved}
                                     </div>
                                   )}
                                   {statusCounts.checkedOut > 0 && (
-                                    <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
+                                    <div className="flex items-center gap-0.5 rounded-sm bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-900/30 dark:text-gray-300">
                                       <PawPrint className="h-2.5 w-2.5" />
                                       {statusCounts.checkedOut}
                                     </div>
@@ -382,8 +382,8 @@ export function DaycareCalendarView({
                             {!isMaintenance &&
                               statusCounts.total === 0 &&
                               !isExpanded && (
-                                <div className="h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground bg-background border rounded px-2 py-1 shadow-sm">
+                                <div className="flex h-full items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+                                  <div className="bg-background text-muted-foreground flex items-center gap-1 rounded-sm border px-2 py-1 text-xs shadow-sm">
                                     <Plus className="h-3 w-3" />
                                     Add
                                   </div>
@@ -397,7 +397,7 @@ export function DaycareCalendarView({
                     {/* Maintenance Bar */}
                     {isMaintenance && (
                       <div
-                        className="absolute top-2 h-8 rounded flex items-center gap-2 px-2 bg-red-100 dark:bg-red-900/30 border-l-4 border-l-red-500"
+                        className="absolute top-2 flex h-8 items-center gap-2 rounded-sm border-l-4 border-l-red-500 bg-red-100 px-2 dark:bg-red-900/30"
                         style={{
                           left: 2,
                           right: 2,
@@ -425,7 +425,7 @@ export function DaycareCalendarView({
                           <div
                             key={reservation.id}
                             className={cn(
-                              "absolute h-7 rounded border-l-4 px-2 cursor-pointer overflow-hidden shadow-sm transition-all hover:shadow-md flex items-center gap-1.5",
+                              `absolute flex h-7 cursor-pointer items-center gap-1.5 overflow-hidden rounded-sm border-l-4 px-2 shadow-sm transition-all hover:shadow-md`,
                               getStatusColor(reservation.status),
                             )}
                             style={{
@@ -438,19 +438,19 @@ export function DaycareCalendarView({
                               onReservationClick?.(reservation);
                             }}
                           >
-                            <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center shrink-0">
-                              <PawPrint className="h-2.5 w-2.5 text-muted-foreground" />
+                            <div className="bg-muted flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
+                              <PawPrint className="text-muted-foreground h-2.5 w-2.5" />
                             </div>
-                            <div className="min-w-0 flex-1 flex items-center gap-2">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
                               <span
                                 className={cn(
-                                  "text-xs font-medium truncate",
+                                  "truncate text-xs font-medium",
                                   getStatusTextColor(reservation.status),
                                 )}
                               >
                                 {reservation.petName}
                               </span>
-                              <span className="text-[10px] text-muted-foreground shrink-0">
+                              <span className="text-muted-foreground shrink-0 text-[10px]">
                                 {reservation.startTime} - {reservation.endTime}
                               </span>
                             </div>
@@ -468,19 +468,19 @@ export function DaycareCalendarView({
       {/* Legend */}
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 border-l-2 border-l-blue-500" />
+          <div className="size-4 rounded-sm border-l-2 border-l-blue-500 bg-blue-100 dark:bg-blue-900/30" />
           <span className="text-muted-foreground">Checked In</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-yellow-100 dark:bg-yellow-900/30 border-l-2 border-l-yellow-500" />
+          <div className="size-4 rounded-sm border-l-2 border-l-yellow-500 bg-yellow-100 dark:bg-yellow-900/30" />
           <span className="text-muted-foreground">Reserved</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-900/30 border-l-2 border-l-gray-500" />
+          <div className="size-4 rounded-sm border-l-2 border-l-gray-500 bg-gray-100 dark:bg-gray-900/30" />
           <span className="text-muted-foreground">Checked Out</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800" />
+          <div className="size-4 rounded-sm border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20" />
           <span className="text-muted-foreground">Maintenance</span>
         </div>
       </div>

@@ -20,7 +20,10 @@ const BUILTIN_CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function getTaskCategoryLabel(category: string): string {
-  return BUILTIN_CATEGORY_LABELS[category] ?? category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " ");
+  return (
+    BUILTIN_CATEGORY_LABELS[category] ??
+    category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " ")
+  );
 }
 
 export const taskTemplates: TaskTemplate[] = [

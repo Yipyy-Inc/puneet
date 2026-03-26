@@ -5,7 +5,6 @@
  */
 
 import { facilityConfig } from "@/data/facility-config";
-import { triggerFormEvent } from "@/lib/form-automation-events";
 
 const customerNotify = facilityConfig.notifications?.forms?.customer;
 
@@ -20,8 +19,12 @@ export function notifyCustomerSubmissionConfirmed(params: {
   if (!customerNotify?.submissionConfirmed) return;
   // In production: send email/SMS or in-app notification
   if (typeof window !== "undefined") {
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }).__FORM_CUSTOMER_EVENTS__ ??= [];
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }).__FORM_CUSTOMER_EVENTS__.push({
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__ ??= [];
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__.push({
       type: "submission_confirmed",
       ...params,
       at: new Date().toISOString(),
@@ -39,8 +42,12 @@ export function notifyCustomerMissingRequiredForms(params: {
 }): void {
   if (!customerNotify?.missingRequiredFormsReminder) return;
   if (typeof window !== "undefined") {
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }).__FORM_CUSTOMER_EVENTS__ ??= [];
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }).__FORM_CUSTOMER_EVENTS__.push({
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__ ??= [];
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__.push({
       type: "missing_required_forms_reminder",
       ...params,
       at: new Date().toISOString(),
@@ -59,8 +66,12 @@ export function notifyCustomerFormRejected(params: {
 }): void {
   if (!customerNotify?.formRejectedNeedsCorrection) return;
   if (typeof window !== "undefined") {
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }).__FORM_CUSTOMER_EVENTS__ ??= [];
-    (window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }).__FORM_CUSTOMER_EVENTS__.push({
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__?: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__ ??= [];
+    (
+      window as unknown as { __FORM_CUSTOMER_EVENTS__: unknown[] }
+    ).__FORM_CUSTOMER_EVENTS__.push({
       type: "form_rejected_needs_correction",
       ...params,
       at: new Date().toISOString(),

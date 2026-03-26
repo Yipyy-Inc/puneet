@@ -43,19 +43,19 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
       <div className="flex items-center justify-between">
         {steps.map((step, index) => (
           <React.Fragment key={step.id}>
-            <div className="flex flex-col items-center flex-1">
+            <div className="flex flex-1 flex-col items-center">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-medium shrink-0",
+                  `flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium`,
                   index < currentStep
                     ? "border-primary bg-primary text-primary-foreground"
                     : index === currentStep
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted-foreground/30 bg-background text-muted-foreground",
+                      : `border-muted-foreground/30 bg-background text-muted-foreground`,
                 )}
               >
                 {index < currentStep ? (
-                  <CheckIcon className="h-4 w-4" />
+                  <CheckIcon className="size-4" />
                 ) : (
                   index + 1
                 )}
@@ -64,7 +64,7 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  "flex-1 h-px mx-2",
+                  "mx-2 h-px flex-1",
                   index < currentStep ? "bg-primary" : "bg-muted-foreground/30",
                 )}
               />
@@ -75,7 +75,10 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
       {/* Step titles row - below circles */}
       <div className="flex items-start justify-between">
         {steps.map((step, index) => (
-          <div key={step.id} className="flex flex-col items-center flex-1 text-center">
+          <div
+            key={step.id}
+            className="flex flex-1 flex-col items-center text-center"
+          >
             <div
               className={cn(
                 "text-sm font-medium",
@@ -87,7 +90,7 @@ function Stepper({ steps, currentStep, className }: StepperProps) {
               {step.title}
             </div>
             {step.description && (
-              <div className="text-xs text-muted-foreground mt-1 max-w-24">
+              <div className="text-muted-foreground mt-1 max-w-24 text-xs">
                 {step.description}
               </div>
             )}

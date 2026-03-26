@@ -1,6 +1,14 @@
-export type BookingRequestStatus = "pending" | "declined" | "waitlisted" | "scheduled";
+export type BookingRequestStatus =
+  | "pending"
+  | "declined"
+  | "waitlisted"
+  | "scheduled";
 
-export type BookingRequestService = "daycare" | "boarding" | "grooming" | "training";
+export type BookingRequestService =
+  | "daycare"
+  | "boarding"
+  | "grooming"
+  | "training";
 
 export interface BookingRequest {
   id: string;
@@ -125,4 +133,3 @@ export const BOOKING_REQUESTS: BookingRequest[] = [
     status: "pending",
   },
 ];
-

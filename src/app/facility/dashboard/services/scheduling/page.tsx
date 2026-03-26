@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { users } from "@/data/users";
 import { schedules, type Schedule } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
@@ -42,7 +42,6 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  Grid3x3,
   Map,
   Scissors,
   GraduationCap,
@@ -60,10 +59,16 @@ import { toast } from "sonner";
 import {
   calculateWorkloadForDate,
   calculateWorkloadForTimeBlock,
-  type WorkloadMetrics,
   type TimeBlockWorkload,
 } from "@/lib/scheduling-workload";
-import { Activity, TrendingUp, Users as UsersIcon, Home, Scissors as ScissorsIcon, GraduationCap as GraduationCapIcon } from "lucide-react";
+import {
+  Activity,
+  TrendingUp,
+  Users as UsersIcon,
+  Home,
+  Scissors as ScissorsIcon,
+  GraduationCap as GraduationCapIcon,
+} from "lucide-react";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [
@@ -411,7 +416,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Download,
-  Calendar as CalendarIcon,
   Clock,
   Plus,
   Edit,
@@ -421,10 +425,7 @@ import {
   FileDown,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const exportSchedulesToCSV = (scheduleData: typeof schedules) => {
   const headers = [
@@ -540,35 +541,24 @@ const timeSlots = [
 
 export default function FacilitySchedulingPage() {
   // Get user role to determine if admin
-  const [userRole, setUserRole] = useState<"super_admin" | "facility_admin" | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  
-  useEffect(() => {
-    // Check if user is admin (super_admin or facility_admin)
-    const checkAdmin = () => {
-      if (typeof document === "undefined") return;
-      const cookies = document.cookie.split("; ");
-      const roleCookie = cookies.find((cookie) => cookie.startsWith("user_role="));
-      if (roleCookie) {
-        const role = roleCookie.split("=")[1] as "super_admin" | "facility_admin";
-        if (role === "super_admin" || role === "facility_admin") {
-          setUserRole(role);
-          setIsAdmin(true);
-        }
+  const [_userRole] = useState<"super_admin" | "facility_admin" | null>(() => {
+    if (typeof document === "undefined") return null;
+    const cookies = document.cookie.split("; ");
+    const roleCookie = cookies.find((cookie) =>
+      cookie.startsWith("user_role="),
+    );
+    if (roleCookie) {
+      const role = roleCookie.split("=")[1] as "super_admin" | "facility_admin";
+      if (role === "super_admin" || role === "facility_admin") {
+        return role;
       }
-    };
-    checkAdmin();
-  }, []);
+    }
+    return null;
+  });
+  const isAdmin = _userRole === "super_admin" || _userRole === "facility_admin";
 
   // For admins: allow facility selection, for managers: use their assigned facility
   const [selectedFacilityId, setSelectedFacilityId] = useState<number>(11);
-  
-  useEffect(() => {
-    if (!isAdmin) {
-      // For non-admins, use their assigned facility (would come from user token in production)
-      setSelectedFacilityId(11);
-    }
-  }, [isAdmin]);
 
   const facility = facilities.find((f) => f.id === selectedFacilityId);
 
@@ -579,8 +569,12 @@ export default function FacilitySchedulingPage() {
     return new Date(today.setDate(diff));
   });
 
-  const [viewMode, setViewMode] = useState<"calendar" | "list" | "role">("calendar");
-  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("week");
+  const [viewMode, setViewMode] = useState<"calendar" | "list" | "role">(
+    "calendar",
+  );
+  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">(
+    "week",
+  );
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<
@@ -598,7 +592,12 @@ export default function FacilitySchedulingPage() {
     startTime: "09:00",
     endTime: "17:00",
     role: "",
-    status: "scheduled" as "scheduled" | "confirmed" | "completed" | "absent" | "sick",
+    status: "scheduled" as
+      | "scheduled"
+      | "confirmed"
+      | "completed"
+      | "absent"
+      | "sick",
     location: "",
     notes: "",
     isRecurring: false,
@@ -617,12 +616,18 @@ export default function FacilitySchedulingPage() {
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [publishWeekStart, setPublishWeekStart] = useState("");
   const [publishNotes, setPublishNotes] = useState("");
-  const [publishedSchedules, setPublishedSchedules] = useState<Set<string>>(new Set());
+  const [publishedSchedules, setPublishedSchedules] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Bulk edit modal
   const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
-  const [selectedShiftsForBulkEdit, setSelectedShiftsForBulkEdit] = useState<number[]>([]);
-  const [bulkEditAction, setBulkEditAction] = useState<"assign" | "status" | "role" | "delete" | null>(null);
+  const [selectedShiftsForBulkEdit, setSelectedShiftsForBulkEdit] = useState<
+    number[]
+  >([]);
+  const [bulkEditAction, setBulkEditAction] = useState<
+    "assign" | "status" | "role" | "delete" | null
+  >(null);
 
   // Same-Day Sick / Call-Out modal
   const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
@@ -630,8 +635,11 @@ export default function FacilitySchedulingPage() {
     (typeof schedules)[number] | null
   >(null);
   const [sickCallReason, setSickCallReason] = useState("");
-  const [sickCallAction, setSickCallAction] = useState<"assign" | "split" | "volunteers" | null>(null);
-  const [selectedReplacementStaffId, setSelectedReplacementStaffId] = useState<string>("");
+  const [sickCallAction, setSickCallAction] = useState<
+    "assign" | "split" | "volunteers" | null
+  >(null);
+  const [selectedReplacementStaffId, setSelectedReplacementStaffId] =
+    useState<string>("");
   const [splitShiftStaffIds, setSplitShiftStaffIds] = useState<string[]>([]);
   const [notifyDepartments, setNotifyDepartments] = useState<string[]>([]);
 
@@ -644,12 +652,18 @@ export default function FacilitySchedulingPage() {
     targetShiftId: "",
     reason: "",
   });
-  const [swapValidationErrors, setSwapValidationErrors] = useState<string[]>([]);
+  const [_swapValidationErrors, setSwapValidationErrors] = useState<string[]>(
+    [],
+  );
 
   // Shift swap approval modal (for managers)
   const [isSwapApprovalModalOpen, setIsSwapApprovalModalOpen] = useState(false);
-  const [selectedSwapRequest, setSelectedSwapRequest] = useState<typeof shiftSwapRequests[number] | null>(null);
-  const [swapApprovalAction, setSwapApprovalAction] = useState<"approve" | "deny">("approve");
+  const [selectedSwapRequest, setSelectedSwapRequest] = useState<
+    (typeof shiftSwapRequests)[number] | null
+  >(null);
+  const [swapApprovalAction, setSwapApprovalAction] = useState<
+    "approve" | "deny"
+  >("approve");
   const [swapApprovalNotes, setSwapApprovalNotes] = useState("");
 
   // Shift task modal
@@ -673,7 +687,8 @@ export default function FacilitySchedulingPage() {
   >(null);
 
   // Time off request modal
-  const [isTimeOffRequestModalOpen, setIsTimeOffRequestModalOpen] = useState(false);
+  const [isTimeOffRequestModalOpen, setIsTimeOffRequestModalOpen] =
+    useState(false);
   const [timeOffRequestData, setTimeOffRequestData] = useState({
     type: "",
     startDate: "",
@@ -682,9 +697,13 @@ export default function FacilitySchedulingPage() {
   });
 
   // Time off review modal (for managers)
-  const [isTimeOffReviewModalOpen, setIsTimeOffReviewModalOpen] = useState(false);
-  const [selectedTimeOffRequest, setSelectedTimeOffRequest] = useState<TimeOffRequest | null>(null);
-  const [reviewAction, setReviewAction] = useState<"approve" | "deny" | "request_changes">("approve");
+  const [isTimeOffReviewModalOpen, setIsTimeOffReviewModalOpen] =
+    useState(false);
+  const [selectedTimeOffRequest, setSelectedTimeOffRequest] =
+    useState<TimeOffRequest | null>(null);
+  const [reviewAction, setReviewAction] = useState<
+    "approve" | "deny" | "request_changes"
+  >("approve");
   const [reviewNotes, setReviewNotes] = useState("");
   const [requestedChanges, setRequestedChanges] = useState("");
 
@@ -692,7 +711,10 @@ export default function FacilitySchedulingPage() {
   const getTimeOffReasons = (): TimeOffReason[] => {
     // In production, this would fetch from settings/database
     // For now, use defaults
-    return defaultTimeOffReasons.map(r => ({ ...r, facility: facility?.name || "Paws & Play Daycare" }));
+    return defaultTimeOffReasons.map((r) => ({
+      ...r,
+      facility: facility?.name || "Paws & Play Daycare",
+    }));
   };
 
   // Check for coverage gaps when time off is approved
@@ -700,14 +722,18 @@ export default function FacilitySchedulingPage() {
     const startDate = new Date(request.startDate);
     const endDate = new Date(request.endDate);
     const affectedDates: string[] = [];
-    
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
       affectedDates.push(d.toISOString().split("T")[0]);
     }
 
     // Check if there are scheduled shifts during this period
     const affectedShifts = facilitySchedules.filter(
-      (s) => s.staffId === request.staffId && affectedDates.includes(s.date)
+      (s) => s.staffId === request.staffId && affectedDates.includes(s.date),
     );
 
     return affectedShifts.length > 0;
@@ -750,8 +776,11 @@ export default function FacilitySchedulingPage() {
   };
 
   // Calculate coverage impact when a shift is marked as sick
-  const calculateCoverageImpact = (shift: (typeof schedules)[number] | null) => {
-    if (!shift) return { status: "ok", currentCount: 0, minNeeded: 0, impact: "none" };
+  const calculateCoverageImpact = (
+    shift: (typeof schedules)[number] | null,
+  ) => {
+    if (!shift)
+      return { status: "ok", currentCount: 0, minNeeded: 0, impact: "none" };
 
     const dateStr = shift.date;
     const [startHour, startMin] = shift.startTime.split(":").map(Number);
@@ -761,7 +790,11 @@ export default function FacilitySchedulingPage() {
 
     // Get all active shifts for the same role and date
     const sameRoleShifts = facilitySchedules.filter(
-      (s) => s.date === dateStr && s.role === shift.role && s.status === "scheduled" && s.id !== shift.id
+      (s) =>
+        s.date === dateStr &&
+        s.role === shift.role &&
+        s.status === "scheduled" &&
+        s.id !== shift.id,
     );
 
     // Count staff for each time block (every 30 minutes)
@@ -779,11 +812,11 @@ export default function FacilitySchedulingPage() {
 
     // Define minimum staff needed per role (this would come from settings)
     const minStaffByRole: Record<string, number> = {
-      "Boarding": 2,
-      "Daycare": 3,
-      "Grooming": 1,
-      "Training": 1,
-      "Admin": 1,
+      Boarding: 2,
+      Daycare: 3,
+      Grooming: 1,
+      Training: 1,
+      Admin: 1,
     };
     const minNeeded = minStaffByRole[shift.role] || 1;
 
@@ -796,7 +829,8 @@ export default function FacilitySchedulingPage() {
         currentCount: minCount,
         minNeeded,
         impact: "critical",
-        affectedTimeBlocks: timeBlocks.filter((b) => b.count < minNeeded).length,
+        affectedTimeBlocks: timeBlocks.filter((b) => b.count < minNeeded)
+          .length,
       };
     } else if (minCount === minNeeded) {
       return {
@@ -816,7 +850,9 @@ export default function FacilitySchedulingPage() {
   };
 
   // Get suggested replacements for a shift
-  const getSuggestedReplacements = (shift: (typeof schedules)[number] | null) => {
+  const getSuggestedReplacements = (
+    shift: (typeof schedules)[number] | null,
+  ) => {
     if (!shift) return [];
 
     const shiftDate = new Date(shift.date);
@@ -834,7 +870,9 @@ export default function FacilitySchedulingPage() {
         const avEndMinutes = avEndHour * 60 + avEndMin;
         const shiftStartMinutes = startHour * 60 + startMin;
         const shiftEndMinutes = endHour * 60 + endMin;
-        return avStartMinutes <= shiftStartMinutes && avEndMinutes >= shiftEndMinutes;
+        return (
+          avStartMinutes <= shiftStartMinutes && avEndMinutes >= shiftEndMinutes
+        );
       })
       .map((av) => av.staffId);
 
@@ -855,7 +893,7 @@ export default function FacilitySchedulingPage() {
       )
       .map((staff) => {
         const availability = staffAvailability.find(
-          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek
+          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek,
         );
         return {
           ...staff,
@@ -876,7 +914,7 @@ export default function FacilitySchedulingPage() {
       )
       .map((staff) => {
         const availability = staffAvailability.find(
-          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek
+          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek,
         );
         return {
           ...staff,
@@ -895,7 +933,7 @@ export default function FacilitySchedulingPage() {
     requestingShiftId: string,
     targetStaffId: string,
     targetShiftId: string,
-    swapType: "specific" | "anyone"
+    swapType: "specific" | "anyone",
   ): { isValid: boolean; errors: string[]; warnings: string[] } => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -906,7 +944,7 @@ export default function FacilitySchedulingPage() {
     }
 
     const requestingShift = facilitySchedules.find(
-      (s) => s.id.toString() === requestingShiftId
+      (s) => s.id.toString() === requestingShiftId,
     );
     if (!requestingShift) {
       errors.push("Requesting shift not found");
@@ -925,7 +963,7 @@ export default function FacilitySchedulingPage() {
       }
 
       const targetShift = facilitySchedules.find(
-        (s) => s.id.toString() === targetShiftId
+        (s) => s.id.toString() === targetShiftId,
       );
       if (!targetShift) {
         errors.push("Target shift not found");
@@ -933,7 +971,7 @@ export default function FacilitySchedulingPage() {
       }
 
       const targetStaff = facilityStaff.find(
-        (s) => s.id.toString() === targetStaffId
+        (s) => s.id.toString() === targetStaffId,
       );
       if (!targetStaff) {
         errors.push("Target staff member not found");
@@ -945,7 +983,7 @@ export default function FacilitySchedulingPage() {
         // Check if cross-role swaps are allowed (from settings - would need to fetch)
         // For now, we'll allow it but show a warning
         warnings.push(
-          `Role mismatch: ${requestingShift.role} ↔ ${targetShift.role}. Cross-role swaps may require manager approval.`
+          `Role mismatch: ${requestingShift.role} ↔ ${targetShift.role}. Cross-role swaps may require manager approval.`,
         );
       }
 
@@ -954,43 +992,62 @@ export default function FacilitySchedulingPage() {
         (s) =>
           s.staffId.toString() === targetStaffId &&
           s.id.toString() !== targetShiftId &&
-          s.status === "scheduled"
+          s.status === "scheduled",
       );
 
       // Check if requesting shift conflicts with target staff's other shifts
       const hasConflict = targetStaffOtherShifts.some((shift) => {
         if (shift.date !== requestingShift.date) return false;
-        const [reqStartHour, reqStartMin] = requestingShift.startTime.split(":").map(Number);
-        const [reqEndHour, reqEndMin] = requestingShift.endTime.split(":").map(Number);
-        const [shiftStartHour, shiftStartMin] = shift.startTime.split(":").map(Number);
-        const [shiftEndHour, shiftEndMin] = shift.endTime.split(":").map(Number);
+        const [reqStartHour, reqStartMin] = requestingShift.startTime
+          .split(":")
+          .map(Number);
+        const [reqEndHour, reqEndMin] = requestingShift.endTime
+          .split(":")
+          .map(Number);
+        const [shiftStartHour, shiftStartMin] = shift.startTime
+          .split(":")
+          .map(Number);
+        const [shiftEndHour, shiftEndMin] = shift.endTime
+          .split(":")
+          .map(Number);
         const reqStart = reqStartHour * 60 + reqStartMin;
         const reqEnd = reqEndHour * 60 + reqEndMin;
         const shiftStart = shiftStartHour * 60 + shiftStartMin;
         const shiftEnd = shiftEndHour * 60 + shiftEndMin;
-        return (reqStart < shiftEnd && reqEnd > shiftStart);
+        return reqStart < shiftEnd && reqEnd > shiftStart;
       });
 
       if (hasConflict) {
-        errors.push("The target staff member has a conflicting shift on the same day");
+        errors.push(
+          "The target staff member has a conflicting shift on the same day",
+        );
       }
 
       // Check overtime rules (simplified - would need settings)
-      const targetStaffWeeklyHours = targetStaffOtherShifts.reduce((total, shift) => {
-        const [startHour, startMin] = shift.startTime.split(":").map(Number);
-        const [endHour, endMin] = shift.endTime.split(":").map(Number);
-        const hours = (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
-        return total + hours;
-      }, 0);
+      const targetStaffWeeklyHours = targetStaffOtherShifts.reduce(
+        (total, shift) => {
+          const [startHour, startMin] = shift.startTime.split(":").map(Number);
+          const [endHour, endMin] = shift.endTime.split(":").map(Number);
+          const hours =
+            (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
+          return total + hours;
+        },
+        0,
+      );
 
-      const [reqStartHour, reqStartMin] = requestingShift.startTime.split(":").map(Number);
-      const [reqEndHour, reqEndMin] = requestingShift.endTime.split(":").map(Number);
-      const reqHours = (reqEndHour * 60 + reqEndMin - (reqStartHour * 60 + reqStartMin)) / 60;
+      const [reqStartHour, reqStartMin] = requestingShift.startTime
+        .split(":")
+        .map(Number);
+      const [reqEndHour, reqEndMin] = requestingShift.endTime
+        .split(":")
+        .map(Number);
+      const reqHours =
+        (reqEndHour * 60 + reqEndMin - (reqStartHour * 60 + reqStartMin)) / 60;
 
       const newWeeklyHours = targetStaffWeeklyHours + reqHours;
       if (newWeeklyHours > 40) {
         warnings.push(
-          `This swap would result in ${newWeeklyHours.toFixed(1)} hours for the target staff member (overtime threshold: 40 hours). Manager approval may be required.`
+          `This swap would result in ${newWeeklyHours.toFixed(1)} hours for the target staff member (overtime threshold: 40 hours). Manager approval may be required.`,
         );
       }
     }
@@ -1003,13 +1060,15 @@ export default function FacilitySchedulingPage() {
     if (!requestingShiftId) return [];
 
     const requestingShift = facilitySchedules.find(
-      (s) => s.id.toString() === requestingShiftId
+      (s) => s.id.toString() === requestingShiftId,
     );
     if (!requestingShift) return [];
 
     const shiftDate = new Date(requestingShift.date);
     const dayOfWeek = shiftDate.getDay();
-    const [startHour, startMin] = requestingShift.startTime.split(":").map(Number);
+    const [startHour, startMin] = requestingShift.startTime
+      .split(":")
+      .map(Number);
     const [endHour, endMin] = requestingShift.endTime.split(":").map(Number);
 
     // Get staff available on this day and time
@@ -1022,7 +1081,9 @@ export default function FacilitySchedulingPage() {
         const avEndMinutes = avEndHour * 60 + avEndMin;
         const shiftStartMinutes = startHour * 60 + startMin;
         const shiftEndMinutes = endHour * 60 + endMin;
-        return avStartMinutes <= shiftStartMinutes && avEndMinutes >= shiftEndMinutes;
+        return (
+          avStartMinutes <= shiftStartMinutes && avEndMinutes >= shiftEndMinutes
+        );
       })
       .map((av) => av.staffId);
 
@@ -1034,7 +1095,7 @@ export default function FacilitySchedulingPage() {
         (s) =>
           s.date === requestingShift.date &&
           s.status === "scheduled" &&
-          s.id.toString() !== requestingShiftId
+          s.id.toString() !== requestingShiftId,
       )
       .map((s) => s.staffId);
 
@@ -1044,25 +1105,34 @@ export default function FacilitySchedulingPage() {
           uniqueStaffIds.includes(staff.id) &&
           !alreadyScheduledIds.includes(staff.id) &&
           staff.id !== requestingShift.staffId &&
-          (staff.role === requestingShift.role || true) // Allow cross-role if enabled in settings
+          (staff.role === requestingShift.role || true), // Allow cross-role if enabled in settings
       )
       .map((staff) => {
         const availability = staffAvailability.find(
-          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek
+          (av) => av.staffId === staff.id && av.dayOfWeek === dayOfWeek,
         );
         const staffShifts = facilitySchedules.filter(
-          (s) => s.staffId === staff.id && s.status === "scheduled"
+          (s) => s.staffId === staff.id && s.status === "scheduled",
         );
         const weeklyHours = staffShifts.reduce((total, shift) => {
-          const [sStartHour, sStartMin] = shift.startTime.split(":").map(Number);
+          const [sStartHour, sStartMin] = shift.startTime
+            .split(":")
+            .map(Number);
           const [sEndHour, sEndMin] = shift.endTime.split(":").map(Number);
-          const hours = (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
+          const hours =
+            (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
           return total + hours;
         }, 0);
 
-        const [reqStartHour, reqStartMin] = requestingShift.startTime.split(":").map(Number);
-        const [reqEndHour, reqEndMin] = requestingShift.endTime.split(":").map(Number);
-        const reqHours = (reqEndHour * 60 + reqEndMin - (reqStartHour * 60 + reqStartMin)) / 60;
+        const [reqStartHour, reqStartMin] = requestingShift.startTime
+          .split(":")
+          .map(Number);
+        const [reqEndHour, reqEndMin] = requestingShift.endTime
+          .split(":")
+          .map(Number);
+        const reqHours =
+          (reqEndHour * 60 + reqEndMin - (reqStartHour * 60 + reqStartMin)) /
+          60;
 
         return {
           ...staff,
@@ -1090,9 +1160,15 @@ export default function FacilitySchedulingPage() {
       endTime: string;
       role: string;
     },
-    excludeShiftId?: number
+    excludeShiftId?: number,
   ): Array<{
-    type: "double_booking" | "overlapping" | "time_off" | "role_mismatch" | "max_hours" | "min_rest";
+    type:
+      | "double_booking"
+      | "overlapping"
+      | "time_off"
+      | "role_mismatch"
+      | "max_hours"
+      | "min_rest";
     severity: "critical" | "warning" | "info";
     message: string;
     conflictingShiftId?: number;
@@ -1101,7 +1177,13 @@ export default function FacilitySchedulingPage() {
     details?: any;
   }> => {
     const conflicts: Array<{
-      type: "double_booking" | "overlapping" | "time_off" | "role_mismatch" | "max_hours" | "min_rest";
+      type:
+        | "double_booking"
+        | "overlapping"
+        | "time_off"
+        | "role_mismatch"
+        | "max_hours"
+        | "min_rest";
       severity: "critical" | "warning" | "info";
       message: string;
       conflictingShiftId?: number;
@@ -1133,7 +1215,9 @@ export default function FacilitySchedulingPage() {
       const sEndMinutes = sEndHour * 60 + sEndMin;
 
       // Exact overlap
-      return shiftStartMinutes === sStartMinutes && shiftEndMinutes === sEndMinutes;
+      return (
+        shiftStartMinutes === sStartMinutes && shiftEndMinutes === sEndMinutes
+      );
     });
 
     if (doubleBooked) {
@@ -1174,7 +1258,8 @@ export default function FacilitySchedulingPage() {
 
     // 3. Check for scheduling during approved time off
     const approvedTimeOff = timeOffRequests.find((to) => {
-      if (to.staffId !== shift.staffId || to.status !== "approved") return false;
+      if (to.staffId !== shift.staffId || to.status !== "approved")
+        return false;
       const startDate = new Date(to.startDate);
       const endDate = new Date(to.endDate);
       const shiftDate = new Date(shift.date);
@@ -1213,7 +1298,8 @@ export default function FacilitySchedulingPage() {
     const dailyHours = sameDayShifts.reduce((total, s) => {
       const [sStartHour, sStartMin] = s.startTime.split(":").map(Number);
       const [sEndHour, sEndMin] = s.endTime.split(":").map(Number);
-      const hours = (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
+      const hours =
+        (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
       return total + hours;
     }, shiftDuration);
 
@@ -1238,7 +1324,8 @@ export default function FacilitySchedulingPage() {
     const nextDayStr = nextDay.toISOString().split("T")[0];
 
     const previousDayShifts = facilitySchedules.filter((s) => {
-      if (s.staffId !== shift.staffId || s.date !== previousDayStr) return false;
+      if (s.staffId !== shift.staffId || s.date !== previousDayStr)
+        return false;
       if (s.status !== "scheduled") return false;
       return true;
     });
@@ -1258,14 +1345,18 @@ export default function FacilitySchedulingPage() {
       const lastShift = previousDayShifts.reduce((latest, s) => {
         const [sEndHour, sEndMin] = s.endTime.split(":").map(Number);
         const sEndMinutes = sEndHour * 60 + sEndMin;
-        const [latestEndHour, latestEndMin] = latest.endTime.split(":").map(Number);
+        const [latestEndHour, latestEndMin] = latest.endTime
+          .split(":")
+          .map(Number);
         const latestEndMinutes = latestEndHour * 60 + latestEndMin;
         return sEndMinutes > latestEndMinutes ? s : latest;
       }, previousDayShifts[0]);
 
-      const [lastEndHour, lastEndMin] = lastShift.endTime.split(":").map(Number);
+      const [lastEndHour, lastEndMin] = lastShift.endTime
+        .split(":")
+        .map(Number);
       const lastEndMinutes = lastEndHour * 60 + lastEndMin;
-      const restMinutes = (24 * 60 - lastEndMinutes) + shiftStartMinutes;
+      const restMinutes = 24 * 60 - lastEndMinutes + shiftStartMinutes;
 
       if (restMinutes < minRestMinutes) {
         conflicts.push({
@@ -1284,14 +1375,18 @@ export default function FacilitySchedulingPage() {
       const firstShift = nextDayShifts.reduce((earliest, s) => {
         const [sStartHour, sStartMin] = s.startTime.split(":").map(Number);
         const sStartMinutes = sStartHour * 60 + sStartMin;
-        const [earliestStartHour, earliestStartMin] = earliest.startTime.split(":").map(Number);
+        const [earliestStartHour, earliestStartMin] = earliest.startTime
+          .split(":")
+          .map(Number);
         const earliestStartMinutes = earliestStartHour * 60 + earliestStartMin;
         return sStartMinutes < earliestStartMinutes ? s : earliest;
       }, nextDayShifts[0]);
 
-      const [firstStartHour, firstStartMin] = firstShift.startTime.split(":").map(Number);
+      const [firstStartHour, firstStartMin] = firstShift.startTime
+        .split(":")
+        .map(Number);
       const firstStartMinutes = firstStartHour * 60 + firstStartMin;
-      const restMinutes = (24 * 60 - shiftEndMinutes) + firstStartMinutes;
+      const restMinutes = 24 * 60 - shiftEndMinutes + firstStartMinutes;
 
       if (restMinutes < minRestMinutes) {
         conflicts.push({
@@ -1314,7 +1409,13 @@ export default function FacilitySchedulingPage() {
     shiftId: number;
     staffId: number;
     staffName: string;
-    conflictType: "double_booking" | "overlapping" | "time_off" | "role_mismatch" | "max_hours" | "min_rest";
+    conflictType:
+      | "double_booking"
+      | "overlapping"
+      | "time_off"
+      | "role_mismatch"
+      | "max_hours"
+      | "min_rest";
     severity: "critical" | "warning" | "info";
     date: string;
     timeSlot: string;
@@ -1329,7 +1430,13 @@ export default function FacilitySchedulingPage() {
       shiftId: number;
       staffId: number;
       staffName: string;
-      conflictType: "double_booking" | "overlapping" | "time_off" | "role_mismatch" | "max_hours" | "min_rest";
+      conflictType:
+        | "double_booking"
+        | "overlapping"
+        | "time_off"
+        | "role_mismatch"
+        | "max_hours"
+        | "min_rest";
       severity: "critical" | "warning" | "info";
       date: string;
       timeSlot: string;
@@ -1366,12 +1473,15 @@ export default function FacilitySchedulingPage() {
       });
 
     // Remove duplicates (same conflict from different perspectives)
-    const uniqueConflicts = allConflicts.filter((conflict, index, self) =>
-      index === self.findIndex((c) =>
-        c.shiftId === conflict.shiftId &&
-        c.conflictType === conflict.conflictType &&
-        c.conflictingShiftId === conflict.conflictingShiftId
-      )
+    const uniqueConflicts = allConflicts.filter(
+      (conflict, index, self) =>
+        index ===
+        self.findIndex(
+          (c) =>
+            c.shiftId === conflict.shiftId &&
+            c.conflictType === conflict.conflictType &&
+            c.conflictingShiftId === conflict.conflictingShiftId,
+        ),
     );
 
     return uniqueConflicts;
@@ -1383,16 +1493,20 @@ export default function FacilitySchedulingPage() {
 
   // For admins: show all schedules/staff, for managers: filter by facility
   const facilitySchedules = isAdmin
-    ? (exampleSchedules.length > 0 ? exampleSchedules : schedules)
-    : (exampleSchedules.length > 0
-        ? exampleSchedules.filter((s) => s.facility === facility?.name)
-        : schedules.filter((schedule) => schedule.facility === facility?.name));
+    ? exampleSchedules.length > 0
+      ? exampleSchedules
+      : schedules
+    : exampleSchedules.length > 0
+      ? exampleSchedules.filter((s) => s.facility === facility?.name)
+      : schedules.filter((schedule) => schedule.facility === facility?.name);
 
   const facilityStaff = isAdmin
-    ? (exampleStaff.length > 0 ? exampleStaff : users)
-    : (exampleStaff.length > 0
-        ? exampleStaff.filter((u) => u.facility === facility?.name)
-        : users.filter((user) => user.facility === facility?.name));
+    ? exampleStaff.length > 0
+      ? exampleStaff
+      : users
+    : exampleStaff.length > 0
+      ? exampleStaff.filter((u) => u.facility === facility?.name)
+      : users.filter((user) => user.facility === facility?.name);
 
   const handleAddNew = (date?: string) => {
     setEditingSchedule(null);
@@ -1465,15 +1579,18 @@ export default function FacilitySchedulingPage() {
     const filtered = role
       ? facilitySchedules.filter((s) => s.role === role)
       : facilitySchedules;
-    
-    const grouped = filtered.reduce((acc, schedule) => {
-      const role = schedule.role || "Other";
-      if (!acc[role]) {
-        acc[role] = [];
-      }
-      acc[role].push(schedule);
-      return acc;
-    }, {} as Record<string, typeof facilitySchedules>);
+
+    const grouped = filtered.reduce(
+      (acc, schedule) => {
+        const role = schedule.role || "Other";
+        if (!acc[role]) {
+          acc[role] = [];
+        }
+        acc[role].push(schedule);
+        return acc;
+      },
+      {} as Record<string, typeof facilitySchedules>,
+    );
 
     return grouped;
   };
@@ -1515,13 +1632,17 @@ export default function FacilitySchedulingPage() {
     try {
       const timeBlock = `${timeStr}-${String(hour + 1).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
       workload = calculateWorkloadForTimeBlock(dateStr, timeBlock, facility.id);
-    } catch (e) {
+    } catch {
       // If time block calculation fails, use daily workload
       const dailyWorkload = calculateWorkloadForDate(dateStr, facility.id);
       workload = {
         timeBlock: timeStr,
-        checkIns: dailyWorkload.checkInTimes.filter((t) => t.startsWith(timeStr.split(":")[0])).length,
-        checkOuts: dailyWorkload.checkOutTimes.filter((t) => t.startsWith(timeStr.split(":")[0])).length,
+        checkIns: dailyWorkload.checkInTimes.filter((t) =>
+          t.startsWith(timeStr.split(":")[0]),
+        ).length,
+        checkOuts: dailyWorkload.checkOutTimes.filter((t) =>
+          t.startsWith(timeStr.split(":")[0]),
+        ).length,
         daycareCount: dailyWorkload.daycareAttendance,
         boardingCount: dailyWorkload.boardingOccupancy,
         groomingCount: dailyWorkload.groomingAppointmentsCount,
@@ -1537,7 +1658,9 @@ export default function FacilitySchedulingPage() {
     // Daycare requirement: 1 staff per X dogs
     const daycareStaffNeeded = Math.max(
       coverageRules.daycareMinStaff,
-      Math.ceil((workload?.daycareCount || 0) / coverageRules.daycareStaffPerDogs)
+      Math.ceil(
+        (workload?.daycareCount || 0) / coverageRules.daycareStaffPerDogs,
+      ),
     );
 
     // Boarding requirement: based on shift time
@@ -1559,30 +1682,41 @@ export default function FacilitySchedulingPage() {
     }
 
     // Grooming: count active grooming shifts
-    const groomingStaffCount = activeShifts.filter((s) => s.role.toLowerCase().includes("groom")).length;
+    const groomingStaffCount = activeShifts.filter((s) =>
+      s.role.toLowerCase().includes("groom"),
+    ).length;
 
     // Total minimum staff needed
     minStaffNeeded = Math.max(
       daycareStaffNeeded,
       boardingStaffNeeded,
       frontDeskNeeded,
-      groomingStaffCount > 0 ? 1 : 0
+      groomingStaffCount > 0 ? 1 : 0,
     );
 
     // Count staff by role
-    const staffByRole = activeShifts.reduce((acc, s) => {
-      const role = s.role.toLowerCase();
-      if (role.includes("daycare")) acc.daycare++;
-      if (role.includes("boarding")) acc.boarding++;
-      if (role.includes("groom")) acc.grooming++;
-      if (role.includes("front") || role.includes("admin") || role.includes("desk")) acc.frontDesk++;
-      return acc;
-    }, { daycare: 0, boarding: 0, grooming: 0, frontDesk: 0 });
+    const staffByRole = activeShifts.reduce(
+      (acc, s) => {
+        const role = s.role.toLowerCase();
+        if (role.includes("daycare")) acc.daycare++;
+        if (role.includes("boarding")) acc.boarding++;
+        if (role.includes("groom")) acc.grooming++;
+        if (
+          role.includes("front") ||
+          role.includes("admin") ||
+          role.includes("desk")
+        )
+          acc.frontDesk++;
+        return acc;
+      },
+      { daycare: 0, boarding: 0, grooming: 0, frontDesk: 0 },
+    );
 
     const totalStaffCount = activeShifts.length;
 
     // Calculate coverage ratio
-    const coverageRatio = minStaffNeeded > 0 ? totalStaffCount / minStaffNeeded : 1;
+    const coverageRatio =
+      minStaffNeeded > 0 ? totalStaffCount / minStaffNeeded : 1;
 
     // Determine status based on thresholds
     let status: "understaffed" | "ok" | "overstaffed";
@@ -1636,7 +1770,7 @@ export default function FacilitySchedulingPage() {
       toast.error("Please select a week to publish");
       return;
     }
-    
+
     // In production, this would publish the schedule and notify staff
     const weekKey = publishWeekStart;
     setPublishedSchedules((prev) => new Set([...prev, weekKey]));
@@ -1656,7 +1790,7 @@ export default function FacilitySchedulingPage() {
   return (
     <div className="space-y-6">
       {/* Action Bar - Role-Based */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">
             {isAdmin ? "Schedule Administration" : "Schedule Planning"}
@@ -1665,9 +1799,11 @@ export default function FacilitySchedulingPage() {
             <div className="flex items-center gap-2">
               <Select
                 value={selectedFacilityId.toString()}
-                onValueChange={(value) => setSelectedFacilityId(parseInt(value))}
+                onValueChange={(value) =>
+                  setSelectedFacilityId(parseInt(value))
+                }
               >
-                <SelectTrigger className="w-[250px] border-primary">
+                <SelectTrigger className="border-primary w-[250px]">
                   <SelectValue placeholder="Select Facility" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1688,14 +1824,18 @@ export default function FacilitySchedulingPage() {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Planning Actions - Manager Focus */}
           <Button onClick={() => handleAddNew()} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Shift
           </Button>
-          <Button variant="outline" onClick={() => setIsCopyWeekModalOpen(true)} size="sm">
-            <Copy className="mr-2 h-4 w-4" />
+          <Button
+            variant="outline"
+            onClick={() => setIsCopyWeekModalOpen(true)}
+            size="sm"
+          >
+            <Copy className="mr-2 size-4" />
             Copy Week
           </Button>
           <Button
@@ -1711,7 +1851,7 @@ export default function FacilitySchedulingPage() {
             className="bg-green-600 hover:bg-green-700"
             size="sm"
           >
-            <CheckCircle2 className="mr-2 h-4 w-4" />
+            <CheckCircle2 className="mr-2 size-4" />
             Publish
           </Button>
           <Button
@@ -1719,15 +1859,17 @@ export default function FacilitySchedulingPage() {
             onClick={() => exportSchedulesToCSV(facilitySchedules)}
             size="sm"
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             <span className="hidden sm:inline">CSV</span>
           </Button>
           <Button
             variant="outline"
-            onClick={() => exportSchedulesToICS(facilitySchedules, facility?.name || "")}
+            onClick={() =>
+              exportSchedulesToICS(facilitySchedules, facility?.name || "")
+            }
             size="sm"
           >
-            <FileDown className="mr-2 h-4 w-4" />
+            <FileDown className="mr-2 size-4" />
             <span className="hidden sm:inline">ICS</span>
           </Button>
         </div>
@@ -1735,20 +1877,25 @@ export default function FacilitySchedulingPage() {
 
       {/* Coverage-First Quick Actions Bar (Manager) */}
       {!isAdmin && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {/* Coverage Needs - Prominent */}
           {getSickCallInsNeedingCoverage().length > 0 && (
-            <Card className="border-red-200 bg-red-50/50 cursor-pointer hover:bg-red-100/50 transition-colors"
+            <Card
+              className="cursor-pointer border-red-200 bg-red-50/50 transition-colors hover:bg-red-100/50"
               onClick={() => {
-                const coverageTab = document.querySelector('[value="coverage"]') as HTMLElement;
+                const coverageTab = document.querySelector(
+                  '[value="coverage"]',
+                ) as HTMLElement;
                 coverageTab?.click();
               }}
             >
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-red-900">Coverage Needed</p>
-                    <p className="text-2xl font-bold text-red-600 mt-1">
+                    <p className="text-sm font-medium text-red-900">
+                      Coverage Needed
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-red-600">
                       {getSickCallInsNeedingCoverage().length}
                     </p>
                   </div>
@@ -1758,19 +1905,28 @@ export default function FacilitySchedulingPage() {
             </Card>
           )}
           {/* Pending Approvals - Quick Access */}
-          {(getPendingSwapRequests().length > 0 || timeOffRequests.filter(r => r.status === "pending").length > 0) && (
-            <Card className="border-orange-200 bg-orange-50/50 cursor-pointer hover:bg-orange-100/50 transition-colors"
+          {(getPendingSwapRequests().length > 0 ||
+            timeOffRequests.filter((r) => r.status === "pending").length >
+              0) && (
+            <Card
+              className="cursor-pointer border-orange-200 bg-orange-50/50 transition-colors hover:bg-orange-100/50"
               onClick={() => {
-                const requestsTab = document.querySelector('[value="requests"]') as HTMLElement;
+                const requestsTab = document.querySelector(
+                  '[value="requests"]',
+                ) as HTMLElement;
                 requestsTab?.click();
               }}
             >
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-orange-900">Pending Approvals</p>
-                    <p className="text-2xl font-bold text-orange-600 mt-1">
-                      {getPendingSwapRequests().length + timeOffRequests.filter(r => r.status === "pending").length}
+                    <p className="text-sm font-medium text-orange-900">
+                      Pending Approvals
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-orange-600">
+                      {getPendingSwapRequests().length +
+                        timeOffRequests.filter((r) => r.status === "pending")
+                          .length}
                     </p>
                   </div>
                   <FileText className="h-8 w-8 text-orange-600" />
@@ -1779,19 +1935,29 @@ export default function FacilitySchedulingPage() {
             </Card>
           )}
           {/* Conflicts - Quick Access */}
-          {detectAllConflicts().filter(c => c.severity === "critical").length > 0 && (
-            <Card className="border-yellow-200 bg-yellow-50/50 cursor-pointer hover:bg-yellow-100/50 transition-colors"
+          {detectAllConflicts().filter((c) => c.severity === "critical")
+            .length > 0 && (
+            <Card
+              className="cursor-pointer border-yellow-200 bg-yellow-50/50 transition-colors hover:bg-yellow-100/50"
               onClick={() => {
-                const coverageTab = document.querySelector('[value="coverage"]') as HTMLElement;
+                const coverageTab = document.querySelector(
+                  '[value="coverage"]',
+                ) as HTMLElement;
                 coverageTab?.click();
               }}
             >
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-yellow-900">Critical Conflicts</p>
-                    <p className="text-2xl font-bold text-yellow-600 mt-1">
-                      {detectAllConflicts().filter(c => c.severity === "critical").length}
+                    <p className="text-sm font-medium text-yellow-900">
+                      Critical Conflicts
+                    </p>
+                    <p className="mt-1 text-2xl font-bold text-yellow-600">
+                      {
+                        detectAllConflicts().filter(
+                          (c) => c.severity === "critical",
+                        ).length
+                      }
                     </p>
                   </div>
                   <AlertTriangle className="h-8 w-8 text-yellow-600" />
@@ -1804,19 +1970,19 @@ export default function FacilitySchedulingPage() {
 
       {/* Tabs - Reordered for Manager: Coverage First */}
       <Tabs defaultValue="schedule" className="space-y-6">
-        <TabsList className="inline-flex h-auto gap-1 rounded-lg bg-muted p-1">
+        <TabsList className="bg-muted inline-flex h-auto gap-1 rounded-lg p-1">
           <TabsTrigger
             value="schedule"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-background data-[state=active]:text-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:shadow-sm"
           >
-            <Calendar className="h-4 w-4" />
+            <Calendar className="size-4" />
             Schedule
           </TabsTrigger>
           <TabsTrigger
             value="coverage"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-background data-[state=active]:text-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:shadow-sm"
           >
-            <Users className="h-4 w-4" />
+            <Users className="size-4" />
             Coverage & Conflicts
             {getSickCallInsNeedingCoverage().length > 0 && (
               <Badge variant="destructive" className="ml-1 h-5 px-1.5">
@@ -1826,29 +1992,31 @@ export default function FacilitySchedulingPage() {
           </TabsTrigger>
           <TabsTrigger
             value="requests"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-background data-[state=active]:text-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:shadow-sm"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             Requests
-            {(getSickCallInsNeedingCoverage().length > 0 || getPendingSwapRequests().length > 0) && (
+            {(getSickCallInsNeedingCoverage().length > 0 ||
+              getPendingSwapRequests().length > 0) && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                {getSickCallInsNeedingCoverage().length + getPendingSwapRequests().length}
+                {getSickCallInsNeedingCoverage().length +
+                  getPendingSwapRequests().length}
               </Badge>
             )}
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+            className="data-[state=active]:bg-background data-[state=active]:text-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:shadow-sm"
           >
-            <CalendarDays className="h-4 w-4" />
+            <CalendarDays className="size-4" />
             Templates
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger
               value="settings"
-              className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-background data-[state=active]:text-primary inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium data-[state=active]:shadow-sm"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="size-4" />
               Settings
             </TabsTrigger>
           )}
@@ -1867,7 +2035,7 @@ export default function FacilitySchedulingPage() {
                 <div className="text-2xl font-bold">
                   {todaySchedules.length}
                 </div>
-                <p className="text-xs text-muted-foreground">Active today</p>
+                <p className="text-muted-foreground text-xs">Active today</p>
               </CardContent>
             </Card>
             <Card>
@@ -1880,7 +2048,7 @@ export default function FacilitySchedulingPage() {
                 <div className="text-2xl font-bold">
                   {upcomingSchedules.length}
                 </div>
-                <p className="text-xs text-muted-foreground">Future shifts</p>
+                <p className="text-muted-foreground text-xs">Future shifts</p>
               </CardContent>
             </Card>
             <Card>
@@ -1893,7 +2061,7 @@ export default function FacilitySchedulingPage() {
                 <div className="text-2xl font-bold">
                   {totalHours.toFixed(1)}
                 </div>
-                <p className="text-xs text-muted-foreground">Scheduled hours</p>
+                <p className="text-muted-foreground text-xs">Scheduled hours</p>
               </CardContent>
             </Card>
             <Card>
@@ -1906,21 +2074,21 @@ export default function FacilitySchedulingPage() {
                 <div className="text-2xl font-bold">
                   {new Set(facilitySchedules.map((s) => s.staffId)).size}
                 </div>
-                <p className="text-xs text-muted-foreground">Staff members</p>
+                <p className="text-muted-foreground text-xs">Staff members</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Planning Tools Bar - Fast Editing Focus */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant={viewMode === "calendar" ? "default" : "outline"}
                   onClick={() => setViewMode("calendar")}
                   size="sm"
                 >
-                  <User className="mr-2 h-4 w-4" />
+                  <User className="mr-2 size-4" />
                   By Employee
                 </Button>
                 <Button
@@ -1928,7 +2096,7 @@ export default function FacilitySchedulingPage() {
                   onClick={() => setViewMode("role")}
                   size="sm"
                 >
-                  <Users className="mr-2 h-4 w-4" />
+                  <Users className="mr-2 size-4" />
                   By Role
                 </Button>
                 <Button
@@ -1936,7 +2104,7 @@ export default function FacilitySchedulingPage() {
                   onClick={() => setViewMode("list")}
                   size="sm"
                 >
-                  <Clock className="mr-2 h-4 w-4" />
+                  <Clock className="mr-2 size-4" />
                   List
                 </Button>
                 {/* Bulk Edit Button */}
@@ -1948,25 +2116,29 @@ export default function FacilitySchedulingPage() {
                     toast.info("Bulk edit feature coming soon");
                   }}
                 >
-                  <Users2 className="mr-2 h-4 w-4" />
+                  <Users2 className="mr-2 size-4" />
                   Bulk Edit
                 </Button>
               </div>
               {/* Coverage Overlay Toggle - Prominent */}
               {viewMode === "calendar" && (
                 <div className="flex items-center gap-2">
-                  <Badge 
-                    variant={calendarView === "day" ? "default" : "outline"} 
-                    className="flex items-center gap-1 cursor-pointer"
+                  <Badge
+                    variant={calendarView === "day" ? "default" : "outline"}
+                    className="flex cursor-pointer items-center gap-1"
                     onClick={() => {
                       if (calendarView !== "day") {
                         setCalendarView("day");
-                        toast.info("Switch to Day view to see coverage overlay");
+                        toast.info(
+                          "Switch to Day view to see coverage overlay",
+                        );
                       }
                     }}
                   >
                     <Map className="h-3 w-3" />
-                    {calendarView === "day" ? "Coverage On" : "Coverage (Day View)"}
+                    {calendarView === "day"
+                      ? "Coverage On"
+                      : "Coverage (Day View)"}
                   </Badge>
                 </div>
               )}
@@ -1974,7 +2146,7 @@ export default function FacilitySchedulingPage() {
               {viewMode === "calendar" && (
                 <div className="flex items-center gap-2">
                   {/* Date Navigation */}
-                  <div className="flex items-center gap-1 border rounded-md">
+                  <div className="flex items-center gap-1 rounded-md border">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1990,7 +2162,7 @@ export default function FacilitySchedulingPage() {
                         setCurrentDate(newDate);
                       }}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="size-4" />
                     </Button>
                     <Input
                       type="date"
@@ -2005,12 +2177,13 @@ export default function FacilitySchedulingPage() {
                         const newDate = new Date(e.target.value);
                         if (calendarView === "week") {
                           const day = newDate.getDay();
-                          const diff = newDate.getDate() - day + (day === 0 ? -6 : 1);
+                          const diff =
+                            newDate.getDate() - day + (day === 0 ? -6 : 1);
                           newDate.setDate(diff);
                         }
                         setCurrentDate(newDate);
                       }}
-                      className="w-auto border-0 h-8 px-2"
+                      className="h-8 w-auto border-0 px-2"
                     />
                     <Button
                       variant="ghost"
@@ -2027,7 +2200,7 @@ export default function FacilitySchedulingPage() {
                         setCurrentDate(newDate);
                       }}
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="size-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -2035,7 +2208,8 @@ export default function FacilitySchedulingPage() {
                       onClick={() => {
                         const today = new Date();
                         const day = today.getDay();
-                        const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+                        const diff =
+                          today.getDate() - day + (day === 0 ? -6 : 1);
                         setCurrentDate(new Date(today.setDate(diff)));
                       }}
                     >
@@ -2120,7 +2294,7 @@ export default function FacilitySchedulingPage() {
                     calendarView === "week"
                       ? ({ items, date }) => {
                           const dayTasks = shiftTasks.filter(
-                            (t) => t.scheduleDate === formatDate(date)
+                            (t) => t.scheduleDate === formatDate(date),
                           );
                           return (
                             <>
@@ -2129,8 +2303,9 @@ export default function FacilitySchedulingPage() {
                                   const shiftTasksForSchedule = dayTasks.filter(
                                     (t) =>
                                       t.shiftId === schedule.id ||
-                                      (t.shiftStartTime === schedule.startTime &&
-                                        t.shiftEndTime === schedule.endTime)
+                                      (t.shiftStartTime ===
+                                        schedule.startTime &&
+                                        t.shiftEndTime === schedule.endTime),
                                   );
                                   return (
                                     <div
@@ -2139,110 +2314,118 @@ export default function FacilitySchedulingPage() {
                                     >
                                       <Badge
                                         variant="secondary"
-                                        className="cursor-pointer hover:bg-secondary/80"
+                                        className="hover:bg-secondary/80 cursor-pointer"
                                         onClick={() => handleEdit(schedule)}
                                       >
-                                        {schedule.startTime} - {schedule.endTime}
+                                        {schedule.startTime} -{" "}
+                                        {schedule.endTime}
                                       </Badge>
                                       {/* Afficher les tasks attachées au shift */}
                                       {shiftTasksForSchedule.length > 0 && (
                                         <div className="mt-1 space-y-0.5">
-                                          {shiftTasksForSchedule.slice(0, 2).map((task) => (
-                                            <div
-                                              key={task.id}
-                                              className={`text-[10px] px-1 py-0.5 rounded ${
-                                                task.status === "completed"
-                                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                  : task.priority === "urgent"
-                                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                                    : task.priority === "high"
-                                                      ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                                                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                              }`}
-                                              title={task.taskName}
-                                            >
-                                              {task.taskName.length > 15
-                                                ? task.taskName.substring(0, 15) + "..."
-                                                : task.taskName}
-                                            </div>
-                                          ))}
+                                          {shiftTasksForSchedule
+                                            .slice(0, 2)
+                                            .map((task) => (
+                                              <div
+                                                key={task.id}
+                                                className={`rounded-sm px-1 py-0.5 text-[10px] ${
+                                                  task.status === "completed"
+                                                    ? `bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400`
+                                                    : task.priority === "urgent"
+                                                      ? `bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400`
+                                                      : task.priority === "high"
+                                                        ? `bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400`
+                                                        : `bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400`
+                                                } `}
+                                                title={task.taskName}
+                                              >
+                                                {task.taskName.length > 15
+                                                  ? task.taskName.substring(
+                                                      0,
+                                                      15,
+                                                    ) + "..."
+                                                  : task.taskName}
+                                              </div>
+                                            ))}
                                           {shiftTasksForSchedule.length > 2 && (
-                                            <div className="text-[10px] text-muted-foreground">
-                                              +{shiftTasksForSchedule.length - 2} more
+                                            <div className="text-muted-foreground text-[10px]">
+                                              +
+                                              {shiftTasksForSchedule.length - 2}{" "}
+                                              more
                                             </div>
                                           )}
                                         </div>
                                       )}
-                                      <div className="absolute hidden group-hover:flex gap-1 top-full left-1/2 transform -translate-x-1/2 mt-1 z-10">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 px-2"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleEdit(schedule);
-                                      }}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 px-2"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedShiftForReport(schedule);
-                                        setIsShiftReportModalOpen(true);
-                                      }}
-                                    >
-                                      <ClipboardList className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 px-2"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteClick(schedule);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3 w-3 text-destructive" />
-                                    </Button>
-                                  </div>
-                                </div>
+                                      <div className="absolute top-full left-1/2 z-10 mt-1 hidden -translate-x-1/2 transform gap-1 group-hover:flex">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-6 px-2"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEdit(schedule);
+                                          }}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-6 px-2"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedShiftForReport(schedule);
+                                            setIsShiftReportModalOpen(true);
+                                          }}
+                                        >
+                                          <ClipboardList className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-6 px-2"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteClick(schedule);
+                                          }}
+                                        >
+                                          <Trash2 className="text-destructive h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </div>
                                   );
                                 })
                               ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-full text-xs"
-                                onClick={() => handleAddNew(formatDate(date))}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </>
-                        );
-                      }
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-full text-xs"
+                                  onClick={() => handleAddNew(formatDate(date))}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </>
+                          );
+                        }
                       : ({ items }) => (
                           <>
                             {items.slice(0, 3).map((schedule) => (
                               <div
                                 key={schedule.id}
-                                className="group relative text-xs bg-secondary/50 rounded px-1.5 py-0.5 cursor-pointer hover:bg-secondary/80"
+                                className="group bg-secondary/50 hover:bg-secondary/80 relative cursor-pointer rounded-sm px-1.5 py-0.5 text-xs"
                                 onClick={() => handleEdit(schedule)}
                               >
-                                <div className="font-medium truncate">
+                                <div className="truncate font-medium">
                                   {schedule.staffName}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground">
+                                <div className="text-muted-foreground text-[10px]">
                                   {schedule.startTime}-{schedule.endTime}
                                 </div>
                               </div>
                             ))}
                             {items.length > 3 && (
-                              <div className="text-[10px] text-muted-foreground text-center">
+                              <div className="text-muted-foreground text-center text-[10px]">
                                 +{items.length - 3} more
                               </div>
                             )}
@@ -2270,46 +2453,51 @@ export default function FacilitySchedulingPage() {
                 <CardContent>
                   <div className="space-y-4">
                     {/* Coverage Heatmap */}
-                    <div className="border rounded-lg p-4 bg-muted/50">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          <Map className="h-4 w-4" />
+                    <div className="bg-muted/50 rounded-lg border p-4">
+                      <div className="mb-4 flex items-center justify-between">
+                        <h3 className="flex items-center gap-2 font-semibold">
+                          <Map className="size-4" />
                           Coverage Heatmap
                         </h3>
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded bg-red-500"></div>
+                            <div className="h-3 w-3 rounded-sm bg-red-500"></div>
                             <span>Understaffed</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded bg-green-500"></div>
+                            <div className="h-3 w-3 rounded-sm bg-green-500"></div>
                             <span>OK</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded bg-yellow-500"></div>
+                            <div className="h-3 w-3 rounded-sm bg-yellow-500"></div>
                             <span>Overstaffed</span>
                           </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-12 gap-2">
                         {timeSlots.map((timeSlot) => {
-                          const coverage = getCoverageStatus(currentDate, timeSlot);
+                          const coverage = getCoverageStatus(
+                            currentDate,
+                            timeSlot,
+                          );
                           return (
                             <div
                               key={timeSlot}
-                              className={`p-2 rounded text-center text-xs ${
+                              className={`rounded-sm p-2 text-center text-xs ${
                                 coverage.status === "understaffed"
-                                  ? "bg-red-500/20 border border-red-500"
+                                  ? "border border-red-500 bg-red-500/20"
                                   : coverage.status === "overstaffed"
-                                    ? "bg-yellow-500/20 border border-yellow-500"
-                                    : "bg-green-500/20 border border-green-500"
-                              }`}
+                                    ? `border border-yellow-500 bg-yellow-500/20`
+                                    : "border border-green-500 bg-green-500/20"
+                              } `}
                               title={`${timeSlot}: ${coverage.count} staff (${coverage.status}) | Required: ${coverage.min} | Busy: ${coverage.workload}%`}
                             >
                               <div className="font-medium">{timeSlot}</div>
-                              <div className="text-xs mt-1">{coverage.count}/{coverage.min}</div>
+                              <div className="mt-1 text-xs">
+                                {coverage.count}/{coverage.min}
+                              </div>
                               {coverage.workload > 0 && (
-                                <div className="text-[10px] mt-0.5 opacity-75">
+                                <div className="mt-0.5 text-[10px] opacity-75">
                                   {coverage.workload}% busy
                                 </div>
                               )}
@@ -2322,18 +2510,23 @@ export default function FacilitySchedulingPage() {
                     {/* Workload Indicators */}
                     {(() => {
                       const dateStr = formatDate(currentDate);
-                      const workload = calculateWorkloadForDate(dateStr, facility.id);
+                      const workload = calculateWorkloadForDate(
+                        dateStr,
+                        facility.id,
+                      );
                       return (
-                        <div className="border rounded-lg p-4 bg-muted/50">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <Activity className="h-4 w-4" />
+                        <div className="bg-muted/50 rounded-lg border p-4">
+                          <div className="mb-4 flex items-center justify-between">
+                            <h3 className="flex items-center gap-2 font-semibold">
+                              <Activity className="size-4" />
                               Workload Indicators
                             </h3>
                             <div className="flex items-center gap-2">
-                              <div className="text-sm font-medium">Busy Meter:</div>
+                              <div className="text-sm font-medium">
+                                Busy Meter:
+                              </div>
                               <div className="flex items-center gap-2">
-                                <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="bg-muted h-2 w-32 overflow-hidden rounded-full">
                                   <div
                                     className={`h-full transition-all ${
                                       workload.busyMeter >= 80
@@ -2341,83 +2534,114 @@ export default function FacilitySchedulingPage() {
                                         : workload.busyMeter >= 50
                                           ? "bg-yellow-500"
                                           : "bg-green-500"
-                                    }`}
+                                    } `}
                                     style={{ width: `${workload.busyMeter}%` }}
                                   />
                                 </div>
-                                <span className="text-sm font-bold">{workload.busyMeter}%</span>
+                                <span className="text-sm font-bold">
+                                  {workload.busyMeter}%
+                                </span>
                               </div>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <UsersIcon className="h-4 w-4 text-blue-600" />
+                          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-blue-100 p-2">
+                                <UsersIcon className="size-4 text-blue-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Check-ins</p>
-                                <p className="text-lg font-bold">{workload.checkInsCount}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-green-100 rounded-lg">
-                                <TrendingUp className="h-4 w-4 text-green-600" />
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Check-outs</p>
-                                <p className="text-lg font-bold">{workload.checkOutsCount}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-purple-100 rounded-lg">
-                                <UsersIcon className="h-4 w-4 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Daycare</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Check-ins
+                                </p>
                                 <p className="text-lg font-bold">
-                                  {workload.daycareAttendance} / {workload.daycareForecast}
+                                  {workload.checkInsCount}
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-orange-100 rounded-lg">
-                                <Home className="h-4 w-4 text-orange-600" />
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-green-100 p-2">
+                                <TrendingUp className="size-4 text-green-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Boarding</p>
-                                <p className="text-lg font-bold">{workload.boardingOccupancy}</p>
-                                {(workload.boardingArrivals > 0 || workload.boardingDepartures > 0) && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {workload.boardingArrivals} in, {workload.boardingDepartures} out
+                                <p className="text-muted-foreground text-xs">
+                                  Check-outs
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.checkOutsCount}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-purple-100 p-2">
+                                <UsersIcon className="size-4 text-purple-600" />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground text-xs">
+                                  Daycare
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.daycareAttendance} /{" "}
+                                  {workload.daycareForecast}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-orange-100 p-2">
+                                <Home className="size-4 text-orange-600" />
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground text-xs">
+                                  Boarding
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.boardingOccupancy}
+                                </p>
+                                {(workload.boardingArrivals > 0 ||
+                                  workload.boardingDepartures > 0) && (
+                                  <p className="text-muted-foreground mt-1 text-xs">
+                                    {workload.boardingArrivals} in,{" "}
+                                    {workload.boardingDepartures} out
                                   </p>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-pink-100 rounded-lg">
-                                <ScissorsIcon className="h-4 w-4 text-pink-600" />
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-pink-100 p-2">
+                                <ScissorsIcon className="size-4 text-pink-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Grooming</p>
-                                <p className="text-lg font-bold">{workload.groomingAppointmentsCount}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Grooming
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.groomingAppointmentsCount}
+                                </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-indigo-100 rounded-lg">
-                                <FileText className="h-4 w-4 text-indigo-600" />
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-indigo-100 p-2">
+                                <FileText className="size-4 text-indigo-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Evaluations</p>
-                                <p className="text-lg font-bold">{workload.evaluationsCount}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Evaluations
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.evaluationsCount}
+                                </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                              <div className="p-2 bg-teal-100 rounded-lg">
-                                <GraduationCapIcon className="h-4 w-4 text-teal-600" />
+                            <div className="bg-background flex items-center gap-3 rounded-lg border p-3">
+                              <div className="rounded-lg bg-teal-100 p-2">
+                                <GraduationCapIcon className="size-4 text-teal-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Training</p>
-                                <p className="text-lg font-bold">{workload.trainingSessionsCount}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Training
+                                </p>
+                                <p className="text-lg font-bold">
+                                  {workload.trainingSessionsCount}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -2430,11 +2654,13 @@ export default function FacilitySchedulingPage() {
                       <h3 className="font-semibold">Scheduled Shifts</h3>
                       <div className="space-y-2">
                         {getSchedulesForDate(currentDate)
-                          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                          .sort((a, b) =>
+                            a.startTime.localeCompare(b.startTime),
+                          )
                           .map((schedule) => (
                             <div
                               key={schedule.id}
-                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50"
+                              className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-3"
                             >
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
@@ -2446,8 +2672,10 @@ export default function FacilitySchedulingPage() {
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium">{schedule.staffName}</p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="font-medium">
+                                    {schedule.staffName}
+                                  </p>
+                                  <p className="text-muted-foreground text-sm">
                                     {schedule.role}
                                   </p>
                                 </div>
@@ -2457,7 +2685,7 @@ export default function FacilitySchedulingPage() {
                                   {schedule.startTime} - {schedule.endTime}
                                 </p>
                                 {schedule.location && (
-                                  <p className="text-xs text-muted-foreground mt-1">
+                                  <p className="text-muted-foreground mt-1 text-xs">
                                     📍 {schedule.location}
                                   </p>
                                 )}
@@ -2468,7 +2696,7 @@ export default function FacilitySchedulingPage() {
                             </div>
                           ))}
                         {getSchedulesForDate(currentDate).length === 0 && (
-                          <p className="text-center text-muted-foreground py-8">
+                          <p className="text-muted-foreground py-8 text-center">
                             No shifts scheduled for this day
                           </p>
                         )}
@@ -2476,9 +2704,9 @@ export default function FacilitySchedulingPage() {
                     </div>
 
                     {/* Day Tasks Section */}
-                    <div className="space-y-2 mt-4">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <ClipboardList className="h-4 w-4" />
+                    <div className="mt-4 space-y-2">
+                      <h3 className="flex items-center gap-2 font-semibold">
+                        <ClipboardList className="size-4" />
                         Day Tasks
                       </h3>
                       <div className="space-y-2">
@@ -2486,12 +2714,12 @@ export default function FacilitySchedulingPage() {
                           .filter(
                             (t) =>
                               t.scheduleDate === formatDate(currentDate) &&
-                              !t.shiftId // Tasks attachées au jour, pas à un shift
+                              !t.shiftId, // Tasks attachées au jour, pas à un shift
                           )
                           .map((task) => (
                             <div
                               key={task.id}
-                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50"
+                              className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-3"
                             >
                               <div className="flex items-center gap-3">
                                 <Checkbox
@@ -2500,16 +2728,16 @@ export default function FacilitySchedulingPage() {
                                 />
                                 <div>
                                   <p className="font-medium">{task.taskName}</p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-muted-foreground text-sm">
                                     {task.description}
                                   </p>
                                   {task.assignedToStaffName && (
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="text-muted-foreground mt-1 text-xs">
                                       Assigned to: {task.assignedToStaffName}
                                     </p>
                                   )}
                                   {task.shiftStartTime && (
-                                    <p className="text-xs text-muted-foreground">
+                                    <p className="text-muted-foreground text-xs">
                                       Time: {task.shiftStartTime}
                                     </p>
                                   )}
@@ -2548,9 +2776,10 @@ export default function FacilitySchedulingPage() {
                           ))}
                         {shiftTasks.filter(
                           (t) =>
-                            t.scheduleDate === formatDate(currentDate) && !t.shiftId
+                            t.scheduleDate === formatDate(currentDate) &&
+                            !t.shiftId,
                         ).length === 0 && (
-                          <p className="text-center text-muted-foreground py-4 text-sm">
+                          <p className="text-muted-foreground py-4 text-center text-sm">
                             No day-level tasks for this date
                           </p>
                         )}
@@ -2582,10 +2811,14 @@ export default function FacilitySchedulingPage() {
                         return (
                           <Button
                             key={category.id}
-                            variant={selectedRole === category.id ? "default" : "outline"}
+                            variant={
+                              selectedRole === category.id
+                                ? "default"
+                                : "outline"
+                            }
                             onClick={() => setSelectedRole(category.id)}
                           >
-                            <Icon className="mr-2 h-4 w-4" />
+                            <Icon className="mr-2 size-4" />
                             {category.label}
                           </Button>
                         );
@@ -2595,78 +2828,84 @@ export default function FacilitySchedulingPage() {
                 </Card>
 
                 {/* Role Grouped Schedules */}
-                {Object.entries(getSchedulesByRole(selectedRole || undefined)).map(
-                  ([role, schedules]) => {
-                    const category = roleCategories.find((c) => c.id === role);
-                    const Icon = category?.icon || User;
-                    return (
-                      <Card key={role}>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Icon className="h-5 w-5" />
-                            {category?.label || role} ({schedules.length} shifts)
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Staff Name</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Start Time</TableHead>
-                                <TableHead>End Time</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {schedules
-                                .sort((a, b) => {
-                                  const dateCompare = a.date.localeCompare(b.date);
-                                  if (dateCompare !== 0) return dateCompare;
-                                  return a.startTime.localeCompare(b.startTime);
-                                })
-                                .map((schedule) => (
-                                  <TableRow key={schedule.id}>
-                                    <TableCell className="font-medium">
-                                      {schedule.staffName}
-                                    </TableCell>
-                                    <TableCell>{schedule.date}</TableCell>
-                                    <TableCell>{schedule.startTime}</TableCell>
-                                    <TableCell>{schedule.endTime}</TableCell>
-                                    <TableCell>
-                                      <StatusBadge
-                                        type="status"
-                                        value={schedule.status}
-                                      />
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <div className="flex gap-2 justify-end">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleEdit(schedule)}
-                                        >
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleDeleteClick(schedule)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
-                    );
-                  },
-                )}
+                {Object.entries(
+                  getSchedulesByRole(selectedRole || undefined),
+                ).map(([role, schedules]) => {
+                  const category = roleCategories.find((c) => c.id === role);
+                  const Icon = category?.icon || User;
+                  return (
+                    <Card key={role}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Icon className="h-5 w-5" />
+                          {category?.label || role} ({schedules.length} shifts)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Staff Name</TableHead>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Start Time</TableHead>
+                              <TableHead>End Time</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {schedules
+                              .sort((a, b) => {
+                                const dateCompare = a.date.localeCompare(
+                                  b.date,
+                                );
+                                if (dateCompare !== 0) return dateCompare;
+                                return a.startTime.localeCompare(b.startTime);
+                              })
+                              .map((schedule) => (
+                                <TableRow key={schedule.id}>
+                                  <TableCell className="font-medium">
+                                    {schedule.staffName}
+                                  </TableCell>
+                                  <TableCell>{schedule.date}</TableCell>
+                                  <TableCell>{schedule.startTime}</TableCell>
+                                  <TableCell>{schedule.endTime}</TableCell>
+                                  <TableCell>
+                                    <StatusBadge
+                                      type="status"
+                                      value={schedule.status}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEdit(schedule)}
+                                      >
+                                        <Edit className="size-4" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                          handleDeleteClick(schedule)
+                                        }
+                                      >
+                                        <Trash2 className="size-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
 
@@ -2708,13 +2947,13 @@ export default function FacilitySchedulingPage() {
                             />
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
+                            <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleEdit(schedule)}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="size-4" />
                               </Button>
                               <Button
                                 variant="outline"
@@ -2724,14 +2963,14 @@ export default function FacilitySchedulingPage() {
                                   setIsShiftReportModalOpen(true);
                                 }}
                               >
-                                <ClipboardList className="h-4 w-4" />
+                                <ClipboardList className="size-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteClick(schedule)}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="text-destructive size-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -2749,7 +2988,7 @@ export default function FacilitySchedulingPage() {
             open={isAddEditModalOpen}
             onOpenChange={setIsAddEditModalOpen}
           >
-            <DialogContent className="max-h-[85vh] flex flex-col">
+            <DialogContent className="flex max-h-[85vh] flex-col">
               <DialogHeader>
                 <DialogTitle>
                   {editingSchedule ? "Edit Shift" : "Add New Shift"}
@@ -2761,7 +3000,7 @@ export default function FacilitySchedulingPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-3 py-4 overflow-y-auto flex-1 pr-2">
+              <div className="flex-1 space-y-3 overflow-y-auto py-4 pr-2">
                 <div className="space-y-2">
                   <Label htmlFor="staffId">Staff Member</Label>
                   <Select
@@ -2950,34 +3189,39 @@ export default function FacilitySchedulingPage() {
                 {editingSchedule && (
                   <div className="space-y-2 border-t pt-3">
                     <Label>Shift Tasks</Label>
-                    <div className="space-y-1.5 border rounded-lg p-2 bg-muted/50 max-h-[200px] overflow-y-auto">
+                    <div className="bg-muted/50 max-h-[200px] space-y-1.5 overflow-y-auto rounded-lg border p-2">
                       {shiftTasks
                         .filter(
                           (t) =>
                             t.shiftId === editingSchedule.id ||
                             (t.scheduleDate === editingSchedule.date &&
                               t.shiftStartTime === editingSchedule.startTime &&
-                              t.shiftEndTime === editingSchedule.endTime)
+                              t.shiftEndTime === editingSchedule.endTime),
                         )
                         .map((task) => (
                           <div
                             key={task.id}
-                            className="flex items-center justify-between p-1.5 bg-background rounded text-sm"
+                            className="bg-background flex items-center justify-between rounded-sm p-1.5 text-sm"
                           >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
                               <Checkbox
                                 checked={task.status === "completed"}
                                 disabled
                                 className="h-3 w-3"
                               />
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-xs truncate">{task.taskName}</p>
-                                <p className="text-[10px] text-muted-foreground truncate">
+                                <p className="truncate text-xs font-medium">
+                                  {task.taskName}
+                                </p>
+                                <p className="text-muted-foreground truncate text-[10px]">
                                   {task.description}
                                 </p>
                               </div>
                             </div>
-                            <Badge variant="outline" className="text-[10px] ml-2 shrink-0">
+                            <Badge
+                              variant="outline"
+                              className="ml-2 shrink-0 text-[10px]"
+                            >
                               {task.status}
                             </Badge>
                           </div>
@@ -2988,22 +3232,22 @@ export default function FacilitySchedulingPage() {
                           (t.shiftId === editingSchedule.id ||
                             (t.scheduleDate === editingSchedule.date &&
                               t.shiftStartTime === editingSchedule.startTime &&
-                              t.shiftEndTime === editingSchedule.endTime))
+                              t.shiftEndTime === editingSchedule.endTime)),
                       ).length === 0 && (
-                        <p className="text-xs text-muted-foreground text-center py-2">
+                        <p className="text-muted-foreground py-2 text-center text-xs">
                           No tasks assigned to this shift
                         </p>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full mt-1.5 text-xs h-7"
+                        className="mt-1.5 h-7 w-full text-xs"
                         onClick={() => {
                           // TODO: Open modal to add task to this shift
                           toast.info("Task assignment feature coming soon");
                         }}
                       >
-                        <Plus className="h-3 w-3 mr-1.5" />
+                        <Plus className="mr-1.5 h-3 w-3" />
                         Add Task to Shift
                       </Button>
                     </div>
@@ -3022,9 +3266,9 @@ export default function FacilitySchedulingPage() {
                       />
                       <Label
                         htmlFor="isRecurring"
-                        className="font-normal flex items-center gap-2"
+                        className="flex items-center gap-2 font-normal"
                       >
-                        <Repeat className="h-4 w-4" />
+                        <Repeat className="size-4" />
                         Create recurring shift
                       </Label>
                     </div>
@@ -3077,132 +3321,165 @@ export default function FacilitySchedulingPage() {
                 )}
 
                 {/* Conflict Detection */}
-                {formData.staffId && formData.date && formData.startTime && formData.endTime && formData.role && (() => {
-                  const conflicts = detectShiftConflicts(
-                    {
-                      staffId: parseInt(formData.staffId),
-                      date: formData.date,
-                      startTime: formData.startTime,
-                      endTime: formData.endTime,
-                      role: formData.role,
-                    },
-                    editingSchedule?.id
-                  );
+                {formData.staffId &&
+                  formData.date &&
+                  formData.startTime &&
+                  formData.endTime &&
+                  formData.role &&
+                  (() => {
+                    const conflicts = detectShiftConflicts(
+                      {
+                        staffId: parseInt(formData.staffId),
+                        date: formData.date,
+                        startTime: formData.startTime,
+                        endTime: formData.endTime,
+                        role: formData.role,
+                      },
+                      editingSchedule?.id,
+                    );
 
-                  if (conflicts.length === 0) return null;
+                    if (conflicts.length === 0) return null;
 
-                  return (
-                    <div className="space-y-3 border-t pt-3">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                        <Label className="text-sm font-semibold">Detected Conflicts</Label>
-                      </div>
-                      <div className="space-y-2">
-                        {conflicts.map((conflict, idx) => (
-                          <Card
-                            key={idx}
-                            className={`border-2 ${
-                              conflict.severity === "critical"
-                                ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                                : conflict.severity === "warning"
-                                  ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
-                                  : "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
-                            }`}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    {conflict.severity === "critical" && (
-                                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                                    )}
-                                    {conflict.severity === "warning" && (
-                                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                    )}
-                                    {conflict.severity === "info" && (
-                                      <Info className="h-4 w-4 text-blue-600" />
-                                    )}
-                                    <Badge
-                                      variant="outline"
-                                      className={
-                                        conflict.severity === "critical"
-                                          ? "border-red-600 text-red-700"
-                                          : conflict.severity === "warning"
-                                            ? "border-yellow-600 text-yellow-700"
-                                            : "border-blue-600 text-blue-700"
-                                      }
-                                    >
-                                      {conflict.type === "double_booking" && "Double Booking"}
-                                      {conflict.type === "overlapping" && "Overlapping"}
-                                      {conflict.type === "time_off" && "Time Off Conflict"}
-                                      {conflict.type === "role_mismatch" && "Role Mismatch"}
-                                      {conflict.type === "max_hours" && "Max Hours Exceeded"}
-                                      {conflict.type === "min_rest" && "Insufficient Rest"}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    {conflict.message}
-                                  </p>
-                                  {conflict.conflictingShift && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Conflicting shift: {conflict.conflictingShift.staffName} - {conflict.conflictingShift.date} ({conflict.conflictingShift.startTime} - {conflict.conflictingShift.endTime})
+                    return (
+                      <div className="space-y-3 border-t pt-3">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="size-4 text-yellow-600" />
+                          <Label className="text-sm font-semibold">
+                            Detected Conflicts
+                          </Label>
+                        </div>
+                        <div className="space-y-2">
+                          {conflicts.map((conflict, idx) => (
+                            <Card
+                              key={idx}
+                              className={`border-2 ${
+                                conflict.severity === "critical"
+                                  ? `border-red-500 bg-red-50 dark:bg-red-950/20`
+                                  : conflict.severity === "warning"
+                                    ? `border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20`
+                                    : `border-blue-500 bg-blue-50 dark:bg-blue-950/20`
+                              } `}
+                            >
+                              <CardContent className="p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="mb-1 flex items-center gap-2">
+                                      {conflict.severity === "critical" && (
+                                        <AlertTriangle className="size-4 text-red-600" />
+                                      )}
+                                      {conflict.severity === "warning" && (
+                                        <AlertCircle className="size-4 text-yellow-600" />
+                                      )}
+                                      {conflict.severity === "info" && (
+                                        <Info className="size-4 text-blue-600" />
+                                      )}
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          conflict.severity === "critical"
+                                            ? "border-red-600 text-red-700"
+                                            : conflict.severity === "warning"
+                                              ? `border-yellow-600 text-yellow-700`
+                                              : "border-blue-600 text-blue-700"
+                                        }
+                                      >
+                                        {conflict.type === "double_booking" &&
+                                          "Double Booking"}
+                                        {conflict.type === "overlapping" &&
+                                          "Overlapping"}
+                                        {conflict.type === "time_off" &&
+                                          "Time Off Conflict"}
+                                        {conflict.type === "role_mismatch" &&
+                                          "Role Mismatch"}
+                                        {conflict.type === "max_hours" &&
+                                          "Max Hours Exceeded"}
+                                        {conflict.type === "min_rest" &&
+                                          "Insufficient Rest"}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-muted-foreground text-sm">
+                                      {conflict.message}
                                     </p>
+                                    {conflict.conflictingShift && (
+                                      <p className="text-muted-foreground mt-1 text-xs">
+                                        Conflicting shift:{" "}
+                                        {conflict.conflictingShift.staffName} -{" "}
+                                        {conflict.conflictingShift.date} (
+                                        {conflict.conflictingShift.startTime} -{" "}
+                                        {conflict.conflictingShift.endTime})
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 border-t pt-2">
+                                  {(conflict.type === "double_booking" ||
+                                    conflict.type === "overlapping") && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 flex-1 text-xs"
+                                        onClick={() => {
+                                          toast.info(
+                                            "Reassign feature - select a different staff member",
+                                          );
+                                        }}
+                                      >
+                                        <ArrowRightLeft className="mr-1 h-3 w-3" />
+                                        Reassign
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 flex-1 text-xs"
+                                        onClick={() => {
+                                          if (conflict.conflictingShift) {
+                                            const [
+                                              confStartHour,
+                                              confStartMin,
+                                            ] =
+                                              conflict.conflictingShift.endTime
+                                                .split(":")
+                                                .map(Number);
+                                            const newStartTime = `${String(confStartHour).padStart(2, "0")}:${String(confStartMin).padStart(2, "0")}`;
+                                            setFormData({
+                                              ...formData,
+                                              startTime: newStartTime,
+                                            });
+                                            toast.success(
+                                              "Start time adjusted to avoid conflict",
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <Clock className="mr-1 h-3 w-3" />
+                                        Adjust Time
+                                      </Button>
+                                    </>
+                                  )}
+                                  {conflict.severity === "warning" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 flex-1 text-xs"
+                                      onClick={() => {
+                                        toast.info(
+                                          "This is a warning. You can proceed, but consider reviewing.",
+                                        );
+                                      }}
+                                    >
+                                      <Info className="mr-1 h-3 w-3" />
+                                      Continue Anyway
+                                    </Button>
                                   )}
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2 mt-3 pt-2 border-t">
-                                {(conflict.type === "double_booking" || conflict.type === "overlapping") && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs h-7"
-                                      onClick={() => {
-                                        toast.info("Reassign feature - select a different staff member");
-                                      }}
-                                    >
-                                      <ArrowRightLeft className="h-3 w-3 mr-1" />
-                                      Reassign
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="flex-1 text-xs h-7"
-                                      onClick={() => {
-                                        if (conflict.conflictingShift) {
-                                          const [confStartHour, confStartMin] = conflict.conflictingShift.endTime.split(":").map(Number);
-                                          const newStartTime = `${String(confStartHour).padStart(2, "0")}:${String(confStartMin).padStart(2, "0")}`;
-                                          setFormData({ ...formData, startTime: newStartTime });
-                                          toast.success("Start time adjusted to avoid conflict");
-                                        }
-                                      }}
-                                    >
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      Adjust Time
-                                    </Button>
-                                  </>
-                                )}
-                                {conflict.severity === "warning" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="flex-1 text-xs h-7"
-                                    onClick={() => {
-                                      toast.info("This is a warning. You can proceed, but consider reviewing.");
-                                    }}
-                                  >
-                                    <Info className="h-3 w-3 mr-1" />
-                                    Continue Anyway
-                                  </Button>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
               </div>
 
               <DialogFooter>
@@ -3227,7 +3504,7 @@ export default function FacilitySchedulingPage() {
                         endTime: formData.endTime,
                         role: formData.role || "",
                       },
-                      editingSchedule?.id
+                      editingSchedule?.id,
                     ).some((c) => c.severity === "critical")
                   }
                 >
@@ -3286,7 +3563,7 @@ export default function FacilitySchedulingPage() {
                     value={copyTargetDate}
                     onChange={(e) => setCopyTargetDate(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     All shifts from the current week will be copied to the
                     selected week.
                   </p>
@@ -3301,7 +3578,7 @@ export default function FacilitySchedulingPage() {
                   Cancel
                 </Button>
                 <Button onClick={handleCopyWeek}>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="mr-2 size-4" />
                   Copy Shifts
                 </Button>
               </DialogFooter>
@@ -3320,7 +3597,8 @@ export default function FacilitySchedulingPage() {
                   Publish Schedule
                 </DialogTitle>
                 <DialogDescription>
-                  Publish the schedule for staff to view. Staff will be notified of the published schedule.
+                  Publish the schedule for staff to view. Staff will be notified
+                  of the published schedule.
                 </DialogDescription>
               </DialogHeader>
 
@@ -3336,20 +3614,18 @@ export default function FacilitySchedulingPage() {
                     onChange={(e) => setPublishWeekStart(e.target.value)}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Select the Monday of the week you want to publish.
                   </p>
                   {publishWeekStart && isWeekPublished(publishWeekStart) && (
-                    <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                      <AlertTriangle className="h-4 w-4" />
+                    <div className="flex items-center gap-2 rounded-sm border border-yellow-200 bg-yellow-50 p-2 text-sm text-yellow-800">
+                      <AlertTriangle className="size-4" />
                       This week has already been published.
                     </div>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="publishNotes">
-                    Notes (Optional)
-                  </Label>
+                  <Label htmlFor="publishNotes">Notes (Optional)</Label>
                   <Textarea
                     id="publishNotes"
                     value={publishNotes}
@@ -3358,11 +3634,11 @@ export default function FacilitySchedulingPage() {
                     rows={3}
                   />
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-blue-900 font-medium mb-1">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <p className="mb-1 text-sm font-medium text-blue-900">
                     What happens when you publish:
                   </p>
-                  <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                  <ul className="list-inside list-disc space-y-1 text-xs text-blue-800">
                     <li>All staff members will be notified</li>
                     <li>Schedule will be visible in their staff portal</li>
                     <li>Staff will need to acknowledge the schedule update</li>
@@ -3386,7 +3662,7 @@ export default function FacilitySchedulingPage() {
                   className="bg-green-600 hover:bg-green-700"
                   disabled={!publishWeekStart}
                 >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  <CheckCircle2 className="mr-2 size-4" />
                   Publish Schedule
                 </Button>
               </DialogFooter>
@@ -3406,44 +3682,61 @@ export default function FacilitySchedulingPage() {
                     Bulk Edit Shifts
                   </DialogTitle>
                   <DialogDescription>
-                    Select multiple shifts and apply changes to all of them at once.
+                    Select multiple shifts and apply changes to all of them at
+                    once.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label>Select Shifts</Label>
-                    <div className="border rounded-lg p-3 max-h-[300px] overflow-y-auto">
+                    <div className="max-h-[300px] overflow-y-auto rounded-lg border p-3">
                       <div className="space-y-2">
                         {facilitySchedules
-                          .filter((s) => s.status === "scheduled" || s.status === "confirmed")
+                          .filter(
+                            (s) =>
+                              s.status === "scheduled" ||
+                              s.status === "confirmed",
+                          )
                           .slice(0, 20)
                           .map((shift) => (
                             <div
                               key={shift.id}
-                              className="flex items-center gap-2 p-2 border rounded hover:bg-accent/50"
+                              className="hover:bg-accent/50 flex items-center gap-2 rounded-sm border p-2"
                             >
                               <Checkbox
-                                checked={selectedShiftsForBulkEdit.includes(shift.id)}
+                                checked={selectedShiftsForBulkEdit.includes(
+                                  shift.id,
+                                )}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                    setSelectedShiftsForBulkEdit([...selectedShiftsForBulkEdit, shift.id]);
+                                    setSelectedShiftsForBulkEdit([
+                                      ...selectedShiftsForBulkEdit,
+                                      shift.id,
+                                    ]);
                                   } else {
-                                    setSelectedShiftsForBulkEdit(selectedShiftsForBulkEdit.filter(id => id !== shift.id));
+                                    setSelectedShiftsForBulkEdit(
+                                      selectedShiftsForBulkEdit.filter(
+                                        (id) => id !== shift.id,
+                                      ),
+                                    );
                                   }
                                 }}
                               />
                               <div className="flex-1 text-sm">
-                                <span className="font-medium">{shift.staffName}</span>
+                                <span className="font-medium">
+                                  {shift.staffName}
+                                </span>
                                 <span className="text-muted-foreground ml-2">
-                                  {shift.date} - {shift.startTime} to {shift.endTime} ({shift.role})
+                                  {shift.date} - {shift.startTime} to{" "}
+                                  {shift.endTime} ({shift.role})
                                 </span>
                               </div>
                             </div>
                           ))}
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {selectedShiftsForBulkEdit.length} shift(s) selected
                     </p>
                   </div>
@@ -3453,7 +3746,9 @@ export default function FacilitySchedulingPage() {
                       <Label>Bulk Action</Label>
                       <Select
                         value={bulkEditAction || ""}
-                        onValueChange={(value) => setBulkEditAction(value as typeof bulkEditAction)}
+                        onValueChange={(value) =>
+                          setBulkEditAction(value as typeof bulkEditAction)
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select action..." />
@@ -3469,9 +3764,10 @@ export default function FacilitySchedulingPage() {
                   )}
 
                   {bulkEditAction && selectedShiftsForBulkEdit.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                       <p className="text-sm text-blue-900">
-                        <strong>Note:</strong> This will apply the action to {selectedShiftsForBulkEdit.length} selected shift(s).
+                        <strong>Note:</strong> This will apply the action to{" "}
+                        {selectedShiftsForBulkEdit.length} selected shift(s).
                       </p>
                     </div>
                   )}
@@ -3490,17 +3786,24 @@ export default function FacilitySchedulingPage() {
                   </Button>
                   <Button
                     onClick={() => {
-                      if (selectedShiftsForBulkEdit.length === 0 || !bulkEditAction) {
+                      if (
+                        selectedShiftsForBulkEdit.length === 0 ||
+                        !bulkEditAction
+                      ) {
                         toast.error("Please select shifts and an action");
                         return;
                       }
                       // TODO: Implement bulk edit logic
-                      toast.success(`Bulk ${bulkEditAction} applied to ${selectedShiftsForBulkEdit.length} shift(s)`);
+                      toast.success(
+                        `Bulk ${bulkEditAction} applied to ${selectedShiftsForBulkEdit.length} shift(s)`,
+                      );
                       setIsBulkEditModalOpen(false);
                       setSelectedShiftsForBulkEdit([]);
                       setBulkEditAction(null);
                     }}
-                    disabled={selectedShiftsForBulkEdit.length === 0 || !bulkEditAction}
+                    disabled={
+                      selectedShiftsForBulkEdit.length === 0 || !bulkEditAction
+                    }
                   >
                     Apply to {selectedShiftsForBulkEdit.length} Shift(s)
                   </Button>
@@ -3515,7 +3818,7 @@ export default function FacilitySchedulingPage() {
           <Tabs defaultValue="time-off" className="space-y-4">
             <TabsList>
               <TabsTrigger value="time-off">
-                <FileText className="h-4 w-4 mr-2" />
+                <FileText className="mr-2 size-4" />
                 Time Off
                 {getSickCallInsNeedingCoverage().length > 0 && (
                   <Badge variant="destructive" className="ml-2 h-5 px-1.5">
@@ -3524,7 +3827,7 @@ export default function FacilitySchedulingPage() {
                 )}
               </TabsTrigger>
               <TabsTrigger value="shift-swap">
-                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                <ArrowLeftRight className="mr-2 size-4" />
                 Shift Swap
                 {getPendingSwapRequests().length > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 px-1.5">
@@ -3544,12 +3847,13 @@ export default function FacilitySchedulingPage() {
                         <FileText className="h-5 w-5" />
                         Time Off Requests
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Manage time off requests including sick calls, vacation, and other absences
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        Manage time off requests including sick calls, vacation,
+                        and other absences
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         onClick={() => {
                           setSelectedShiftForSickCall(null);
                           setSickCallReason("");
@@ -3558,289 +3862,327 @@ export default function FacilitySchedulingPage() {
                           setSplitShiftStaffIds([]);
                           setNotifyDepartments([]);
                           setIsSickCallModalOpen(true);
-                        }} 
+                        }}
                         variant="outline"
                       >
-                        <Phone className="mr-2 h-4 w-4" />
+                        <Phone className="mr-2 size-4" />
                         Same-Day Sick / Call-Out
                       </Button>
-                      <Button onClick={() => {
-                        setTimeOffRequestData({
-                          type: "",
-                          startDate: "",
-                          endDate: "",
-                          reason: "",
-                        });
-                        setIsTimeOffRequestModalOpen(true);
-                      }}>
-                        <Plus className="mr-2 h-4 w-4" />
+                      <Button
+                        onClick={() => {
+                          setTimeOffRequestData({
+                            type: "",
+                            startDate: "",
+                            endDate: "",
+                            reason: "",
+                          });
+                          setIsTimeOffRequestModalOpen(true);
+                        }}
+                      >
+                        <Plus className="mr-2 size-4" />
                         Request Time Off
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="requests" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="requests">
-                    Time Off Requests
-                    {timeOffRequests.filter(r => r.status === "pending" && r.facility === facility.name).length > 0 && (
-                      <Badge variant="secondary" className="ml-2 h-5 px-1.5">
-                        {timeOffRequests.filter(r => r.status === "pending" && r.facility === facility.name).length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="sick-calls">
-                    Sick Call-ins
-                    {getSickCallInsNeedingCoverage().length > 0 && (
-                      <Badge variant="destructive" className="ml-2 h-5 px-1.5">
-                        {getSickCallInsNeedingCoverage().length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="requests" className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff Member</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Date Range</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Requested</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {timeOffRequests
-                        .filter((r) => r.facility === facility.name)
-                        .map((request) => (
-                          <TableRow key={request.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback>
-                                    {request.staffName
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium">{request.staffName}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {request.customTypeName || 
-                                 defaultTimeOffReasons.find(r => r.id === request.type)?.name || 
-                                 request.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {request.startDate === request.endDate
-                                  ? request.startDate
-                                  : `${request.startDate} - ${request.endDate}`}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm">{request.reason || "-"}</span>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  request.status === "approved"
-                                    ? "default"
-                                    : request.status === "denied"
-                                      ? "destructive"
-                                      : request.status === "changes_requested"
-                                        ? "secondary"
-                                        : "outline"
-                                }
-                                className={
-                                  request.status === "approved" ? "bg-green-600" : ""
-                                }
-                              >
-                                {request.status === "changes_requested"
-                                  ? "Changes Requested"
-                                  : request.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {new Date(request.requestedAt).toLocaleDateString()}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {request.status === "pending" && (
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    onClick={() => {
-                                      setSelectedTimeOffRequest(request);
-                                      setReviewAction("approve");
-                                      setReviewNotes("");
-                                      setIsTimeOffReviewModalOpen(true);
-                                    }}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedTimeOffRequest(request);
-                                      setReviewAction("request_changes");
-                                      setRequestedChanges("");
-                                      setIsTimeOffReviewModalOpen(true);
-                                    }}
-                                  >
-                                    <AlertTriangle className="h-4 w-4 mr-1" />
-                                    Request Changes
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => {
-                                      setSelectedTimeOffRequest(request);
-                                      setReviewAction("deny");
-                                      setReviewNotes("");
-                                      setIsTimeOffReviewModalOpen(true);
-                                    }}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Deny
-                                  </Button>
-                                </div>
-                              )}
-                              {request.status === "changes_requested" && request.requestedChanges && (
-                                <div className="text-xs text-muted-foreground max-w-[200px]">
-                                  {request.requestedChanges}
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </TabsContent>
-
-                <TabsContent value="sick-calls">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff Member</TableHead>
-                        <TableHead>Shift</TableHead>
-                        <TableHead>Called In</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>Coverage Status</TableHead>
-                        <TableHead>Covered By</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sickCallIns.map((callIn) => (
-                    <TableRow key={callIn.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {callIn.staffName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">
-                            {callIn.staffName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{callIn.shiftDate}</div>
-                          <div className="text-muted-foreground">
-                            {callIn.shiftTime}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {new Date(callIn.calledInAt).toLocaleString()}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{callIn.reason}</span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            callIn.coverageStatus === "covered"
-                              ? "default"
-                              : callIn.coverageStatus === "needs_coverage"
-                                ? "destructive"
-                                : "secondary"
-                          }
-                          className={
-                            callIn.coverageStatus === "covered"
-                              ? "bg-green-600"
-                              : ""
-                          }
-                        >
-                          {callIn.coverageStatus === "covered" && (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                          )}
-                          {callIn.coverageStatus === "needs_coverage" && (
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                          )}
-                          {callIn.coverageStatus.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {callIn.coveredByStaffName ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-xs">
-                                {callIn.coveredByStaffName
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">
-                              {callIn.coveredByStaffName}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {callIn.coverageStatus === "needs_coverage" && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSickCallIn(callIn);
-                              setSelectedCoverageStaffId("");
-                              setIsFindCoverageModalOpen(true);
-                            }}
+                <CardContent>
+                  <Tabs defaultValue="requests" className="space-y-4">
+                    <TabsList>
+                      <TabsTrigger value="requests">
+                        Time Off Requests
+                        {timeOffRequests.filter(
+                          (r) =>
+                            r.status === "pending" &&
+                            r.facility === facility.name,
+                        ).length > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 h-5 px-1.5"
                           >
-                            Find Coverage
-                          </Button>
+                            {
+                              timeOffRequests.filter(
+                                (r) =>
+                                  r.status === "pending" &&
+                                  r.facility === facility.name,
+                              ).length
+                            }
+                          </Badge>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                      </TabsTrigger>
+                      <TabsTrigger value="sick-calls">
+                        Sick Call-ins
+                        {getSickCallInsNeedingCoverage().length > 0 && (
+                          <Badge
+                            variant="destructive"
+                            className="ml-2 h-5 px-1.5"
+                          >
+                            {getSickCallInsNeedingCoverage().length}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="requests" className="space-y-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Staff Member</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Date Range</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Requested</TableHead>
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {timeOffRequests
+                            .filter((r) => r.facility === facility.name)
+                            .map((request) => (
+                              <TableRow key={request.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarFallback>
+                                        {request.staffName
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium">
+                                      {request.staffName}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {request.customTypeName ||
+                                      defaultTimeOffReasons.find(
+                                        (r) => r.id === request.type,
+                                      )?.name ||
+                                      request.type}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {request.startDate === request.endDate
+                                      ? request.startDate
+                                      : `${request.startDate} - ${request.endDate}`}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {request.reason || "-"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      request.status === "approved"
+                                        ? "default"
+                                        : request.status === "denied"
+                                          ? "destructive"
+                                          : request.status ===
+                                              "changes_requested"
+                                            ? "secondary"
+                                            : "outline"
+                                    }
+                                    className={
+                                      request.status === "approved"
+                                        ? "bg-green-600"
+                                        : ""
+                                    }
+                                  >
+                                    {request.status === "changes_requested"
+                                      ? "Changes Requested"
+                                      : request.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {new Date(
+                                      request.requestedAt,
+                                    ).toLocaleDateString()}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {request.status === "pending" && (
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => {
+                                          setSelectedTimeOffRequest(request);
+                                          setReviewAction("approve");
+                                          setReviewNotes("");
+                                          setIsTimeOffReviewModalOpen(true);
+                                        }}
+                                      >
+                                        <CheckCircle2 className="mr-1 size-4" />
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setSelectedTimeOffRequest(request);
+                                          setReviewAction("request_changes");
+                                          setRequestedChanges("");
+                                          setIsTimeOffReviewModalOpen(true);
+                                        }}
+                                      >
+                                        <AlertTriangle className="mr-1 size-4" />
+                                        Request Changes
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => {
+                                          setSelectedTimeOffRequest(request);
+                                          setReviewAction("deny");
+                                          setReviewNotes("");
+                                          setIsTimeOffReviewModalOpen(true);
+                                        }}
+                                      >
+                                        <XCircle className="mr-1 size-4" />
+                                        Deny
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {request.status === "changes_requested" &&
+                                    request.requestedChanges && (
+                                      <div className="text-muted-foreground max-w-[200px] text-xs">
+                                        {request.requestedChanges}
+                                      </div>
+                                    )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+
+                    <TabsContent value="sick-calls">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Staff Member</TableHead>
+                            <TableHead>Shift</TableHead>
+                            <TableHead>Called In</TableHead>
+                            <TableHead>Reason</TableHead>
+                            <TableHead>Coverage Status</TableHead>
+                            <TableHead>Covered By</TableHead>
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sickCallIns.map((callIn) => (
+                            <TableRow key={callIn.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarFallback>
+                                      {callIn.staffName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">
+                                    {callIn.staffName}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>{callIn.shiftDate}</div>
+                                  <div className="text-muted-foreground">
+                                    {callIn.shiftTime}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  {new Date(callIn.calledInAt).toLocaleString()}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">{callIn.reason}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    callIn.coverageStatus === "covered"
+                                      ? "default"
+                                      : callIn.coverageStatus ===
+                                          "needs_coverage"
+                                        ? "destructive"
+                                        : "secondary"
+                                  }
+                                  className={
+                                    callIn.coverageStatus === "covered"
+                                      ? "bg-green-600"
+                                      : ""
+                                  }
+                                >
+                                  {callIn.coverageStatus === "covered" && (
+                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  )}
+                                  {callIn.coverageStatus ===
+                                    "needs_coverage" && (
+                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                  )}
+                                  {callIn.coverageStatus.replace("_", " ")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {callIn.coveredByStaffName ? (
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarFallback className="text-xs">
+                                        {callIn.coveredByStaffName
+                                          .split(" ")
+                                          .map((n) => n[0])
+                                          .join("")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm">
+                                      {callIn.coveredByStaffName}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    -
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {callIn.coverageStatus === "needs_coverage" && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedSickCallIn(callIn);
+                                      setSelectedCoverageStaffId("");
+                                      setIsFindCoverageModalOpen(true);
+                                    }}
+                                  >
+                                    Find Coverage
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Shift Swap Sub-tab */}
@@ -3853,11 +4195,11 @@ export default function FacilitySchedulingPage() {
                         <ArrowLeftRight className="h-5 w-5" />
                         Shift Swap Requests
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-muted-foreground mt-1 text-sm">
                         Review and manage shift swap requests between staff
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       onClick={() => {
                         setSwapData({
                           requestingShiftId: "",
@@ -3870,163 +4212,163 @@ export default function FacilitySchedulingPage() {
                         setIsSwapModalOpen(true);
                       }}
                     >
-                      <Plus className="mr-2 h-4 w-4" />
+                      <Plus className="mr-2 size-4" />
                       Request Shift Swap
                     </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Requesting Staff</TableHead>
-                    <TableHead>Their Shift</TableHead>
-                    <TableHead>Swap With</TableHead>
-                    <TableHead>Target Shift</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shiftSwapRequests.map((swap) => (
-                    <TableRow key={swap.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback>
-                              {swap.requestingStaffName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">
-                            {swap.requestingStaffName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{swap.requestingShiftDate}</div>
-                          <div className="text-muted-foreground">
-                            {swap.requestingShiftTime}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {swap.targetStaffName ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarFallback className="text-xs">
-                                {swap.targetStaffName
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">
-                              {swap.targetStaffName}
-                            </span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline">
-                            <User className="h-3 w-3 mr-1" />
-                            Anyone available
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {swap.targetShiftDate ? (
-                          <div className="text-sm">
-                            <div>{swap.targetShiftDate}</div>
-                            {swap.targetShiftTime && (
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Requesting Staff</TableHead>
+                        <TableHead>Their Shift</TableHead>
+                        <TableHead>Swap With</TableHead>
+                        <TableHead>Target Shift</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {shiftSwapRequests.map((swap) => (
+                        <TableRow key={swap.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  {swap.requestingStaffName
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">
+                                {swap.requestingStaffName}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div>{swap.requestingShiftDate}</div>
                               <div className="text-muted-foreground">
-                                {swap.targetShiftTime}
+                                {swap.requestingShiftTime}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {swap.targetStaffName ? (
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="text-xs">
+                                    {swap.targetStaffName
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">
+                                  {swap.targetStaffName}
+                                </span>
+                              </div>
+                            ) : (
+                              <Badge variant="outline">
+                                <User className="mr-1 h-3 w-3" />
+                                Anyone available
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {swap.targetShiftDate ? (
+                              <div className="text-sm">
+                                <div>{swap.targetShiftDate}</div>
+                                {swap.targetShiftTime && (
+                                  <div className="text-muted-foreground">
+                                    {swap.targetShiftTime}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                Any shift
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="block max-w-[200px] truncate text-sm">
+                              {swap.reason}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                swap.status === "approved"
+                                  ? "default"
+                                  : swap.status === "denied"
+                                    ? "destructive"
+                                    : swap.status === "pending"
+                                      ? "secondary"
+                                      : "outline"
+                              }
+                              className={
+                                swap.status === "approved" ? "bg-green-600" : ""
+                              }
+                            >
+                              {swap.status === "approved" && (
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                              )}
+                              {swap.status === "denied" && (
+                                <XCircle className="mr-1 h-3 w-3" />
+                              )}
+                              {swap.status === "pending" && (
+                                <Clock className="mr-1 h-3 w-3" />
+                              )}
+                              {swap.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {swap.status === "pending" && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setSelectedSwapRequest(swap);
+                                    setSwapApprovalAction("approve");
+                                    setSwapApprovalNotes("");
+                                    setIsSwapApprovalModalOpen(true);
+                                  }}
+                                >
+                                  <CheckCircle2 className="mr-1 size-4" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedSwapRequest(swap);
+                                    setSwapApprovalAction("deny");
+                                    setSwapApprovalNotes("");
+                                    setIsSwapApprovalModalOpen(true);
+                                  }}
+                                >
+                                  <XCircle className="mr-1 size-4" />
+                                  Deny
+                                </Button>
                               </div>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Any shift
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm max-w-[200px] truncate block">
-                          {swap.reason}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            swap.status === "approved"
-                              ? "default"
-                              : swap.status === "denied"
-                                ? "destructive"
-                                : swap.status === "pending"
-                                  ? "secondary"
-                                  : "outline"
-                          }
-                          className={
-                            swap.status === "approved" ? "bg-green-600" : ""
-                          }
-                        >
-                          {swap.status === "approved" && (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                          )}
-                          {swap.status === "denied" && (
-                            <XCircle className="h-3 w-3 mr-1" />
-                          )}
-                          {swap.status === "pending" && (
-                            <Clock className="h-3 w-3 mr-1" />
-                          )}
-                          {swap.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {swap.status === "pending" && (
-                          <div className="flex gap-2 justify-end">
-                            <Button 
-                              size="sm" 
-                              variant="default"
-                              onClick={() => {
-                                setSelectedSwapRequest(swap);
-                                setSwapApprovalAction("approve");
-                                setSwapApprovalNotes("");
-                                setIsSwapApprovalModalOpen(true);
-                              }}
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedSwapRequest(swap);
-                                setSwapApprovalAction("deny");
-                                setSwapApprovalNotes("");
-                                setIsSwapApprovalModalOpen(true);
-                              }}
-                            >
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Deny
-                            </Button>
-                          </div>
-                        )}
-                        {swap.status !== "pending" && swap.reviewNotes && (
-                          <span className="text-xs text-muted-foreground max-w-[150px] truncate block">
-                            {swap.reviewNotes}
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                            {swap.status !== "pending" && swap.reviewNotes && (
+                              <span className="text-muted-foreground block max-w-[150px] truncate text-xs">
+                                {swap.reviewNotes}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </TabsContent>
@@ -4041,7 +4383,7 @@ export default function FacilitySchedulingPage() {
                   <Users className="h-5 w-5" />
                   Coverage Needs
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Shifts that need coverage and available staff
                 </p>
               </CardHeader>
@@ -4061,11 +4403,11 @@ export default function FacilitySchedulingPage() {
                         {getSickCallInsNeedingCoverage().map((callIn) => (
                           <div
                             key={callIn.id}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-muted/50"
+                            className="bg-muted/50 flex items-center justify-between rounded-lg border p-3"
                           >
                             <div>
                               <p className="font-medium">{callIn.staffName}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 {callIn.shiftDate} - {callIn.shiftTime}
                               </p>
                             </div>
@@ -4084,7 +4426,7 @@ export default function FacilitySchedulingPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-muted-foreground py-4 text-center text-sm">
                       No coverage needs at this time
                     </p>
                   )}
@@ -4099,7 +4441,7 @@ export default function FacilitySchedulingPage() {
                   <AlertTriangle className="h-5 w-5" />
                   Schedule Conflicts
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Detect and resolve scheduling conflicts
                 </p>
               </CardHeader>
@@ -4107,13 +4449,17 @@ export default function FacilitySchedulingPage() {
                 <StaffConflictDetector
                   schedules={facilitySchedules}
                   staff={facilityStaff}
-                  timeOffRequests={timeOffRequests.filter((to) => to.facility === facility.name)}
-                  onReassign={(shiftId, newStaffId) => {
+                  timeOffRequests={timeOffRequests.filter(
+                    (to) => to.facility === facility.name,
+                  )}
+                  onReassign={(_shiftId, _newStaffId) => {
                     // TODO: Reassign shift in backend
                     toast.success("Shift reassigned successfully");
                   }}
                   onEditShift={(shiftId) => {
-                    const shift = facilitySchedules.find((s) => s.id === shiftId);
+                    const shift = facilitySchedules.find(
+                      (s) => s.id === shiftId,
+                    );
                     if (shift) {
                       handleEdit(shift);
                     }
@@ -4138,12 +4484,17 @@ export default function FacilitySchedulingPage() {
                     <CalendarDays className="h-5 w-5" />
                     Shift Templates
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Create and manage reusable shift templates for quick scheduling
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Create and manage reusable shift templates for quick
+                    scheduling
                   </p>
                 </div>
-                <Button onClick={() => {/* TODO: Open template creation modal */}}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button
+                  onClick={() => {
+                    /* TODO: Open template creation modal */
+                  }}
+                >
+                  <Plus className="mr-2 size-4" />
                   Create Template
                 </Button>
               </div>
@@ -4153,25 +4504,37 @@ export default function FacilitySchedulingPage() {
                 {shiftTemplates.length > 0 ? (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {shiftTemplates.map((template) => (
-                      <Card key={template.id} className="cursor-pointer hover:bg-accent/50 transition-colors">
+                      <Card
+                        key={template.id}
+                        className="hover:bg-accent/50 cursor-pointer transition-colors"
+                      >
                         <CardHeader>
-                          <CardTitle className="text-lg">{template.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">
+                          <CardTitle className="text-lg">
+                            {template.name}
+                          </CardTitle>
+                          <p className="text-muted-foreground text-sm">
                             {template.startTime} - {template.endTime}
                           </p>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Duration:</span>
+                              <span className="text-muted-foreground">
+                                Duration:
+                              </span>
                               <span className="font-medium">
                                 {(() => {
-                                  const [startHour, startMin] = template.startTime.split(":").map(Number);
-                                  const [endHour, endMin] = template.endTime.split(":").map(Number);
-                                  const startMinutes = startHour * 60 + startMin;
+                                  const [startHour, startMin] =
+                                    template.startTime.split(":").map(Number);
+                                  const [endHour, endMin] = template.endTime
+                                    .split(":")
+                                    .map(Number);
+                                  const startMinutes =
+                                    startHour * 60 + startMin;
                                   const endMinutes = endHour * 60 + endMin;
                                   return endMinutes - startMinutes;
-                                })()} min
+                                })()}{" "}
+                                min
                               </span>
                             </div>
                           </div>
@@ -4180,10 +4543,10 @@ export default function FacilitySchedulingPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <CalendarDays className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <div className="py-12 text-center">
+                    <CalendarDays className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                     <p className="text-lg font-medium">No templates yet</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       Create your first shift template to get started
                     </p>
                   </div>
@@ -4203,14 +4566,15 @@ export default function FacilitySchedulingPage() {
 
       {/* Same-Day Sick / Call-Out Modal */}
       <Dialog open={isSickCallModalOpen} onOpenChange={setIsSickCallModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5" />
               Same-Day Sick / Call-Out
             </DialogTitle>
             <DialogDescription>
-              Mark a staff member as absent (sick) for a shift and manage coverage immediately.
+              Mark a staff member as absent (sick) for a shift and manage
+              coverage immediately.
             </DialogDescription>
           </DialogHeader>
 
@@ -4222,7 +4586,8 @@ export default function FacilitySchedulingPage() {
                 value={selectedShiftForSickCall?.id.toString() || ""}
                 onValueChange={(value) => {
                   const shift = facilitySchedules.find(
-                    (s) => s.id.toString() === value && s.status === "scheduled"
+                    (s) =>
+                      s.id.toString() === value && s.status === "scheduled",
                   );
                   setSelectedShiftForSickCall(shift || null);
                   setSickCallAction(null);
@@ -4237,8 +4602,13 @@ export default function FacilitySchedulingPage() {
                   {facilitySchedules
                     .filter((s) => s.status === "scheduled")
                     .map((schedule) => (
-                      <SelectItem key={schedule.id} value={schedule.id.toString()}>
-                        {schedule.staffName} - {schedule.date} ({schedule.startTime} - {schedule.endTime}) - {schedule.role}
+                      <SelectItem
+                        key={schedule.id}
+                        value={schedule.id.toString()}
+                      >
+                        {schedule.staffName} - {schedule.date} (
+                        {schedule.startTime} - {schedule.endTime}) -{" "}
+                        {schedule.role}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -4261,14 +4631,30 @@ export default function FacilitySchedulingPage() {
 
                 {/* Step 3: Coverage Impact Display */}
                 {(() => {
-                  const impact = calculateCoverageImpact(selectedShiftForSickCall);
+                  const impact = calculateCoverageImpact(
+                    selectedShiftForSickCall,
+                  );
                   return (
-                    <Card className={impact.impact === "critical" ? "border-red-500 bg-red-50 dark:bg-red-950/20" : impact.impact === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" : ""}>
+                    <Card
+                      className={
+                        impact.impact === "critical"
+                          ? `border-red-500 bg-red-50 dark:bg-red-950/20`
+                          : impact.impact === "warning"
+                            ? `border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20`
+                            : ""
+                      }
+                    >
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          {impact.impact === "critical" && <AlertCircle className="h-4 w-4 text-red-600" />}
-                          {impact.impact === "warning" && <AlertTriangle className="h-4 w-4 text-yellow-600" />}
-                          {impact.impact === "none" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        <CardTitle className="flex items-center gap-2 text-sm">
+                          {impact.impact === "critical" && (
+                            <AlertCircle className="size-4 text-red-600" />
+                          )}
+                          {impact.impact === "warning" && (
+                            <AlertTriangle className="size-4 text-yellow-600" />
+                          )}
+                          {impact.impact === "none" && (
+                            <CheckCircle2 className="size-4 text-green-600" />
+                          )}
                           Coverage Impact
                         </CardTitle>
                       </CardHeader>
@@ -4276,28 +4662,41 @@ export default function FacilitySchedulingPage() {
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <p className="text-muted-foreground">Status</p>
-                            <p className={`font-medium ${
-                              impact.status === "understaffed" ? "text-red-600" :
-                              impact.status === "at_minimum" ? "text-yellow-600" :
-                              "text-green-600"
-                            }`}>
-                              {impact.status === "understaffed" ? "Understaffed" :
-                               impact.status === "at_minimum" ? "At Minimum" :
-                               "OK"}
+                            <p
+                              className={`font-medium ${
+                                impact.status === "understaffed"
+                                  ? "text-red-600"
+                                  : impact.status === "at_minimum"
+                                    ? "text-yellow-600"
+                                    : "text-green-600"
+                              } `}
+                            >
+                              {impact.status === "understaffed"
+                                ? "Understaffed"
+                                : impact.status === "at_minimum"
+                                  ? "At Minimum"
+                                  : "OK"}
                             </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Current Staff</p>
+                            <p className="text-muted-foreground">
+                              Current Staff
+                            </p>
                             <p className="font-medium">{impact.currentCount}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Minimum Needed</p>
+                            <p className="text-muted-foreground">
+                              Minimum Needed
+                            </p>
                             <p className="font-medium">{impact.minNeeded}</p>
                           </div>
                         </div>
                         {impact.impact === "critical" && (
-                          <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-sm text-red-900 dark:text-red-200">
-                            <strong>Critical:</strong> This shift removal will leave {impact.currentCount} staff member(s), which is below the minimum of {impact.minNeeded} for {selectedShiftForSickCall.role}.
+                          <div className="mt-3 rounded-sm bg-red-100 p-2 text-sm text-red-900 dark:bg-red-900/30 dark:text-red-200">
+                            <strong>Critical:</strong> This shift removal will
+                            leave {impact.currentCount} staff member(s), which
+                            is below the minimum of {impact.minNeeded} for{" "}
+                            {selectedShiftForSickCall.role}.
                           </div>
                         )}
                       </CardContent>
@@ -4307,54 +4706,83 @@ export default function FacilitySchedulingPage() {
 
                 {/* Step 4: Suggested Replacements */}
                 {(() => {
-                  const suggestions = getSuggestedReplacements(selectedShiftForSickCall);
+                  const suggestions = getSuggestedReplacements(
+                    selectedShiftForSickCall,
+                  );
                   return (
                     <div className="space-y-2">
-                      <Label className="text-base font-semibold">Suggested Replacements</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Staff members available for this shift based on availability
+                      <Label className="text-base font-semibold">
+                        Suggested Replacements
+                      </Label>
+                      <p className="text-muted-foreground text-sm">
+                        Staff members available for this shift based on
+                        availability
                       </p>
                       {suggestions.length > 0 ? (
-                        <div className="space-y-2 mt-3 max-h-64 overflow-y-auto">
+                        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
                           {suggestions.map((staff) => (
                             <div
                               key={staff.id}
-                              className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                                selectedReplacementStaffId === staff.id.toString() || splitShiftStaffIds.includes(staff.id.toString())
+                              className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors ${
+                                selectedReplacementStaffId ===
+                                  staff.id.toString() ||
+                                splitShiftStaffIds.includes(staff.id.toString())
                                   ? "border-primary bg-primary/5"
                                   : "hover:bg-muted/50"
-                              }`}
+                              } `}
                               onClick={() => {
                                 if (sickCallAction === "split") {
-                                  if (splitShiftStaffIds.includes(staff.id.toString())) {
-                                    setSplitShiftStaffIds(splitShiftStaffIds.filter(id => id !== staff.id.toString()));
+                                  if (
+                                    splitShiftStaffIds.includes(
+                                      staff.id.toString(),
+                                    )
+                                  ) {
+                                    setSplitShiftStaffIds(
+                                      splitShiftStaffIds.filter(
+                                        (id) => id !== staff.id.toString(),
+                                      ),
+                                    );
                                   } else if (splitShiftStaffIds.length < 2) {
-                                    setSplitShiftStaffIds([...splitShiftStaffIds, staff.id.toString()]);
+                                    setSplitShiftStaffIds([
+                                      ...splitShiftStaffIds,
+                                      staff.id.toString(),
+                                    ]);
                                   }
                                 } else {
-                                  setSelectedReplacementStaffId(staff.id.toString());
+                                  setSelectedReplacementStaffId(
+                                    staff.id.toString(),
+                                  );
                                 }
                               }}
                             >
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarFallback>
-                                    {staff.name.split(" ").map((n) => n[0]).join("")}
+                                    {staff.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="font-medium">{staff.name}</p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-muted-foreground text-sm">
                                     {staff.role}
                                   </p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-muted-foreground text-sm">
                                   Available: {staff.availability}
                                 </p>
-                                {(selectedReplacementStaffId === staff.id.toString() || splitShiftStaffIds.includes(staff.id.toString())) && (
-                                  <Badge className="mt-1 bg-green-600">Selected</Badge>
+                                {(selectedReplacementStaffId ===
+                                  staff.id.toString() ||
+                                  splitShiftStaffIds.includes(
+                                    staff.id.toString(),
+                                  )) && (
+                                  <Badge className="mt-1 bg-green-600">
+                                    Selected
+                                  </Badge>
                                 )}
                               </div>
                             </div>
@@ -4363,10 +4791,13 @@ export default function FacilitySchedulingPage() {
                       ) : (
                         <Card className="bg-muted/50">
                           <CardContent className="py-8 text-center">
-                            <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-muted-foreground">No available staff found for this shift</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              All available staff are already scheduled or unavailable
+                            <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                            <p className="text-muted-foreground">
+                              No available staff found for this shift
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                              All available staff are already scheduled or
+                              unavailable
                             </p>
                           </CardContent>
                         </Card>
@@ -4376,36 +4807,50 @@ export default function FacilitySchedulingPage() {
                 })()}
 
                 {/* Step 5: Manager Actions */}
-                <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-base font-semibold">Coverage Options</Label>
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-base font-semibold">
+                    Coverage Options
+                  </Label>
                   <div className="grid grid-cols-3 gap-3">
                     <Button
-                      variant={sickCallAction === "assign" ? "default" : "outline"}
-                      className="flex flex-col items-center gap-2 h-auto py-4"
+                      variant={
+                        sickCallAction === "assign" ? "default" : "outline"
+                      }
+                      className="flex h-auto flex-col items-center gap-2 py-4"
                       onClick={() => {
                         setSickCallAction("assign");
                         setSplitShiftStaffIds([]);
                       }}
-                      disabled={!selectedReplacementStaffId && sickCallAction === "assign"}
+                      disabled={
+                        !selectedReplacementStaffId &&
+                        sickCallAction === "assign"
+                      }
                     >
                       <CheckCircle2 className="h-5 w-5" />
                       <span className="text-sm">Assign Replacement</span>
                     </Button>
                     <Button
-                      variant={sickCallAction === "split" ? "default" : "outline"}
-                      className="flex flex-col items-center gap-2 h-auto py-4"
+                      variant={
+                        sickCallAction === "split" ? "default" : "outline"
+                      }
+                      className="flex h-auto flex-col items-center gap-2 py-4"
                       onClick={() => {
                         setSickCallAction("split");
                         setSelectedReplacementStaffId("");
                       }}
-                      disabled={splitShiftStaffIds.length === 0 && sickCallAction === "split"}
+                      disabled={
+                        splitShiftStaffIds.length === 0 &&
+                        sickCallAction === "split"
+                      }
                     >
                       <Split className="h-5 w-5" />
                       <span className="text-sm">Split Shift</span>
                     </Button>
                     <Button
-                      variant={sickCallAction === "volunteers" ? "default" : "outline"}
-                      className="flex flex-col items-center gap-2 h-auto py-4"
+                      variant={
+                        sickCallAction === "volunteers" ? "default" : "outline"
+                      }
+                      className="flex h-auto flex-col items-center gap-2 py-4"
                       onClick={() => {
                         setSickCallAction("volunteers");
                         setSelectedReplacementStaffId("");
@@ -4418,40 +4863,47 @@ export default function FacilitySchedulingPage() {
                   </div>
 
                   {sickCallAction === "assign" && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Assign Replacement</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="mb-2 text-sm font-medium">
+                        Assign Replacement
+                      </p>
+                      <p className="text-muted-foreground text-xs">
                         {selectedReplacementStaffId
-                          ? `Selected: ${facilityStaff.find(s => s.id.toString() === selectedReplacementStaffId)?.name}`
+                          ? `Selected: ${facilityStaff.find((s) => s.id.toString() === selectedReplacementStaffId)?.name}`
                           : "Please select a replacement from the suggestions above"}
                       </p>
                     </div>
                   )}
 
                   {sickCallAction === "split" && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Split Shift</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="mb-2 text-sm font-medium">Split Shift</p>
+                      <p className="text-muted-foreground text-xs">
                         {splitShiftStaffIds.length > 0
-                          ? `Selected: ${splitShiftStaffIds.map(id => facilityStaff.find(s => s.id.toString() === id)?.name).join(", ")}`
+                          ? `Selected: ${splitShiftStaffIds.map((id) => facilityStaff.find((s) => s.id.toString() === id)?.name).join(", ")}`
                           : "Select up to 2 staff members to split this shift"}
                       </p>
                     </div>
                   )}
 
                   {sickCallAction === "volunteers" && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Request Volunteers</p>
-                      <p className="text-xs text-muted-foreground">
-                        Eligible staff will be notified to volunteer for this shift
+                    <div className="bg-muted/50 rounded-lg p-3">
+                      <p className="mb-2 text-sm font-medium">
+                        Request Volunteers
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        Eligible staff will be notified to volunteer for this
+                        shift
                       </p>
                     </div>
                   )}
                 </div>
 
                 {/* Step 6: Notification Options */}
-                <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-base font-semibold">Notifications</Label>
+                <div className="space-y-3 border-t pt-4">
+                  <Label className="text-base font-semibold">
+                    Notifications
+                  </Label>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox
@@ -4459,37 +4911,58 @@ export default function FacilitySchedulingPage() {
                         checked={true}
                         disabled
                       />
-                      <Label htmlFor="notifyReplacement" className="text-sm font-normal cursor-pointer">
+                      <Label
+                        htmlFor="notifyReplacement"
+                        className="cursor-pointer text-sm font-normal"
+                      >
                         Notify replacement staff
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="notifyManagers"
-                        checked={true}
-                        disabled
-                      />
-                      <Label htmlFor="notifyManagers" className="text-sm font-normal cursor-pointer">
+                      <Checkbox id="notifyManagers" checked={true} disabled />
+                      <Label
+                        htmlFor="notifyManagers"
+                        className="cursor-pointer text-sm font-normal"
+                      >
                         Notify manager team
                       </Label>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm">Notify Affected Departments (Optional)</Label>
+                      <Label className="text-sm">
+                        Notify Affected Departments (Optional)
+                      </Label>
                       <div className="flex flex-wrap gap-2">
-                        {["Daycare", "Boarding", "Grooming", "Training", "Front Desk"].map((dept) => (
-                          <div key={dept} className="flex items-center space-x-2">
+                        {[
+                          "Daycare",
+                          "Boarding",
+                          "Grooming",
+                          "Training",
+                          "Front Desk",
+                        ].map((dept) => (
+                          <div
+                            key={dept}
+                            className="flex items-center space-x-2"
+                          >
                             <Checkbox
                               id={`notify-${dept}`}
                               checked={notifyDepartments.includes(dept)}
                               onCheckedChange={(checked) => {
                                 if (checked) {
-                                  setNotifyDepartments([...notifyDepartments, dept]);
+                                  setNotifyDepartments([
+                                    ...notifyDepartments,
+                                    dept,
+                                  ]);
                                 } else {
-                                  setNotifyDepartments(notifyDepartments.filter(d => d !== dept));
+                                  setNotifyDepartments(
+                                    notifyDepartments.filter((d) => d !== dept),
+                                  );
                                 }
                               }}
                             />
-                            <Label htmlFor={`notify-${dept}`} className="text-sm font-normal cursor-pointer">
+                            <Label
+                              htmlFor={`notify-${dept}`}
+                              className="cursor-pointer text-sm font-normal"
+                            >
                               {dept}
                             </Label>
                           </div>
@@ -4534,17 +5007,21 @@ export default function FacilitySchedulingPage() {
                 if (sickCallAction === "assign" && selectedReplacementStaffId) {
                   // TODO: Assign replacement in backend
                   toast.success("Replacement assigned", {
-                    description: `${facilityStaff.find(s => s.id.toString() === selectedReplacementStaffId)?.name} has been assigned to cover this shift`,
+                    description: `${facilityStaff.find((s) => s.id.toString() === selectedReplacementStaffId)?.name} has been assigned to cover this shift`,
                   });
-                } else if (sickCallAction === "split" && splitShiftStaffIds.length > 0) {
+                } else if (
+                  sickCallAction === "split" &&
+                  splitShiftStaffIds.length > 0
+                ) {
                   // TODO: Split shift in backend
                   toast.success("Shift split", {
-                    description: `Shift has been split between ${splitShiftStaffIds.map(id => facilityStaff.find(s => s.id.toString() === id)?.name).join(" and ")}`,
+                    description: `Shift has been split between ${splitShiftStaffIds.map((id) => facilityStaff.find((s) => s.id.toString() === id)?.name).join(" and ")}`,
                   });
                 } else if (sickCallAction === "volunteers") {
                   // TODO: Send volunteer request notifications in backend
                   toast.success("Volunteer request sent", {
-                    description: "Eligible staff have been notified to volunteer for this shift",
+                    description:
+                      "Eligible staff have been notified to volunteer for this shift",
                   });
                 }
 
@@ -4563,9 +5040,20 @@ export default function FacilitySchedulingPage() {
                 setSplitShiftStaffIds([]);
                 setNotifyDepartments([]);
               }}
-              disabled={!selectedShiftForSickCall || (sickCallAction === "assign" && !selectedReplacementStaffId) || (sickCallAction === "split" && splitShiftStaffIds.length === 0)}
+              disabled={
+                !selectedShiftForSickCall ||
+                (sickCallAction === "assign" && !selectedReplacementStaffId) ||
+                (sickCallAction === "split" && splitShiftStaffIds.length === 0)
+              }
             >
-              Mark as Sick & {sickCallAction === "assign" ? "Assign" : sickCallAction === "split" ? "Split" : sickCallAction === "volunteers" ? "Request Volunteers" : "Continue"}
+              Mark as Sick &{" "}
+              {sickCallAction === "assign"
+                ? "Assign"
+                : sickCallAction === "split"
+                  ? "Split"
+                  : sickCallAction === "volunteers"
+                    ? "Request Volunteers"
+                    : "Continue"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -4573,14 +5061,15 @@ export default function FacilitySchedulingPage() {
 
       {/* Shift Swap Request Modal */}
       <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowLeftRight className="h-5 w-5" />
               Request Shift Swap
             </DialogTitle>
             <DialogDescription>
-              Select your shift and choose to swap with a specific coworker or open to anyone qualified.
+              Select your shift and choose to swap with a specific coworker or
+              open to anyone qualified.
             </DialogDescription>
           </DialogHeader>
 
@@ -4591,7 +5080,12 @@ export default function FacilitySchedulingPage() {
               <Select
                 value={swapData.requestingShiftId}
                 onValueChange={(value) => {
-                  setSwapData({ ...swapData, requestingShiftId: value, targetStaffId: "", targetShiftId: "" });
+                  setSwapData({
+                    ...swapData,
+                    requestingShiftId: value,
+                    targetStaffId: "",
+                    targetShiftId: "",
+                  });
                   setSwapValidationErrors([]);
                 }}
               >
@@ -4602,8 +5096,13 @@ export default function FacilitySchedulingPage() {
                   {facilitySchedules
                     .filter((s) => s.status === "scheduled")
                     .map((schedule) => (
-                      <SelectItem key={schedule.id} value={schedule.id.toString()}>
-                        {schedule.staffName} - {schedule.date} ({schedule.startTime} - {schedule.endTime}) - {schedule.role}
+                      <SelectItem
+                        key={schedule.id}
+                        value={schedule.id.toString()}
+                      >
+                        {schedule.staffName} - {schedule.date} (
+                        {schedule.startTime} - {schedule.endTime}) -{" "}
+                        {schedule.role}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -4618,19 +5117,30 @@ export default function FacilitySchedulingPage() {
                   <RadioGroup
                     value={swapData.swapType}
                     onValueChange={(value: "specific" | "anyone") => {
-                      setSwapData({ ...swapData, swapType: value, targetStaffId: "", targetShiftId: "" });
+                      setSwapData({
+                        ...swapData,
+                        swapType: value,
+                        targetStaffId: "",
+                        targetShiftId: "",
+                      });
                       setSwapValidationErrors([]);
                     }}
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="specific" id="swap-specific" />
-                      <Label htmlFor="swap-specific" className="font-normal cursor-pointer">
+                      <Label
+                        htmlFor="swap-specific"
+                        className="cursor-pointer font-normal"
+                      >
                         Specific coworker
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="anyone" id="swap-anyone" />
-                      <Label htmlFor="swap-anyone" className="font-normal cursor-pointer">
+                      <Label
+                        htmlFor="swap-anyone"
+                        className="cursor-pointer font-normal"
+                      >
                         Open to anyone qualified
                       </Label>
                     </div>
@@ -4645,7 +5155,11 @@ export default function FacilitySchedulingPage() {
                       <Select
                         value={swapData.targetStaffId}
                         onValueChange={(value) => {
-                          setSwapData({ ...swapData, targetStaffId: value, targetShiftId: "" });
+                          setSwapData({
+                            ...swapData,
+                            targetStaffId: value,
+                            targetShiftId: "",
+                          });
                           setSwapValidationErrors([]);
                         }}
                       >
@@ -4656,12 +5170,19 @@ export default function FacilitySchedulingPage() {
                           {facilityStaff
                             .filter((s) => {
                               const requestingShift = facilitySchedules.find(
-                                (shift) => shift.id.toString() === swapData.requestingShiftId
+                                (shift) =>
+                                  shift.id.toString() ===
+                                  swapData.requestingShiftId,
                               );
-                              return requestingShift ? s.id !== requestingShift.staffId : true;
+                              return requestingShift
+                                ? s.id !== requestingShift.staffId
+                                : true;
                             })
                             .map((staff) => (
-                              <SelectItem key={staff.id} value={staff.id.toString()}>
+                              <SelectItem
+                                key={staff.id}
+                                value={staff.id.toString()}
+                              >
                                 {staff.name} ({staff.role})
                               </SelectItem>
                             ))}
@@ -4671,7 +5192,9 @@ export default function FacilitySchedulingPage() {
 
                     {swapData.targetStaffId && (
                       <div className="space-y-2">
-                        <Label htmlFor="targetShift">Their Shift to Swap *</Label>
+                        <Label htmlFor="targetShift">
+                          Their Shift to Swap *
+                        </Label>
                         <Select
                           value={swapData.targetShiftId}
                           onValueChange={(value) => {
@@ -4686,12 +5209,17 @@ export default function FacilitySchedulingPage() {
                             {facilitySchedules
                               .filter(
                                 (s) =>
-                                  s.staffId.toString() === swapData.targetStaffId &&
-                                  s.status === "scheduled"
+                                  s.staffId.toString() ===
+                                    swapData.targetStaffId &&
+                                  s.status === "scheduled",
                               )
                               .map((schedule) => (
-                                <SelectItem key={schedule.id} value={schedule.id.toString()}>
-                                  {schedule.date} ({schedule.startTime} - {schedule.endTime})
+                                <SelectItem
+                                  key={schedule.id}
+                                  value={schedule.id.toString()}
+                                >
+                                  {schedule.date} ({schedule.startTime} -{" "}
+                                  {schedule.endTime})
                                 </SelectItem>
                               ))}
                           </SelectContent>
@@ -4700,140 +5228,169 @@ export default function FacilitySchedulingPage() {
                     )}
 
                     {/* Validation Results */}
-                    {swapData.targetStaffId && swapData.targetShiftId && (() => {
-                      const validation = validateShiftSwap(
-                        swapData.requestingShiftId,
-                        swapData.targetStaffId,
-                        swapData.targetShiftId,
-                        swapData.swapType
-                      );
-                      return (
-                        <div className="space-y-2">
-                          {validation.errors.length > 0 && (
-                            <Card className="border-red-500 bg-red-50 dark:bg-red-950/20">
-                              <CardContent className="pt-4">
-                                <div className="flex items-start gap-2">
-                                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                                  <div className="space-y-1">
-                                    <p className="font-medium text-sm text-red-900 dark:text-red-200">
-                                      Validation Errors
-                                    </p>
-                                    <ul className="text-sm text-red-700 dark:text-red-300 list-disc list-inside">
-                                      {validation.errors.map((error, idx) => (
-                                        <li key={idx}>{error}</li>
-                                      ))}
-                                    </ul>
+                    {swapData.targetStaffId &&
+                      swapData.targetShiftId &&
+                      (() => {
+                        const validation = validateShiftSwap(
+                          swapData.requestingShiftId,
+                          swapData.targetStaffId,
+                          swapData.targetShiftId,
+                          swapData.swapType,
+                        );
+                        return (
+                          <div className="space-y-2">
+                            {validation.errors.length > 0 && (
+                              <Card className="border-red-500 bg-red-50 dark:bg-red-950/20">
+                                <CardContent className="pt-4">
+                                  <div className="flex items-start gap-2">
+                                    <AlertCircle className="mt-0.5 h-5 w-5 text-red-600" />
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium text-red-900 dark:text-red-200">
+                                        Validation Errors
+                                      </p>
+                                      <ul className="list-inside list-disc text-sm text-red-700 dark:text-red-300">
+                                        {validation.errors.map((error, idx) => (
+                                          <li key={idx}>{error}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                          {validation.warnings.length > 0 && (
-                            <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
-                              <CardContent className="pt-4">
-                                <div className="flex items-start gap-2">
-                                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                                  <div className="space-y-1">
-                                    <p className="font-medium text-sm text-yellow-900 dark:text-yellow-200">
-                                      Warnings
-                                    </p>
-                                    <ul className="text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside">
-                                      {validation.warnings.map((warning, idx) => (
-                                        <li key={idx}>{warning}</li>
-                                      ))}
-                                    </ul>
+                                </CardContent>
+                              </Card>
+                            )}
+                            {validation.warnings.length > 0 && (
+                              <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+                                <CardContent className="pt-4">
+                                  <div className="flex items-start gap-2">
+                                    <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                                    <div className="space-y-1">
+                                      <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
+                                        Warnings
+                                      </p>
+                                      <ul className="list-inside list-disc text-sm text-yellow-700 dark:text-yellow-300">
+                                        {validation.warnings.map(
+                                          (warning, idx) => (
+                                            <li key={idx}>{warning}</li>
+                                          ),
+                                        )}
+                                      </ul>
+                                    </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                          {validation.isValid && validation.warnings.length === 0 && (
-                            <Card className="border-green-500 bg-green-50 dark:bg-green-950/20">
-                              <CardContent className="pt-4">
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                  <p className="text-sm text-green-900 dark:text-green-200 font-medium">
-                                    Swap is valid and ready to submit
-                                  </p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </div>
-                      );
-                    })()}
+                                </CardContent>
+                              </Card>
+                            )}
+                            {validation.isValid &&
+                              validation.warnings.length === 0 && (
+                                <Card className="border-green-500 bg-green-50 dark:bg-green-950/20">
+                                  <CardContent className="pt-4">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                      <p className="text-sm font-medium text-green-900 dark:text-green-200">
+                                        Swap is valid and ready to submit
+                                      </p>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+                          </div>
+                        );
+                      })()}
                   </div>
                 )}
 
                 {/* Step 4: Open to Anyone - Show Qualified Staff */}
-                {swapData.swapType === "anyone" && (() => {
-                  const qualifiedStaff = getQualifiedStaffForSwap(swapData.requestingShiftId);
-                  return (
-                    <div className="space-y-2">
-                      <Label>Qualified Staff Available</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Staff members who are qualified and available for this swap
-                      </p>
-                      {qualifiedStaff.length > 0 ? (
-                        <div className="space-y-2 mt-3 max-h-64 overflow-y-auto">
-                          {qualifiedStaff.map((staff) => (
-                            <Card
-                              key={staff.id}
-                              className={`${
-                                staff.wouldExceedOvertime
-                                  ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20"
-                                  : staff.roleMatch
-                                    ? "border-green-500 bg-green-50 dark:bg-green-950/20"
-                                    : ""
-                              }`}
-                            >
-                              <CardContent className="p-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10">
-                                      <AvatarFallback>
-                                        {staff.name.split(" ").map((n) => n[0]).join("")}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <p className="font-medium">{staff.name}</p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {staff.role} {!staff.roleMatch && <Badge variant="outline" className="ml-1 text-xs">Cross-role</Badge>}
+                {swapData.swapType === "anyone" &&
+                  (() => {
+                    const qualifiedStaff = getQualifiedStaffForSwap(
+                      swapData.requestingShiftId,
+                    );
+                    return (
+                      <div className="space-y-2">
+                        <Label>Qualified Staff Available</Label>
+                        <p className="text-muted-foreground text-sm">
+                          Staff members who are qualified and available for this
+                          swap
+                        </p>
+                        {qualifiedStaff.length > 0 ? (
+                          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+                            {qualifiedStaff.map((staff) => (
+                              <Card
+                                key={staff.id}
+                                className={` ${
+                                  staff.wouldExceedOvertime
+                                    ? `border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20`
+                                    : staff.roleMatch
+                                      ? `border-green-500 bg-green-50 dark:bg-green-950/20`
+                                      : ""
+                                } `}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10">
+                                        <AvatarFallback>
+                                          {staff.name
+                                            .split(" ")
+                                            .map((n) => n[0])
+                                            .join("")}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium">
+                                          {staff.name}
+                                        </p>
+                                        <p className="text-muted-foreground text-sm">
+                                          {staff.role}{" "}
+                                          {!staff.roleMatch && (
+                                            <Badge
+                                              variant="outline"
+                                              className="ml-1 text-xs"
+                                            >
+                                              Cross-role
+                                            </Badge>
+                                          )}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right text-sm">
+                                      <p className="text-muted-foreground">
+                                        Available: {staff.availability}
                                       </p>
+                                      <p className="text-muted-foreground">
+                                        Weekly hours:{" "}
+                                        {staff.weeklyHours.toFixed(1)}h
+                                      </p>
+                                      {staff.wouldExceedOvertime && (
+                                        <Badge
+                                          variant="outline"
+                                          className="mt-1 border-yellow-600 text-yellow-600"
+                                        >
+                                          Would exceed overtime
+                                        </Badge>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="text-right text-sm">
-                                    <p className="text-muted-foreground">
-                                      Available: {staff.availability}
-                                    </p>
-                                    <p className="text-muted-foreground">
-                                      Weekly hours: {staff.weeklyHours.toFixed(1)}h
-                                    </p>
-                                    {staff.wouldExceedOvertime && (
-                                      <Badge variant="outline" className="mt-1 text-yellow-600 border-yellow-600">
-                                        Would exceed overtime
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      ) : (
-                        <Card className="bg-muted/50">
-                          <CardContent className="py-8 text-center">
-                            <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-muted-foreground">No qualified staff found</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              All available staff are already scheduled or unavailable
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  );
-                })()}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <Card className="bg-muted/50">
+                            <CardContent className="py-8 text-center">
+                              <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                              <p className="text-muted-foreground">
+                                No qualified staff found
+                              </p>
+                              <p className="text-muted-foreground mt-1 text-sm">
+                                All available staff are already scheduled or
+                                unavailable
+                              </p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                 {/* Step 5: Reason */}
                 <div className="space-y-2">
@@ -4842,7 +5399,9 @@ export default function FacilitySchedulingPage() {
                     id="swapReason"
                     placeholder="Why do you need to swap this shift?"
                     value={swapData.reason}
-                    onChange={(e) => setSwapData({ ...swapData, reason: e.target.value })}
+                    onChange={(e) =>
+                      setSwapData({ ...swapData, reason: e.target.value })
+                    }
                     rows={3}
                   />
                 </div>
@@ -4884,12 +5443,14 @@ export default function FacilitySchedulingPage() {
                     swapData.requestingShiftId,
                     swapData.targetStaffId,
                     swapData.targetShiftId,
-                    swapData.swapType
+                    swapData.swapType,
                   );
 
                   if (!validation.isValid) {
                     setSwapValidationErrors(validation.errors);
-                    toast.error("Please fix validation errors before submitting");
+                    toast.error(
+                      "Please fix validation errors before submitting",
+                    );
                     return;
                   }
                 }
@@ -4900,14 +5461,15 @@ export default function FacilitySchedulingPage() {
                 }
 
                 // TODO: Submit swap request to backend
-                const requestingShift = facilitySchedules.find(
-                  (s) => s.id.toString() === swapData.requestingShiftId
+                const _requestingShift = facilitySchedules.find(
+                  (s) => s.id.toString() === swapData.requestingShiftId,
                 );
 
                 toast.success("Shift swap request submitted", {
-                  description: swapData.swapType === "specific"
-                    ? `Request sent to ${facilityStaff.find(s => s.id.toString() === swapData.targetStaffId)?.name}. Awaiting approval.`
-                    : "Request posted. Qualified staff can respond.",
+                  description:
+                    swapData.swapType === "specific"
+                      ? `Request sent to ${facilityStaff.find((s) => s.id.toString() === swapData.targetStaffId)?.name}. Awaiting approval.`
+                      : "Request posted. Qualified staff can respond.",
                 });
 
                 setIsSwapModalOpen(false);
@@ -4923,7 +5485,8 @@ export default function FacilitySchedulingPage() {
               disabled={
                 !swapData.requestingShiftId ||
                 !swapData.reason.trim() ||
-                (swapData.swapType === "specific" && (!swapData.targetStaffId || !swapData.targetShiftId))
+                (swapData.swapType === "specific" &&
+                  (!swapData.targetStaffId || !swapData.targetShiftId))
               }
             >
               Submit Request
@@ -4933,43 +5496,62 @@ export default function FacilitySchedulingPage() {
       </Dialog>
 
       {/* Shift Swap Approval Modal (for managers) */}
-      <Dialog open={isSwapApprovalModalOpen} onOpenChange={setIsSwapApprovalModalOpen}>
+      <Dialog
+        open={isSwapApprovalModalOpen}
+        onOpenChange={setIsSwapApprovalModalOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {swapApprovalAction === "approve" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-              {swapApprovalAction === "deny" && <XCircle className="h-5 w-5 text-red-600" />}
+              {swapApprovalAction === "approve" && (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              )}
+              {swapApprovalAction === "deny" && (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
               Review Shift Swap Request
             </DialogTitle>
             {selectedSwapRequest && (
               <DialogDescription>
-                {swapApprovalAction === "approve" && "Approve this shift swap request"}
-                {swapApprovalAction === "deny" && "Deny this shift swap request"}
-                {" "}from {selectedSwapRequest.requestingStaffName}
+                {swapApprovalAction === "approve" &&
+                  "Approve this shift swap request"}
+                {swapApprovalAction === "deny" &&
+                  "Deny this shift swap request"}{" "}
+                from {selectedSwapRequest.requestingStaffName}
               </DialogDescription>
             )}
           </DialogHeader>
 
           {selectedSwapRequest && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Requesting Staff</p>
-                  <p className="font-medium">{selectedSwapRequest.requestingStaffName}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {selectedSwapRequest.requestingShiftDate} ({selectedSwapRequest.requestingShiftTime})
+                  <p className="text-muted-foreground text-sm">
+                    Requesting Staff
+                  </p>
+                  <p className="font-medium">
+                    {selectedSwapRequest.requestingStaffName}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {selectedSwapRequest.requestingShiftDate} (
+                    {selectedSwapRequest.requestingShiftTime})
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedSwapRequest.targetStaffName ? "Target Staff" : "Open Request"}
+                  <p className="text-muted-foreground text-sm">
+                    {selectedSwapRequest.targetStaffName
+                      ? "Target Staff"
+                      : "Open Request"}
                   </p>
                   {selectedSwapRequest.targetStaffName ? (
                     <>
-                      <p className="font-medium">{selectedSwapRequest.targetStaffName}</p>
+                      <p className="font-medium">
+                        {selectedSwapRequest.targetStaffName}
+                      </p>
                       {selectedSwapRequest.targetShiftDate && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {selectedSwapRequest.targetShiftDate} ({selectedSwapRequest.targetShiftTime})
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {selectedSwapRequest.targetShiftDate} (
+                          {selectedSwapRequest.targetShiftTime})
                         </p>
                       )}
                     </>
@@ -4979,7 +5561,7 @@ export default function FacilitySchedulingPage() {
                 </div>
                 {selectedSwapRequest.reason && (
                   <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Reason</p>
+                    <p className="text-muted-foreground text-sm">Reason</p>
                     <p className="font-medium">{selectedSwapRequest.reason}</p>
                   </div>
                 )}
@@ -4987,7 +5569,8 @@ export default function FacilitySchedulingPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="approvalNotes">
-                  Notes {swapApprovalAction === "deny" ? "(Required)" : "(Optional)"}
+                  Notes{" "}
+                  {swapApprovalAction === "deny" ? "(Required)" : "(Optional)"}
                 </Label>
                 <Textarea
                   id="approvalNotes"
@@ -5016,7 +5599,10 @@ export default function FacilitySchedulingPage() {
             </Button>
             <Button
               onClick={() => {
-                if (swapApprovalAction === "deny" && !swapApprovalNotes.trim()) {
+                if (
+                  swapApprovalAction === "deny" &&
+                  !swapApprovalNotes.trim()
+                ) {
                   toast.error("Please provide a reason for denial");
                   return;
                 }
@@ -5036,8 +5622,12 @@ export default function FacilitySchedulingPage() {
                 setIsSwapApprovalModalOpen(false);
                 setSwapApprovalNotes("");
               }}
-              variant={swapApprovalAction === "deny" ? "destructive" : "default"}
-              disabled={swapApprovalAction === "deny" && !swapApprovalNotes.trim()}
+              variant={
+                swapApprovalAction === "deny" ? "destructive" : "default"
+              }
+              disabled={
+                swapApprovalAction === "deny" && !swapApprovalNotes.trim()
+              }
             >
               {swapApprovalAction === "approve" && "Approve Swap"}
               {swapApprovalAction === "deny" && "Deny Request"}
@@ -5203,7 +5793,7 @@ export default function FacilitySchedulingPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Leave unassigned if any staff member on the shift can complete
                 this task.
               </p>
@@ -5252,7 +5842,7 @@ export default function FacilitySchedulingPage() {
             )}
           </DialogHeader>
 
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             {selectedSickCallIn && (
               <>
                 {/* Shift Details */}
@@ -5289,13 +5879,14 @@ export default function FacilitySchedulingPage() {
                   <Label className="text-base font-semibold">
                     Available Staff
                   </Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Staff members available on this day who are not already
                     scheduled
                   </p>
 
-                  {getAvailableStaffForCoverage(selectedSickCallIn).length > 0 ? (
-                    <div className="space-y-2 mt-3">
+                  {getAvailableStaffForCoverage(selectedSickCallIn).length >
+                  0 ? (
+                    <div className="mt-3 space-y-2">
                       {getAvailableStaffForCoverage(selectedSickCallIn).map(
                         (staff) => {
                           const availability = staffAvailability.find(
@@ -5307,11 +5898,11 @@ export default function FacilitySchedulingPage() {
                           return (
                             <div
                               key={staff.id}
-                              className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                              className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors ${
                                 selectedCoverageStaffId === staff.id.toString()
                                   ? "border-primary bg-primary/5"
                                   : "hover:bg-muted/50"
-                              }`}
+                              } `}
                               onClick={() =>
                                 setSelectedCoverageStaffId(staff.id.toString())
                               }
@@ -5327,14 +5918,14 @@ export default function FacilitySchedulingPage() {
                                 </Avatar>
                                 <div>
                                   <p className="font-medium">{staff.name}</p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-muted-foreground text-sm">
                                     {staff.role}
                                   </p>
                                 </div>
                               </div>
                               <div className="text-right">
                                 {availability && (
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-muted-foreground text-sm">
                                     Available: {availability.startTime} -{" "}
                                     {availability.endTime}
                                   </p>
@@ -5354,11 +5945,11 @@ export default function FacilitySchedulingPage() {
                   ) : (
                     <Card className="bg-muted/50">
                       <CardContent className="py-8 text-center">
-                        <UserX className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <UserX className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
                         <p className="text-muted-foreground">
                           No available staff found for this shift
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-sm">
                           All available staff are already scheduled or
                           unavailable
                         </p>
@@ -5368,8 +5959,9 @@ export default function FacilitySchedulingPage() {
                 </div>
 
                 {/* Send Request Options */}
-                {getAvailableStaffForCoverage(selectedSickCallIn).length > 0 && (
-                  <div className="space-y-3 pt-4 border-t">
+                {getAvailableStaffForCoverage(selectedSickCallIn).length >
+                  0 && (
+                  <div className="space-y-3 border-t pt-4">
                     <Label className="text-base font-semibold">
                       Coverage Options
                     </Label>
@@ -5381,7 +5973,7 @@ export default function FacilitySchedulingPage() {
                           setIsFindCoverageModalOpen(false);
                         }}
                       >
-                        <Phone className="h-4 w-4 mr-2" />
+                        <Phone className="mr-2 size-4" />
                         Notify All Available
                       </Button>
                       <Button
@@ -5391,7 +5983,7 @@ export default function FacilitySchedulingPage() {
                           setIsFindCoverageModalOpen(false);
                         }}
                       >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        <CheckCircle2 className="mr-2 size-4" />
                         Assign Selected
                       </Button>
                     </div>
@@ -5417,7 +6009,7 @@ export default function FacilitySchedulingPage() {
         open={isShiftReportModalOpen}
         onOpenChange={setIsShiftReportModalOpen}
       >
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5" />
@@ -5436,7 +6028,7 @@ export default function FacilitySchedulingPage() {
           <div className="py-4">
             {selectedShiftForReport && (
               <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-4 min-w-[800px]">
+                <div className="grid min-w-[800px] grid-cols-4 gap-4">
                   <Card>
                     <CardContent className="pt-4">
                       <div className="text-2xl font-bold">
@@ -5449,7 +6041,7 @@ export default function FacilitySchedulingPage() {
                           ).length
                         }
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Total Tasks
                       </p>
                     </CardContent>
@@ -5467,7 +6059,7 @@ export default function FacilitySchedulingPage() {
                           ).length
                         }
                       </div>
-                      <p className="text-xs text-muted-foreground">Completed</p>
+                      <p className="text-muted-foreground text-xs">Completed</p>
                     </CardContent>
                   </Card>
                   <Card>
@@ -5483,7 +6075,7 @@ export default function FacilitySchedulingPage() {
                           ).length
                         }
                       </div>
-                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <p className="text-muted-foreground text-xs">Pending</p>
                     </CardContent>
                   </Card>
                   <Card>
@@ -5499,7 +6091,7 @@ export default function FacilitySchedulingPage() {
                           ).length
                         }
                       </div>
-                      <p className="text-xs text-muted-foreground">Skipped</p>
+                      <p className="text-muted-foreground text-xs">Skipped</p>
                     </CardContent>
                   </Card>
                 </div>
@@ -5509,64 +6101,67 @@ export default function FacilitySchedulingPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="min-w-[300px]">Task</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Completed By</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shiftTasks
-                      .filter(
-                        (t) =>
-                          t.scheduleDate === selectedShiftForReport.date &&
-                          t.shiftStartTime === selectedShiftForReport.startTime,
-                      )
-                      .map((task) => (
-                        <TableRow key={task.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{task.taskName}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {task.description}
+                        <TableHead>Priority</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Completed By</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {shiftTasks
+                        .filter(
+                          (t) =>
+                            t.scheduleDate === selectedShiftForReport.date &&
+                            t.shiftStartTime ===
+                              selectedShiftForReport.startTime,
+                        )
+                        .map((task) => (
+                          <TableRow key={task.id}>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">
+                                  {task.taskName}
+                                </div>
+                                <div className="text-muted-foreground text-sm">
+                                  {task.description}
+                                </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                task.priority === "urgent"
-                                  ? "destructive"
-                                  : task.priority === "high"
-                                    ? "default"
-                                    : "outline"
-                              }
-                            >
-                              {task.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                task.status === "completed"
-                                  ? "default"
-                                  : task.status === "skipped"
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  task.priority === "urgent"
                                     ? "destructive"
-                                    : "outline"
-                              }
-                              className={
-                                task.status === "completed"
-                                  ? "bg-green-600"
-                                  : ""
-                              }
-                            >
-                              {task.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {task.completedByStaffName || "-"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                    : task.priority === "high"
+                                      ? "default"
+                                      : "outline"
+                                }
+                              >
+                                {task.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  task.status === "completed"
+                                    ? "default"
+                                    : task.status === "skipped"
+                                      ? "destructive"
+                                      : "outline"
+                                }
+                                className={
+                                  task.status === "completed"
+                                    ? "bg-green-600"
+                                    : ""
+                                }
+                              >
+                                {task.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {task.completedByStaffName || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -5651,13 +6246,18 @@ export default function FacilitySchedulingPage() {
                       endDate: e.target.value,
                     })
                   }
-                  min={timeOffRequestData.startDate || new Date().toISOString().split("T")[0]}
+                  min={
+                    timeOffRequestData.startDate ||
+                    new Date().toISOString().split("T")[0]
+                  }
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="timeOffReason">Additional Details (Optional)</Label>
+              <Label htmlFor="timeOffReason">
+                Additional Details (Optional)
+              </Label>
               <Textarea
                 id="timeOffReason"
                 placeholder="Provide any additional details about your time off request..."
@@ -5712,65 +6312,78 @@ export default function FacilitySchedulingPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {reviewAction === "approve" && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-              {reviewAction === "deny" && <XCircle className="h-5 w-5 text-red-600" />}
-              {reviewAction === "request_changes" && <AlertTriangle className="h-5 w-5 text-yellow-600" />}
+              {reviewAction === "approve" && (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              )}
+              {reviewAction === "deny" && (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              {reviewAction === "request_changes" && (
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              )}
               Review Time Off Request
             </DialogTitle>
             {selectedTimeOffRequest && (
               <DialogDescription>
                 {reviewAction === "approve" && "Approve this time off request"}
                 {reviewAction === "deny" && "Deny this time off request"}
-                {reviewAction === "request_changes" && "Request changes to this time off request"}
-                {" "}for {selectedTimeOffRequest.staffName}
+                {reviewAction === "request_changes" &&
+                  "Request changes to this time off request"}{" "}
+                for {selectedTimeOffRequest.staffName}
               </DialogDescription>
             )}
           </DialogHeader>
 
           {selectedTimeOffRequest && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p className="text-muted-foreground text-sm">Type</p>
                   <p className="font-medium">
                     {selectedTimeOffRequest.customTypeName ||
-                      defaultTimeOffReasons.find((r) => r.id === selectedTimeOffRequest.type)
-                        ?.name ||
+                      defaultTimeOffReasons.find(
+                        (r) => r.id === selectedTimeOffRequest.type,
+                      )?.name ||
                       selectedTimeOffRequest.type}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Date Range</p>
+                  <p className="text-muted-foreground text-sm">Date Range</p>
                   <p className="font-medium">
-                    {selectedTimeOffRequest.startDate === selectedTimeOffRequest.endDate
+                    {selectedTimeOffRequest.startDate ===
+                    selectedTimeOffRequest.endDate
                       ? selectedTimeOffRequest.startDate
                       : `${selectedTimeOffRequest.startDate} - ${selectedTimeOffRequest.endDate}`}
                   </p>
                 </div>
                 {selectedTimeOffRequest.reason && (
                   <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Reason</p>
-                    <p className="font-medium">{selectedTimeOffRequest.reason}</p>
+                    <p className="text-muted-foreground text-sm">Reason</p>
+                    <p className="font-medium">
+                      {selectedTimeOffRequest.reason}
+                    </p>
                   </div>
                 )}
               </div>
 
-              {reviewAction === "approve" && checkCoverageGaps(selectedTimeOffRequest) && (
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm text-yellow-900 dark:text-yellow-200">
-                        Coverage Gap Detected
-                      </p>
-                      <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                        This staff member has scheduled shifts during this time off period.
-                        A coverage alert will be automatically triggered upon approval.
-                      </p>
+              {reviewAction === "approve" &&
+                checkCoverageGaps(selectedTimeOffRequest) && (
+                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-900 dark:text-yellow-200">
+                          Coverage Gap Detected
+                        </p>
+                        <p className="mt-1 text-xs text-yellow-700 dark:text-yellow-300">
+                          This staff member has scheduled shifts during this
+                          time off period. A coverage alert will be
+                          automatically triggered upon approval.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {reviewAction === "request_changes" ? (
                 <div className="space-y-2">
@@ -5786,7 +6399,8 @@ export default function FacilitySchedulingPage() {
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="reviewNotes">
-                    Notes {reviewAction === "deny" ? "(Required)" : "(Optional)"}
+                    Notes{" "}
+                    {reviewAction === "deny" ? "(Required)" : "(Optional)"}
                   </Label>
                   <Textarea
                     id="reviewNotes"
@@ -5834,10 +6448,15 @@ export default function FacilitySchedulingPage() {
                 setRequestedChanges("");
               }}
               variant={
-                reviewAction === "deny" ? "destructive" : reviewAction === "request_changes" ? "secondary" : "default"
+                reviewAction === "deny"
+                  ? "destructive"
+                  : reviewAction === "request_changes"
+                    ? "secondary"
+                    : "default"
               }
               disabled={
-                (reviewAction === "deny" || reviewAction === "request_changes") &&
+                (reviewAction === "deny" ||
+                  reviewAction === "request_changes") &&
                 !reviewNotes &&
                 !requestedChanges
               }

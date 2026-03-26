@@ -29,7 +29,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Save, Plus, Trash2, GripVertical, Calendar, Clock, Users, AlertTriangle } from "lucide-react";
+import {
+  Save,
+  Plus,
+  Trash2,
+  GripVertical,
+  Calendar,
+  Clock,
+  Users,
+  AlertTriangle,
+} from "lucide-react";
 // Note: DatePickerWithRange component would need to be created or use a different date picker
 // For now, using Input type="date" for simplicity
 import { toast } from "sonner";
@@ -132,7 +141,9 @@ export default function GroomingBookingRulesPage() {
     },
   ]);
 
-  const [addOnRestrictions, setAddOnRestrictions] = useState<AddOnRestriction[]>([
+  const [addOnRestrictions, setAddOnRestrictions] = useState<
+    AddOnRestriction[]
+  >([
     {
       id: "1",
       addOnId: "teeth-brushing",
@@ -196,7 +207,7 @@ export default function GroomingBookingRulesPage() {
       // TODO: Save to backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success("Booking rules saved successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to save booking rules");
     } finally {
       setIsSaving(false);
@@ -222,7 +233,7 @@ export default function GroomingBookingRulesPage() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     const newBlackout: BlackoutDate = {
       id: Date.now().toString(),
       startDate: today.toISOString().split("T")[0],
@@ -241,13 +252,15 @@ export default function GroomingBookingRulesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Booking Rule Engine</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Booking Rule Engine
+          </h2>
           <p className="text-muted-foreground">
             Configure advanced booking rules and restrictions
           </p>
         </div>
         <Button onClick={handleSave} disabled={isSaving}>
-          <Save className="mr-2 h-4 w-4" />
+          <Save className="mr-2 size-4" />
           {isSaving ? "Saving..." : "Save All Changes"}
         </Button>
       </div>
@@ -260,7 +273,8 @@ export default function GroomingBookingRulesPage() {
             Service Catalog
           </CardTitle>
           <CardDescription>
-            Drag and drop to reorder, toggle to activate/deactivate services, set prices per size
+            Drag and drop to reorder, toggle to activate/deactivate services,
+            set prices per size
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -280,7 +294,7 @@ export default function GroomingBookingRulesPage() {
               {serviceCatalog.map((service) => (
                 <TableRow key={service.id}>
                   <TableCell>
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                    <GripVertical className="text-muted-foreground size-4 cursor-move" />
                   </TableCell>
                   <TableCell className="font-medium">{service.name}</TableCell>
                   <TableCell>
@@ -289,8 +303,10 @@ export default function GroomingBookingRulesPage() {
                       onCheckedChange={(checked) => {
                         setServiceCatalog(
                           serviceCatalog.map((s) =>
-                            s.id === service.id ? { ...s, enabled: checked } : s
-                          )
+                            s.id === service.id
+                              ? { ...s, enabled: checked }
+                              : s,
+                          ),
                         );
                       }}
                     />
@@ -310,8 +326,8 @@ export default function GroomingBookingRulesPage() {
                                     small: parseFloat(e.target.value) || 0,
                                   },
                                 }
-                              : s
-                          )
+                              : s,
+                          ),
                         );
                       }}
                       className="w-20"
@@ -332,8 +348,8 @@ export default function GroomingBookingRulesPage() {
                                     medium: parseFloat(e.target.value) || 0,
                                   },
                                 }
-                              : s
-                          )
+                              : s,
+                          ),
                         );
                       }}
                       className="w-20"
@@ -354,8 +370,8 @@ export default function GroomingBookingRulesPage() {
                                     large: parseFloat(e.target.value) || 0,
                                   },
                                 }
-                              : s
-                          )
+                              : s,
+                          ),
                         );
                       }}
                       className="w-20"
@@ -376,8 +392,8 @@ export default function GroomingBookingRulesPage() {
                                     xl: parseFloat(e.target.value) || 0,
                                   },
                                 }
-                              : s
-                          )
+                              : s,
+                          ),
                         );
                       }}
                       className="w-20"
@@ -395,18 +411,19 @@ export default function GroomingBookingRulesPage() {
         <CardHeader>
           <CardTitle>Add-On Restrictions</CardTitle>
           <CardDescription>
-            Configure conditional rules for add-ons (e.g., "Don't show Teeth Brushing if Bath not selected")
+            Configure conditional rules for add-ons (e.g., &quot;Don&apos;t show
+            Teeth Brushing if Bath not selected&quot;)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {addOnRestrictions.map((restriction) => (
             <div
               key={restriction.id}
-              className="flex items-center gap-4 p-4 border rounded-lg"
+              className="flex items-center gap-4 rounded-lg border p-4"
             >
               <div className="flex-1">
                 <p className="font-medium">{restriction.addOnName}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {restriction.condition === "requires"
                     ? `Requires: ${restriction.requiresServiceName}`
                     : `Excludes: ${restriction.requiresServiceName}`}
@@ -417,16 +434,16 @@ export default function GroomingBookingRulesPage() {
                 size="sm"
                 onClick={() => {
                   setAddOnRestrictions(
-                    addOnRestrictions.filter((r) => r.id !== restriction.id)
+                    addOnRestrictions.filter((r) => r.id !== restriction.id),
                   );
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
               </Button>
             </div>
           ))}
           <Button variant="outline" onClick={() => {}}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Restriction
           </Button>
         </CardContent>
@@ -440,12 +457,13 @@ export default function GroomingBookingRulesPage() {
             Scheduling Rules
           </CardTitle>
           <CardDescription>
-            Configure advance booking limits, zone restrictions, and day-specific rules
+            Configure advance booking limits, zone restrictions, and
+            day-specific rules
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {schedulingRules.map((rule) => (
-            <div key={rule.id} className="p-4 border rounded-lg space-y-3">
+            <div key={rule.id} className="space-y-3 rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Switch
@@ -453,8 +471,8 @@ export default function GroomingBookingRulesPage() {
                     onCheckedChange={(checked) => {
                       setSchedulingRules(
                         schedulingRules.map((r) =>
-                          r.id === rule.id ? { ...r, enabled: checked } : r
-                        )
+                          r.id === rule.id ? { ...r, enabled: checked } : r,
+                        ),
                       );
                     }}
                   />
@@ -465,7 +483,7 @@ export default function GroomingBookingRulesPage() {
                   size="sm"
                   onClick={() => removeSchedulingRule(rule.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                 </Button>
               </div>
               {rule.type === "advance_booking" && (
@@ -479,8 +497,8 @@ export default function GroomingBookingRulesPage() {
                           schedulingRules.map((r) =>
                             r.id === rule.id
                               ? { ...r, dayOfWeek: parseInt(value) }
-                              : r
-                          )
+                              : r,
+                          ),
                         );
                       }}
                     >
@@ -507,9 +525,12 @@ export default function GroomingBookingRulesPage() {
                         setSchedulingRules(
                           schedulingRules.map((r) =>
                             r.id === rule.id
-                              ? { ...r, daysInAdvance: parseInt(e.target.value) || 0 }
-                              : r
-                          )
+                              ? {
+                                  ...r,
+                                  daysInAdvance: parseInt(e.target.value) || 0,
+                                }
+                              : r,
+                          ),
                         );
                       }}
                     />
@@ -531,9 +552,12 @@ export default function GroomingBookingRulesPage() {
                         setSchedulingRules(
                           schedulingRules.map((r) =>
                             r.id === rule.id
-                              ? { ...r, noticeDays: parseInt(e.target.value) || 0 }
-                              : r
-                          )
+                              ? {
+                                  ...r,
+                                  noticeDays: parseInt(e.target.value) || 0,
+                                }
+                              : r,
+                          ),
                         );
                       }}
                     />
@@ -543,7 +567,7 @@ export default function GroomingBookingRulesPage() {
             </div>
           ))}
           <Button variant="outline" onClick={addSchedulingRule}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Scheduling Rule
           </Button>
         </CardContent>
@@ -557,16 +581,20 @@ export default function GroomingBookingRulesPage() {
             Buffer Times (Per Groomer)
           </CardTitle>
           <CardDescription>
-            Set custom break times between appointments per groomer (e.g., Jessica needs 30 min lunch at 12 PM)
+            Set custom break times between appointments per groomer (e.g.,
+            Jessica needs 30 min lunch at 12 PM)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {groomerBuffers.map((groomer) => (
-            <div key={groomer.groomerId} className="p-4 border rounded-lg space-y-3">
+            <div
+              key={groomer.groomerId}
+              className="space-y-3 rounded-lg border p-4"
+            >
               <h4 className="font-medium">{groomer.groomerName}</h4>
               {groomer.buffers.map((buffer) => (
                 <div key={buffer.id} className="flex items-center gap-4">
-                  <div className="flex-1 grid grid-cols-3 gap-2">
+                  <div className="grid flex-1 grid-cols-3 gap-2">
                     <Input
                       type="time"
                       value={buffer.startTime}
@@ -579,11 +607,11 @@ export default function GroomingBookingRulesPage() {
                                   buffers: g.buffers.map((b) =>
                                     b.id === buffer.id
                                       ? { ...b, startTime: e.target.value }
-                                      : b
+                                      : b,
                                   ),
                                 }
-                              : g
-                          )
+                              : g,
+                          ),
                         );
                       }}
                     />
@@ -599,11 +627,11 @@ export default function GroomingBookingRulesPage() {
                                   buffers: g.buffers.map((b) =>
                                     b.id === buffer.id
                                       ? { ...b, endTime: e.target.value }
-                                      : b
+                                      : b,
                                   ),
                                 }
-                              : g
-                          )
+                              : g,
+                          ),
                         );
                       }}
                     />
@@ -618,11 +646,11 @@ export default function GroomingBookingRulesPage() {
                                   buffers: g.buffers.map((b) =>
                                     b.id === buffer.id
                                       ? { ...b, reason: e.target.value }
-                                      : b
+                                      : b,
                                   ),
                                 }
-                              : g
-                          )
+                              : g,
+                          ),
                         );
                       }}
                       placeholder="Reason (e.g., Lunch break)"
@@ -639,11 +667,11 @@ export default function GroomingBookingRulesPage() {
                                 buffers: g.buffers.map((b) =>
                                   b.id === buffer.id
                                     ? { ...b, recurring: checked }
-                                    : b
+                                    : b,
                                 ),
                               }
-                            : g
-                        )
+                            : g,
+                        ),
                       );
                     }}
                   />
@@ -665,15 +693,17 @@ export default function GroomingBookingRulesPage() {
             Capacity Guards
           </CardTitle>
           <CardDescription>
-            Stop accepting bookings when a percentage threshold is reached (leave room for urgent/emergency grooms)
+            Stop accepting bookings when a percentage threshold is reached
+            (leave room for urgent/emergency grooms)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Enable Capacity Guard</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically stop online bookings when capacity threshold is reached
+              <p className="text-muted-foreground text-sm">
+                Automatically stop online bookings when capacity threshold is
+                reached
               </p>
             </div>
             <Switch
@@ -700,8 +730,9 @@ export default function GroomingBookingRulesPage() {
                       });
                     }}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Stop online booking when {capacityGuard.threshold}% of slots are full
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Stop online booking when {capacityGuard.threshold}% of slots
+                    are full
                   </p>
                 </div>
                 <div>
@@ -716,7 +747,9 @@ export default function GroomingBookingRulesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="stop_online">Stop Online Booking</SelectItem>
+                      <SelectItem value="stop_online">
+                        Stop Online Booking
+                      </SelectItem>
                       <SelectItem value="warn_only">Warn Only</SelectItem>
                     </SelectContent>
                   </Select>
@@ -727,7 +760,10 @@ export default function GroomingBookingRulesPage() {
                 <Textarea
                   value={capacityGuard.message}
                   onChange={(e) => {
-                    setCapacityGuard({ ...capacityGuard, message: e.target.value });
+                    setCapacityGuard({
+                      ...capacityGuard,
+                      message: e.target.value,
+                    });
                   }}
                   placeholder="We're almost fully booked. Please call for availability."
                   rows={2}
@@ -746,14 +782,15 @@ export default function GroomingBookingRulesPage() {
             Blackout Dates
           </CardTitle>
           <CardDescription>
-            Block online booking for specific dates (holidays, staff training) while keeping calendar open for manual entry
+            Block online booking for specific dates (holidays, staff training)
+            while keeping calendar open for manual entry
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {blackoutDates.map((blackout) => (
-            <div key={blackout.id} className="p-4 border rounded-lg space-y-3">
+            <div key={blackout.id} className="space-y-3 rounded-lg border p-4">
               <div className="flex items-center justify-between">
-                <div className="flex-1 grid grid-cols-3 gap-4">
+                <div className="grid flex-1 grid-cols-3 gap-4">
                   <div>
                     <Label>Start Date</Label>
                     <Input
@@ -764,8 +801,8 @@ export default function GroomingBookingRulesPage() {
                           blackoutDates.map((b) =>
                             b.id === blackout.id
                               ? { ...b, startDate: e.target.value }
-                              : b
-                          )
+                              : b,
+                          ),
                         );
                       }}
                     />
@@ -780,8 +817,8 @@ export default function GroomingBookingRulesPage() {
                           blackoutDates.map((b) =>
                             b.id === blackout.id
                               ? { ...b, endDate: e.target.value }
-                              : b
-                          )
+                              : b,
+                          ),
                         );
                       }}
                     />
@@ -795,8 +832,8 @@ export default function GroomingBookingRulesPage() {
                           blackoutDates.map((b) =>
                             b.id === blackout.id
                               ? { ...b, reason: e.target.value }
-                              : b
-                          )
+                              : b,
+                          ),
                         );
                       }}
                       placeholder="Holiday, Training, etc."
@@ -808,7 +845,7 @@ export default function GroomingBookingRulesPage() {
                   size="sm"
                   onClick={() => removeBlackoutDate(blackout.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                 </Button>
               </div>
               <div className="flex items-center gap-2">
@@ -819,8 +856,8 @@ export default function GroomingBookingRulesPage() {
                       blackoutDates.map((b) =>
                         b.id === blackout.id
                           ? { ...b, allowManualBooking: checked }
-                          : b
-                      )
+                          : b,
+                      ),
                     );
                   }}
                 />
@@ -831,7 +868,7 @@ export default function GroomingBookingRulesPage() {
             </div>
           ))}
           <Button variant="outline" onClick={addBlackoutDate}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Blackout Date
           </Button>
         </CardContent>

@@ -55,7 +55,7 @@ export function SettingsBlock<T>({
           <div>
             <CardTitle>{title}</CardTitle>
             {description && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {description}
               </p>
             )}
@@ -63,7 +63,7 @@ export function SettingsBlock<T>({
           {isEditing ? (
             <div className="flex gap-2">
               <Button onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="mr-2 size-4" />
                 Save
               </Button>
               <Button variant="outline" onClick={handleCancel}>
@@ -72,7 +72,7 @@ export function SettingsBlock<T>({
             </div>
           ) : (
             <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="mr-2 size-4" />
               Edit
             </Button>
           )}

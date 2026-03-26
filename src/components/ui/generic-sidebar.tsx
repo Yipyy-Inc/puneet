@@ -112,11 +112,11 @@ export function GenericSidebar({
   }, [menuSections, searchQuery]);
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-sidebar z-50 pb-16">
+    <Sidebar collapsible="icon" className="bg-sidebar z-50 border-r-0 pb-16">
       {/* Header */}
       <SidebarHeader
         className={cn(
-          "border-b border-sidebar-border/50",
+          "border-sidebar-border/50 border-b",
           isExpanded ? "px-5 py-3" : "px-1 py-2",
         )}
       >
@@ -127,7 +127,7 @@ export function GenericSidebar({
               <div className="flex items-center gap-2">
                 <button
                   onClick={toggleAllSections}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-sidebar-accent transition-colors"
+                  className="hover:bg-sidebar-accent flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
                   title={
                     bulkCollapsed
                       ? "Expand all sections"
@@ -136,7 +136,7 @@ export function GenericSidebar({
                 >
                   <ChevronUp
                     className={cn(
-                      "h-4 w-4 transition-transform duration-200",
+                      "size-4 transition-transform duration-200",
                       bulkCollapsed ? "rotate-180" : "",
                     )}
                   />
@@ -146,20 +146,20 @@ export function GenericSidebar({
             </div>
             {/* Search Input */}
             <div className="relative mt-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <SidebarInput
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-8"
+                className="pr-8 pl-9"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-sm hover:bg-sidebar-accent"
+                  className="hover:bg-sidebar-accent absolute top-1/2 right-2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm"
                 >
-                  <X className="h-3 w-3 text-muted-foreground" />
+                  <X className="text-muted-foreground h-3 w-3" />
                 </button>
               )}
             </div>
@@ -173,7 +173,10 @@ export function GenericSidebar({
 
       {/* Navigation Content */}
       <SidebarContent
-        className={cn("py-2 scrollbar-thin overflow-x-hidden", isExpanded ? "px-3" : "px-1")}
+        className={cn(
+          "scrollbar-thin overflow-x-hidden py-2",
+          isExpanded ? "px-3" : "px-1",
+        )}
       >
         {filteredMenuSections.map((section, index) => {
           const hasActiveItem = section.items.some(
@@ -203,8 +206,8 @@ export function GenericSidebar({
                               disabled
                               tooltip={item.title}
                               className={cn(
-                                "w-full text-sm font-medium rounded-lg",
-                                "opacity-50 cursor-not-allowed",
+                                "w-full rounded-lg text-sm font-medium",
+                                "cursor-not-allowed opacity-50",
                                 "text-muted-foreground",
                               )}
                             >
@@ -216,7 +219,7 @@ export function GenericSidebar({
                               isActive={isActive}
                               tooltip={item.title}
                               className={cn(
-                                "w-full text-sm font-medium transition-all duration-200 rounded-lg",
+                                `w-full rounded-lg text-sm font-medium transition-all duration-200`,
                                 "hover:bg-sidebar-accent",
                                 isActive && [
                                   "bg-primary text-primary-foreground",
@@ -237,7 +240,7 @@ export function GenericSidebar({
                                     )}
                                   />
                                   {item.count && item.count > 0 && (
-                                    <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full" />
+                                    <div className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-red-500" />
                                   )}
                                 </div>
                               </Link>
@@ -265,20 +268,20 @@ export function GenericSidebar({
                   <CollapsibleTrigger asChild>
                     <SidebarGroupLabel
                       className={cn(
-                        "px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 flex items-center justify-between",
+                        `text-muted-foreground/70 mb-1 flex items-center justify-between px-3 text-xs font-semibold tracking-wider uppercase`,
                         !hasActiveItem && "cursor-pointer",
                       )}
                     >
                       <span>{section.label}</span>
                       <ChevronRight
                         className={cn(
-                          "h-4 w-4 transition-transform duration-200",
+                          "size-4 transition-transform duration-200",
                           isOpen ? "rotate-90" : "",
                         )}
                       />
                     </SidebarGroupLabel>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down border-l-2 border-sidebar-border ml-3 pl-3">
+                  <CollapsibleContent className="border-sidebar-border data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down ml-3 overflow-hidden border-l-2 pl-3">
                     <SidebarGroupContent>
                       <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {
@@ -293,7 +296,7 @@ export function GenericSidebar({
                                   className={cn(
                                     "w-full text-sm font-medium",
                                     isExpanded ? "rounded-xl" : "rounded-lg",
-                                    "opacity-50 cursor-not-allowed",
+                                    "cursor-not-allowed opacity-50",
                                     "text-muted-foreground",
                                   )}
                                 >
@@ -310,7 +313,7 @@ export function GenericSidebar({
                                   isActive={isActive}
                                   tooltip={item.title}
                                   className={cn(
-                                    "w-full text-sm font-medium transition-all duration-200",
+                                    `w-full text-sm font-medium transition-all duration-200`,
                                     isExpanded ? "rounded-xl" : "rounded-lg",
                                     "hover:bg-sidebar-accent",
                                     isActive && [
@@ -335,7 +338,7 @@ export function GenericSidebar({
                                     />
                                     {isExpanded && (
                                       <>
-                                        <span className="truncate flex-1">
+                                        <span className="flex-1 truncate">
                                           {item.title}
                                         </span>
                                         {item.count && (
@@ -347,7 +350,7 @@ export function GenericSidebar({
                                           </Badge>
                                         )}
                                         {isActive && (
-                                          <ChevronRight className="h-4 w-4 opacity-60" />
+                                          <ChevronRight className="size-4 opacity-60" />
                                         )}
                                       </>
                                     )}
@@ -374,8 +377,8 @@ export function GenericSidebar({
                               disabled
                               tooltip={item.title}
                               className={cn(
-                                "w-full text-sm font-medium rounded-xl",
-                                "opacity-50 cursor-not-allowed",
+                                "w-full rounded-xl text-sm font-medium",
+                                "cursor-not-allowed opacity-50",
                                 "text-muted-foreground",
                               )}
                             >
@@ -388,7 +391,7 @@ export function GenericSidebar({
                               isActive={isActive}
                               tooltip={item.title}
                               className={cn(
-                                "w-full text-sm font-medium transition-all duration-200 rounded-xl",
+                                `w-full rounded-xl text-sm font-medium transition-all duration-200`,
                                 "hover:bg-sidebar-accent",
                                 isActive && [
                                   "bg-primary text-primary-foreground",
@@ -407,7 +410,7 @@ export function GenericSidebar({
                                     isActive && "text-muted-foreground",
                                   )}
                                 />
-                                <span className="truncate flex-1">
+                                <span className="flex-1 truncate">
                                   {item.title}
                                 </span>
                                 {item.count && (
@@ -419,7 +422,7 @@ export function GenericSidebar({
                                   </Badge>
                                 )}
                                 {isActive && (
-                                  <ChevronRight className="h-4 w-4 opacity-60" />
+                                  <ChevronRight className="size-4 opacity-60" />
                                 )}
                               </Link>
                             </SidebarMenuButton>
@@ -442,8 +445,8 @@ export function GenericSidebar({
                           disabled
                           tooltip={activeItem.title}
                           className={cn(
-                            "w-full text-sm font-medium rounded-xl",
-                            "opacity-50 cursor-not-allowed",
+                            "w-full rounded-xl text-sm font-medium",
+                            "cursor-not-allowed opacity-50",
                             "text-muted-foreground",
                           )}
                         >
@@ -456,7 +459,7 @@ export function GenericSidebar({
                           isActive={true}
                           tooltip={activeItem.title}
                           className={cn(
-                            "w-full text-sm font-medium transition-all duration-200 rounded-xl",
+                            `w-full rounded-xl text-sm font-medium transition-all duration-200`,
                             "bg-primary text-primary-foreground",
                             "shadow-sm",
                             "hover:bg-primary/90",
@@ -472,7 +475,7 @@ export function GenericSidebar({
                                 "text-muted-foreground",
                               )}
                             />
-                            <span className="truncate flex-1">
+                            <span className="flex-1 truncate">
                               {activeItem.title}
                             </span>
                             {activeItem.count && (
@@ -480,7 +483,7 @@ export function GenericSidebar({
                                 {activeItem.count}
                               </Badge>
                             )}
-                            <ChevronRight className="h-4 w-4 opacity-60" />
+                            <ChevronRight className="size-4 opacity-60" />
                           </Link>
                         </SidebarMenuButton>
                       )}
@@ -496,7 +499,7 @@ export function GenericSidebar({
       {/* Footer */}
       <SidebarFooter
         className={cn(
-          "border-t border-sidebar-border/50",
+          "border-sidebar-border/50 border-t",
           isExpanded ? "px-3 py-4" : "px-1 py-2",
         )}
       >
@@ -507,7 +510,7 @@ export function GenericSidebar({
             className={cn(
               "w-full text-sm font-medium",
               isExpanded ? "rounded-xl px-3 py-2.5" : "rounded-lg",
-              "text-destructive hover:bg-destructive/10",
+              `text-destructive hover:bg-destructive/10`,
               "transition-all duration-200",
             )}
             onClick={onLogout}

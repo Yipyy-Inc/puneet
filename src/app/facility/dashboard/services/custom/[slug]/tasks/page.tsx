@@ -64,7 +64,10 @@ const MOCK_TASKS: MockTask[] = [
 
 const STATUS_CONFIG: Record<
   TaskStatus,
-  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "outline" | "destructive";
+  }
 > = {
   pending: { label: "Pending", variant: "secondary" },
   in_progress: { label: "In Progress", variant: "default" },
@@ -84,11 +87,11 @@ export default function CustomServiceTasksPage() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(slug ?? "");
+  const serviceModule = getModuleBySlug(slug ?? "");
 
-  if (!module) return null;
+  if (!serviceModule) return null;
 
-  const { staffAssignment } = module;
+  const { staffAssignment } = serviceModule;
 
   const completedCount = MOCK_TASKS.filter(
     (t) => t.status === "completed",
@@ -103,8 +106,8 @@ export default function CustomServiceTasksPage() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold">Tasks</h2>
-        <p className="text-sm text-muted-foreground">
-          Staff task tracking for {module.name}
+        <p className="text-muted-foreground text-sm">
+          Staff task tracking for {serviceModule.name}
         </p>
       </div>
 
@@ -113,8 +116,8 @@ export default function CustomServiceTasksPage() {
         {/* Staff Assignment Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <UserCheck className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <UserCheck className="size-4" />
               Staff Assignment
             </CardTitle>
           </CardHeader>
@@ -139,8 +142,8 @@ export default function CustomServiceTasksPage() {
         {/* Task Generation Phases */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-base font-semibold">
+              <ClipboardList className="size-4" />
               Auto-Generated Phases
             </CardTitle>
           </CardHeader>
@@ -155,11 +158,11 @@ export default function CustomServiceTasksPage() {
                   return (
                     <div
                       key={phase}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border ${
+                      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
                         isEnabled
-                          ? "bg-primary/5 border-primary/20 text-primary"
-                          : "bg-muted/40 border-transparent text-muted-foreground"
-                      }`}
+                          ? "border-primary/20 bg-primary/5 text-primary"
+                          : `bg-muted/40 text-muted-foreground border-transparent`
+                      } `}
                     >
                       <PhaseIcon className="h-3.5 w-3.5" />
                       {cfg.label}
@@ -169,7 +172,7 @@ export default function CustomServiceTasksPage() {
               )}
             </div>
             {staffAssignment.taskGeneration.length === 0 && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No automatic task generation configured.
               </p>
             )}
@@ -183,11 +186,11 @@ export default function CustomServiceTasksPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-muted-foreground text-sm">Completed</p>
                 <p className="text-2xl font-bold">{completedCount}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/10">
-                <CheckCircle2 className="h-6 w-6 text-success" />
+              <div className="bg-success/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <CheckCircle2 className="text-success h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -196,11 +199,11 @@ export default function CustomServiceTasksPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-muted-foreground text-sm">In Progress</p>
                 <p className="text-2xl font-bold">{inProgressCount}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                <Play className="h-6 w-6 text-primary" />
+              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <Play className="text-primary h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -209,11 +212,11 @@ export default function CustomServiceTasksPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-muted-foreground text-sm">Pending</p>
                 <p className="text-2xl font-bold">{pendingCount}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
-                <Clock className="h-6 w-6 text-muted-foreground" />
+              <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
+                <Clock className="text-muted-foreground h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -224,7 +227,7 @@ export default function CustomServiceTasksPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <ClipboardList className="h-5 w-5" />
               Today&apos;s Tasks
             </CardTitle>
@@ -243,17 +246,17 @@ export default function CustomServiceTasksPage() {
               return (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors"
+                  className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex items-center justify-center w-9 h-9 rounded-full bg-muted ${phaseCfg.color}`}
+                      className={`bg-muted flex h-9 w-9 items-center justify-center rounded-full ${phaseCfg.color} `}
                     >
-                      <PhaseIcon className="h-4 w-4" />
+                      <PhaseIcon className="size-4" />
                     </div>
                     <div>
                       <p className="font-medium">{task.title}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-2 text-xs">
                         <span className="capitalize">{task.phase}</span>
                         <span>•</span>
                         <span>{task.assignedStaff}</span>
@@ -267,7 +270,7 @@ export default function CustomServiceTasksPage() {
                     <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                     {task.status !== "completed" && (
                       <Button size="sm" variant="ghost">
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="size-4" />
                       </Button>
                     )}
                   </div>

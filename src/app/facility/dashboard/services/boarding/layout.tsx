@@ -104,15 +104,15 @@ export default function BoardingLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="sticky top-16 z-10 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-16 z-10 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-indigo-500 to-purple-500">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-purple-500">
                 <Bed className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
                   Boarding Module
                   <Badge
                     variant={
@@ -122,7 +122,7 @@ export default function BoardingLayout({
                     {boarding.status.disabled ? "Disabled" : "Enabled"}
                   </Badge>
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Manage boarding guests, rates, care sheets, and kennel cards
                 </p>
               </div>
@@ -136,7 +136,7 @@ export default function BoardingLayout({
             </div>
           </div>
         </div>
-        <nav className="px-6 flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive =
               pathname === tab.href ||
@@ -149,14 +149,14 @@ export default function BoardingLayout({
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? "bg-background border-b-2 border-primary text-primary"
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 {tab.name}
               </Link>
             );

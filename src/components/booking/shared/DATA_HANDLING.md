@@ -16,7 +16,7 @@ Shared components in this folder are **controlled**: they receive state and call
    From `FeedingScheduleForm` and `MedicationForm`:
    - `feedingSchedule`: `FeedingScheduleItem[]` → booking.`feedingSchedule`
    - `medications`: `MedicationItem[]` → booking.`medications`  
-   These are part of the same booking payload; link by `petId` on each item.
+     These are part of the same booking payload; link by `petId` on each item.
 
 3. **Forms module**  
    Required forms (agreements, vaccination) are completed in the documents/pet profile flows. When the user completes a form:
@@ -26,8 +26,8 @@ Shared components in this folder are **controlled**: they receive state and call
 
 Use `@/lib/booking-step-config` for step order:
 
-- **Daycare:** schedule → add-ons → (optional feeding/meds) → forms → tip → confirm  
-- **Boarding:** schedule → room type → add-ons → feeding/meds → forms → tip → confirm  
-- **Grooming:** package → date/time → add-ons → forms → tip → confirm  
+- **Daycare:** schedule → add-ons → (optional feeding/meds) → forms → tip → confirm
+- **Boarding:** schedule → room type → add-ons → feeding/meds → forms → tip → confirm
+- **Grooming:** package → date/time → add-ons → forms → tip → confirm
 
 Detail sub-steps are defined in `DETAIL_STEPS_BY_SERVICE`; main steps in `CUSTOMER_MAIN_STEPS` / `FACILITY_MAIN_STEPS`.

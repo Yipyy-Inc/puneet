@@ -1,13 +1,11 @@
 /**
  * Yipyy Pay / Tap to Pay Service
- * 
+ *
  * Handles contactless card payments via iPhone (Tap to Pay)
  * No physical terminal needed - uses iPhone's NFC capability
  */
 
 import {
-  YipyyPayConfig,
-  YipyyPayDevice,
   YipyyPayTransaction,
   getYipyyPayConfig,
   getYipyyPayDevice,
@@ -61,10 +59,10 @@ export interface YipyyPayResponse {
  * Process payment via Yipyy Pay / Tap to Pay on iPhone
  */
 export async function processYipyyPay(
-  request: YipyyPayRequest
+  request: YipyyPayRequest,
 ): Promise<YipyyPayResponse> {
   const config = getYipyyPayConfig(request.facilityId);
-  
+
   if (!config || !config.enabled) {
     return {
       success: false,
@@ -85,7 +83,7 @@ export async function processYipyyPay(
   }
 
   const device = getYipyyPayDevice(request.facilityId, request.deviceId);
-  
+
   if (!device) {
     return {
       success: false,
@@ -126,7 +124,10 @@ export async function processYipyyPay(
 
   // Check transaction limits
   const totalAmount = request.amount + (request.tipAmount || 0);
-  if (config.maxTransactionAmount && totalAmount > config.maxTransactionAmount) {
+  if (
+    config.maxTransactionAmount &&
+    totalAmount > config.maxTransactionAmount
+  ) {
     return {
       success: false,
       transactionId: "",
@@ -145,7 +146,10 @@ export async function processYipyyPay(
     };
   }
 
-  if (config.minTransactionAmount && totalAmount < config.minTransactionAmount) {
+  if (
+    config.minTransactionAmount &&
+    totalAmount < config.minTransactionAmount
+  ) {
     return {
       success: false,
       transactionId: "",
@@ -312,7 +316,7 @@ function generateReceiptData(data: {
     minute: "2-digit",
   });
 
-  let receipt = `
+  const receipt = `
 ================================
         RECEIPT
 ================================
@@ -345,7 +349,7 @@ Thank you for your business!
  */
 async function sendReceipt(
   customerId: number | undefined,
-  receiptData: string
+  receiptData: string,
 ): Promise<boolean> {
   if (!customerId) {
     return false;
@@ -355,7 +359,7 @@ async function sendReceipt(
   // In production, this would send receipt to customer's email or phone
   console.log(`Sending receipt to customer ${customerId}...`);
   console.log(`Receipt data:\n${receiptData}`);
-  
+
   await new Promise((resolve) => setTimeout(resolve, 500));
   return true;
 }
@@ -365,14 +369,14 @@ async function sendReceipt(
  */
 export async function checkDeviceReady(
   facilityId: number,
-  deviceId: string
+  deviceId: string,
 ): Promise<{
   isReady: boolean;
   isAuthorized: boolean;
   error?: string;
 }> {
   const device = getYipyyPayDevice(facilityId, deviceId);
-  
+
   if (!device) {
     return {
       isReady: false,

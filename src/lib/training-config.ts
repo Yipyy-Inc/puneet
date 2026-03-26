@@ -1,6 +1,6 @@
 /**
  * Training Module Configuration
- * 
+ *
  * Defines the structure for training course types (class catalog)
  * that facilities can configure and customize.
  */
@@ -32,7 +32,8 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
   {
     id: "basic-obedience",
     name: "Basic Obedience / Beginner Manners",
-    description: "Teaches foundational commands like sit, stay, down, and polite leash walking. Perfect for dogs who are new to training or need a refresher on basic manners. This course focuses on building a strong foundation for future training.",
+    description:
+      "Teaches foundational commands like sit, stay, down, and polite leash walking. Perfect for dogs who are new to training or need a refresher on basic manners. This course focuses on building a strong foundation for future training.",
     defaultWeeks: 6,
     ageRange: {
       minWeeks: 16, // 16+ weeks
@@ -46,8 +47,10 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
       "Water bottle for your dog",
       "Waste bags",
     ],
-    cancellationPolicy: "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
-    refundPolicy: "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
+    cancellationPolicy:
+      "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
+    refundPolicy:
+      "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -55,7 +58,8 @@ export const defaultTrainingCourseTypes: TrainingCourseType[] = [
   {
     id: "intermediate-obedience",
     name: "Intermediate / Level 2 Obedience",
-    description: "Adds distractions, distance, and duration to previously learned commands.",
+    description:
+      "Adds distractions, distance, and duration to previously learned commands.",
     defaultWeeks: 4,
     ageRange: {
       minWeeks: 20,

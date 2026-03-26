@@ -681,10 +681,34 @@ export interface TimeOffReason {
 
 // Default time off reasons
 export const defaultTimeOffReasons: Omit<TimeOffReason, "facility">[] = [
-  { id: "vacation", name: "Vacation", isDefault: true, isActive: true, requiresApproval: true },
-  { id: "personal", name: "Personal day", isDefault: true, isActive: true, requiresApproval: true },
-  { id: "sick_planned", name: "Sick day (planned)", isDefault: true, isActive: true, requiresApproval: true },
-  { id: "sick_last_minute", name: "Sick day (same-day / last-minute)", isDefault: true, isActive: true, requiresApproval: true },
+  {
+    id: "vacation",
+    name: "Vacation",
+    isDefault: true,
+    isActive: true,
+    requiresApproval: true,
+  },
+  {
+    id: "personal",
+    name: "Personal day",
+    isDefault: true,
+    isActive: true,
+    requiresApproval: true,
+  },
+  {
+    id: "sick_planned",
+    name: "Sick day (planned)",
+    isDefault: true,
+    isActive: true,
+    requiresApproval: true,
+  },
+  {
+    id: "sick_last_minute",
+    name: "Sick day (same-day / last-minute)",
+    isDefault: true,
+    isActive: true,
+    requiresApproval: true,
+  },
 ];
 
 // Time-off Requests

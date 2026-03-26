@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Bell, FileText, Info, AlertCircle, AlertTriangle, Paperclip } from "lucide-react";
+import {
+  Bell,
+  FileText,
+  Info,
+  AlertCircle,
+  AlertTriangle,
+  Paperclip,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,30 +44,36 @@ function IconForType(type: FacilityNotificationType) {
   switch (type) {
     case "yipyygo_submitted":
     case "form_submission_new":
-      return <FileText className="h-4 w-4 text-primary" />;
+      return <FileText className="text-primary size-4" />;
     case "form_submission_red_flag":
-      return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      return <AlertTriangle className="text-destructive size-4" />;
     case "form_submission_has_files":
-      return <Paperclip className="h-4 w-4 text-muted-foreground" />;
+      return <Paperclip className="text-muted-foreground size-4" />;
     case "warning":
-      return <AlertCircle className="h-4 w-4 text-warning" />;
+      return <AlertCircle className="text-warning size-4" />;
     default:
-      return <Info className="h-4 w-4 text-muted-foreground" />;
+      return <Info className="text-muted-foreground size-4" />;
   }
 }
 
-export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotificationsDropdownProps) {
-  const [notifications, setNotifications] = useState<FacilityNotification[]>([]);
+export function FacilityNotificationsDropdown({
+  facilityId = 11,
+}: FacilityNotificationsDropdownProps) {
+  const [notifications, setNotifications] = useState<FacilityNotification[]>(
+    () => getFacilityNotifications(facilityId),
+  );
   const [open, setOpen] = useState(false);
 
-  const refresh = () => setNotifications(getFacilityNotifications(facilityId));
+  const refresh = useCallback(
+    () => setNotifications(getFacilityNotifications(facilityId)),
+    [facilityId],
+  );
   const unreadCount = getUnreadFacilityNotificationCount(facilityId);
 
   useEffect(() => {
-    refresh();
     const unsub = subscribeToFacilityNotifications(refresh);
     return unsub;
-  }, [facilityId]);
+  }, [refresh]);
 
   const markRead = (id: string) => {
     markFacilityNotificationRead(id);
@@ -77,23 +89,26 @@ export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotif
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
-          className="relative flex items-center justify-center h-10 w-10 rounded-xl hover:bg-muted transition-colors"
+          className="hover:bg-muted relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
           aria-label="Notifications"
         >
-          <Bell className="h-5 w-5 text-muted-foreground" />
+          <Bell className="text-muted-foreground h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span className="bg-primary absolute top-2 right-2 h-2 w-2 animate-pulse rounded-full" />
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-[360px] overflow-y-auto">
-        <div className="flex items-center justify-between px-2 py-1.5 border-b">
-          <span className="font-medium text-sm">Notifications</span>
+      <DropdownMenuContent
+        align="end"
+        className="max-h-[360px] w-80 overflow-y-auto"
+      >
+        <div className="flex items-center justify-between border-b px-2 py-1.5">
+          <span className="text-sm font-medium">Notifications</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-0 text-xs text-muted-foreground"
+              className="text-muted-foreground h-auto p-0 text-xs"
               onClick={markAllRead}
             >
               Mark all read
@@ -101,7 +116,7 @@ export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotif
           )}
         </div>
         {notifications.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-8 text-center text-sm">
             No notifications
           </div>
         ) : (
@@ -109,28 +124,31 @@ export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotif
             {notifications.slice(0, 20).map((n) => (
               <div
                 key={n.id}
-                className={`flex gap-2 px-3 py-2 hover:bg-muted/50 ${!n.read ? "bg-primary/5" : ""}`}
+                className={`hover:bg-muted/50 flex gap-2 px-3 py-2 ${!n.read ? `bg-primary/5` : ""} `}
               >
-                <div className="shrink-0 mt-0.5">{IconForType(n.type)}</div>
+                <div className="mt-0.5 shrink-0">{IconForType(n.type)}</div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{n.title}</p>
-                  <p className="text-xs text-muted-foreground">{n.message}</p>
-                  {(n.type === "form_submission_new" || n.type === "form_submission_red_flag" || n.type === "form_submission_has_files") && n.submissionId && (
-                    <Link
-                      href={`/facility/dashboard/forms/submissions/${n.submissionId}`}
-                      className="text-xs text-primary hover:underline mt-1 inline-block"
-                      onClick={() => {
-                        markRead(n.id);
-                        setOpen(false);
-                      }}
-                    >
-                      View submission →
-                    </Link>
-                  )}
+                  <p className="text-muted-foreground text-xs">{n.message}</p>
+                  {(n.type === "form_submission_new" ||
+                    n.type === "form_submission_red_flag" ||
+                    n.type === "form_submission_has_files") &&
+                    n.submissionId && (
+                      <Link
+                        href={`/facility/dashboard/forms/submissions/${n.submissionId}`}
+                        className="text-primary mt-1 inline-block text-xs hover:underline"
+                        onClick={() => {
+                          markRead(n.id);
+                          setOpen(false);
+                        }}
+                      >
+                        View submission →
+                      </Link>
+                    )}
                   {n.type === "yipyygo_submitted" && n.bookingId != null && (
                     <Link
                       href={`/facility/dashboard/bookings/${n.bookingId}#yipyygo`}
-                      className="text-xs text-primary hover:underline mt-1 inline-block"
+                      className="text-primary mt-1 inline-block text-xs hover:underline"
                       onClick={() => {
                         markRead(n.id);
                         setOpen(false);
@@ -139,13 +157,15 @@ export function FacilityNotificationsDropdown({ facilityId = 11 }: FacilityNotif
                       Review form →
                     </Link>
                   )}
-                  <p className="text-[10px] text-muted-foreground mt-1">{formatTime(n.timestamp)}</p>
+                  <p className="text-muted-foreground mt-1 text-[10px]">
+                    {formatTime(n.timestamp)}
+                  </p>
                 </div>
                 {!n.read && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="shrink-0 h-6 text-xs"
+                    className="h-6 shrink-0 text-xs"
                     onClick={() => markRead(n.id)}
                   >
                     Mark read

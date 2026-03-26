@@ -151,7 +151,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
 
         {/* Optional Limits */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Label className="text-base">Optional Limits</Label>
 
             <div className="grid grid-cols-2 gap-4">
@@ -246,7 +246,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
 
         {/* Conditions */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Label className="text-base">Conditions (Auto-Apply Rules)</Label>
 
             <div className="flex items-center space-x-2">
@@ -259,7 +259,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               />
               <label
                 htmlFor="autoApply"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Auto-apply this promo code when conditions are met
               </label>
@@ -278,7 +278,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
               />
               <label
                 htmlFor="firstTimeCustomer"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 First-time customers only
               </label>
@@ -334,7 +334,7 @@ export function PromoCodeModal({ onClose }: PromoCodeModalProps) {
             !formData.validUntil
           }
         >
-          <Tag className="h-4 w-4 mr-2" />
+          <Tag className="mr-2 size-4" />
           Create Promo Code
         </Button>
       </DialogFooter>

@@ -175,8 +175,8 @@ export function DataTable<T extends object>({
       {/* Filters */}
       <div className="flex items-center space-x-2">
         {(searchKey || searchKeys || getSearchValue) && (
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="relative max-w-sm flex-1">
+            <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
             <Input
               placeholder={searchPlaceholder}
               className="pl-8"
@@ -216,14 +216,14 @@ export function DataTable<T extends object>({
             size="icon"
             onClick={() => setShowFilters(!showFilters)}
           >
-            <Filter className="h-4 w-4" />
+            <Filter className="size-4" />
           </Button>
         )}
         {columns.length > 1 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
-                <Columns className="h-4 w-4" />
+                <Columns className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="space-y-1">
@@ -237,7 +237,7 @@ export function DataTable<T extends object>({
                     e.preventDefault();
                   }}
                 >
-                  <Label className="hover:bg-primary/30 flex items-center gap-2 rounded-md border p-2 has-aria-checked:bg-accent/5 w-full cursor-pointer">
+                  <Label className="hover:bg-primary/30 has-aria-checked:bg-accent/5 flex w-full cursor-pointer items-center gap-2 rounded-md border p-2">
                     <Checkbox
                       checked={visibleColumns[col.key]}
                       onCheckedChange={(checked) =>
@@ -249,7 +249,7 @@ export function DataTable<T extends object>({
                       className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-primary-foreground mt-0.5"
                     />
                     <div className="grid gap-1 font-normal">
-                      <p className="text-xs leading-none font-medium flex items-center gap-2">
+                      <p className="flex items-center gap-2 text-xs leading-none font-medium">
                         {col.icon && <col.icon className="h-3.5 w-3.5" />}
                         {col.label}
                       </p>
@@ -263,7 +263,7 @@ export function DataTable<T extends object>({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -286,14 +286,14 @@ export function DataTable<T extends object>({
                     setCurrentPage(1);
                   }}
                 >
-                  {col.icon && <col.icon className="mr-2 h-4 w-4 inline" />}
+                  {col.icon && <col.icon className="mr-2 inline size-4" />}
                   {col.label}
                   {sortKey === col.key &&
                     col.sortable !== false &&
                     (sortDirection === "asc" ? (
-                      <ArrowUp className="ml-1 h-4 w-4 inline" />
+                      <ArrowUp className="ml-1 inline size-4" />
                     ) : (
-                      <ArrowDown className="ml-1 h-4 w-4 inline" />
+                      <ArrowDown className="ml-1 inline size-4" />
                     ))}
                 </TableHead>
               ))}
@@ -305,7 +305,7 @@ export function DataTable<T extends object>({
               <TableRow>
                 <TableCell
                   colSpan={visibleColumnDefs.length + (actions ? 1 : 0)}
-                  className="text-center py-8 text-muted-foreground"
+                  className="text-muted-foreground py-8 text-center"
                 >
                   No data found
                 </TableCell>
@@ -341,7 +341,10 @@ export function DataTable<T extends object>({
                   ))}
                   {actions && (
                     <TableCell className="text-right">
-                      <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
                         {actions(item)}
                       </div>
                     </TableCell>

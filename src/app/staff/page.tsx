@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,22 +35,16 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  MessageSquare,
-  X,
   ChevronLeft,
   ChevronRight,
   List,
   Grid3x3,
   Calendar as CalendarIcon,
-  PhoneCall,
-  Mail,
 } from "lucide-react";
 import { schedules, type Schedule } from "@/data/schedules";
 import {
   timeOffRequests,
   defaultTimeOffReasons,
-  type TimeOffRequest,
-  type TimeOffReason,
   shiftSwapRequests,
   type ShiftSwapRequest,
   shiftTasks,
@@ -82,8 +76,12 @@ const mockScheduleUpdates: ScheduleUpdate[] = [
 ];
 
 export default function StaffSchedulePage() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [mySchedules, setMySchedules] = useState<Schedule[]>([]);
+  const [userId] = useState<string | null>(() => {
+    const currentUserId = getCurrentUserId();
+    if (currentUserId) return currentUserId;
+    const defaultStaff = users.find((u) => u.role === "Staff");
+    return defaultStaff?.id.toString() || "4";
+  });
   const [viewMode, setViewMode] = useState<"week" | "list" | "day">("week");
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
@@ -91,7 +89,9 @@ export default function StaffSchedulePage() {
     const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
     return new Date(today.setDate(diff));
   });
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [_selectedDate, setSelectedDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
   const [selectedShift, setSelectedShift] = useState<Schedule | null>(null);
   const [isShiftDetailModalOpen, setIsShiftDetailModalOpen] = useState(false);
   const [isTimeOffModalOpen, setIsTimeOffModalOpen] = useState(false);
@@ -99,8 +99,11 @@ export default function StaffSchedulePage() {
   const [isSickCallModalOpen, setIsSickCallModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [isSwapResponseModalOpen, setIsSwapResponseModalOpen] = useState(false);
-  const [selectedSwapRequest, setSelectedSwapRequest] = useState<ShiftSwapRequest | null>(null);
-  const [pendingUpdates, setPendingUpdates] = useState<ScheduleUpdate[]>([]);
+  const [selectedSwapRequest, setSelectedSwapRequest] =
+    useState<ShiftSwapRequest | null>(null);
+  const [acknowledgedUpdateIds, setAcknowledgedUpdateIds] = useState<
+    Set<string>
+  >(new Set());
 
   // Time off request state
   const [timeOffData, setTimeOffData] = useState({
@@ -130,47 +133,38 @@ export default function StaffSchedulePage() {
     message: "",
   });
 
-  useEffect(() => {
-    const currentUserId = getCurrentUserId();
-    // If no user ID, use first staff member as default for demo
-    const defaultStaff = users.find((u) => u.role === "Staff");
-    setUserId(currentUserId || defaultStaff?.id.toString() || "4");
-  }, []);
-
   // Get staff member info
   const staffMember = useMemo(() => {
     if (!userId) return null;
-    return users.find((u) => u.id.toString() === userId || u.email === userId) || null;
+    return (
+      users.find((u) => u.id.toString() === userId || u.email === userId) ||
+      null
+    );
   }, [userId]);
 
   // Get schedules for this staff member
-  useEffect(() => {
-    if (!userId) return;
+  const mySchedules = useMemo(() => {
+    if (!userId) return [];
     const staffId = parseInt(userId);
     const today = new Date().toISOString().split("T")[0];
-    
-    // Get all future and today's schedules
-    const allSchedules = schedules.filter(
-      (s) => s.staffId === staffId && s.date >= today
-    );
-    
-    // Sort by date and time
-    allSchedules.sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.startTime.localeCompare(b.startTime);
-    });
-    
-    setMySchedules(allSchedules);
+
+    return schedules
+      .filter((s) => s.staffId === staffId && s.date >= today)
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.startTime.localeCompare(b.startTime);
+      });
   }, [userId]);
 
   // Get pending schedule updates
-  useEffect(() => {
-    if (!staffMember) return;
-    const unacknowledged = mockScheduleUpdates.filter(
-      (update) => !update.acknowledgedBy.includes(staffMember.id.toString())
+  const pendingUpdates = useMemo(() => {
+    if (!staffMember) return [];
+    return mockScheduleUpdates.filter(
+      (update) =>
+        !update.acknowledgedBy.includes(staffMember.id.toString()) &&
+        !acknowledgedUpdateIds.has(update.id),
     );
-    setPendingUpdates(unacknowledged);
-  }, [staffMember]);
+  }, [staffMember, acknowledgedUpdateIds]);
 
   // Get time off reasons
   const timeOffReasons = useMemo(() => {
@@ -200,7 +194,7 @@ export default function StaffSchedulePage() {
         r.status === "pending" &&
         // Open to anyone (no targetStaffId) OR specifically targeted at me
         (!r.targetStaffId || r.targetStaffId === staffId) &&
-        r.requestingStaffId !== staffId
+        r.requestingStaffId !== staffId,
     );
   }, [userId]);
 
@@ -211,7 +205,7 @@ export default function StaffSchedulePage() {
         t.shiftId === shift.id ||
         (t.scheduleDate === shift.date &&
           t.shiftStartTime === shift.startTime &&
-          t.shiftEndTime === shift.endTime)
+          t.shiftEndTime === shift.endTime),
     );
   };
 
@@ -220,7 +214,7 @@ export default function StaffSchedulePage() {
     if (!userId) return [];
     const staffId = parseInt(userId);
     return getShiftTasks(shift).filter(
-      (t) => t.assignedToStaffId === staffId || t.assignedToStaffId === null
+      (t) => t.assignedToStaffId === staffId || t.assignedToStaffId === null,
     );
   };
 
@@ -294,7 +288,12 @@ export default function StaffSchedulePage() {
     // In production, this would make an API call
     toast.success("Shift swap request submitted successfully");
     setIsSwapModalOpen(false);
-    setSwapData({ shiftId: "", swapType: "specific", targetStaffId: "", reason: "" });
+    setSwapData({
+      shiftId: "",
+      swapType: "specific",
+      targetStaffId: "",
+      reason: "",
+    });
   };
 
   // Handle sick call
@@ -336,9 +335,9 @@ export default function StaffSchedulePage() {
   // Handle schedule update acknowledgment
   const handleAcknowledgeUpdate = (updateId: string) => {
     if (!staffMember) return;
-    
+
     // In production, this would make an API call
-    setPendingUpdates((prev) => prev.filter((u) => u.id !== updateId));
+    setAcknowledgedUpdateIds((prev) => new Set([...prev, updateId]));
     toast.success("Schedule update acknowledged");
   };
 
@@ -363,7 +362,10 @@ export default function StaffSchedulePage() {
 
   // Get status badge color
   const getStatusBadge = (status: Schedule["status"]) => {
-    const variants: Record<Schedule["status"], "default" | "secondary" | "destructive" | "outline"> = {
+    const variants: Record<
+      Schedule["status"],
+      "default" | "secondary" | "destructive" | "outline"
+    > = {
       scheduled: "default",
       confirmed: "secondary",
       completed: "outline",
@@ -385,8 +387,10 @@ export default function StaffSchedulePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No Staff Member Found</h2>
+              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-yellow-500" />
+              <h2 className="mb-2 text-xl font-semibold">
+                No Staff Member Found
+              </h2>
               <p className="text-muted-foreground">
                 Please log in to view your schedule.
               </p>
@@ -398,38 +402,36 @@ export default function StaffSchedulePage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 space-y-4">
+    <div className="space-y-4 p-3 sm:p-4">
       {/* Minimal Header - Mobile First */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">My Schedule</h1>
-          <p className="text-sm text-muted-foreground">
-            {staffMember.name}
-          </p>
+          <h1 className="text-xl font-bold sm:text-2xl">My Schedule</h1>
+          <p className="text-muted-foreground text-sm">{staffMember.name}</p>
         </div>
         {/* Mobile: Single menu button, Desktop: Essential actions only */}
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setIsTimeOffModalOpen(true)} 
-            variant="outline" 
+          <Button
+            onClick={() => setIsTimeOffModalOpen(true)}
+            variant="outline"
             size="sm"
             className="hidden sm:flex"
           >
-            <CalendarDays className="h-4 w-4 sm:mr-2" />
+            <CalendarDays className="size-4 sm:mr-2" />
             <span className="hidden sm:inline">Time Off</span>
           </Button>
-          <Button 
-            onClick={() => setIsSwapModalOpen(true)} 
-            variant="outline" 
+          <Button
+            onClick={() => setIsSwapModalOpen(true)}
+            variant="outline"
             size="sm"
             className="hidden sm:flex"
           >
-            <ArrowRightLeft className="h-4 w-4 sm:mr-2" />
+            <ArrowRightLeft className="size-4 sm:mr-2" />
             <span className="hidden sm:inline">Swap</span>
           </Button>
           {/* Mobile menu button */}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="sm:hidden"
             onClick={() => {
@@ -437,7 +439,7 @@ export default function StaffSchedulePage() {
               setIsTimeOffModalOpen(true);
             }}
           >
-            <CalendarDays className="h-4 w-4" />
+            <CalendarDays className="size-4" />
           </Button>
         </div>
       </div>
@@ -446,7 +448,7 @@ export default function StaffSchedulePage() {
       {pendingUpdates.length > 0 && (
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Info className="h-5 w-5 text-blue-600" />
               New Schedule Updates
             </CardTitle>
@@ -455,14 +457,16 @@ export default function StaffSchedulePage() {
             {pendingUpdates.map((update) => (
               <div
                 key={update.id}
-                className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                className="bg-background flex items-center justify-between rounded-lg border p-3"
               >
                 <div>
                   <p className="font-medium">
-                    Schedule published for {formatDate(update.weekStart)} - {formatDate(update.weekEnd)}
+                    Schedule published for {formatDate(update.weekStart)} -{" "}
+                    {formatDate(update.weekEnd)}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Published {new Date(update.publishedAt).toLocaleDateString("en-US", {
+                  <p className="text-muted-foreground text-sm">
+                    Published{" "}
+                    {new Date(update.publishedAt).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
@@ -475,7 +479,7 @@ export default function StaffSchedulePage() {
                   size="sm"
                   onClick={() => handleAcknowledgeUpdate(update.id)}
                 >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  <CheckCircle2 className="mr-2 size-4" />
                   Acknowledge
                 </Button>
               </div>
@@ -488,7 +492,7 @@ export default function StaffSchedulePage() {
       {availableSwapRequests.length > 0 && (
         <Card className="border-green-200 bg-green-50/50">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <ArrowRightLeft className="h-5 w-5 text-green-600" />
               Available Swap Requests
             </CardTitle>
@@ -497,22 +501,27 @@ export default function StaffSchedulePage() {
             {availableSwapRequests.map((request) => (
               <div
                 key={request.id}
-                className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                className="bg-background flex items-center justify-between rounded-lg border p-3"
               >
                 <div className="flex-1">
                   <p className="font-medium">
                     {request.requestingStaffName} wants to swap
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {request.requestingShiftDate} - {request.requestingShiftTime}
+                  <p className="text-muted-foreground text-sm">
+                    {request.requestingShiftDate} -{" "}
+                    {request.requestingShiftTime}
                     {(() => {
                       // Find the shift to get the role (search in all schedules, not just mySchedules)
-                      const shift = schedules.find(s => s.id === request.requestingShiftId);
-                      return shift ? ` (${shift.role})` : '';
+                      const shift = schedules.find(
+                        (s) => s.id === request.requestingShiftId,
+                      );
+                      return shift ? ` (${shift.role})` : "";
                     })()}
                   </p>
                   {request.reason && (
-                    <p className="text-sm text-muted-foreground mt-1">Reason: {request.reason}</p>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      Reason: {request.reason}
+                    </p>
                   )}
                 </div>
                 <Button
@@ -531,16 +540,22 @@ export default function StaffSchedulePage() {
       )}
 
       {/* Minimal Stats - Only show if there are pending items */}
-      {(myTimeOffRequests.filter((r) => r.status === "pending").length > 0 || 
+      {(myTimeOffRequests.filter((r) => r.status === "pending").length > 0 ||
         mySwapRequests.filter((r) => r.status === "pending").length > 0) && (
         <div className="grid grid-cols-2 gap-2 sm:hidden">
-          {myTimeOffRequests.filter((r) => r.status === "pending").length > 0 && (
+          {myTimeOffRequests.filter((r) => r.status === "pending").length >
+            0 && (
             <Card className="border-blue-200 bg-blue-50/50">
               <CardContent className="pt-3 pb-3">
                 <div className="text-lg font-bold">
-                  {myTimeOffRequests.filter((r) => r.status === "pending").length}
+                  {
+                    myTimeOffRequests.filter((r) => r.status === "pending")
+                      .length
+                  }
                 </div>
-                <p className="text-xs text-muted-foreground">Pending Requests</p>
+                <p className="text-muted-foreground text-xs">
+                  Pending Requests
+                </p>
               </CardContent>
             </Card>
           )}
@@ -550,7 +565,7 @@ export default function StaffSchedulePage() {
                 <div className="text-lg font-bold">
                   {mySwapRequests.filter((r) => r.status === "pending").length}
                 </div>
-                <p className="text-xs text-muted-foreground">Pending Swaps</p>
+                <p className="text-muted-foreground text-xs">Pending Swaps</p>
               </CardContent>
             </Card>
           )}
@@ -558,19 +573,22 @@ export default function StaffSchedulePage() {
       )}
 
       {/* View Tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "week" | "list" | "day")}>
+      <Tabs
+        value={viewMode}
+        onValueChange={(v) => setViewMode(v as "week" | "list" | "day")}
+      >
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="week">
-              <Grid3x3 className="mr-2 h-4 w-4" />
+              <Grid3x3 className="mr-2 size-4" />
               Week View
             </TabsTrigger>
             <TabsTrigger value="list">
-              <List className="mr-2 h-4 w-4" />
+              <List className="mr-2 size-4" />
               My Shifts
             </TabsTrigger>
             <TabsTrigger value="day">
-              <CalendarIcon className="mr-2 h-4 w-4" />
+              <CalendarIcon className="mr-2 size-4" />
               Today
             </TabsTrigger>
           </TabsList>
@@ -583,14 +601,18 @@ export default function StaffSchedulePage() {
               <div className="flex items-center justify-between">
                 <CardTitle>Week View</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
-                    <ChevronLeft className="h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousWeek}
+                  >
+                    <ChevronLeft className="size-4" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleToday}>
                     Today
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleNextWeek}>
-                    <ChevronRight className="h-4 w-4" />
+                    <ChevronRight className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -599,27 +621,31 @@ export default function StaffSchedulePage() {
               <div className="grid grid-cols-7 gap-2">
                 {weekDays.map((day, index) => {
                   const daySchedules = getSchedulesForDate(day);
-                  const isToday = day.toISOString().split("T")[0] === new Date().toISOString().split("T")[0];
-                  
+                  const isToday =
+                    day.toISOString().split("T")[0] ===
+                    new Date().toISOString().split("T")[0];
+
                   return (
                     <div
                       key={index}
-                      className={`border rounded-lg p-2 min-h-[200px] ${
-                        isToday ? "bg-blue-50 border-blue-300" : ""
-                      }`}
+                      className={`min-h-[200px] rounded-lg border p-2 ${isToday ? "border-blue-300 bg-blue-50" : ""} `}
                     >
-                      <div className="font-semibold text-sm mb-2">
+                      <div className="mb-2 text-sm font-semibold">
                         {formatDateShort(day)}
                       </div>
                       <div className="space-y-1">
                         {daySchedules.map((shift) => (
                           <div
                             key={shift.id}
-                            className="text-xs p-1.5 bg-primary/10 rounded cursor-pointer hover:bg-primary/20"
+                            className="bg-primary/10 hover:bg-primary/20 cursor-pointer rounded-sm p-1.5 text-xs"
                             onClick={() => handleViewShift(shift)}
                           >
-                            <div className="font-medium">{shift.startTime} - {shift.endTime}</div>
-                            <div className="text-muted-foreground">{shift.role}</div>
+                            <div className="font-medium">
+                              {shift.startTime} - {shift.endTime}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {shift.role}
+                            </div>
                             {shift.location && (
                               <div className="text-muted-foreground flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
@@ -645,8 +671,8 @@ export default function StaffSchedulePage() {
             </CardHeader>
             <CardContent>
               {mySchedules.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   <p>No upcoming shifts scheduled</p>
                 </div>
               ) : (
@@ -656,17 +682,19 @@ export default function StaffSchedulePage() {
                     return (
                       <div
                         key={shift.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                        className="hover:bg-accent/50 flex cursor-pointer flex-col items-start justify-between rounded-lg border p-4 transition-colors sm:flex-row sm:items-center"
                         onClick={() => handleViewShift(shift)}
                       >
                         <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex flex-wrap items-center gap-3">
                             <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{formatDate(shift.date)}</span>
+                              <Calendar className="text-muted-foreground size-4" />
+                              <span className="font-medium">
+                                {formatDate(shift.date)}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <Clock className="text-muted-foreground size-4" />
                               <span className="text-sm">
                                 {shift.startTime} - {shift.endTime}
                               </span>
@@ -675,7 +703,7 @@ export default function StaffSchedulePage() {
                               {shift.status}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
+                          <div className="text-muted-foreground flex flex-wrap items-center gap-4 text-sm">
                             <span className="font-medium">{shift.role}</span>
                             {shift.location && (
                               <div className="flex items-center gap-1">
@@ -686,26 +714,39 @@ export default function StaffSchedulePage() {
                           </div>
                           {myTasks.length > 0 && (
                             <div className="mt-2 space-y-1">
-                              <p className="text-xs font-medium text-muted-foreground">My Tasks:</p>
+                              <p className="text-muted-foreground text-xs font-medium">
+                                My Tasks:
+                              </p>
                               {myTasks.slice(0, 2).map((task) => (
-                                <div key={task.id} className="flex items-center gap-2 text-xs">
+                                <div
+                                  key={task.id}
+                                  className="flex items-center gap-2 text-xs"
+                                >
                                   <Checkbox
                                     checked={task.status === "completed"}
                                     disabled
                                     className="h-3 w-3"
                                   />
-                                  <span className={task.status === "completed" ? "line-through text-muted-foreground" : ""}>
+                                  <span
+                                    className={
+                                      task.status === "completed"
+                                        ? "text-muted-foreground line-through"
+                                        : ""
+                                    }
+                                  >
                                     {task.taskName}
                                   </span>
                                 </div>
                               ))}
                               {myTasks.length > 2 && (
-                                <p className="text-xs text-muted-foreground">+{myTasks.length - 2} more tasks</p>
+                                <p className="text-muted-foreground text-xs">
+                                  +{myTasks.length - 2} more tasks
+                                </p>
                               )}
                             </div>
                           )}
                           {shift.notes && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="text-muted-foreground line-clamp-2 text-sm">
                               {shift.notes}
                             </p>
                           )}
@@ -719,7 +760,7 @@ export default function StaffSchedulePage() {
                             handleViewShift(shift);
                           }}
                         >
-                          <FileText className="mr-2 h-4 w-4" />
+                          <FileText className="mr-2 size-4" />
                           Details
                         </Button>
                       </div>
@@ -735,12 +776,12 @@ export default function StaffSchedulePage() {
         <TabsContent value="day" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Today's Shifts</CardTitle>
+              <CardTitle>Today&apos;s Shifts</CardTitle>
             </CardHeader>
             <CardContent>
               {todayShifts.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   <p>No shifts scheduled for today</p>
                 </div>
               ) : (
@@ -755,13 +796,16 @@ export default function StaffSchedulePage() {
                               <CardTitle className="text-lg">
                                 {shift.startTime} - {shift.endTime}
                               </CardTitle>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="mt-1 flex items-center gap-2">
                                 <Badge variant={getStatusBadge(shift.status)}>
                                   {shift.status}
                                 </Badge>
                                 <Badge variant="outline">{shift.role}</Badge>
                                 {shift.location && (
-                                  <Badge variant="outline" className="flex items-center gap-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="flex items-center gap-1"
+                                  >
                                     <MapPin className="h-3 w-3" />
                                     {shift.location}
                                   </Badge>
@@ -780,18 +824,24 @@ export default function StaffSchedulePage() {
                         <CardContent className="space-y-4">
                           {shift.notes && (
                             <div>
-                              <Label className="text-sm font-medium">Notes</Label>
-                              <p className="text-sm text-muted-foreground mt-1">{shift.notes}</p>
+                              <Label className="text-sm font-medium">
+                                Notes
+                              </Label>
+                              <p className="text-muted-foreground mt-1 text-sm">
+                                {shift.notes}
+                              </p>
                             </div>
                           )}
                           {myTasks.length > 0 && (
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">My Tasks</Label>
+                              <Label className="mb-2 block text-sm font-medium">
+                                My Tasks
+                              </Label>
                               <div className="space-y-2">
                                 {myTasks.map((task) => (
                                   <div
                                     key={task.id}
-                                    className="flex items-start gap-3 p-2 border rounded-lg"
+                                    className="flex items-start gap-3 rounded-lg border p-2"
                                   >
                                     <Checkbox
                                       checked={task.status === "completed"}
@@ -799,16 +849,25 @@ export default function StaffSchedulePage() {
                                       className="mt-0.5"
                                     />
                                     <div className="flex-1">
-                                      <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                                      <p
+                                        className={`text-sm font-medium ${
+                                          task.status === "completed"
+                                            ? `text-muted-foreground line-through`
+                                            : ""
+                                        } `}
+                                      >
                                         {task.taskName}
                                       </p>
                                       {task.description && (
-                                        <p className="text-xs text-muted-foreground mt-1">
+                                        <p className="text-muted-foreground mt-1 text-xs">
                                           {task.description}
                                         </p>
                                       )}
                                     </div>
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       {task.priority}
                                     </Badge>
                                   </div>
@@ -828,8 +887,11 @@ export default function StaffSchedulePage() {
       </Tabs>
 
       {/* Shift Detail Modal */}
-      <Dialog open={isShiftDetailModalOpen} onOpenChange={setIsShiftDetailModalOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isShiftDetailModalOpen}
+        onOpenChange={setIsShiftDetailModalOpen}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Shift Details</DialogTitle>
             <DialogDescription>
@@ -841,14 +903,14 @@ export default function StaffSchedulePage() {
               <div className="space-y-2">
                 <Label>Date</Label>
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Calendar className="text-muted-foreground size-4" />
                   <span>{formatDate(selectedShift.date)}</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Time</Label>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="text-muted-foreground size-4" />
                   <span>
                     {selectedShift.startTime} - {selectedShift.endTime}
                   </span>
@@ -864,7 +926,7 @@ export default function StaffSchedulePage() {
                 <div className="space-y-2">
                   <Label>Location</Label>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <MapPin className="text-muted-foreground size-4" />
                     <span>{selectedShift.location}</span>
                   </div>
                 </div>
@@ -878,7 +940,7 @@ export default function StaffSchedulePage() {
               {selectedShift.notes && (
                 <div className="space-y-2">
                   <Label>Notes</Label>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                  <p className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
                     {selectedShift.notes}
                   </p>
                 </div>
@@ -887,11 +949,11 @@ export default function StaffSchedulePage() {
               {getMyShiftTasks(selectedShift).length > 0 && (
                 <div className="space-y-2">
                   <Label>My Tasks</Label>
-                  <div className="space-y-2 border rounded-lg p-3 bg-muted/50">
+                  <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
                     {getMyShiftTasks(selectedShift).map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-start gap-3 p-2 bg-background rounded"
+                        className="bg-background flex items-start gap-3 rounded-sm p-2"
                       >
                         <Checkbox
                           checked={task.status === "completed"}
@@ -899,11 +961,17 @@ export default function StaffSchedulePage() {
                           className="mt-0.5"
                         />
                         <div className="flex-1">
-                          <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                          <p
+                            className={`text-sm font-medium ${
+                              task.status === "completed"
+                                ? `text-muted-foreground line-through`
+                                : ""
+                            } `}
+                          >
                             {task.taskName}
                           </p>
                           {task.description && (
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               {task.description}
                             </p>
                           )}
@@ -918,24 +986,33 @@ export default function StaffSchedulePage() {
               )}
             </div>
           )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button
               variant="destructive"
               onClick={() => {
-                setSickCallData({ ...sickCallData, shiftId: selectedShift?.id.toString() || "" });
+                setSickCallData({
+                  ...sickCallData,
+                  shiftId: selectedShift?.id.toString() || "",
+                });
                 setIsShiftDetailModalOpen(false);
                 setIsSickCallModalOpen(true);
               }}
             >
-              <AlertCircle className="mr-2 h-4 w-4" />
-              I Can't Make This Shift
+              <AlertCircle className="mr-2 size-4" />I Can&apos;t Make This
+              Shift
             </Button>
-            <Button variant="outline" onClick={() => setIsShiftDetailModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsShiftDetailModalOpen(false)}
+            >
               Close
             </Button>
             <Button
               onClick={() => {
-                setSwapData({ ...swapData, shiftId: selectedShift?.id.toString() || "" });
+                setSwapData({
+                  ...swapData,
+                  shiftId: selectedShift?.id.toString() || "",
+                });
                 setIsShiftDetailModalOpen(false);
                 setIsSwapModalOpen(true);
               }}
@@ -952,7 +1029,8 @@ export default function StaffSchedulePage() {
           <DialogHeader>
             <DialogTitle>Request Time Off</DialogTitle>
             <DialogDescription>
-              Submit a request for time off. Your manager will review and respond.
+              Submit a request for time off. Your manager will review and
+              respond.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -960,7 +1038,9 @@ export default function StaffSchedulePage() {
               <Label>Type of Request</Label>
               <Select
                 value={timeOffData.type}
-                onValueChange={(value) => setTimeOffData({ ...timeOffData, type: value })}
+                onValueChange={(value) =>
+                  setTimeOffData({ ...timeOffData, type: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -980,7 +1060,12 @@ export default function StaffSchedulePage() {
                 <Input
                   type="date"
                   value={timeOffData.startDate}
-                  onChange={(e) => setTimeOffData({ ...timeOffData, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setTimeOffData({
+                      ...timeOffData,
+                      startDate: e.target.value,
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -988,7 +1073,9 @@ export default function StaffSchedulePage() {
                 <Input
                   type="date"
                   value={timeOffData.endDate}
-                  onChange={(e) => setTimeOffData({ ...timeOffData, endDate: e.target.value })}
+                  onChange={(e) =>
+                    setTimeOffData({ ...timeOffData, endDate: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -996,14 +1083,19 @@ export default function StaffSchedulePage() {
               <Label>Reason (Optional)</Label>
               <Textarea
                 value={timeOffData.reason}
-                onChange={(e) => setTimeOffData({ ...timeOffData, reason: e.target.value })}
+                onChange={(e) =>
+                  setTimeOffData({ ...timeOffData, reason: e.target.value })
+                }
                 placeholder="Provide additional details..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTimeOffModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsTimeOffModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleTimeOffSubmit}>Submit Request</Button>
@@ -1017,7 +1109,8 @@ export default function StaffSchedulePage() {
           <DialogHeader>
             <DialogTitle>Request Shift Swap</DialogTitle>
             <DialogDescription>
-              Request to swap a shift with a coworker or open it up for anyone qualified.
+              Request to swap a shift with a coworker or open it up for anyone
+              qualified.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1025,17 +1118,23 @@ export default function StaffSchedulePage() {
               <Label>Select Shift</Label>
               <Select
                 value={swapData.shiftId}
-                onValueChange={(value) => setSwapData({ ...swapData, shiftId: value })}
+                onValueChange={(value) =>
+                  setSwapData({ ...swapData, shiftId: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a shift" />
                 </SelectTrigger>
                 <SelectContent>
                   {mySchedules
-                    .filter((s) => s.status === "scheduled" || s.status === "confirmed")
+                    .filter(
+                      (s) =>
+                        s.status === "scheduled" || s.status === "confirmed",
+                    )
                     .map((shift) => (
                       <SelectItem key={shift.id} value={shift.id.toString()}>
-                        {formatDate(shift.date)} - {shift.startTime} to {shift.endTime} ({shift.role})
+                        {formatDate(shift.date)} - {shift.startTime} to{" "}
+                        {shift.endTime} ({shift.role})
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1046,7 +1145,10 @@ export default function StaffSchedulePage() {
               <Select
                 value={swapData.swapType}
                 onValueChange={(value) =>
-                  setSwapData({ ...swapData, swapType: value as "specific" | "anyone" })
+                  setSwapData({
+                    ...swapData,
+                    swapType: value as "specific" | "anyone",
+                  })
                 }
               >
                 <SelectTrigger>
@@ -1054,7 +1156,9 @@ export default function StaffSchedulePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="specific">Specific Coworker</SelectItem>
-                  <SelectItem value="anyone">Open to Anyone Qualified</SelectItem>
+                  <SelectItem value="anyone">
+                    Open to Anyone Qualified
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1063,16 +1167,23 @@ export default function StaffSchedulePage() {
                 <Label>Select Coworker</Label>
                 <Select
                   value={swapData.targetStaffId}
-                  onValueChange={(value) => setSwapData({ ...swapData, targetStaffId: value })}
+                  onValueChange={(value) =>
+                    setSwapData({ ...swapData, targetStaffId: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a coworker" />
                   </SelectTrigger>
                   <SelectContent>
                     {users
-                      .filter((u) => u.id.toString() !== userId && u.role === "Staff")
+                      .filter(
+                        (u) => u.id.toString() !== userId && u.role === "Staff",
+                      )
                       .map((staff, index) => (
-                        <SelectItem key={`staff-${staff.id}-${staff.email}-${index}`} value={staff.id.toString()}>
+                        <SelectItem
+                          key={`staff-${staff.id}-${staff.email}-${index}`}
+                          value={staff.id.toString()}
+                        >
                           {staff.name}
                         </SelectItem>
                       ))}
@@ -1084,7 +1195,9 @@ export default function StaffSchedulePage() {
               <Label>Reason</Label>
               <Textarea
                 value={swapData.reason}
-                onChange={(e) => setSwapData({ ...swapData, reason: e.target.value })}
+                onChange={(e) =>
+                  setSwapData({ ...swapData, reason: e.target.value })
+                }
                 placeholder="Why do you need to swap this shift?"
                 rows={3}
               />
@@ -1105,7 +1218,8 @@ export default function StaffSchedulePage() {
           <DialogHeader>
             <DialogTitle>Report Absence / Sick</DialogTitle>
             <DialogDescription>
-              Report that you cannot make this shift. Managers will be notified immediately.
+              Report that you cannot make this shift. Managers will be notified
+              immediately.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1113,17 +1227,23 @@ export default function StaffSchedulePage() {
               <Label>Select Shift</Label>
               <Select
                 value={sickCallData.shiftId}
-                onValueChange={(value) => setSickCallData({ ...sickCallData, shiftId: value })}
+                onValueChange={(value) =>
+                  setSickCallData({ ...sickCallData, shiftId: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a shift" />
                 </SelectTrigger>
                 <SelectContent>
                   {mySchedules
-                    .filter((s) => s.status === "scheduled" || s.status === "confirmed")
+                    .filter(
+                      (s) =>
+                        s.status === "scheduled" || s.status === "confirmed",
+                    )
                     .map((shift) => (
                       <SelectItem key={shift.id} value={shift.id.toString()}>
-                        {formatDate(shift.date)} - {shift.startTime} to {shift.endTime} ({shift.role})
+                        {formatDate(shift.date)} - {shift.startTime} to{" "}
+                        {shift.endTime} ({shift.role})
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1133,20 +1253,26 @@ export default function StaffSchedulePage() {
               <Label>Reason</Label>
               <Textarea
                 value={sickCallData.reason}
-                onChange={(e) => setSickCallData({ ...sickCallData, reason: e.target.value })}
+                onChange={(e) =>
+                  setSickCallData({ ...sickCallData, reason: e.target.value })
+                }
                 placeholder="Please provide a reason (e.g., sick, emergency, family issue)..."
                 rows={4}
               />
             </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
               <p className="text-sm text-yellow-800">
-                <AlertCircle className="h-4 w-4 inline mr-1" />
-                This will flag your shift as needing coverage and notify managers immediately.
+                <AlertCircle className="mr-1 inline size-4" />
+                This will flag your shift as needing coverage and notify
+                managers immediately.
               </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSickCallModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsSickCallModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleSickCallSubmit}>
@@ -1170,7 +1296,9 @@ export default function StaffSchedulePage() {
               <Label>Subject</Label>
               <Input
                 value={messageData.subject}
-                onChange={(e) => setMessageData({ ...messageData, subject: e.target.value })}
+                onChange={(e) =>
+                  setMessageData({ ...messageData, subject: e.target.value })
+                }
                 placeholder="e.g., Question about my shift..."
               />
             </div>
@@ -1178,14 +1306,19 @@ export default function StaffSchedulePage() {
               <Label>Message</Label>
               <Textarea
                 value={messageData.message}
-                onChange={(e) => setMessageData({ ...messageData, message: e.target.value })}
+                onChange={(e) =>
+                  setMessageData({ ...messageData, message: e.target.value })
+                }
                 placeholder="Type your message here..."
                 rows={6}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMessageModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsMessageModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleMessageSubmit}>Send Message</Button>
@@ -1194,7 +1327,10 @@ export default function StaffSchedulePage() {
       </Dialog>
 
       {/* Swap Response Modal */}
-      <Dialog open={isSwapResponseModalOpen} onOpenChange={setIsSwapResponseModalOpen}>
+      <Dialog
+        open={isSwapResponseModalOpen}
+        onOpenChange={setIsSwapResponseModalOpen}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Respond to Swap Request</DialogTitle>
@@ -1206,23 +1342,37 @@ export default function StaffSchedulePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Requested By</Label>
-                <p className="text-sm font-medium">{selectedSwapRequest.requestingStaffName}</p>
+                <p className="text-sm font-medium">
+                  {selectedSwapRequest.requestingStaffName}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Shift Details</Label>
-                <div className="text-sm space-y-1">
-                  <p><strong>Date:</strong> {formatDate(selectedSwapRequest.requestingShiftDate)}</p>
-                  <p><strong>Time:</strong> {selectedSwapRequest.requestingShiftTime}</p>
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <strong>Date:</strong>{" "}
+                    {formatDate(selectedSwapRequest.requestingShiftDate)}
+                  </p>
+                  <p>
+                    <strong>Time:</strong>{" "}
+                    {selectedSwapRequest.requestingShiftTime}
+                  </p>
                   {(() => {
-                    const shift = schedules.find(s => s.id === selectedSwapRequest.requestingShiftId);
-                    return shift ? <p><strong>Role:</strong> {shift.role}</p> : null;
+                    const shift = schedules.find(
+                      (s) => s.id === selectedSwapRequest.requestingShiftId,
+                    );
+                    return shift ? (
+                      <p>
+                        <strong>Role:</strong> {shift.role}
+                      </p>
+                    ) : null;
                   })()}
                 </div>
               </div>
               {selectedSwapRequest.reason && (
                 <div className="space-y-2">
                   <Label>Reason</Label>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                  <p className="bg-muted text-muted-foreground rounded-md p-3 text-sm">
                     {selectedSwapRequest.reason}
                   </p>
                 </div>
@@ -1230,7 +1380,10 @@ export default function StaffSchedulePage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSwapResponseModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsSwapResponseModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button

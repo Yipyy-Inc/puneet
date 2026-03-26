@@ -146,7 +146,7 @@ export default function RolesPermissionsPage() {
           return (
             <Card
               key={role}
-              className="cursor-pointer hover:shadow-md transition-shadow"
+              className="cursor-pointer transition-shadow hover:shadow-md"
               onClick={() => {
                 setSelectedRole(role);
                 setViewMode("view");
@@ -156,11 +156,11 @@ export default function RolesPermissionsPage() {
                 <CardTitle className="text-sm font-medium">
                   {roleDisplayNames[role]}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className="text-muted-foreground size-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{userCount}</div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {rolePermissions[role].length} permissions
                 </p>
               </CardContent>
@@ -181,8 +181,8 @@ export default function RolesPermissionsPage() {
               <CardHeader className="bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Icon className="h-5 w-5 text-primary" />
+                    <div className="bg-primary/10 rounded-lg p-2">
+                      <Icon className="text-primary h-5 w-5" />
                     </div>
                     <div>
                       <CardTitle className="text-lg">
@@ -204,7 +204,7 @@ export default function RolesPermissionsPage() {
                     <Badge variant="secondary">{userCount}</Badge>
                   </div>
                   <div>
-                    <p className="text-sm font-medium mb-2">
+                    <p className="mb-2 text-sm font-medium">
                       Permissions ({permissions.length})
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -234,7 +234,7 @@ export default function RolesPermissionsPage() {
                         setViewMode("view");
                       }}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="mr-1 size-4" />
                       View
                     </Button>
                     <Button
@@ -246,7 +246,7 @@ export default function RolesPermissionsPage() {
                         setViewMode("edit");
                       }}
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Edit className="mr-1 size-4" />
                       Edit
                     </Button>
                   </div>
@@ -259,7 +259,7 @@ export default function RolesPermissionsPage() {
 
       {/* Role Details Modal */}
       <Dialog open={!!selectedRole} onOpenChange={() => setSelectedRole(null)}>
-        <DialogContent className="min-w-5xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -272,10 +272,10 @@ export default function RolesPermissionsPage() {
           </DialogHeader>
 
           {selectedRole && (
-            <div className="space-y-6 mt-4">
-              <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="mt-4 space-y-6">
+              <div className="bg-muted/30 flex items-center gap-4 rounded-lg p-4">
                 <StatusBadge type="adminRole" value={selectedRole} showIcon />
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {getUserCountByRole(selectedRole)} users •{" "}
                   {rolePermissions[selectedRole].length} permissions
                 </div>
@@ -285,8 +285,8 @@ export default function RolesPermissionsPage() {
                 {Object.entries(getPermissionsByCategory()).map(
                   ([category, perms]) => (
                     <div key={category}>
-                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
+                      <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                        <Settings className="size-4" />
                         {category}
                       </h4>
                       <div className="grid grid-cols-2 gap-2">
@@ -297,11 +297,11 @@ export default function RolesPermissionsPage() {
                           return (
                             <div
                               key={perm.id}
-                              className={`flex items-center gap-2 p-2 rounded-lg ${
+                              className={`flex items-center gap-2 rounded-lg p-2 ${
                                 isEnabled
-                                  ? "bg-green-50 dark:bg-green-950/20"
+                                  ? `bg-green-50 dark:bg-green-950/20`
                                   : "bg-muted/30"
-                              }`}
+                              } `}
                             >
                               <Checkbox
                                 id={perm.id}
@@ -314,7 +314,7 @@ export default function RolesPermissionsPage() {
                                   isEnabled
                                     ? "font-medium"
                                     : "text-muted-foreground"
-                                }`}
+                                } `}
                               >
                                 {perm.label}
                               </label>
@@ -328,7 +328,7 @@ export default function RolesPermissionsPage() {
               </div>
 
               {viewMode === "edit" && (
-                <div className="flex justify-end gap-2 pt-4 border-t">
+                <div className="flex justify-end gap-2 border-t pt-4">
                   <Button
                     variant="outline"
                     onClick={() => setSelectedRole(null)}

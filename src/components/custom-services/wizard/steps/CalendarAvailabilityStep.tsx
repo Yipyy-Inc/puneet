@@ -69,12 +69,15 @@ export function CalendarAvailabilityStep({
   return (
     <div className="space-y-6">
       {/* Enable toggle */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+      <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="cal-enabled" className="text-sm font-semibold cursor-pointer">
+          <Label
+            htmlFor="cal-enabled"
+            className="cursor-pointer text-sm font-semibold"
+          >
             Enable Calendar & Availability
           </Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Allow scheduling with specific time slots on your facility calendar.
           </p>
         </div>
@@ -86,25 +89,36 @@ export function CalendarAvailabilityStep({
       </div>
 
       {!cal.enabled && (
-        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Calendar is disabled. This service won&apos;t appear on the scheduling calendar.
-            You can still enable online booking and manual staff assignment.
+            Calendar is disabled. This service won&apos;t appear on the
+            scheduling calendar. You can still enable online booking and manual
+            staff assignment.
           </span>
         </div>
       )}
 
-      <div className={cn("space-y-6", !cal.enabled && "opacity-50 pointer-events-none")}>
+      <div
+        className={cn(
+          "space-y-6",
+          !cal.enabled && "pointer-events-none opacity-50",
+        )}
+      >
         {/* Duration Mode */}
         <div className="space-y-3">
           <div>
             <Label className="text-sm font-semibold">Duration Mode</Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Fixed: all sessions are the same length. Variable: clients choose from multiple options.
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Fixed: all sessions are the same length. Variable: clients choose
+              from multiple options.
             </p>
           </div>
-          <div role="radiogroup" aria-label="Duration mode" className="flex gap-3">
+          <div
+            role="radiogroup"
+            aria-label="Duration mode"
+            className="flex gap-3"
+          >
             {(["fixed", "variable"] as const).map((mode) => (
               <button
                 key={mode}
@@ -116,11 +130,11 @@ export function CalendarAvailabilityStep({
                   "flex-1 rounded-lg border-2 p-3 text-left transition-colors",
                   cal.durationMode === mode
                     ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-border/80 hover:bg-accent/30",
+                    : `border-border hover:border-border/80 hover:bg-accent/30`,
                 )}
               >
                 <p className="text-sm font-semibold capitalize">{mode}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {mode === "fixed"
                     ? "One session length for all bookings"
                     : "Clients select from multiple durations"}
@@ -151,16 +165,22 @@ export function CalendarAvailabilityStep({
                 className="w-24"
                 placeholder="60"
               />
-              <span className="text-xs text-muted-foreground shrink-0">min</span>
+              <span className="text-muted-foreground shrink-0 text-xs">
+                min
+              </span>
               <Input
                 value={opt.label}
-                onChange={(e) => updateDurationOption(i, { label: e.target.value })}
+                onChange={(e) =>
+                  updateDurationOption(i, { label: e.target.value })
+                }
                 className="flex-1"
                 placeholder="Label (e.g. 60 min)"
               />
               {cal.durationMode === "variable" && (
                 <>
-                  <span className="text-xs text-muted-foreground shrink-0">$</span>
+                  <span className="text-muted-foreground shrink-0 text-xs">
+                    $
+                  </span>
                   <Input
                     type="number"
                     min={0}
@@ -183,7 +203,7 @@ export function CalendarAvailabilityStep({
                   size="icon-sm"
                   onClick={() => removeDurationOption(i)}
                 >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  <Trash2 className="text-destructive h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
@@ -218,7 +238,7 @@ export function CalendarAvailabilityStep({
                 updateCal({ bufferTimeMinutes: parseInt(e.target.value) || 0 })
               }
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Time between bookings for cleanup or prep.
             </p>
           </div>
@@ -235,7 +255,7 @@ export function CalendarAvailabilityStep({
                 })
               }
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               How many bookings can overlap at the same time slot.
             </p>
           </div>
@@ -247,7 +267,7 @@ export function CalendarAvailabilityStep({
         <div className="space-y-3">
           <div>
             <Label className="text-sm font-semibold">Assigned To</Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               What resource this service consumes when booked.
             </p>
           </div>
@@ -262,9 +282,13 @@ export function CalendarAvailabilityStep({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="staff">Staff Member</SelectItem>
-              <SelectItem value="resource">Facility Resource (room, pool, van…)</SelectItem>
+              <SelectItem value="resource">
+                Facility Resource (room, pool, van…)
+              </SelectItem>
               <SelectItem value="room">Room / Kennel</SelectItem>
-              <SelectItem value="combination">Combination (staff + resource)</SelectItem>
+              <SelectItem value="combination">
+                Combination (staff + resource)
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -274,20 +298,23 @@ export function CalendarAvailabilityStep({
           resources.length > 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Assign Resources</Label>
-              <p className="text-xs text-muted-foreground">
-                Select which resources this service can use. Availability is tracked per resource.
+              <p className="text-muted-foreground text-xs">
+                Select which resources this service can use. Availability is
+                tracked per resource.
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {resources.map((res) => {
-                  const isChecked = (cal.assignedResourceIds ?? []).includes(res.id);
+                  const isChecked = (cal.assignedResourceIds ?? []).includes(
+                    res.id,
+                  );
                   return (
                     <label
                       key={res.id}
                       className={cn(
-                        "flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                        `flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors`,
                         isChecked
                           ? "border-primary bg-primary/5"
-                          : "border-border hover:bg-accent/30",
+                          : `border-border hover:bg-accent/30`,
                       )}
                     >
                       <Checkbox
@@ -297,7 +324,7 @@ export function CalendarAvailabilityStep({
                       />
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{res.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">
+                        <p className="text-muted-foreground text-xs capitalize">
                           {res.type} · capacity {res.capacity}
                         </p>
                       </div>

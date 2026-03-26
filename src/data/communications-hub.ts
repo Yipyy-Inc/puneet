@@ -141,7 +141,12 @@ export const messageTemplates: MessageTemplate[] = [
     subject: "{{pet_name}} has been checked in!",
     body: "Hi {{customer_full_name}},\n\n{{pet_name}} has been safely checked in at {{check_in_time}}. They're settling in nicely!\n\nWe'll keep you updated throughout their stay.\n\nBest,\n{{facility_name}}",
     category: "update",
-    variables: ["customer_full_name", "pet_name", "check_in_time", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "check_in_time",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-004",
@@ -150,7 +155,12 @@ export const messageTemplates: MessageTemplate[] = [
     subject: "{{pet_name}} is ready for pickup!",
     body: "Hi {{customer_full_name}},\n\n{{pet_name}} is all ready for pickup! Check-out is available from {{check_out_time}}.\n\nWe hope {{pet_name}} had a wonderful time. See you next time!\n\nBest,\n{{facility_name}}",
     category: "update",
-    variables: ["customer_full_name", "pet_name", "check_out_time", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "check_out_time",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-005",
@@ -158,7 +168,12 @@ export const messageTemplates: MessageTemplate[] = [
     type: "sms",
     body: "Hi {{customer_full_name}}! {{pet_name}} is ready for pickup at {{check_out_time}}. See you soon! - {{facility_name}}",
     category: "update",
-    variables: ["customer_full_name", "pet_name", "check_out_time", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "check_out_time",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-006",
@@ -167,7 +182,15 @@ export const messageTemplates: MessageTemplate[] = [
     subject: "Payment Received - {{invoice_id}}",
     body: "Hi {{customer_full_name}},\n\nWe've received your payment of {{amount_paid}} for {{service_name}}.\n\nInvoice: {{invoice_id}}\nDate: {{booking_date}}\n\nView your receipt: {{receipt_link}}\n\nThank you for choosing {{facility_name}}!",
     category: "confirmation",
-    variables: ["customer_full_name", "amount_paid", "service_name", "invoice_id", "booking_date", "receipt_link", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "amount_paid",
+      "service_name",
+      "invoice_id",
+      "booking_date",
+      "receipt_link",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-007",
@@ -176,7 +199,14 @@ export const messageTemplates: MessageTemplate[] = [
     subject: "Payment Reminder - {{amount_due}} due",
     body: "Hi {{customer_full_name}},\n\nThis is a friendly reminder that invoice {{invoice_id}} for {{amount_due}} is past due.\n\nDue date: {{due_date}}\n\nPay now: {{payment_link}}\n\nIf you've already made this payment, please disregard this message.\n\nThank you,\n{{facility_name}}",
     category: "reminder",
-    variables: ["customer_full_name", "invoice_id", "amount_due", "due_date", "payment_link", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "invoice_id",
+      "amount_due",
+      "due_date",
+      "payment_link",
+      "facility_name",
+    ],
   },
   {
     id: "tmpl-008",
@@ -184,7 +214,13 @@ export const messageTemplates: MessageTemplate[] = [
     type: "sms",
     body: "Hi {{customer_full_name}}! Please complete {{pet_name}}'s pre-arrival form before your visit on {{booking_date}}: {{yipyygo_link}} - {{facility_name}}",
     category: "reminder",
-    variables: ["customer_full_name", "pet_name", "booking_date", "yipyygo_link", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "booking_date",
+      "yipyygo_link",
+      "facility_name",
+    ],
   },
 ];
 

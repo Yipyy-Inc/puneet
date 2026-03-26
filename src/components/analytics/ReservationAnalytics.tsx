@@ -39,11 +39,11 @@ export function ReservationAnalytics() {
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total Reservations
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -51,12 +51,12 @@ export function ReservationAnalytics() {
                     {metrics.totalReservations.toLocaleString()}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   This month
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -68,27 +68,27 @@ export function ReservationAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Completed
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.completedReservations.toLocaleString()}
                   </h3>
-                  <span className="inline-flex items-center text-xs font-medium text-success">
+                  <span className="text-success inline-flex items-center text-xs font-medium">
                     {metrics.completionRate}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Success rate
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -100,27 +100,27 @@ export function ReservationAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Cancelled
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.cancelledReservations.toLocaleString()}
                   </h3>
-                  <span className="inline-flex items-center text-xs font-medium text-destructive">
+                  <span className="text-destructive inline-flex items-center text-xs font-medium">
                     {metrics.cancellationRate}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Cancellation rate
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
@@ -132,11 +132,11 @@ export function ReservationAnalytics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total Revenue
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -144,12 +144,12 @@ export function ReservationAnalytics() {
                     ${(metrics.totalRevenue / 1000).toFixed(0)}K
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Avg ${metrics.averageBookingValue}/booking
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -163,12 +163,12 @@ export function ReservationAnalytics() {
       </div>
 
       {/* Reservation Trends Chart */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Reservation Trends
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Monthly reservation and cancellation patterns
           </p>
         </CardHeader>
@@ -247,12 +247,12 @@ export function ReservationAnalytics() {
 
       {/* Peak Usage Times */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Peak Usage Times
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Most popular booking time slots
             </p>
           </CardHeader>
@@ -300,12 +300,12 @@ export function ReservationAnalytics() {
         </Card>
 
         {/* Reservation Status Breakdown */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Status Distribution
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Current reservation status breakdown
             </p>
           </CardHeader>
@@ -315,21 +315,21 @@ export function ReservationAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 className="text-success size-4" />
                     <span className="font-medium">Completed</span>
                   </div>
                   <div className="text-right">
                     <span className="font-bold">
                       {metrics.completedReservations.toLocaleString()}
                     </span>
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-muted-foreground ml-2 text-sm">
                       ({metrics.completionRate}%)
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-muted h-2 w-full rounded-full">
                   <div
-                    className="bg-success rounded-full h-2 transition-all"
+                    className="bg-success h-2 rounded-full transition-all"
                     style={{ width: `${metrics.completionRate}%` }}
                   />
                 </div>
@@ -339,21 +339,21 @@ export function ReservationAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-destructive" />
+                    <XCircle className="text-destructive size-4" />
                     <span className="font-medium">Cancelled</span>
                   </div>
                   <div className="text-right">
                     <span className="font-bold">
                       {metrics.cancelledReservations.toLocaleString()}
                     </span>
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-muted-foreground ml-2 text-sm">
                       ({metrics.cancellationRate}%)
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-muted h-2 w-full rounded-full">
                   <div
-                    className="bg-destructive rounded-full h-2 transition-all"
+                    className="bg-destructive h-2 rounded-full transition-all"
                     style={{ width: `${metrics.cancellationRate}%` }}
                   />
                 </div>
@@ -363,28 +363,28 @@ export function ReservationAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-warning" />
+                    <Clock className="text-warning size-4" />
                     <span className="font-medium">Pending</span>
                   </div>
                   <div className="text-right">
                     <span className="font-bold">
                       {metrics.pendingReservations.toLocaleString()}
                     </span>
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-muted-foreground ml-2 text-sm">
                       ({pendingRate}%)
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-muted h-2 w-full rounded-full">
                   <div
-                    className="bg-warning rounded-full h-2 transition-all"
+                    className="bg-warning h-2 rounded-full transition-all"
                     style={{ width: `${pendingRate}%` }}
                   />
                 </div>
               </div>
 
               {/* Summary Stats */}
-              <div className="pt-4 mt-4 border-t border-border space-y-3">
+              <div className="border-border mt-4 space-y-3 border-t pt-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Processed</span>
                   <span className="font-semibold">
@@ -401,7 +401,7 @@ export function ReservationAnalytics() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Total Revenue</span>
-                  <span className="font-semibold text-success">
+                  <span className="text-success font-semibold">
                     ${metrics.totalRevenue.toLocaleString()}
                   </span>
                 </div>
@@ -412,12 +412,12 @@ export function ReservationAnalytics() {
       </div>
 
       {/* Monthly Performance Summary */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Year-Over-Year Comparison
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Reservation performance across 12 months
           </p>
         </CardHeader>

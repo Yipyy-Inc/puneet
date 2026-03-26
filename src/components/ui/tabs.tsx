@@ -25,7 +25,7 @@ function TabsList({
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("px-6 flex gap-1 overflow-x-auto", className)}
+      className={cn("flex gap-1 overflow-x-auto px-6", className)}
       {...props}
     />
   );
@@ -39,7 +39,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg border-b transition-colors whitespace-nowrap hover:bg-muted/50 text-muted-foreground data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        `text-muted-foreground hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:bg-background data-[state=active]:text-primary flex items-center gap-2 rounded-t-lg border-b px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors data-[state=active]:border-b-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className,
       )}
       {...props}

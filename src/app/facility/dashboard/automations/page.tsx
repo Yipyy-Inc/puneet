@@ -43,13 +43,25 @@ export default function AutomationsPage() {
   };
 
   // Categorize automations
-  const formTriggers = ["form_link_sent", "form_started", "form_submitted", "form_incomplete_by_deadline", "form_red_flag_answer"];
+  const formTriggers = [
+    "form_link_sent",
+    "form_started",
+    "form_submitted",
+    "form_incomplete_by_deadline",
+    "form_red_flag_answer",
+  ];
   const categorizedAutomations = {
     booking: automationRules.filter(
-      (r) => r.trigger === "booking_created" || r.trigger === "check_in" || r.trigger === "check_out"
+      (r) =>
+        r.trigger === "booking_created" ||
+        r.trigger === "check_in" ||
+        r.trigger === "check_out",
     ),
     reminder: automationRules.filter(
-      (r) => r.trigger === "24h_before" || r.trigger === "appointment_reminder" || r.trigger === "vaccination_expiry"
+      (r) =>
+        r.trigger === "24h_before" ||
+        r.trigger === "appointment_reminder" ||
+        r.trigger === "vaccination_expiry",
     ),
     payment: automationRules.filter((r) => r.trigger === "payment_received"),
     forms: automationRules.filter((r) => formTriggers.includes(r.trigger)),
@@ -64,27 +76,43 @@ export default function AutomationsPage() {
 
   // Get automation category icon
   const getCategoryIcon = (trigger: string) => {
-    if (trigger === "booking_created" || trigger === "check_in" || trigger === "check_out") {
-      return <Calendar className="h-4 w-4" />;
+    if (
+      trigger === "booking_created" ||
+      trigger === "check_in" ||
+      trigger === "check_out"
+    ) {
+      return <Calendar className="size-4" />;
     }
-    if (trigger === "24h_before" || trigger === "appointment_reminder" || trigger === "vaccination_expiry") {
-      return <Clock className="h-4 w-4" />;
+    if (
+      trigger === "24h_before" ||
+      trigger === "appointment_reminder" ||
+      trigger === "vaccination_expiry"
+    ) {
+      return <Clock className="size-4" />;
     }
     if (trigger === "payment_received") {
-      return <DollarSign className="h-4 w-4" />;
+      return <DollarSign className="size-4" />;
     }
     if (formTriggers.includes(trigger)) {
-      return <FileText className="h-4 w-4" />;
+      return <FileText className="size-4" />;
     }
-    return <Zap className="h-4 w-4" />;
+    return <Zap className="size-4" />;
   };
 
   // Get automation category name
   const getCategoryName = (trigger: string) => {
-    if (trigger === "booking_created" || trigger === "check_in" || trigger === "check_out") {
+    if (
+      trigger === "booking_created" ||
+      trigger === "check_in" ||
+      trigger === "check_out"
+    ) {
       return "Booking";
     }
-    if (trigger === "24h_before" || trigger === "appointment_reminder" || trigger === "vaccination_expiry") {
+    if (
+      trigger === "24h_before" ||
+      trigger === "appointment_reminder" ||
+      trigger === "vaccination_expiry"
+    ) {
       return "Reminder";
     }
     if (trigger === "payment_received") {
@@ -97,23 +125,24 @@ export default function AutomationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Automations</h1>
           <p className="text-muted-foreground mt-1">
-            System rules and automated messages configuration (Managers & Admins only)
+            System rules and automated messages configuration (Managers & Admins
+            only)
           </p>
         </div>
         <Button onClick={() => setShowAutomationModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 size-4" />
           Create Automation Rule
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
@@ -124,7 +153,7 @@ export default function AutomationsPage() {
             <div className="text-2xl font-bold">
               {automationRules.filter((r) => r.enabled).length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               of {automationRules.length} total
             </p>
           </CardContent>
@@ -132,58 +161,45 @@ export default function AutomationsPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Sent
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {automationRules.reduce(
-                (sum, r) => sum + r.stats.totalSent,
-                0,
-              )}
+              {automationRules.reduce((sum, r) => sum + r.stats.totalSent, 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">All time</p>
+            <p className="text-muted-foreground mt-1 text-xs">All time</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Email Rules
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Email Rules</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {
                 automationRules.filter(
-                  (r) => r.messageType === "email" || r.messageType === "both"
+                  (r) => r.messageType === "email" || r.messageType === "both",
                 ).length
               }
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active rules
-            </p>
+            <p className="text-muted-foreground mt-1 text-xs">Active rules</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              SMS Rules
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">SMS Rules</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {
                 automationRules.filter(
-                  (r) => r.messageType === "sms" || r.messageType === "both"
+                  (r) => r.messageType === "sms" || r.messageType === "both",
                 ).length
               }
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active rules
-            </p>
+            <p className="text-muted-foreground mt-1 text-xs">Active rules</p>
           </CardContent>
         </Card>
       </div>
@@ -194,24 +210,36 @@ export default function AutomationsPage() {
           <TabsTrigger value="all" onClick={() => setFilterCategory("all")}>
             All Rules
           </TabsTrigger>
-          <TabsTrigger value="booking" onClick={() => setFilterCategory("booking")}>
-            <Calendar className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="booking"
+            onClick={() => setFilterCategory("booking")}
+          >
+            <Calendar className="mr-2 size-4" />
             Booking & Check-ins
           </TabsTrigger>
-          <TabsTrigger value="reminder" onClick={() => setFilterCategory("reminder")}>
-            <Clock className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="reminder"
+            onClick={() => setFilterCategory("reminder")}
+          >
+            <Clock className="mr-2 size-4" />
             Reminders
           </TabsTrigger>
-          <TabsTrigger value="payment" onClick={() => setFilterCategory("payment")}>
-            <DollarSign className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="payment"
+            onClick={() => setFilterCategory("payment")}
+          >
+            <DollarSign className="mr-2 size-4" />
             Payment
           </TabsTrigger>
           <TabsTrigger value="forms" onClick={() => setFilterCategory("forms")}>
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="mr-2 size-4" />
             Forms
           </TabsTrigger>
-          <TabsTrigger value="campaign" onClick={() => setFilterCategory("campaign")}>
-            <Megaphone className="h-4 w-4 mr-2" />
+          <TabsTrigger
+            value="campaign"
+            onClick={() => setFilterCategory("campaign")}
+          >
+            <Megaphone className="mr-2 size-4" />
             Campaigns
           </TabsTrigger>
         </TabsList>
@@ -221,7 +249,7 @@ export default function AutomationsPage() {
           <Card>
             <CardHeader>
               <CardTitle>All Automation Rules</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Complete list of all automated message rules
               </p>
             </CardHeader>
@@ -230,17 +258,19 @@ export default function AutomationsPage() {
                 {filteredAutomations.map((rule) => (
                   <div
                     key={rule.id}
-                    className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="mb-2 flex items-center gap-2">
                           {getCategoryIcon(rule.trigger)}
                           <span className="font-semibold">{rule.name}</span>
-                          <Badge variant={rule.enabled ? "default" : "secondary"}>
+                          <Badge
+                            variant={rule.enabled ? "default" : "secondary"}
+                          >
                             {rule.enabled ? (
                               <>
-                                <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+                                <CheckCircle2 className="mr-1 inline h-3 w-3" />
                                 Active
                               </>
                             ) : (
@@ -253,29 +283,35 @@ export default function AutomationsPage() {
                           <Badge variant="outline" className="capitalize">
                             {rule.messageType === "both" ? (
                               <>
-                                <Mail className="h-3 w-3 mr-1 inline" />
-                                <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                <Mail className="mr-1 inline h-3 w-3" />
+                                <MessageSquare className="mr-1 inline h-3 w-3" />
                                 Both
                               </>
                             ) : rule.messageType === "email" ? (
                               <>
-                                <Mail className="h-3 w-3 mr-1 inline" />
+                                <Mail className="mr-1 inline h-3 w-3" />
                                 Email
                               </>
                             ) : (
                               <>
-                                <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                <MessageSquare className="mr-1 inline h-3 w-3" />
                                 SMS
                               </>
                             )}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Trigger: <span className="font-medium">{rule.trigger.replace(/_/g, " ")}</span>
+                        <p className="text-muted-foreground mb-2 text-sm">
+                          Trigger:{" "}
+                          <span className="font-medium">
+                            {rule.trigger.replace(/_/g, " ")}
+                          </span>
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-4 text-xs">
                           <span>
-                            Total sent: <span className="font-medium">{rule.stats.totalSent}</span>
+                            Total sent:{" "}
+                            <span className="font-medium">
+                              {rule.stats.totalSent}
+                            </span>
                           </span>
                           <span>•</span>
                           <span>
@@ -296,7 +332,7 @@ export default function AutomationsPage() {
                           setShowAutomationModal(true);
                         }}
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -314,35 +350,38 @@ export default function AutomationsPage() {
                 <Calendar className="h-5 w-5" />
                 Booking & Check-in Automations
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Automated messages for booking confirmations, check-ins, and check-outs
+              <p className="text-muted-foreground mt-1 text-sm">
+                Automated messages for booking confirmations, check-ins, and
+                check-outs
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {categorizedAutomations.booking.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No booking automations configured</p>
                   </div>
                 ) : (
                   categorizedAutomations.booking.map((rule) => (
                     <div
                       key={rule.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="mb-2 flex items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
-                            <Badge variant={rule.enabled ? "default" : "secondary"}>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                            >
                               {rule.enabled ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Trigger: {rule.trigger.replace(/_/g, " ")}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-xs">
                             Sent {rule.stats.totalSent} times
                           </p>
                         </div>
@@ -354,7 +393,7 @@ export default function AutomationsPage() {
                             setShowAutomationModal(true);
                           }}
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -373,28 +412,31 @@ export default function AutomationsPage() {
                 <Clock className="h-5 w-5" />
                 Reminder Automations
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Automated reminders for appointments, evaluations, and important dates
+              <p className="text-muted-foreground mt-1 text-sm">
+                Automated reminders for appointments, evaluations, and important
+                dates
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {categorizedAutomations.reminder.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Clock className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No reminder automations configured</p>
                   </div>
                 ) : (
                   categorizedAutomations.reminder.map((rule) => (
                     <div
                       key={rule.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="mb-2 flex items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
-                            <Badge variant={rule.enabled ? "default" : "secondary"}>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                            >
                               {rule.enabled ? "Active" : "Inactive"}
                             </Badge>
                             {rule.schedule && (
@@ -407,10 +449,10 @@ export default function AutomationsPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Trigger: {rule.trigger.replace(/_/g, " ")}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-xs">
                             Sent {rule.stats.totalSent} times
                           </p>
                         </div>
@@ -422,7 +464,7 @@ export default function AutomationsPage() {
                             setShowAutomationModal(true);
                           }}
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -441,35 +483,37 @@ export default function AutomationsPage() {
                 <DollarSign className="h-5 w-5" />
                 Payment Automations
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Automated payment receipts and reminders
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {categorizedAutomations.payment.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <DollarSign className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No payment automations configured</p>
                   </div>
                 ) : (
                   categorizedAutomations.payment.map((rule) => (
                     <div
                       key={rule.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="mb-2 flex items-center gap-2">
                             <span className="font-semibold">{rule.name}</span>
-                            <Badge variant={rule.enabled ? "default" : "secondary"}>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                            >
                               {rule.enabled ? "Active" : "Inactive"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Trigger: {rule.trigger.replace(/_/g, " ")}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-xs">
                             Sent {rule.stats.totalSent} times
                           </p>
                         </div>
@@ -481,7 +525,7 @@ export default function AutomationsPage() {
                             setShowAutomationModal(true);
                           }}
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -500,32 +544,35 @@ export default function AutomationsPage() {
                 <FileText className="h-5 w-5" />
                 Form Automations
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Automated messages triggered by form lifecycle events — link sent, started, submitted, deadline missed, or red-flag answers
+              <p className="text-muted-foreground mt-1 text-sm">
+                Automated messages triggered by form lifecycle events — link
+                sent, started, submitted, deadline missed, or red-flag answers
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {categorizedAutomations.forms.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No form automations configured</p>
                   </div>
                 ) : (
                   categorizedAutomations.forms.map((rule) => (
                     <div
                       key={rule.id}
-                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-4 w-4" />
+                          <div className="mb-2 flex items-center gap-2">
+                            <FileText className="size-4" />
                             <span className="font-semibold">{rule.name}</span>
-                            <Badge variant={rule.enabled ? "default" : "secondary"}>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                            >
                               {rule.enabled ? (
                                 <>
-                                  <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+                                  <CheckCircle2 className="mr-1 inline h-3 w-3" />
                                   Active
                                 </>
                               ) : (
@@ -538,29 +585,35 @@ export default function AutomationsPage() {
                             <Badge variant="outline" className="capitalize">
                               {rule.messageType === "both" ? (
                                 <>
-                                  <Mail className="h-3 w-3 mr-1 inline" />
-                                  <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                  <Mail className="mr-1 inline h-3 w-3" />
+                                  <MessageSquare className="mr-1 inline h-3 w-3" />
                                   Both
                                 </>
                               ) : rule.messageType === "email" ? (
                                 <>
-                                  <Mail className="h-3 w-3 mr-1 inline" />
+                                  <Mail className="mr-1 inline h-3 w-3" />
                                   Email
                                 </>
                               ) : (
                                 <>
-                                  <MessageSquare className="h-3 w-3 mr-1 inline" />
+                                  <MessageSquare className="mr-1 inline h-3 w-3" />
                                   SMS
                                 </>
                               )}
                             </Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            Trigger: <span className="font-medium">{rule.trigger.replace(/_/g, " ")}</span>
+                          <p className="text-muted-foreground mb-2 text-sm">
+                            Trigger:{" "}
+                            <span className="font-medium">
+                              {rule.trigger.replace(/_/g, " ")}
+                            </span>
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="text-muted-foreground flex items-center gap-4 text-xs">
                             <span>
-                              Total sent: <span className="font-medium">{rule.stats.totalSent}</span>
+                              Total sent:{" "}
+                              <span className="font-medium">
+                                {rule.stats.totalSent}
+                              </span>
                             </span>
                             <span>•</span>
                             <span>
@@ -581,7 +634,7 @@ export default function AutomationsPage() {
                             setShowAutomationModal(true);
                           }}
                         >
-                          <Settings className="h-4 w-4" />
+                          <Settings className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -600,15 +653,15 @@ export default function AutomationsPage() {
                 <Megaphone className="h-5 w-5" />
                 Campaign Automations
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Marketing campaigns and bulk messaging automations
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Megaphone className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <div className="text-muted-foreground py-12 text-center">
+                <Megaphone className="mx-auto mb-4 h-16 w-16 opacity-50" />
                 <p className="text-lg font-medium">Campaigns coming soon</p>
-                <p className="text-sm mt-2">
+                <p className="mt-2 text-sm">
                   Marketing campaign automation will be available here
                 </p>
               </div>
@@ -619,7 +672,7 @@ export default function AutomationsPage() {
 
       {/* Modal */}
       <Dialog open={showAutomationModal} onOpenChange={setShowAutomationModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <AutomationRuleModal
             rule={selectedAutomationRule ?? undefined}
             onClose={() => {

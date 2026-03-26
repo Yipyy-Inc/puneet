@@ -1,6 +1,6 @@
 /**
  * Grooming Workflow - Phase 1: Pre-Booking Validation
- * 
+ *
  * This module handles facility configuration checks that occur BEFORE
  * the customer sees any booking options. All validation is invisible to the customer.
  */
@@ -95,8 +95,16 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
     groomerSelection: {
       mode: "optional",
       tiers: [
-        { id: "senior", name: "Senior Stylist", description: "Experienced groomer" },
-        { id: "junior", name: "Junior Stylist", description: "Entry-level groomer" },
+        {
+          id: "senior",
+          name: "Senior Stylist",
+          description: "Experienced groomer",
+        },
+        {
+          id: "junior",
+          name: "Junior Stylist",
+          description: "Entry-level groomer",
+        },
       ],
     },
     deposit: {
@@ -109,7 +117,13 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
       categories: [
         { id: "full-groom", name: "Full Groom", enabled: true },
         { id: "bath-only", name: "Bath Only", enabled: true },
-        { id: "haircut", name: "Haircut", enabled: true, hiddenWhenFullyBooked: true, fullyBookedWeeksThreshold: 2 },
+        {
+          id: "haircut",
+          name: "Haircut",
+          enabled: true,
+          hiddenWhenFullyBooked: true,
+          fullyBookedWeeksThreshold: 2,
+        },
         { id: "nail-trim", name: "Nail Trim", enabled: true },
         { id: "de-shed", name: "De-Shedding", enabled: true },
       ],
@@ -142,13 +156,13 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
 export interface GroomingPreBookingValidation {
   // Is grooming service available at all?
   isAvailable: boolean;
-  
+
   // Earliest available booking date/time
   earliestAvailableDate: Date | null;
-  
+
   // Available service categories (after filtering)
   availableCategories: GroomingServiceCategory[];
-  
+
   // Groomer selection options (based on mode)
   groomerSelectionOptions: {
     mode: GroomerSelectionMode;
@@ -157,7 +171,7 @@ export interface GroomingPreBookingValidation {
     showGroomerNames: boolean;
     tiers?: Array<{ id: string; name: string; description?: string }>;
   };
-  
+
   // Deposit information
   depositInfo: {
     required: boolean;
@@ -166,7 +180,7 @@ export interface GroomingPreBookingValidation {
     percentage?: number;
     message: string; // Customer-facing message about deposit
   };
-  
+
   // Validation errors/warnings (for internal use, not shown to customer)
   validationErrors: string[];
   validationWarnings: string[];
@@ -175,14 +189,14 @@ export interface GroomingPreBookingValidation {
 /**
  * Validates grooming booking rules BEFORE customer sees booking options
  * This is the "invisible" pre-booking validation
- * 
+ *
  * @param config - Facility grooming configuration
  * @param requestedDate - Date customer wants to book (optional, for validation)
  * @returns Validation results
  */
 export function validateGroomingPreBooking(
   config: GroomingFacilityConfig,
-  requestedDate?: Date
+  requestedDate?: Date,
 ): GroomingPreBookingValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -212,7 +226,8 @@ export function validateGroomingPreBooking(
 
   // Calculate earliest available date based on lead time
   const now = new Date();
-  const minimumAdvanceTime = config.bookingRules.leadTime.minimumHours * 60 * 60 * 1000;
+  const minimumAdvanceTime =
+    config.bookingRules.leadTime.minimumHours * 60 * 60 * 1000;
   let earliestDate = new Date(now.getTime() + minimumAdvanceTime);
 
   // Apply same-day/tomorrow rules
@@ -221,7 +236,7 @@ export function validateGroomingPreBooking(
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    
+
     if (earliestDate < tomorrow) {
       earliestDate = tomorrow;
     }
@@ -232,7 +247,7 @@ export function validateGroomingPreBooking(
     const dayAfterTomorrow = new Date(now);
     dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
     dayAfterTomorrow.setHours(0, 0, 0, 0);
-    
+
     if (earliestDate < dayAfterTomorrow) {
       earliestDate = dayAfterTomorrow;
     }
@@ -242,15 +257,16 @@ export function validateGroomingPreBooking(
   if (requestedDate) {
     if (requestedDate < earliestDate) {
       errors.push(
-        `Requested date is too soon. Minimum advance booking: ${config.bookingRules.leadTime.minimumHours} hours`
+        `Requested date is too soon. Minimum advance booking: ${config.bookingRules.leadTime.minimumHours} hours`,
       );
     }
   }
 
   // Filter available service categories
-  const availableCategories = config.bookingRules.serviceVisibility.categories.filter(
-    (category) => category.enabled
-  );
+  const availableCategories =
+    config.bookingRules.serviceVisibility.categories.filter(
+      (category) => category.enabled,
+    );
 
   // TODO: In production, check if categories are fully booked and hide them
   // For now, we just filter by enabled status
@@ -263,8 +279,12 @@ export function validateGroomingPreBooking(
   const groomerSelection = config.bookingRules.groomerSelection;
   const groomerSelectionOptions = {
     mode: groomerSelection.mode,
-    canSelectGroomer: groomerSelection.mode === "optional" || groomerSelection.mode === "full-choice",
-    canSelectTier: groomerSelection.mode === "tier-only" || groomerSelection.mode === "optional",
+    canSelectGroomer:
+      groomerSelection.mode === "optional" ||
+      groomerSelection.mode === "full-choice",
+    canSelectTier:
+      groomerSelection.mode === "tier-only" ||
+      groomerSelection.mode === "optional",
     showGroomerNames: groomerSelection.mode === "full-choice",
     tiers: groomerSelection.tiers,
   };
@@ -292,7 +312,9 @@ export function validateGroomingPreBooking(
 /**
  * Generates a customer-facing message about deposit requirements
  */
-function generateDepositMessage(deposit: GroomingBookingRules["deposit"]): string {
+function generateDepositMessage(
+  deposit: GroomingBookingRules["deposit"],
+): string {
   if (deposit.type === "none") {
     return "";
   }
@@ -313,9 +335,17 @@ function generateDepositMessage(deposit: GroomingBookingRules["deposit"]): strin
  */
 export function isWithinOperatingHours(
   date: Date,
-  config: GroomingFacilityConfig
+  config: GroomingFacilityConfig,
 ): boolean {
-  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const dayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
   const dayName = dayNames[date.getDay()] as keyof typeof config.operatingHours;
   const hours = config.operatingHours[dayName];
 
@@ -329,10 +359,10 @@ export function isWithinOperatingHours(
  * Gets the next available booking slot based on configuration
  */
 export function getNextAvailableBookingSlot(
-  config: GroomingFacilityConfig
+  config: GroomingFacilityConfig,
 ): Date | null {
   const validation = validateGroomingPreBooking(config);
-  
+
   if (!validation.isAvailable || !validation.earliestAvailableDate) {
     return null;
   }

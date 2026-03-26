@@ -1,6 +1,6 @@
 /**
  * Clover Terminal Service
- * 
+ *
  * Handles communication with Fiserv Clover physical terminals
  * Supports Tap/Chip/Swipe payments and receipt printing
  */
@@ -58,10 +58,10 @@ export interface CloverPaymentResponse {
  * Process payment through Clover terminal
  */
 export async function processCloverPayment(
-  request: CloverPaymentRequest
+  request: CloverPaymentRequest,
 ): Promise<CloverPaymentResponse> {
   const terminal = getCloverTerminal(request.facilityId, request.terminalId);
-  
+
   if (!terminal) {
     return {
       success: false,
@@ -110,7 +110,8 @@ export async function processCloverPayment(
 
   // Simulate payment method detection (random for demo)
   const paymentMethods: ("tap" | "chip" | "swipe")[] = ["tap", "chip", "swipe"];
-  const paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
+  const paymentMethod =
+    paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
 
   // Simulate success/failure (90% success rate)
   const success = Math.random() > 0.1;
@@ -175,8 +176,10 @@ export async function processCloverPayment(
   let receiptPrinted = false;
   if (request.printReceipt) {
     receiptPrinted = await printReceiptOnTerminal(terminal, receiptData, {
-      printCustomerCopy: request.printCustomerCopy ?? terminal.printCustomerCopy,
-      printMerchantCopy: request.printMerchantCopy ?? terminal.printMerchantCopy,
+      printCustomerCopy:
+        request.printCustomerCopy ?? terminal.printCustomerCopy,
+      printMerchantCopy:
+        request.printMerchantCopy ?? terminal.printMerchantCopy,
     });
   }
 
@@ -230,16 +233,16 @@ export async function processCloverPayment(
 async function printReceiptOnTerminal(
   terminal: CloverTerminalConfig,
   receiptData: string,
-  options: {
+  _options: {
     printCustomerCopy: boolean;
     printMerchantCopy: boolean;
-  }
+  },
 ): Promise<boolean> {
   // Simulate terminal printing
   // In production, this would send print command to Clover device
   console.log(`Printing receipt on terminal ${terminal.terminalName}...`);
   console.log(`Receipt data:\n${receiptData}`);
-  
+
   // Simulate print delay
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -270,7 +273,7 @@ function generateReceiptData(data: {
     minute: "2-digit",
   });
 
-  let receipt = `
+  const receipt = `
 ================================
         RECEIPT
 ================================
@@ -303,7 +306,7 @@ Thank you for your business!
 export async function reprintReceiptOnTerminal(
   facilityId: number,
   terminalId: string,
-  transactionId: string
+  transactionId: string,
 ): Promise<boolean> {
   const terminal = getCloverTerminal(facilityId, terminalId);
   if (!terminal || !terminal.isOnline) {
@@ -312,7 +315,9 @@ export async function reprintReceiptOnTerminal(
 
   // In production, retrieve transaction and reprint
   // For now, simulate reprint
-  console.log(`Re-printing receipt for transaction ${transactionId} on terminal ${terminal.terminalName}`);
+  console.log(
+    `Re-printing receipt for transaction ${transactionId} on terminal ${terminal.terminalName}`,
+  );
   await new Promise((resolve) => setTimeout(resolve, 1000));
   return true;
 }
@@ -322,14 +327,14 @@ export async function reprintReceiptOnTerminal(
  */
 export async function checkTerminalStatus(
   facilityId: number,
-  terminalId: string
+  terminalId: string,
 ): Promise<{
   isOnline: boolean;
   isReady: boolean;
   lastSeen?: string;
 }> {
   const terminal = getCloverTerminal(facilityId, terminalId);
-  
+
   if (!terminal) {
     return {
       isOnline: false,

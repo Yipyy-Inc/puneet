@@ -10,14 +10,14 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-      <div className="text-center space-y-4">
-        <h1 className="text-6xl font-bold text-destructive">Oops!</h1>
+    <div className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center">
+      <div className="space-y-4 text-center">
+        <h1 className="text-destructive text-6xl font-bold">Oops!</h1>
         <h2 className="text-2xl font-semibold">Something went wrong</h2>
         <p className="text-muted-foreground max-w-md">
           An unexpected error occurred. Our team has been notified.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex justify-center gap-4">
           <Button onClick={reset}>Try Again</Button>
           <Button variant="outline" asChild>
             <Link href="/">Go Home</Link>

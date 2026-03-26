@@ -93,7 +93,13 @@ const MOCK_BOOKINGS: MockBooking[] = [
   },
 ];
 
-const STATUS_CONFIG: Record<BookingStatus, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+const STATUS_CONFIG: Record<
+  BookingStatus,
+  {
+    label: string;
+    variant: "default" | "secondary" | "outline" | "destructive";
+  }
+> = {
   confirmed: { label: "Confirmed", variant: "default" },
   pending: { label: "Pending", variant: "secondary" },
   completed: { label: "Completed", variant: "outline" },
@@ -104,9 +110,9 @@ export default function CustomServiceBookingsPage() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(slug ?? "");
+  const serviceModule = getModuleBySlug(slug ?? "");
 
-  if (!module) return null;
+  if (!serviceModule) return null;
 
   return (
     <div className="space-y-6">
@@ -114,12 +120,12 @@ export default function CustomServiceBookingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Bookings</h2>
-          <p className="text-sm text-muted-foreground">
-            All bookings for {module.name}
+          <p className="text-muted-foreground text-sm">
+            All bookings for {serviceModule.name}
           </p>
         </div>
         <Button className="gap-2">
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
           New Booking
         </Button>
       </div>
@@ -127,35 +133,35 @@ export default function CustomServiceBookingsPage() {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <CalendarDays className="h-5 w-5" />
             All Bookings
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border overflow-hidden">
+          <div className="overflow-hidden rounded-md border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-left font-medium">
                     Date
                   </th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-left font-medium">
                     Client
                   </th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-left font-medium">
                     Pet
                   </th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-left font-medium">
                     Duration
                   </th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-left font-medium">
                     Status
                   </th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-right font-medium">
                     Amount
                   </th>
-                  <th className="text-right px-4 py-3 font-medium text-muted-foreground">
+                  <th className="text-muted-foreground px-4 py-3 text-right font-medium">
                     Actions
                   </th>
                 </tr>
@@ -171,7 +177,7 @@ export default function CustomServiceBookingsPage() {
                       <td className="px-4 py-3">
                         <div>
                           <p className="font-medium">{booking.date}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {booking.time}
                           </p>
                         </div>
@@ -179,10 +185,10 @@ export default function CustomServiceBookingsPage() {
                       <td className="px-4 py-3 font-medium">
                         {booking.client}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {booking.pet}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {booking.duration}
                       </td>
                       <td className="px-4 py-3">

@@ -19,10 +19,20 @@ import {
   type SubmissionStatus,
   type SubmissionListFilters,
 } from "@/data/form-submissions";
-import { getFormById, getFormsByFacility, evaluateLogicRules } from "@/data/forms";
+import {
+  getFormById,
+  getFormsByFacility,
+  evaluateLogicRules,
+} from "@/data/forms";
 import { facilities } from "@/data/facilities";
 import { clients } from "@/data/clients";
-import { FileText, Inbox, Search, AlertTriangle, AlertCircle } from "lucide-react";
+import {
+  FileText,
+  Inbox,
+  Search,
+  AlertTriangle,
+  AlertCircle,
+} from "lucide-react";
 
 const FACILITY_ID = 11;
 
@@ -62,7 +72,10 @@ function formatSubmissionDate(iso: string): string {
 }
 
 /** Get status badge styles (flat/pastel, no gradients) */
-function statusBadgeProps(status: string): { className?: string; variant?: "outline" | "default" | "secondary" | "destructive" } {
+function statusBadgeProps(status: string): {
+  className?: string;
+  variant?: "outline" | "default" | "secondary" | "destructive";
+} {
   switch (status) {
     case "unread":
       return { className: "bg-blue-100 text-blue-800 border-0" };
@@ -79,7 +92,9 @@ function statusBadgeProps(status: string): { className?: string; variant?: "outl
 
 export default function SubmissionsInboxPage() {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<SubmissionStatus | "all">(
+    "all",
+  );
   const [formIdFilter, setFormIdFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -96,19 +111,22 @@ export default function SubmissionsInboxPage() {
       dateTo: dateTo || undefined,
       locationId: locationFilter === "all" ? undefined : locationFilter,
     }),
-    [statusFilter, formIdFilter, dateFrom, dateTo, locationFilter]
+    [statusFilter, formIdFilter, dateFrom, dateTo, locationFilter],
   );
 
   const list = useMemo(
     () => getSubmissionsWithRecords(FACILITY_ID, filters),
-    [filters]
+    [filters],
   );
 
   const forms = useMemo(() => getFormsByFacility(FACILITY_ID), []);
 
   // Pre-compute flags for each submission
   const submissionFlags = useMemo(() => {
-    const flagMap = new Map<string, { alertFlag: boolean; missingCount: number }>();
+    const flagMap = new Map<
+      string,
+      { alertFlag: boolean; missingCount: number }
+    >();
     for (const { submission } of list) {
       const form = getFormById(submission.formId);
       let alertFlag = false;
@@ -124,7 +142,8 @@ export default function SubmissionsInboxPage() {
       if (form?.questions) {
         const answers = submission.answers ?? {};
         const missingRequired = form.questions.filter(
-          (q) => q.required && (answers[q.id] === undefined || answers[q.id] === "")
+          (q) =>
+            q.required && (answers[q.id] === undefined || answers[q.id] === ""),
         );
         missingCount = missingRequired.length;
       }
@@ -136,16 +155,23 @@ export default function SubmissionsInboxPage() {
 
   // Summary stats
   const totalCount = list.length;
-  const unreadCount = list.filter(({ record }) => record.status === "unread").length;
-  const processedCount = list.filter(({ record }) => record.status === "processed").length;
-  const alertCount = Array.from(submissionFlags.values()).filter((f) => f.alertFlag).length;
+  const unreadCount = list.filter(
+    ({ record }) => record.status === "unread",
+  ).length;
+  const processedCount = list.filter(
+    ({ record }) => record.status === "processed",
+  ).length;
+  const alertCount = Array.from(submissionFlags.values()).filter(
+    (f) => f.alertFlag,
+  ).length;
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Submissions Inbox</h2>
         <p className="text-muted-foreground">
-          Process form submissions, match to customers and pets, or create new profiles.
+          Process form submissions, match to customers and pets, or create new
+          profiles.
         </p>
       </div>
 
@@ -158,16 +184,22 @@ export default function SubmissionsInboxPage() {
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
           <span className="h-2 w-2 rounded-full bg-blue-500" />
           <span className="text-muted-foreground">Unread</span>
-          <Badge className="bg-blue-100 text-blue-800 border-0">{unreadCount}</Badge>
+          <Badge className="border-0 bg-blue-100 text-blue-800">
+            {unreadCount}
+          </Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
           <span className="text-muted-foreground">Processed</span>
-          <Badge className="bg-green-100 text-green-800 border-0">{processedCount}</Badge>
+          <Badge className="border-0 bg-green-100 text-green-800">
+            {processedCount}
+          </Badge>
         </div>
         <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
           <span className="h-2 w-2 rounded-full bg-red-500" />
           <span className="text-muted-foreground">Alerts</span>
-          <Badge className="bg-red-100 text-red-800 border-0">{alertCount}</Badge>
+          <Badge className="border-0 bg-red-100 text-red-800">
+            {alertCount}
+          </Badge>
         </div>
       </div>
 
@@ -179,7 +211,12 @@ export default function SubmissionsInboxPage() {
         <CardContent className="flex flex-wrap items-end gap-4">
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as SubmissionStatus | "all")}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter(v as SubmissionStatus | "all")
+              }
+            >
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
               </SelectTrigger>
@@ -187,7 +224,9 @@ export default function SubmissionsInboxPage() {
                 {STATUS_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
-                    {o.value === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}
+                    {o.value === "unread" && unreadCount > 0
+                      ? ` (${unreadCount})`
+                      : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -249,29 +288,35 @@ export default function SubmissionsInboxPage() {
       {/* List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Inbox className="h-4 w-4" />
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Inbox className="size-4" />
             Submissions ({list.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {list.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-              <Search className="h-10 w-10 mb-4 opacity-50" />
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
+              <Search className="mb-4 h-10 w-10 opacity-50" />
               <p>No submissions match your filters.</p>
-              <p className="text-sm mt-1">Submissions appear when forms are filled via shareable links.</p>
+              <p className="mt-1 text-sm">
+                Submissions appear when forms are filled via shareable links.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-2 font-medium">Submitted at</th>
-                    <th className="text-left py-3 px-2 font-medium">Form</th>
-                    <th className="text-left py-3 px-2 font-medium">Customer</th>
-                    <th className="text-left py-3 px-2 font-medium">Pet(s)</th>
-                    <th className="text-left py-3 px-2 font-medium">Status</th>
-                    <th className="text-left py-3 px-2 font-medium">Flags</th>
+                    <th className="px-2 py-3 text-left font-medium">
+                      Submitted at
+                    </th>
+                    <th className="px-2 py-3 text-left font-medium">Form</th>
+                    <th className="px-2 py-3 text-left font-medium">
+                      Customer
+                    </th>
+                    <th className="px-2 py-3 text-left font-medium">Pet(s)</th>
+                    <th className="px-2 py-3 text-left font-medium">Status</th>
+                    <th className="px-2 py-3 text-left font-medium">Flags</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,20 +329,33 @@ export default function SubmissionsInboxPage() {
                     return (
                       <tr
                         key={submission.id}
-                        className={`border-b hover:bg-muted/50 cursor-pointer ${isUnread ? "border-l-2 border-l-primary font-medium" : ""}`}
-                        onClick={() => router.push(`/facility/dashboard/forms/submissions/${submission.id}`)}
+                        className={`hover:bg-muted/50 cursor-pointer border-b ${isUnread ? `border-l-primary border-l-2 font-medium` : ""} `}
+                        onClick={() =>
+                          router.push(
+                            `/facility/dashboard/forms/submissions/${submission.id}`,
+                          )
+                        }
                       >
-                        <td className="py-3 px-2 whitespace-nowrap">
+                        <td className="px-2 py-3 whitespace-nowrap">
                           {formatSubmissionDate(submission.createdAt)}
                         </td>
-                        <td className="py-3 px-2">{form?.name ?? submission.formId}</td>
-                        <td className="py-3 px-2">
-                          {getCustomerName(submission.customerId ?? record.relatedCustomerId)}
+                        <td className="px-2 py-3">
+                          {form?.name ?? submission.formId}
                         </td>
-                        <td className="py-3 px-2">
-                          {getPetNames(submission.petIds ?? (record.relatedPetId ? [record.relatedPetId] : undefined))}
+                        <td className="px-2 py-3">
+                          {getCustomerName(
+                            submission.customerId ?? record.relatedCustomerId,
+                          )}
                         </td>
-                        <td className="py-3 px-2">
+                        <td className="px-2 py-3">
+                          {getPetNames(
+                            submission.petIds ??
+                              (record.relatedPetId
+                                ? [record.relatedPetId]
+                                : undefined),
+                          )}
+                        </td>
+                        <td className="px-2 py-3">
                           <Badge
                             variant={badgeProps.variant}
                             className={badgeProps.className}
@@ -305,20 +363,29 @@ export default function SubmissionsInboxPage() {
                             {record.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-2">
-                          <div className="flex gap-1.5 items-center">
+                        <td className="px-2 py-3">
+                          <div className="flex items-center gap-1.5">
                             {hasFiles && (
-                              <span className="inline-flex items-center gap-0.5 text-muted-foreground" title="Has file upload">
+                              <span
+                                className="text-muted-foreground inline-flex items-center gap-0.5"
+                                title="Has file upload"
+                              >
                                 <FileText className="h-3.5 w-3.5" />
                               </span>
                             )}
                             {flags?.alertFlag && (
-                              <span className="inline-flex items-center text-red-600" title="Red alert">
+                              <span
+                                className="inline-flex items-center text-red-600"
+                                title="Red alert"
+                              >
                                 <AlertTriangle className="h-3.5 w-3.5" />
                               </span>
                             )}
                             {(flags?.missingCount ?? 0) > 0 && (
-                              <span className="inline-flex items-center text-amber-600" title={`${flags!.missingCount} required field(s) missing`}>
+                              <span
+                                className="inline-flex items-center text-amber-600"
+                                title={`${flags!.missingCount} required field(s) missing`}
+                              >
                                 <AlertCircle className="h-3.5 w-3.5" />
                               </span>
                             )}

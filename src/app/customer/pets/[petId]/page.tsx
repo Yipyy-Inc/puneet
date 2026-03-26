@@ -201,7 +201,7 @@ export default function CustomerPetDetailPage({
 
   if (!customer || !pet) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Pet not found</h2>
           <Button
@@ -209,7 +209,7 @@ export default function CustomerPetDetailPage({
             className="mt-4"
             onClick={() => router.push("/customer/pets")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to Pets
           </Button>
         </div>
@@ -376,7 +376,7 @@ export default function CustomerPetDetailPage({
                 size="sm"
                 onClick={() => setIsEditingCI(true)}
               >
-                <Edit className="h-4 w-4 mr-2" />
+                <Edit className="mr-2 size-4" />
                 Edit
               </Button>
             )}
@@ -429,7 +429,7 @@ export default function CustomerPetDetailPage({
                       size="sm"
                       onClick={handleAddMedication}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="mr-2 size-4" />
                       Add Medication
                     </Button>
                   </div>
@@ -494,7 +494,7 @@ export default function CustomerPetDetailPage({
                                 size="sm"
                                 onClick={() => handleRemoveMedication(index)}
                               >
-                                <X className="h-4 w-4" />
+                                <X className="size-4" />
                               </Button>
                             </div>
                           </div>
@@ -502,7 +502,7 @@ export default function CustomerPetDetailPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       No medications added
                     </p>
                   )}
@@ -551,12 +551,12 @@ export default function CustomerPetDetailPage({
                 <Button onClick={handleSaveCI} disabled={isSavingCI}>
                   {isSavingCI ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 size-4 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="mr-2 size-4" />
                       Save Changes
                     </>
                   )}
@@ -579,7 +579,7 @@ export default function CustomerPetDetailPage({
             <div className="space-y-4">
               {editableFields.feedingSchedule && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Feeding Schedule
                   </p>
                   <p className="text-sm">
@@ -590,7 +590,7 @@ export default function CustomerPetDetailPage({
 
               {editableFields.feedingAmount && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Feeding Amount
                   </p>
                   <p className="text-sm">
@@ -601,7 +601,7 @@ export default function CustomerPetDetailPage({
 
               {editableFields.medicationList && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                  <p className="text-muted-foreground mb-2 text-sm font-medium">
                     Medications
                   </p>
                   {editedInstructions.medicationList &&
@@ -610,12 +610,12 @@ export default function CustomerPetDetailPage({
                       {editedInstructions.medicationList.map((med, index) => (
                         <Card key={index} className="p-3">
                           <div className="space-y-1">
-                            <p className="font-medium text-sm">{med.name}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm font-medium">{med.name}</p>
+                            <p className="text-muted-foreground text-xs">
                               {med.dosage} • {med.frequency}
                             </p>
                             {med.notes && (
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 {med.notes}
                               </p>
                             )}
@@ -624,7 +624,7 @@ export default function CustomerPetDetailPage({
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       No medications listed
                     </p>
                   )}
@@ -633,7 +633,7 @@ export default function CustomerPetDetailPage({
 
               {editableFields.groomingSensitivities && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Grooming Sensitivities
                   </p>
                   <p className="text-sm">
@@ -645,7 +645,7 @@ export default function CustomerPetDetailPage({
 
               {editableFields.behaviorNotes && (
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Behavior Notes
                   </p>
                   <p className="text-sm">
@@ -655,14 +655,14 @@ export default function CustomerPetDetailPage({
               )}
 
               {!petCareInstructions && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-muted-foreground py-8 text-center">
                   <p className="text-sm">No care instructions added yet</p>
                   <Button
                     variant="outline"
                     className="mt-4"
                     onClick={() => setIsEditingCI(true)}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Add Care Instructions
                   </Button>
                 </div>
@@ -739,7 +739,7 @@ export default function CustomerPetDetailPage({
               <Badge variant="destructive">Rejected</Badge>
               {vaccination.rejectionReason && (
                 <span
-                  className="text-xs text-muted-foreground"
+                  className="text-muted-foreground text-xs"
                   title={vaccination.rejectionReason}
                 >
                   <AlertTriangle className="h-3 w-3" />
@@ -762,7 +762,7 @@ export default function CustomerPetDetailPage({
               target="_blank"
               rel="noopener noreferrer"
             >
-              <FileText className="h-4 w-4 mr-1" />
+              <FileText className="mr-1 size-4" />
               View
             </a>
           </Button>
@@ -815,8 +815,8 @@ export default function CustomerPetDetailPage({
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -825,7 +825,7 @@ export default function CustomerPetDetailPage({
               size="icon"
               onClick={() => router.push("/customer/pets")}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="size-4" />
             </Button>
             <div>
               <h1 className="text-3xl font-bold">{pet.name}</h1>
@@ -845,7 +845,7 @@ export default function CustomerPetDetailPage({
           </div>
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="mr-2 size-4" />
               Edit Profile
             </Button>
           ) : (
@@ -860,12 +860,12 @@ export default function CustomerPetDetailPage({
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Save className="h-4 w-4 mr-2 animate-spin" />
+                    <Save className="mr-2 size-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="mr-2 size-4" />
                     Save Changes
                   </>
                 )}
@@ -878,36 +878,36 @@ export default function CustomerPetDetailPage({
         <Card>
           <CardContent className="p-6">
             <div className="flex items-start gap-6">
-              <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+              <div className="bg-muted flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg">
                 {pet.imageUrl ? (
                   <Image
                     src={pet.imageUrl}
                     alt={pet.name}
                     width={128}
                     height={128}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
-                  <PetIcon className="h-16 w-16 text-muted-foreground" />
+                  <PetIcon className="text-muted-foreground h-16 w-16" />
                 )}
               </div>
-              <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p className="text-muted-foreground text-sm">Type</p>
                   <p className="font-medium capitalize">{pet.type}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Breed</p>
+                  <p className="text-muted-foreground text-sm">Breed</p>
                   <p className="font-medium">{pet.breed}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Age</p>
+                  <p className="text-muted-foreground text-sm">Age</p>
                   <p className="font-medium">
                     {pet.age} {pet.age === 1 ? "year" : "years"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Weight</p>
+                  <p className="text-muted-foreground text-sm">Weight</p>
                   <p className="font-medium">{pet.weight} lbs</p>
                 </div>
               </div>
@@ -1046,36 +1046,36 @@ export default function CustomerPetDetailPage({
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground">Name</p>
+                        <p className="text-muted-foreground text-sm">Name</p>
                         <p className="font-medium">{pet.name}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Breed</p>
+                        <p className="text-muted-foreground text-sm">Breed</p>
                         <p className="font-medium">{pet.breed}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Age</p>
+                          <p className="text-muted-foreground text-sm">Age</p>
                           <p className="font-medium">
                             {pet.age} {pet.age === 1 ? "year" : "years"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Weight
                           </p>
                           <p className="font-medium">{pet.weight} lbs</p>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Color</p>
+                        <p className="text-muted-foreground text-sm">Color</p>
                         <p className="font-medium">{pet.color}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Microchip
                         </p>
-                        <p className="font-medium font-mono text-sm">
+                        <p className="font-mono text-sm font-medium">
                           {pet.microchip}
                         </p>
                       </div>
@@ -1125,7 +1125,7 @@ export default function CustomerPetDetailPage({
                   ) : (
                     <>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">
+                        <p className="text-muted-foreground mb-1 text-sm">
                           Allergies
                         </p>
                         <Badge
@@ -1139,7 +1139,7 @@ export default function CustomerPetDetailPage({
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">
+                        <p className="text-muted-foreground mb-1 text-sm">
                           Special Needs
                         </p>
                         <p className="text-sm">{pet.specialNeeds || "None"}</p>
@@ -1177,7 +1177,7 @@ export default function CustomerPetDetailPage({
           <TabsContent value="forms" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                   <FileText className="h-5 w-5" />
                   Forms for {pet.name}
                 </CardTitle>
@@ -1190,8 +1190,8 @@ export default function CustomerPetDetailPage({
                 {/* Required (incomplete) */}
                 {requiredForms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-destructive mb-2 flex items-center gap-1">
-                      <AlertTriangle className="h-4 w-4" />
+                    <h4 className="text-destructive mb-2 flex items-center gap-1 text-sm font-medium">
+                      <AlertTriangle className="size-4" />
                       Required ({requiredForms.length} incomplete)
                     </h4>
                     <ul className="space-y-2">
@@ -1199,11 +1199,11 @@ export default function CustomerPetDetailPage({
                         <li key={form.id}>
                           <Link
                             href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
-                            className="flex items-center justify-between rounded-lg border border-destructive/30 p-3 hover:bg-destructive/5 transition-colors"
+                            className="border-destructive/30 hover:bg-destructive/5 flex items-center justify-between rounded-lg border p-3 transition-colors"
                           >
                             <div>
                               <span className="font-medium">{form.name}</span>
-                              <p className="text-xs text-muted-foreground mt-0.5">
+                              <p className="text-muted-foreground mt-0.5 text-xs">
                                 {form.questions.length} question
                                 {form.questions.length !== 1 ? "s" : ""}
                                 {form.settings?.welcomeMessage &&
@@ -1212,7 +1212,7 @@ export default function CustomerPetDetailPage({
                             </div>
                             <Badge
                               variant="destructive"
-                              className="text-xs shrink-0"
+                              className="shrink-0 text-xs"
                             >
                               Fill now
                             </Badge>
@@ -1226,8 +1226,8 @@ export default function CustomerPetDetailPage({
                 {/* Completed (view-only with expandable answers) */}
                 {completedForms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-green-600 mb-2 flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4" />
+                    <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-green-600">
+                      <CheckCircle2 className="size-4" />
                       Completed ({completedForms.length})
                     </h4>
                     <ul className="space-y-2">
@@ -1240,7 +1240,7 @@ export default function CustomerPetDetailPage({
                           <li key={form.id}>
                             <button
                               type="button"
-                              className="w-full text-left rounded-lg border p-3 bg-green-50/50 hover:bg-green-50 transition-colors"
+                              className="w-full rounded-lg border bg-green-50/50 p-3 text-left transition-colors hover:bg-green-50"
                               onClick={() =>
                                 setExpandedSubmission(
                                   isExpanded ? null : form.id,
@@ -1249,7 +1249,7 @@ export default function CustomerPetDetailPage({
                             >
                               <div className="flex items-center justify-between">
                                 <span className="font-medium">{form.name}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   {sub?.createdAt
                                     ? new Date(
                                         sub.createdAt,
@@ -1259,7 +1259,7 @@ export default function CustomerPetDetailPage({
                               </div>
                             </button>
                             {isExpanded && sub && (
-                              <div className="mt-1 rounded-lg border bg-muted/30 p-3 space-y-2">
+                              <div className="bg-muted/30 mt-1 space-y-2 rounded-lg border p-3">
                                 {form.questions
                                   .filter(
                                     (q) =>
@@ -1288,7 +1288,7 @@ export default function CustomerPetDetailPage({
                                     sub.answers[q.id] !== undefined &&
                                     sub.answers[q.id] !== "",
                                 ).length === 0 && (
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-muted-foreground text-xs">
                                     No answers recorded.
                                   </p>
                                 )}
@@ -1304,7 +1304,7 @@ export default function CustomerPetDetailPage({
                 {/* Optional forms (service / owner forms) */}
                 {optionalForms.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                    <h4 className="text-muted-foreground mb-2 text-sm font-medium">
                       Optional forms
                     </h4>
                     <ul className="space-y-2">
@@ -1313,19 +1313,19 @@ export default function CustomerPetDetailPage({
                         return (
                           <li key={form.id}>
                             {isDone ? (
-                              <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/20">
+                              <div className="bg-muted/20 flex items-center justify-between rounded-lg border p-3">
                                 <div className="flex items-center gap-2">
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <CheckCircle2 className="size-4 text-green-500" />
                                   <span className="text-sm">{form.name}</span>
                                 </div>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   Done
                                 </span>
                               </div>
                             ) : (
                               <Link
                                 href={`/forms/${form.slug}?petId=${pet.id}&customerId=${MOCK_CUSTOMER_ID}`}
-                                className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                                className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                               >
                                 <span className="text-sm">{form.name}</span>
                                 <Badge variant="secondary" className="text-xs">
@@ -1341,7 +1341,7 @@ export default function CustomerPetDetailPage({
                 )}
 
                 {facilityForms.length === 0 && optionalForms.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-4">
+                  <p className="text-muted-foreground py-4 text-sm">
                     No forms available for this facility.
                   </p>
                 )}
@@ -1355,7 +1355,7 @@ export default function CustomerPetDetailPage({
             {facilityRequirements.length > 0 && (
               <Card className="border-primary/20 bg-primary/5">
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                     <Syringe className="h-5 w-5" />
                     Facility Vaccination Requirements
                   </CardTitle>
@@ -1374,19 +1374,19 @@ export default function CustomerPetDetailPage({
                     return (
                       <div
                         key={vaccine}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-background"
+                        className="bg-background flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="flex items-center gap-3">
                           {isUpToDate ? (
                             <CheckCircle2 className="h-5 w-5 text-green-600" />
                           ) : isExpiringSoon ? (
-                            <AlertTriangle className="h-5 w-5 text-warning" />
+                            <AlertTriangle className="text-warning h-5 w-5" />
                           ) : (
-                            <XCircle className="h-5 w-5 text-destructive" />
+                            <XCircle className="text-destructive h-5 w-5" />
                           )}
                           <div>
                             <p className="font-medium">{vaccine}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {isMissing
                                 ? "Missing - Required for booking"
                                 : isExpired
@@ -1432,15 +1432,15 @@ export default function CustomerPetDetailPage({
                     size="sm"
                     onClick={() => setVaccinationModalOpen(true)}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="mr-2 size-4" />
                     Upload Record
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 {vaccinations.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Syringe className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Syringe className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No vaccination records yet</p>
                     <Button
                       variant="outline"
@@ -1448,38 +1448,38 @@ export default function CustomerPetDetailPage({
                       size="sm"
                       onClick={() => setVaccinationModalOpen(true)}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
+                      <Upload className="mr-2 size-4" />
                       Upload First Record
                     </Button>
                   </div>
                 ) : (
                   <>
                     {expiredVaccinations.length > 0 && (
-                      <div className="mb-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <AlertTriangle className="h-5 w-5 text-destructive" />
-                          <p className="font-semibold text-destructive">
+                      <div className="border-destructive/20 bg-destructive/10 mb-4 rounded-lg border p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <AlertTriangle className="text-destructive h-5 w-5" />
+                          <p className="text-destructive font-semibold">
                             {expiredVaccinations.length} Expired Vaccination
                             {expiredVaccinations.length > 1 ? "s" : ""}
                           </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Please update expired vaccinations to continue booking
                           services.
                         </p>
                       </div>
                     )}
                     {upcomingVaccinations.length > 0 && (
-                      <div className="mb-4 p-4 rounded-lg bg-warning/10 border border-warning/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <AlertTriangle className="h-5 w-5 text-warning" />
-                          <p className="font-semibold text-warning">
+                      <div className="border-warning/20 bg-warning/10 mb-4 rounded-lg border p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <AlertTriangle className="text-warning h-5 w-5" />
+                          <p className="text-warning font-semibold">
                             {upcomingVaccinations.length} Vaccination
                             {upcomingVaccinations.length > 1 ? "s" : ""}{" "}
                             Expiring Soon
                           </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Update these vaccinations within the next 60 days.
                         </p>
                       </div>
@@ -1504,8 +1504,8 @@ export default function CustomerPetDetailPage({
               </CardHeader>
               <CardContent>
                 {petBookings.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No bookings yet</p>
                     <Button variant="outline" className="mt-4" asChild>
                       <Link href="/customer/bookings">Book a Service</Link>
@@ -1528,10 +1528,10 @@ export default function CustomerPetDetailPage({
               </CardHeader>
               <CardContent>
                 {reports.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No report cards yet</p>
-                    <p className="text-sm mt-2">
+                    <p className="mt-2 text-sm">
                       Report cards will appear here after your pet&apos;s visits
                     </p>
                   </div>
@@ -1557,19 +1557,19 @@ export default function CustomerPetDetailPage({
                         <CardContent className="space-y-4">
                           {report.photos.length > 0 && (
                             <div>
-                              <p className="text-sm font-medium mb-2">Photos</p>
+                              <p className="mb-2 text-sm font-medium">Photos</p>
                               <div className="grid grid-cols-4 gap-2">
                                 {report.photos.map((photo, idx) => (
                                   <div
                                     key={idx}
-                                    className="aspect-square rounded-lg bg-muted overflow-hidden"
+                                    className="bg-muted aspect-square overflow-hidden rounded-lg"
                                   >
                                     <Image
                                       src={photo}
                                       alt={`Photo ${idx + 1}`}
                                       width={200}
                                       height={200}
-                                      className="w-full h-full object-cover"
+                                      className="h-full w-full object-cover"
                                     />
                                   </div>
                                 ))}
@@ -1579,7 +1579,7 @@ export default function CustomerPetDetailPage({
 
                           {report.activities.length > 0 && (
                             <div>
-                              <p className="text-sm font-medium mb-2">
+                              <p className="mb-2 text-sm font-medium">
                                 Activities
                               </p>
                               <div className="flex flex-wrap gap-2">
@@ -1622,10 +1622,10 @@ export default function CustomerPetDetailPage({
               </CardHeader>
               <CardContent>
                 {photos.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <ImageIcon className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No photos yet</p>
-                    <p className="text-sm mt-2">
+                    <p className="mt-2 text-sm">
                       Photos from your pet&apos;s stays will appear here
                     </p>
                   </div>

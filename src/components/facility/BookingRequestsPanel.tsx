@@ -52,33 +52,43 @@ function formatDateTime(iso: string) {
 }
 
 function servicesLabel(services: BookingRequest["services"]) {
-  return services
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(", ");
+  return services.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
 }
 
-export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelProps) {
+export function BookingRequestsPanel({
+  variant = "card",
+}: BookingRequestsPanelProps) {
   const router = useRouter();
   const facilityId = 11;
   const { requests, setRequests } = useBookingRequestsStore();
 
   const pending = React.useMemo(
-    () => requests.filter((r) => r.facilityId === facilityId && r.status === "pending"),
+    () =>
+      requests.filter(
+        (r) => r.facilityId === facilityId && r.status === "pending",
+      ),
     [requests, facilityId],
   );
   // Default sort (matches MoeGo expectation: newest submitted first)
   const sorted = React.useMemo(
-    () => [...pending].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    () =>
+      [...pending].sort(
+        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+      ),
     [pending],
   );
 
   const [selected, setSelected] = React.useState<BookingRequest | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [confirmAction, setConfirmAction] = React.useState<ConfirmAction>("decline");
-  const [confirmTarget, setConfirmTarget] = React.useState<BookingRequest | null>(null);
+  const [confirmAction, setConfirmAction] =
+    React.useState<ConfirmAction>("decline");
+  const [confirmTarget, setConfirmTarget] =
+    React.useState<BookingRequest | null>(null);
   const [postActionOpen, setPostActionOpen] = React.useState(false);
-  const [postActionType, setPostActionType] = React.useState<ConfirmAction>("decline");
-  const [postActionTarget, setPostActionTarget] = React.useState<BookingRequest | null>(null);
+  const [postActionType, setPostActionType] =
+    React.useState<ConfirmAction>("decline");
+  const [postActionTarget, setPostActionTarget] =
+    React.useState<BookingRequest | null>(null);
   const [notifyMode, setNotifyMode] = React.useState<NotifyMode>("none");
 
   const openConfirm = (action: ConfirmAction, req: BookingRequest) => {
@@ -113,7 +123,11 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
       // MoeGo behavior: declining removes the request.
       setRequests((prev) => prev.filter((r) => r.id !== target.id));
     } else {
-      setRequests((prev) => prev.map((r) => (r.id === target.id ? { ...r, status: "waitlisted" } : r)));
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === target.id ? { ...r, status: "waitlisted" } : r,
+        ),
+      );
     }
 
     // Close the details drawer if it was open for this request
@@ -129,16 +143,19 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
 
   const completePostAction = () => {
     if (!postActionTarget) return;
-    toast.success(postActionType === "decline" ? "Request declined" : "Moved to waitlist", {
-      description:
-        notifyMode === "none"
-          ? "No customer message sent"
-          : notifyMode === "both"
-            ? "Send text + email"
-            : notifyMode === "text"
-              ? "Send text"
-              : "Send email",
-    });
+    toast.success(
+      postActionType === "decline" ? "Request declined" : "Moved to waitlist",
+      {
+        description:
+          notifyMode === "none"
+            ? "No customer message sent"
+            : notifyMode === "both"
+              ? "Send text + email"
+              : notifyMode === "text"
+                ? "Send text"
+                : "Send email",
+      },
+    );
     setPostActionOpen(false);
     setPostActionTarget(null);
   };
@@ -150,7 +167,9 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
       icon: Clock,
       sortable: true,
       sortValue: (r) => +new Date(r.createdAt),
-      render: (r) => <div className="text-xs">{formatDateTime(r.createdAt)}</div>,
+      render: (r) => (
+        <div className="text-xs">{formatDateTime(r.createdAt)}</div>
+      ),
     },
     {
       key: "appointmentAt",
@@ -158,7 +177,9 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
       icon: CalendarClock,
       sortable: true,
       sortValue: (r) => +new Date(r.appointmentAt),
-      render: (r) => <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>,
+      render: (r) => (
+        <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>
+      ),
     },
     {
       key: "customer",
@@ -167,7 +188,9 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
       render: (r) => (
         <div className="min-w-0">
           <div className="truncate font-medium">{r.clientName}</div>
-          <div className="truncate text-xs text-muted-foreground">{r.petName}</div>
+          <div className="text-muted-foreground truncate text-xs">
+            {r.petName}
+          </div>
         </div>
       ),
     },
@@ -176,7 +199,9 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
       label: "Service(s)",
       sortable: false,
       render: (r) => (
-        <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
+        <div className="text-muted-foreground text-xs">
+          {servicesLabel(r.services)}
+        </div>
       ),
     },
     {
@@ -190,10 +215,12 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
   const header = (
     <div className="flex flex-row items-center justify-between gap-3">
       <div className="space-y-1">
-        <div className="text-base font-semibold leading-none tracking-tight">
+        <div className="text-base leading-none font-semibold tracking-tight">
           Booking Requests
         </div>
-        <div className="text-xs text-muted-foreground">Act quickly on new requests</div>
+        <div className="text-muted-foreground text-xs">
+          Act quickly on new requests
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -203,7 +230,7 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
           className="gap-1"
         >
           View all
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
       </div>
     </div>
@@ -221,10 +248,18 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
           <Button size="sm" onClick={() => schedule(r)}>
             Schedule
           </Button>
-          <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openConfirm("decline", r)}
+          >
             Decline
           </Button>
-          <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openConfirm("waitlist", r)}
+          >
             To Waitlist
           </Button>
         </div>
@@ -253,29 +288,43 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
               <SheetHeader>
                 <SheetTitle>Booking Request</SheetTitle>
               </SheetHeader>
-              <div className="p-4 space-y-4">
+              <div className="space-y-4 p-4">
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Submitted</div>
-                  <div className="text-sm font-medium">{formatDateTime(selected.createdAt)}</div>
+                  <div className="text-muted-foreground text-xs">Submitted</div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(selected.createdAt)}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Requested appointment</div>
-                  <div className="text-sm font-medium">{formatDateTime(selected.appointmentAt)}</div>
+                  <div className="text-muted-foreground text-xs">
+                    Requested appointment
+                  </div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(selected.appointmentAt)}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Customer / Pet</div>
+                  <div className="text-muted-foreground text-xs">
+                    Customer / Pet
+                  </div>
                   <div className="text-sm font-medium">
                     {selected.clientName} — {selected.petName}
                   </div>
-                  <div className="text-xs text-muted-foreground">{selected.clientContact}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {selected.clientContact}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Service(s)</div>
-                  <div className="text-sm font-medium">{servicesLabel(selected.services)}</div>
+                  <div className="text-muted-foreground text-xs">
+                    Service(s)
+                  </div>
+                  <div className="text-sm font-medium">
+                    {servicesLabel(selected.services)}
+                  </div>
                 </div>
                 {selected.notes && (
                   <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Notes</div>
+                    <div className="text-muted-foreground text-xs">Notes</div>
                     <div className="text-sm">{selected.notes}</div>
                   </div>
                 )}
@@ -309,10 +358,13 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction === "decline" ? "Decline request?" : "Move to waitlist?"}
+              {confirmAction === "decline"
+                ? "Decline request?"
+                : "Move to waitlist?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action will update the request immediately. You can choose whether to notify the customer on the next step.
+              This action will update the request immediately. You can choose
+              whether to notify the customer on the next step.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -342,7 +394,10 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <RadioGroup value={notifyMode} onValueChange={(v) => setNotifyMode(v as NotifyMode)}>
+          <RadioGroup
+            value={notifyMode}
+            onValueChange={(v) => setNotifyMode(v as NotifyMode)}
+          >
             <div className="flex items-center gap-2">
               <RadioGroupItem id="post-notify-none" value="none" />
               <Label htmlFor="post-notify-none">None</Label>
@@ -372,4 +427,3 @@ export function BookingRequestsPanel({ variant = "card" }: BookingRequestsPanelP
     </>
   );
 }
-

@@ -234,7 +234,7 @@ export function GenericCalendar<T extends CalendarItem>({
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
           <div
             key={day}
-            className="text-center font-semibold text-sm py-2 border-b"
+            className="border-b py-2 text-center text-sm font-semibold"
           >
             {day}
           </div>
@@ -250,13 +250,13 @@ export function GenericCalendar<T extends CalendarItem>({
               <div
                 key={`${weekIndex}-${dayIndex}`}
                 className={cn(
-                  "min-h-[100px] border rounded-lg p-2 transition-all hover:shadow-sm",
+                  `min-h-[100px] rounded-lg border p-2 transition-all hover:shadow-sm`,
                   !cell.isCurrentMonth && "bg-muted/30 text-muted-foreground",
                   cell.isCurrentMonth && "bg-card",
-                  isTodayDate && "ring-2 ring-primary",
+                  isTodayDate && "ring-primary ring-2",
                 )}
               >
-                <div className="flex justify-between items-start mb-1">
+                <div className="mb-1 flex items-start justify-between">
                   <span
                     className={cn(
                       "text-sm font-medium",
@@ -304,14 +304,14 @@ export function GenericCalendar<T extends CalendarItem>({
                             key={item.id}
                             onClick={() => config.onItemClick?.(item)}
                             className={cn(
-                              "w-full text-left p-1 rounded text-xs border-l-2 hover:bg-accent transition-colors",
+                              `hover:bg-accent w-full rounded-sm border-l-2 p-1 text-left text-xs transition-colors`,
                               config.getItemBorderColor?.(item) ||
                                 "border-gray-500",
                             )}
                           >
                             <div
                               className={cn(
-                                "w-2 h-2 rounded-full inline-block mr-1",
+                                "mr-1 inline-block h-2 w-2 rounded-full",
                                 config.getItemColor?.(item) || "bg-gray-500",
                               )}
                             />
@@ -320,7 +320,7 @@ export function GenericCalendar<T extends CalendarItem>({
                         ),
                       )}
                       {dayItems.length > 3 && (
-                        <div className="text-xs text-muted-foreground pl-1">
+                        <div className="text-muted-foreground pl-1 text-xs">
                           +{dayItems.length - 3} more
                         </div>
                       )}
@@ -404,7 +404,7 @@ export function GenericCalendar<T extends CalendarItem>({
                       <TableCell
                         key={date.toISOString()}
                         className={cn(
-                          "text-center p-2",
+                          "p-2 text-center",
                           isTodayDate && "bg-primary/5",
                         )}
                       >
@@ -420,7 +420,7 @@ export function GenericCalendar<T extends CalendarItem>({
                             <div key={item.id} className="mb-1">
                               <Badge
                                 variant="secondary"
-                                className="cursor-pointer hover:bg-secondary/80"
+                                className="hover:bg-secondary/80 cursor-pointer"
                                 onClick={() => config.onItemClick?.(item)}
                               >
                                 {item.startTime && item.endTime
@@ -463,7 +463,7 @@ export function GenericCalendar<T extends CalendarItem>({
             <div key={date.toISOString()} className="space-y-2">
               <div
                 className={cn(
-                  "text-center p-2 rounded-lg",
+                  "rounded-lg p-2 text-center",
                   isTodayDate && "bg-primary text-primary-foreground",
                 )}
               >
@@ -487,7 +487,7 @@ export function GenericCalendar<T extends CalendarItem>({
                     <button
                       key={item.id}
                       onClick={() => config.onItemClick?.(item)}
-                      className="w-full text-left p-2 rounded border hover:bg-accent transition-colors text-sm"
+                      className="hover:bg-accent w-full rounded-sm border p-2 text-left text-sm transition-colors"
                     >
                       #{item.id}
                     </button>
@@ -504,7 +504,7 @@ export function GenericCalendar<T extends CalendarItem>({
   const renderListView = () => {
     if (!config.listColumns) {
       return (
-        <div className="text-center text-muted-foreground py-8">
+        <div className="text-muted-foreground py-8 text-center">
           List view configuration not provided
         </div>
       );
@@ -543,7 +543,7 @@ export function GenericCalendar<T extends CalendarItem>({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <CalendarIcon className="h-5 w-5" />
           {config.title || getDateRangeText()}
         </CardTitle>
@@ -551,13 +551,13 @@ export function GenericCalendar<T extends CalendarItem>({
           {currentView !== "list" && (
             <>
               <Button variant="outline" size="sm" onClick={handlePrevious}>
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="size-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={handleToday}>
                 Today
               </Button>
               <Button variant="outline" size="sm" onClick={handleNext}>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="size-4" />
               </Button>
             </>
           )}
@@ -569,10 +569,10 @@ export function GenericCalendar<T extends CalendarItem>({
         {currentView === "list" && renderListView()}
 
         {config.legendItems && config.legendItems.length > 0 && (
-          <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t">
+          <div className="mt-6 flex flex-wrap gap-4 border-t pt-4">
             {config.legendItems.map((item, index) => (
               <div key={index} className="flex items-center gap-2">
-                <div className={cn("w-3 h-3 rounded-full", item.color)} />
+                <div className={cn("h-3 w-3 rounded-full", item.color)} />
                 <span className="text-sm">{item.label}</span>
               </div>
             ))}

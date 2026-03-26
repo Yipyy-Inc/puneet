@@ -32,7 +32,7 @@ export function RequirementsGateStep({
   missing,
   completedCount,
   totalCount,
-  allowProceedWithoutComplete = false,
+  allowProceedWithoutComplete: _allowProceedWithoutComplete = false,
   primaryActionUrl,
   primaryActionLabel = "Go to Documents",
   allCompleteMessage = "All requirements are complete. You can proceed to confirm your booking.",
@@ -43,8 +43,10 @@ export function RequirementsGateStep({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-base mb-1">Complete Required Forms</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="mb-1 text-base font-semibold">
+          Complete Required Forms
+        </h3>
+        <p className="text-muted-foreground text-sm">
           {allComplete ? allCompleteMessage : missingMessage}
         </p>
       </div>
@@ -53,7 +55,7 @@ export function RequirementsGateStep({
         <span
           className={
             allComplete
-              ? "text-green-600 font-semibold"
+              ? "font-semibold text-green-600"
               : "text-muted-foreground"
           }
         >
@@ -62,15 +64,15 @@ export function RequirementsGateStep({
       </div>
       {missing.length > 0 && (
         <Card>
-          <CardContent className="p-4 space-y-3">
-            <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="space-y-3 p-4">
+            <p className="text-muted-foreground text-sm font-medium">
               Missing requirements
             </p>
             <ul className="space-y-2">
               {missing.map((item, idx) => (
                 <li
                   key={idx}
-                  className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-0"
+                  className="border-border flex items-center justify-between gap-4 border-b py-2 last:border-0"
                 >
                   <div>
                     {item.petName && (
@@ -89,7 +91,7 @@ export function RequirementsGateStep({
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary font-medium text-sm hover:underline shrink-0"
+                    className="text-primary shrink-0 text-sm font-medium hover:underline"
                   >
                     Fill now →
                   </a>
@@ -99,7 +101,7 @@ export function RequirementsGateStep({
             {primaryActionUrl && (
               <a
                 href={primaryActionUrl}
-                className="text-sm font-medium text-primary underline inline-block mt-2"
+                className="text-primary mt-2 inline-block text-sm font-medium underline"
               >
                 {primaryActionLabel} →
               </a>

@@ -37,11 +37,11 @@ export function SmartInsightsDashboard() {
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "high":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
+        return <AlertTriangle className="size-4 text-red-500" />;
       case "medium":
-        return <Info className="h-4 w-4 text-yellow-500" />;
+        return <Info className="size-4 text-yellow-500" />;
       case "low":
-        return <CheckCircle className="h-4 w-4 text-blue-500" />;
+        return <CheckCircle className="size-4 text-blue-500" />;
       default:
         return null;
     }
@@ -63,11 +63,11 @@ export function SmartInsightsDashboard() {
   const getTrendIcon = (trend: string) => {
     switch (trend) {
       case "up":
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
+        return <TrendingUp className="size-4 text-green-600" />;
       case "down":
-        return <TrendingDown className="h-4 w-4 text-red-600" />;
+        return <TrendingDown className="size-4 text-red-600" />;
       case "stable":
-        return <Minus className="h-4 w-4 text-gray-600" />;
+        return <Minus className="size-4 text-gray-600" />;
       default:
         return null;
     }
@@ -93,11 +93,11 @@ export function SmartInsightsDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-2xl font-bold">
             <Lightbulb className="h-6 w-6 text-yellow-500" />
             Smart Insights
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             AI-powered recommendations to optimize your facility
           </p>
         </div>
@@ -109,7 +109,7 @@ export function SmartInsightsDashboard() {
       </div>
 
       {/* Category Filter */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {categories.map((category) => (
           <Button
             key={category.value}
@@ -130,10 +130,10 @@ export function SmartInsightsDashboard() {
           <Card key={insight.id} className="overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
+                <div className="flex flex-1 items-start gap-3">
                   {getPriorityIcon(insight.priority)}
                   <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
                       {insight.title}
                       <Badge className={getCategoryColor(insight.category)}>
                         {insight.category}
@@ -143,7 +143,7 @@ export function SmartInsightsDashboard() {
                         {insight.trend}
                       </Badge>
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       {insight.description}
                     </p>
                   </div>
@@ -157,14 +157,14 @@ export function SmartInsightsDashboard() {
             <CardContent className="space-y-4">
               {/* Impact & Recommendation */}
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs font-semibold text-blue-900 mb-1">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-blue-900">
                     💡 Impact
                   </p>
                   <p className="text-sm text-blue-800">{insight.impact}</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs font-semibold text-green-900 mb-1">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                  <p className="mb-1 text-xs font-semibold text-green-900">
                     ✨ Recommendation
                   </p>
                   <p className="text-sm text-green-800">
@@ -174,14 +174,14 @@ export function SmartInsightsDashboard() {
               </div>
 
               {/* Data Points */}
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center gap-4">
                 {insight.dataPoints.map((dp, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border"
+                    className="flex items-center gap-2 rounded-lg border bg-slate-50 px-3 py-2"
                   >
                     <div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {dp.label}
                       </p>
                       <p className="text-lg font-bold">{dp.value}</p>
@@ -191,8 +191,8 @@ export function SmartInsightsDashboard() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between pt-2 border-t">
-                <p className="text-xs text-muted-foreground">
+              <div className="flex items-center justify-between border-t pt-2">
+                <p className="text-muted-foreground text-xs">
                   Generated {new Date(insight.generatedAt).toLocaleString()}
                 </p>
                 <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export function SmartInsightsDashboard() {
                   </Button>
                   <Button size="sm">
                     Take Action
-                    <ExternalLink className="h-3 w-3 ml-1" />
+                    <ExternalLink className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
               </div>

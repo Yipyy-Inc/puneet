@@ -145,7 +145,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                   className="h-10 w-10 rounded-xl"
                   aria-label="Create"
                 >
-                  <Plus className="h-5 w-5 text-muted-foreground" />
+                  <Plus className="text-muted-foreground h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
@@ -153,33 +153,33 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               Create
             </TooltipContent>
           </Tooltip>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={() => setIsCreateClientModalOpen(true)}>
-            <User className="mr-2 h-4 w-4" />
-            New Client
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() =>
-              openBookingModal({
-                clients: clients.filter((c) => c.facility === facility.name),
-                facilityId: facilityId,
-                facilityName: facility.name,
-                onCreateBooking: handleCreateBooking,
-              })
-            }
-          >
-            <Calendar className="mr-2 h-4 w-4" />
-            New Booking
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleCreateWaitlist}>
-            <List className="mr-2 h-4 w-4" />
-            New Waitlist
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
-            <Zap className="mr-2 h-4 w-4" />
-            Quick Daycare Check-in
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setIsCreateClientModalOpen(true)}>
+              <User className="mr-2 size-4" />
+              New Client
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                openBookingModal({
+                  clients: clients.filter((c) => c.facility === facility.name),
+                  facilityId: facilityId,
+                  facilityName: facility.name,
+                  onCreateBooking: handleCreateBooking,
+                })
+              }
+            >
+              <Calendar className="mr-2 size-4" />
+              New Booking
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCreateWaitlist}>
+              <List className="mr-2 size-4" />
+              New Waitlist
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
+              <Zap className="mr-2 size-4" />
+              Quick Daycare Check-in
+            </DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       </TooltipProvider>
 

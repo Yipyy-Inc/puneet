@@ -15,14 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Plus,
-  DollarSign,
-  X,
-  Bell,
-  AlertCircle,
-} from "lucide-react";
+import { Plus, DollarSign, X, Bell, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { PriceAdjustment, PriceAdjustmentReason } from "@/data/grooming";
 
@@ -32,7 +25,9 @@ interface PriceAdjustmentFormProps {
   basePrice: number;
   currentTotal: number;
   adjustments: PriceAdjustment[];
-  onAddAdjustment: (adjustment: Omit<PriceAdjustment, "id" | "addedAt">) => void;
+  onAddAdjustment: (
+    adjustment: Omit<PriceAdjustment, "id" | "addedAt">,
+  ) => void;
   onRemoveAdjustment: (adjustmentId: string) => void;
   readOnly?: boolean;
 }
@@ -93,10 +88,10 @@ const ADJUSTMENT_REASONS: Array<{
 ];
 
 export function PriceAdjustmentForm({
-  appointmentId,
+  appointmentId: _appointmentId,
   petName,
   basePrice,
-  currentTotal,
+  currentTotal: _currentTotal,
   adjustments,
   onAddAdjustment,
   onRemoveAdjustment,
@@ -164,7 +159,10 @@ export function PriceAdjustmentForm({
     });
   };
 
-  const totalAdjustments = adjustments.reduce((sum, adj) => sum + adj.amount, 0);
+  const totalAdjustments = adjustments.reduce(
+    (sum, adj) => sum + adj.amount,
+    0,
+  );
   const newTotal = basePrice + totalAdjustments;
 
   return (
@@ -183,12 +181,12 @@ export function PriceAdjustmentForm({
             >
               {isAdding ? (
                 <>
-                  <X className="h-4 w-4 mr-1" />
+                  <X className="mr-1 size-4" />
                   Cancel
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="mr-1 size-4" />
                   Add Charge
                 </>
               )}
@@ -198,24 +196,22 @@ export function PriceAdjustmentForm({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Price Summary */}
-        <div className="p-4 rounded-lg bg-muted/50">
+        <div className="bg-muted/50 rounded-lg p-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Base Price</p>
-              <p className="font-medium text-lg">${basePrice.toFixed(2)}</p>
+              <p className="text-lg font-medium">${basePrice.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Adjustments</p>
-              <p className="font-medium text-lg">
+              <p className="text-lg font-medium">
                 {totalAdjustments > 0 ? "+" : ""}${totalAdjustments.toFixed(2)}
               </p>
             </div>
-            <div className="col-span-2 pt-2 border-t">
+            <div className="col-span-2 border-t pt-2">
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground font-medium">Total Price</p>
-                <p className="font-bold text-xl">
-                  ${newTotal.toFixed(2)}
-                </p>
+                <p className="text-xl font-bold">${newTotal.toFixed(2)}</p>
               </div>
             </div>
           </div>
@@ -223,7 +219,7 @@ export function PriceAdjustmentForm({
 
         {/* Add Adjustment Form */}
         {isAdding && !readOnly && (
-          <div className="p-4 rounded-lg border-2 border-dashed space-y-4">
+          <div className="space-y-4 rounded-lg border-2 border-dashed p-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Charge Reason *</Label>
               <Select value={reason} onValueChange={handleReasonChange}>
@@ -235,7 +231,7 @@ export function PriceAdjustmentForm({
                     <SelectItem key={r.value} value={r.value}>
                       <div>
                         <div className="font-medium">{r.label}</div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           {r.description}
                         </div>
                       </div>
@@ -244,7 +240,7 @@ export function PriceAdjustmentForm({
                 </SelectContent>
               </Select>
               {selectedReason?.defaultAmount && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Suggested amount: ${selectedReason.defaultAmount}
                 </p>
               )}
@@ -286,13 +282,16 @@ export function PriceAdjustmentForm({
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
               <div className="space-y-0.5">
-                <Label htmlFor="notify-customer" className="flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
+                <Label
+                  htmlFor="notify-customer"
+                  className="flex items-center gap-2"
+                >
+                  <Bell className="size-4" />
                   Notify Customer
                 </Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Send notification about this charge to {petName}&apos;s owner
                 </p>
               </div>
@@ -324,28 +323,28 @@ export function PriceAdjustmentForm({
                 return (
                   <div
                     key={adjustment.id}
-                    className="flex items-start justify-between p-3 rounded-lg border bg-card"
+                    className="bg-card flex items-start justify-between rounded-lg border p-3"
                   >
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="mb-1 flex items-center gap-2">
                         <Badge variant="outline">
                           {reasonData?.label || adjustment.customReason}
                         </Badge>
-                        <span className="font-semibold text-lg">
+                        <span className="text-lg font-semibold">
                           +${adjustment.amount.toFixed(2)}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {adjustment.description}
                       </p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                         <span>
                           Added by {adjustment.addedBy} on{" "}
                           {new Date(adjustment.addedAt).toLocaleString()}
                         </span>
                         {adjustment.customerNotified ? (
                           <Badge variant="outline" className="text-xs">
-                            <Bell className="h-3 w-3 mr-1" />
+                            <Bell className="mr-1 h-3 w-3" />
                             Customer Notified
                           </Badge>
                         ) : (
@@ -362,7 +361,7 @@ export function PriceAdjustmentForm({
                         onClick={() => onRemoveAdjustment(adjustment.id)}
                         className="ml-2"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="size-4" />
                       </Button>
                     )}
                   </div>
@@ -373,15 +372,15 @@ export function PriceAdjustmentForm({
         )}
 
         {adjustments.length === 0 && !isAdding && (
-          <div className="text-center py-6 text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-6 text-center text-sm">
             No price adjustments added yet
           </div>
         )}
 
         {/* Warning if total changed significantly */}
         {totalAdjustments > 0 && totalAdjustments > basePrice * 0.3 && (
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900">
-            <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
+          <div className="flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950/20">
+            <AlertCircle className="mt-0.5 size-4 text-yellow-600" />
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
               Total adjustments exceed 30% of base price. Ensure customer is
               aware of additional charges.

@@ -55,7 +55,7 @@ export function UserModal({ user }: UserModalProps) {
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="border-b">
-          <nav className="px-1 flex gap-1 overflow-x-auto">
+          <nav className="flex gap-1 overflow-x-auto px-1">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               const Icon = tab.icon;
@@ -65,14 +65,14 @@ export function UserModal({ user }: UserModalProps) {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                    `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                     "hover:bg-muted/50",
                     isActive
-                      ? "bg-background border-b-2 border-primary text-primary"
+                      ? "border-primary bg-background text-primary border-b-2"
                       : "text-muted-foreground",
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="size-4" />
                   {tab.name}
                 </button>
               );
@@ -81,7 +81,7 @@ export function UserModal({ user }: UserModalProps) {
         </div>
 
         <TabsContent value="overview" className="mt-6 space-y-6">
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <InfoCard
               title="Last Login"
               value={user.lastLogin}
@@ -107,43 +107,43 @@ export function UserModal({ user }: UserModalProps) {
         </TabsContent>
 
         <TabsContent value="contact" className="mt-6 space-y-6">
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
-            <Card className="bg-linear-to-br from-card to-muted/20 border-none shadow-sm hover:shadow-md transition-all duration-200">
-              <CardHeader className="pb-3 px-5 pt-5">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-info/10 text-info">
-                    <Building className="h-4 w-4" />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Card className="from-card to-muted/20 border-none bg-linear-to-br shadow-sm transition-all duration-200 hover:shadow-md">
+              <CardHeader className="px-5 pt-5 pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <div className="bg-info/10 text-info rounded-lg p-1.5">
+                    <Building className="size-4" />
                   </div>
                   Facility
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-5 pb-5">
-                <div className="p-3 rounded-lg bg-background/60 backdrop-blur-sm">
+                <div className="bg-background/60 rounded-lg p-3 backdrop-blur-sm">
                   <div className="text-base font-semibold">{user.facility}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Works at</p>
+                  <p className="text-muted-foreground mt-1 text-xs">Works at</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-linear-to-br from-card to-muted/20 border-none shadow-sm hover:shadow-md transition-all duration-200">
-              <CardHeader className="pb-3 px-5 pt-5">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                    <Mail className="h-4 w-4" />
+            <Card className="from-card to-muted/20 border-none bg-linear-to-br shadow-sm transition-all duration-200 hover:shadow-md">
+              <CardHeader className="px-5 pt-5 pb-3">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <div className="bg-primary/10 text-primary rounded-lg p-1.5">
+                    <Mail className="size-4" />
                   </div>
                   Contact Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2.5 px-5 pb-5">
-                <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/60 backdrop-blur-sm">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                <div className="bg-background/60 flex items-center gap-3 rounded-lg p-2.5 backdrop-blur-sm">
+                  <div className="bg-muted rounded-lg p-2">
+                    <Mail className="text-muted-foreground size-4" />
                   </div>
                   <span className="text-sm font-medium">{user.email}</span>
                 </div>
-                <div className="flex items-center gap-3 p-2.5 rounded-lg bg-background/60 backdrop-blur-sm">
-                  <div className="p-2 rounded-lg bg-muted">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
+                <div className="bg-background/60 flex items-center gap-3 rounded-lg p-2.5 backdrop-blur-sm">
+                  <div className="bg-muted rounded-lg p-2">
+                    <Phone className="text-muted-foreground size-4" />
                   </div>
                   <span className="text-sm font-medium">{user.phone}</span>
                 </div>
@@ -153,11 +153,11 @@ export function UserModal({ user }: UserModalProps) {
         </TabsContent>
 
         <TabsContent value="permissions" className="mt-6 space-y-6">
-          <Card className="bg-linear-to-br from-card to-muted/20 border-none shadow-sm hover:shadow-md transition-all duration-200">
-            <CardHeader className="pb-3 px-5 pt-5">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-warning/10 text-warning">
-                  <Shield className="h-4 w-4" />
+          <Card className="from-card to-muted/20 border-none bg-linear-to-br shadow-sm transition-all duration-200 hover:shadow-md">
+            <CardHeader className="px-5 pt-5 pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <div className="bg-warning/10 text-warning rounded-lg p-1.5">
+                  <Shield className="size-4" />
                 </div>
                 User Permissions
               </CardTitle>
@@ -168,7 +168,7 @@ export function UserModal({ user }: UserModalProps) {
                   <Badge
                     key={permission}
                     variant="secondary"
-                    className="capitalize text-xs hover:bg-primary hover:text-primary-foreground transition-colors cursor-default"
+                    className="hover:bg-primary hover:text-primary-foreground cursor-default text-xs capitalize transition-colors"
                   >
                     {permission.replace(/_/g, " ")}
                   </Badge>

@@ -72,33 +72,33 @@ export function NoteCard({
       )}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex items-center justify-center h-6 w-6 rounded-full bg-muted shrink-0">
-            <User className="h-3 w-3 text-muted-foreground" />
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+            <User className="text-muted-foreground h-3 w-3" />
           </div>
           <div className="min-w-0">
-            <span className="text-sm font-medium truncate block">
+            <span className="block truncate text-sm font-medium">
               {note.createdBy}
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {formatNoteDate(note.createdAt)}
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           {subtypeStyle && (
             <Badge variant={subtypeStyle.variant} className="text-[10px]">
               {subtypeStyle.label}
             </Badge>
           )}
           {note.visibility === "internal" ? (
-            <Badge variant="secondary" className="text-[10px] gap-0.5">
+            <Badge variant="secondary" className="gap-0.5 text-[10px]">
               <EyeOff className="h-2.5 w-2.5" />
               Internal
             </Badge>
           ) : (
-            <Badge variant="info" className="text-[10px] gap-0.5">
+            <Badge variant="info" className="gap-0.5 text-[10px]">
               <Eye className="h-2.5 w-2.5" />
               Shared
             </Badge>
@@ -107,14 +107,12 @@ export function NoteCard({
       </div>
 
       {/* Content */}
-      <p className="text-sm whitespace-pre-wrap leading-relaxed">
-        {displayContent}
-      </p>
+      <p className="text-sm/relaxed whitespace-pre-wrap">{displayContent}</p>
       {isLong && (
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="text-xs text-primary hover:underline mt-1"
+          className="text-primary mt-1 text-xs hover:underline"
         >
           {expanded ? "Show less" : "Show more"}
         </button>
@@ -122,13 +120,13 @@ export function NoteCard({
 
       {/* Footer — edited indicator + actions */}
       {(!readOnly || hasEdits) && (
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
+        <div className="border-border/50 mt-2 flex items-center justify-between border-t pt-2">
           <div className="flex items-center gap-1">
             {hasEdits && (
               <button
                 type="button"
                 onClick={onViewHistory}
-                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors hover:underline cursor-pointer"
+                className="text-muted-foreground hover:text-primary flex cursor-pointer items-center gap-0.5 text-xs transition-colors hover:underline"
                 aria-label="View edit history"
               >
                 <History className="h-3 w-3" />
@@ -151,9 +149,9 @@ export function NoteCard({
                   title={note.isPinned ? "Unpin" : "Pin"}
                 >
                   {note.isPinned ? (
-                    <PinOff className="h-4 w-4" />
+                    <PinOff className="size-4" />
                   ) : (
-                    <Pin className="h-4 w-4" />
+                    <Pin className="size-4" />
                   )}
                 </Button>
               )}
@@ -175,9 +173,9 @@ export function NoteCard({
                   }
                 >
                   {note.visibility === "internal" ? (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   ) : (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   )}
                 </Button>
               )}
@@ -190,7 +188,7 @@ export function NoteCard({
                   aria-label="Edit note"
                   title="Edit note"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="size-4" />
                 </Button>
               )}
               {onDelete && (
@@ -199,10 +197,10 @@ export function NoteCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive h-7 w-7 p-0"
                       aria-label="Delete note"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

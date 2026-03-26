@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.eslintcache
 
 # debug
 npm-debug.log*
@@ -42,3 +43,6 @@ next-env.d.ts
 
 # claude code
 .claude/
+docs/
+package-lock.json
+pnpm-lock.yaml

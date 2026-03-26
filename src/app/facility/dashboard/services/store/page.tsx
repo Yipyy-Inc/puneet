@@ -193,7 +193,7 @@ export default function StoreServicePage() {
                 disabled={!isEditing}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               When enabled, customers can browse and purchase products from your
               store.
             </p>
@@ -208,7 +208,7 @@ export default function StoreServicePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Store hours can be configured in facility settings.
             </p>
           </CardContent>
@@ -240,7 +240,7 @@ export default function StoreServicePage() {
               </Label>
             </div>
           ))}
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Select the locations where products can be picked up.
           </p>
         </CardContent>
@@ -254,7 +254,7 @@ export default function StoreServicePage() {
           </CardTitle>
           {isEditing && (
             <Button onClick={addProduct} size="sm" className="ml-auto">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Product
             </Button>
           )}
@@ -372,7 +372,7 @@ export default function StoreServicePage() {
                         size="sm"
                         onClick={() => removeProduct(product.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </TableCell>
                   )}

@@ -3,7 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -29,15 +35,15 @@ import {
   MapPin,
   User,
   Users,
-  AlertTriangle,
   CheckCircle2,
   XCircle,
-  GraduationCap,
   Info,
-  Download,
-  Calendar as CalendarIcon,
 } from "lucide-react";
-import { type TrainingSeries, getDayName, calculateSessionDates } from "@/lib/training-series";
+import {
+  type TrainingSeries,
+  getDayName,
+  calculateSessionDates,
+} from "@/lib/training-series";
 import { defaultTrainingCourseTypes } from "@/lib/training-config";
 import { validatePrerequisites } from "@/lib/training-prerequisites";
 import { checkCourseProgression } from "@/lib/training-progression";
@@ -88,24 +94,32 @@ export default function CustomerTrainingPage() {
   const [series] = useState<TrainingSeries[]>(mockSeries);
   const [searchQuery, setSearchQuery] = useState("");
   const [isEnrollmentModalOpen, setIsEnrollmentModalOpen] = useState(false);
-  const [selectedSeries, setSelectedSeries] = useState<TrainingSeries | null>(null);
+  const [selectedSeries, setSelectedSeries] = useState<TrainingSeries | null>(
+    null,
+  );
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
-  const [paymentOption, setPaymentOption] = useState<"deposit" | "full">("deposit");
+  const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
+    "deposit",
+  );
   const [agreedToCommitment, setAgreedToCommitment] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isWaitlistModalOpen, setIsWaitlistModalOpen] = useState(false);
   const [waitlistPosition, setWaitlistPosition] = useState<number | null>(null);
   const [certificates] = useState<TrainingCertificate[]>([]); // Mock - would come from API
-  const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] = useState(false);
-  const [selectedCourseDetails, setSelectedCourseDetails] = useState<TrainingSeries | null>(null);
+  const [isCourseDetailsModalOpen, setIsCourseDetailsModalOpen] =
+    useState(false);
+  const [selectedCourseDetails, setSelectedCourseDetails] =
+    useState<TrainingSeries | null>(null);
   // Mock enrollments - in production, this would come from API
-  const [enrollments] = useState<Array<{ seriesId: string; petId: number; petName: string }>>([
+  const [enrollments] = useState<
+    Array<{ seriesId: string; petId: number; petName: string }>
+  >([
     // Example: { seriesId: "series-001", petId: 1, petName: "Buddy" }
   ]);
 
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -115,18 +129,21 @@ export default function CustomerTrainingPage() {
   // Check course progression for all pets (only show unlocked courses)
   const progressionByPet = useMemo(() => {
     if (!customer) return {};
-    const progression: Record<number, ReturnType<typeof checkCourseProgression>> = {};
-    
+    const progression: Record<
+      number,
+      ReturnType<typeof checkCourseProgression>
+    > = {};
+
     customer.pets.forEach((pet) => {
       if (pet.type === "Dog") {
         progression[pet.id] = checkCourseProgression(
           pet.id,
           defaultTrainingCourseTypes,
-          certificates
+          certificates,
         );
       }
     });
-    
+
     return progression;
   }, [customer, certificates]);
 
@@ -134,24 +151,30 @@ export default function CustomerTrainingPage() {
   const availableSeries = useMemo(() => {
     return series.filter((s) => {
       if (s.status !== "open") return false;
-      
+
       // Check if course is unlocked for at least one pet
-      const courseType = defaultTrainingCourseTypes.find((ct) => ct.id === s.courseTypeId);
+      const courseType = defaultTrainingCourseTypes.find(
+        (ct) => ct.id === s.courseTypeId,
+      );
       if (!courseType) return false;
-      
+
       // If no prerequisites, always show
       if (courseType.prerequisites.length === 0) {
         // Show it
       } else {
         // Check if unlocked for at least one pet
-        const isUnlocked = Object.values(progressionByPet).some((progression) => {
-          const courseProg = progression.find((p) => p.courseTypeId === s.courseTypeId);
-          return courseProg?.isUnlocked ?? false;
-        });
-        
+        const isUnlocked = Object.values(progressionByPet).some(
+          (progression) => {
+            const courseProg = progression.find(
+              (p) => p.courseTypeId === s.courseTypeId,
+            );
+            return courseProg?.isUnlocked ?? false;
+          },
+        );
+
         if (!isUnlocked) return false;
       }
-      
+
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
@@ -177,7 +200,7 @@ export default function CustomerTrainingPage() {
     const sessionDates = calculateSessionDates(
       seriesItem.startDate,
       seriesItem.dayOfWeek,
-      seriesItem.numberOfWeeks
+      seriesItem.numberOfWeeks,
     );
     if (sessionDates.length === 0) return "";
     const start = new Date(sessionDates[0]);
@@ -222,7 +245,7 @@ export default function CustomerTrainingPage() {
     }
 
     const courseType = defaultTrainingCourseTypes.find(
-      (ct) => ct.id === selectedSeries.courseTypeId
+      (ct) => ct.id === selectedSeries.courseTypeId,
     );
     if (!courseType) {
       toast.error("Course type not found");
@@ -244,12 +267,12 @@ export default function CustomerTrainingPage() {
     try {
       // TODO: API call to enroll
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      
+
       // Generate session dates for confirmation and calendar
       const sessionDates = calculateSessionDates(
         selectedSeries.startDate,
         selectedSeries.dayOfWeek,
-        selectedSeries.numberOfWeeks
+        selectedSeries.numberOfWeeks,
       );
 
       toast.success(
@@ -264,20 +287,23 @@ export default function CustomerTrainingPage() {
                 selectedSeries,
                 sessionDates,
                 pet.name,
-                selectedFacility?.name || "Facility"
+                selectedFacility?.name || "Facility",
               );
-              downloadICSFile(icsContent, `${selectedSeries.seriesName.replace(/\s+/g, "-")}-sessions.ics`);
+              downloadICSFile(
+                icsContent,
+                `${selectedSeries.seriesName.replace(/\s+/g, "-")}-sessions.ics`,
+              );
               toast.success("Calendar file downloaded");
             },
           },
-        }
+        },
       );
-      
+
       setIsEnrollmentModalOpen(false);
       setSelectedSeries(null);
       setSelectedPetId(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to enroll");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to enroll");
     } finally {
       setIsEnrolling(false);
     }
@@ -299,13 +325,15 @@ export default function CustomerTrainingPage() {
       // TODO: API call to join waitlist
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(
-        `${pet.name} added to waitlist. Position: #${waitlistPosition}. You'll be notified when a spot opens.`
+        `${pet.name} added to waitlist. Position: #${waitlistPosition}. You'll be notified when a spot opens.`,
       );
       setIsWaitlistModalOpen(false);
       setSelectedSeries(null);
       setSelectedPetId(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to join waitlist");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to join waitlist",
+      );
     }
   };
 
@@ -319,7 +347,7 @@ export default function CustomerTrainingPage() {
     const series = selectedSeries || selectedCourseDetails;
     if (!series) return null;
     return defaultTrainingCourseTypes.find(
-      (ct) => ct.id === series.courseTypeId
+      (ct) => ct.id === series.courseTypeId,
     );
   }, [selectedSeries, selectedCourseDetails]);
 
@@ -333,7 +361,7 @@ export default function CustomerTrainingPage() {
     series: TrainingSeries,
     sessionDates: string[],
     petName: string,
-    facilityName: string
+    _facilityName: string,
   ): string => {
     const formatICSDate = (date: Date) => {
       return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -342,7 +370,7 @@ export default function CustomerTrainingPage() {
     const events = sessionDates.map((date, index) => {
       const startDateTime = new Date(`${date}T${series.startTime}`);
       const endDateTime = new Date(`${date}T${series.endTime}`);
-      
+
       return [
         "BEGIN:VEVENT",
         `UID:training-${series.id}-session-${index + 1}@yipyy.com`,
@@ -365,7 +393,9 @@ export default function CustomerTrainingPage() {
   };
 
   const downloadICSFile = (icsContent: string, filename: string) => {
-    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const blob = new Blob([icsContent], {
+      type: "text/calendar;charset=utf-8",
+    });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -397,7 +427,7 @@ export default function CustomerTrainingPage() {
       {/* Series Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {availableSeries.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
+          <div className="text-muted-foreground col-span-full py-12 text-center">
             No training series available at this time.
           </div>
         ) : (
@@ -411,33 +441,34 @@ export default function CustomerTrainingPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-xl mb-2">
+                      <CardTitle className="mb-2 text-xl">
                         {seriesItem.courseTypeName}
                       </CardTitle>
                       <CardDescription className="space-y-1">
                         <div className="flex items-center gap-2 text-sm">
-                          <CalendarDays className="h-4 w-4" />
-                          {getDayName(seriesItem.dayOfWeek)} {seriesItem.startTime}
+                          <CalendarDays className="size-4" />
+                          {getDayName(seriesItem.dayOfWeek)}{" "}
+                          {seriesItem.startTime}
                         </div>
                         {isMounted && dateRange && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-4 w-4" />
+                            <Clock className="size-4" />
                             {dateRange} | {seriesItem.numberOfWeeks} weeks
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-sm">
-                          <User className="h-4 w-4" />
+                          <User className="size-4" />
                           Instructor: {seriesItem.instructorName}
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-4 w-4" />
+                          <MapPin className="size-4" />
                           {seriesItem.location}
                         </div>
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-end space-y-4">
+                <CardContent className="flex flex-1 flex-col justify-end space-y-4">
                   <div className="flex items-center justify-between">
                     <Badge
                       variant={isFull ? "destructive" : "default"}
@@ -450,10 +481,11 @@ export default function CustomerTrainingPage() {
                   <Separator />
                   {/* Show enrolled pet if any */}
                   {enrollments.some((e) => e.seriesId === seriesItem.id) && (
-                    <div className="p-2 bg-primary/10 rounded-lg text-sm">
-                      <div className="flex items-center gap-2 text-primary font-medium">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Enrolled: {enrollments
+                    <div className="bg-primary/10 rounded-lg p-2 text-sm">
+                      <div className="text-primary flex items-center gap-2 font-medium">
+                        <CheckCircle2 className="size-4" />
+                        Enrolled:{" "}
+                        {enrollments
                           .filter((e) => e.seriesId === seriesItem.id)
                           .map((e) => e.petName)
                           .join(", ")}
@@ -466,7 +498,7 @@ export default function CustomerTrainingPage() {
                       className="flex-1"
                       onClick={() => handleCourseDetailsClick(seriesItem)}
                     >
-                      <Info className="h-4 w-4 mr-2" />
+                      <Info className="mr-2 size-4" />
                       Course Details
                     </Button>
                     {isFull ? (
@@ -494,19 +526,22 @@ export default function CustomerTrainingPage() {
       </div>
 
       {/* Enrollment Modal */}
-      <Dialog open={isEnrollmentModalOpen} onOpenChange={setIsEnrollmentModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isEnrollmentModalOpen}
+        onOpenChange={setIsEnrollmentModalOpen}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Enroll in Training Series</DialogTitle>
-            <DialogDescription>
-              {selectedSeries?.seriesName}
-            </DialogDescription>
+            <DialogDescription>{selectedSeries?.seriesName}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* Pet Selection */}
             <div className="space-y-2">
-              <Label>Select Pet <span className="text-destructive">*</span></Label>
+              <Label>
+                Select Pet <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={selectedPetId?.toString() || ""}
                 onValueChange={(value) => setSelectedPetId(parseInt(value))}
@@ -530,19 +565,23 @@ export default function CustomerTrainingPage() {
             {selectedPet && selectedCourseType && prerequisiteValidation && (
               <div className="space-y-2">
                 <Label>Prerequisites Check</Label>
-                <div className="p-4 border rounded-lg space-y-2">
+                <div className="space-y-2 rounded-lg border p-4">
                   {prerequisiteValidation.eligible ? (
                     <div className="flex items-center gap-2 text-green-600">
                       <CheckCircle2 className="h-5 w-5" />
-                      <span className="font-medium">All prerequisites met!</span>
+                      <span className="font-medium">
+                        All prerequisites met!
+                      </span>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-destructive">
+                      <div className="text-destructive flex items-center gap-2">
                         <XCircle className="h-5 w-5" />
-                        <span className="font-medium">Prerequisites not met</span>
+                        <span className="font-medium">
+                          Prerequisites not met
+                        </span>
                       </div>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-7">
+                      <ul className="text-muted-foreground ml-7 list-inside list-disc space-y-1 text-sm">
                         {prerequisiteValidation.issues.map((issue, index) => (
                           <li key={index}>{issue.message}</li>
                         ))}
@@ -557,16 +596,17 @@ export default function CustomerTrainingPage() {
             {selectedSeries && (
               <div className="space-y-2">
                 <Label>Series Commitment</Label>
-                <div className="p-4 border rounded-lg space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    By enrolling, you commit to attending all {selectedSeries.numberOfWeeks} sessions:
+                <div className="space-y-2 rounded-lg border p-4">
+                  <p className="text-muted-foreground text-sm">
+                    By enrolling, you commit to attending all{" "}
+                    {selectedSeries.numberOfWeeks} sessions:
                   </p>
-                  <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                  <ul className="ml-4 list-inside list-disc space-y-1 text-sm">
                     {isMounted &&
                       calculateSessionDates(
                         selectedSeries.startDate,
                         selectedSeries.dayOfWeek,
-                        selectedSeries.numberOfWeeks
+                        selectedSeries.numberOfWeeks,
                       ).map((date, index) => (
                         <li key={date}>
                           Session {index + 1}:{" "}
@@ -591,9 +631,10 @@ export default function CustomerTrainingPage() {
                   />
                   <Label
                     htmlFor="commitment"
-                    className="text-sm font-normal cursor-pointer"
+                    className="cursor-pointer text-sm font-normal"
                   >
-                    I agree to the series commitment (all {selectedSeries.numberOfWeeks} weeks)
+                    I agree to the series commitment (all{" "}
+                    {selectedSeries.numberOfWeeks} weeks)
                   </Label>
                 </div>
               </div>
@@ -602,20 +643,23 @@ export default function CustomerTrainingPage() {
             {/* Payment Options */}
             {selectedSeries && (
               <div className="space-y-2">
-                <Label>Payment Option <span className="text-destructive">*</span></Label>
+                <Label>
+                  Payment Option <span className="text-destructive">*</span>
+                </Label>
                 <RadioGroup
                   value={paymentOption}
                   onValueChange={(value) =>
                     setPaymentOption(value as "deposit" | "full")
                   }
                 >
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                  <div className="flex items-center space-x-2 rounded-lg border p-4">
                     <RadioGroupItem value="deposit" id="deposit" />
                     <Label htmlFor="deposit" className="flex-1 cursor-pointer">
                       <div>
                         <div className="font-medium">Deposit</div>
-                        <div className="text-sm text-muted-foreground">
-                          ${selectedSeries.enrollmentRules.depositRequired} now, remainder due before first session
+                        <div className="text-muted-foreground text-sm">
+                          ${selectedSeries.enrollmentRules.depositRequired} now,
+                          remainder due before first session
                         </div>
                       </div>
                     </Label>
@@ -623,12 +667,12 @@ export default function CustomerTrainingPage() {
                       ${selectedSeries.enrollmentRules.depositRequired}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                  <div className="flex items-center space-x-2 rounded-lg border p-4">
                     <RadioGroupItem value="full" id="full" />
                     <Label htmlFor="full" className="flex-1 cursor-pointer">
                       <div>
                         <div className="font-medium">Full Payment</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-muted-foreground text-sm">
                           Pay entire series amount upfront
                         </div>
                       </div>
@@ -669,8 +713,11 @@ export default function CustomerTrainingPage() {
       </Dialog>
 
       {/* Course Details Modal */}
-      <Dialog open={isCourseDetailsModalOpen} onOpenChange={setIsCourseDetailsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isCourseDetailsModalOpen}
+        onOpenChange={setIsCourseDetailsModalOpen}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Course Details</DialogTitle>
             <DialogDescription>
@@ -683,56 +730,79 @@ export default function CustomerTrainingPage() {
               {/* Description */}
               <div className="space-y-2">
                 <h3 className="font-semibold">Description</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedCourseType?.description || "No description available."}
+                <p className="text-muted-foreground text-sm">
+                  {selectedCourseType?.description ||
+                    "No description available."}
                 </p>
               </div>
 
               <Separator />
 
               {/* What to Bring */}
-              {selectedCourseType?.whatToBring && selectedCourseType.whatToBring.length > 0 && (
-                <>
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">What to Bring</h3>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
-                      {selectedCourseType.whatToBring.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <Separator />
-                </>
-              )}
+              {selectedCourseType?.whatToBring &&
+                selectedCourseType.whatToBring.length > 0 && (
+                  <>
+                    <div className="space-y-2">
+                      <h3 className="font-semibold">What to Bring</h3>
+                      <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                        {selectedCourseType.whatToBring.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <Separator />
+                  </>
+                )}
 
               {/* Prerequisites */}
               <div className="space-y-2">
                 <h3 className="font-semibold">Prerequisites</h3>
                 <div className="space-y-2">
-                  {selectedCourseType?.requiredVaccines && selectedCourseType.requiredVaccines.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Required Vaccinations:</p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
-                        {selectedCourseType.requiredVaccines.map((vaccine, index) => (
-                          <li key={index}>{vaccine}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {selectedCourseType?.prerequisites && selectedCourseType.prerequisites.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium mb-1">Required Courses:</p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">
-                        {selectedCourseType.prerequisites.map((prereqId, index) => {
-                          const prereqCourse = defaultTrainingCourseTypes.find((ct) => ct.id === prereqId);
-                          return <li key={index}>{prereqCourse?.name || prereqId}</li>;
-                        })}
-                      </ul>
-                    </div>
-                  )}
-                  {(!selectedCourseType?.requiredVaccines || selectedCourseType.requiredVaccines.length === 0) &&
-                    (!selectedCourseType?.prerequisites || selectedCourseType.prerequisites.length === 0) && (
-                      <p className="text-sm text-muted-foreground">No prerequisites required.</p>
+                  {selectedCourseType?.requiredVaccines &&
+                    selectedCourseType.requiredVaccines.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-sm font-medium">
+                          Required Vaccinations:
+                        </p>
+                        <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                          {selectedCourseType.requiredVaccines.map(
+                            (vaccine, index) => (
+                              <li key={index}>{vaccine}</li>
+                            ),
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  {selectedCourseType?.prerequisites &&
+                    selectedCourseType.prerequisites.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-sm font-medium">
+                          Required Courses:
+                        </p>
+                        <ul className="text-muted-foreground ml-2 list-inside list-disc space-y-1 text-sm">
+                          {selectedCourseType.prerequisites.map(
+                            (prereqId, index) => {
+                              const prereqCourse =
+                                defaultTrainingCourseTypes.find(
+                                  (ct) => ct.id === prereqId,
+                                );
+                              return (
+                                <li key={index}>
+                                  {prereqCourse?.name || prereqId}
+                                </li>
+                              );
+                            },
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  {(!selectedCourseType?.requiredVaccines ||
+                    selectedCourseType.requiredVaccines.length === 0) &&
+                    (!selectedCourseType?.prerequisites ||
+                      selectedCourseType.prerequisites.length === 0) && (
+                      <p className="text-muted-foreground text-sm">
+                        No prerequisites required.
+                      </p>
                     )}
                 </div>
               </div>
@@ -744,7 +814,7 @@ export default function CustomerTrainingPage() {
                 <>
                   <div className="space-y-2">
                     <h3 className="font-semibold">Cancellation Policy</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {selectedCourseType.cancellationPolicy}
                     </p>
                   </div>
@@ -756,7 +826,7 @@ export default function CustomerTrainingPage() {
               {selectedCourseType?.refundPolicy && (
                 <div className="space-y-2">
                   <h3 className="font-semibold">Refund Policy</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {selectedCourseType.refundPolicy}
                   </p>
                 </div>
@@ -774,14 +844,17 @@ export default function CustomerTrainingPage() {
             >
               Close
             </Button>
-            {selectedCourseDetails && getSpotsLeft(selectedCourseDetails) > 0 && (
-              <Button onClick={() => {
-                setIsCourseDetailsModalOpen(false);
-                handleEnrollClick(selectedCourseDetails);
-              }}>
-                Enroll Now
-              </Button>
-            )}
+            {selectedCourseDetails &&
+              getSpotsLeft(selectedCourseDetails) > 0 && (
+                <Button
+                  onClick={() => {
+                    setIsCourseDetailsModalOpen(false);
+                    handleEnrollClick(selectedCourseDetails);
+                  }}
+                >
+                  Enroll Now
+                </Button>
+              )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -792,13 +865,16 @@ export default function CustomerTrainingPage() {
           <DialogHeader>
             <DialogTitle>Join Waitlist</DialogTitle>
             <DialogDescription>
-              This series is full. Join the waitlist to be notified when a spot opens.
+              This series is full. Join the waitlist to be notified when a spot
+              opens.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Select Pet <span className="text-destructive">*</span></Label>
+              <Label>
+                Select Pet <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={selectedPetId?.toString() || ""}
                 onValueChange={(value) => setSelectedPetId(parseInt(value))}
@@ -819,10 +895,12 @@ export default function CustomerTrainingPage() {
             </div>
 
             {waitlistPosition && (
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-4">
                 <p className="text-sm">
-                  If you join now, your position will be <strong>#{waitlistPosition}</strong>.
-                  You'll receive an SMS notification when a spot opens, with a 24-hour window to claim it.
+                  If you join now, your position will be{" "}
+                  <strong>#{waitlistPosition}</strong>. You&apos;ll receive an
+                  SMS notification when a spot opens, with a 24-hour window to
+                  claim it.
                 </p>
               </div>
             )}

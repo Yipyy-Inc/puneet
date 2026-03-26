@@ -8,7 +8,13 @@ import {
   StepperNavigation,
   type Step,
 } from "@/components/ui/stepper";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { BasicInfoStep } from "./steps/BasicInfoStep";
 import { CalendarAvailabilityStep } from "./steps/CalendarAvailabilityStep";
 import { CheckInOutStep } from "./steps/CheckInOutStep";
@@ -170,10 +176,10 @@ export function CustomServiceWizard({
   const stepDetail = STEP_DETAILS[currentStep];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-3 sm:px-4 py-6">
+    <div className="mx-auto max-w-4xl space-y-6 px-3 py-6 sm:px-4">
       {/* Stepper header — hidden on small screens, shown as step counter instead */}
       <Card className="overflow-hidden">
-        <CardContent className="pt-6 px-3 sm:px-6">
+        <CardContent className="px-3 pt-6 sm:px-6">
           <div className="hidden sm:block">
             <Stepper
               steps={WIZARD_STEPS}
@@ -181,8 +187,8 @@ export function CustomServiceWizard({
               onStepChange={setCurrentStep}
             />
           </div>
-          <div className="sm:hidden text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="text-center sm:hidden">
+            <p className="text-muted-foreground text-sm">
               Step {currentStep + 1} of {WIZARD_STEPS.length}
             </p>
             <p className="font-medium">{WIZARD_STEPS[currentStep].title}</p>
@@ -192,13 +198,16 @@ export function CustomServiceWizard({
 
       {/* Step content with transition */}
       <Card>
-        <CardHeader className="pb-2 px-4 sm:px-6">
+        <CardHeader className="px-4 pb-2 sm:px-6">
           <CardTitle>{stepDetail.title}</CardTitle>
           <CardDescription>{stepDetail.description}</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
           <StepperContent>
-            <div key={currentStep} className="animate-in fade-in slide-in-from-right-2 duration-200">
+            <div
+              key={currentStep}
+              className="animate-in fade-in slide-in-from-right-2 duration-200"
+            >
               {currentStep === 0 && (
                 <BasicInfoStep data={formData} onChange={handleChange} />
               )}
@@ -225,7 +234,10 @@ export function CustomServiceWizard({
                 <StaffAssignmentStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 7 && (
-                <WizardReviewPanel data={formData} onEditStep={handleEditStep} />
+                <WizardReviewPanel
+                  data={formData}
+                  onEditStep={handleEditStep}
+                />
               )}
             </div>
 
@@ -237,7 +249,13 @@ export function CustomServiceWizard({
               onComplete={handleSave}
               nextLabel="Next Step"
               previousLabel="Back"
-              completeLabel={isSaving ? "Saving..." : isEditMode ? "Update Module" : "Save Module"}
+              completeLabel={
+                isSaving
+                  ? "Saving..."
+                  : isEditMode
+                    ? "Update Module"
+                    : "Save Module"
+              }
               canProceed={canProceedFromStep(currentStep) && !isSaving}
             />
           </StepperContent>
@@ -249,7 +267,7 @@ export function CustomServiceWizard({
         <button
           type="button"
           onClick={handleCancel}
-          className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+          className="text-muted-foreground text-xs underline-offset-2 hover:underline"
         >
           Cancel and discard changes
         </button>

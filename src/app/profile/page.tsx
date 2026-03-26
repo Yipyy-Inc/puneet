@@ -174,11 +174,11 @@ export default function ProfilePage() {
   const getUserTypeIcon = (type: UserType) => {
     switch (type) {
       case "platform":
-        return <Crown className="h-4 w-4" />;
+        return <Crown className="size-4" />;
       case "facility":
-        return <Building2 className="h-4 w-4" />;
+        return <Building2 className="size-4" />;
       case "client":
-        return <UserCheck className="h-4 w-4" />;
+        return <UserCheck className="size-4" />;
     }
   };
 
@@ -194,19 +194,19 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="flex-1 p-6 lg:p-8 bg-background bg-gradient-mesh min-h-screen">
+    <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       {/* Header with Context Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-4">
+          <div className="mb-4 flex items-center gap-3">
             <Button variant="outline" size="sm" asChild className="shadow-sm">
               <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="mr-2 size-4" />
                 Back to Dashboard
               </Link>
             </Button>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-foreground text-2xl font-bold tracking-tight lg:text-3xl">
             Profile Settings
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -227,19 +227,19 @@ export default function ProfilePage() {
             <SelectContent>
               <SelectItem value="platform">
                 <div className="flex items-center gap-2">
-                  <Crown className="h-4 w-4" />
+                  <Crown className="size-4" />
                   Platform Admin
                 </div>
               </SelectItem>
               <SelectItem value="facility">
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
+                  <Building2 className="size-4" />
                   Facility Manager
                 </div>
               </SelectItem>
               <SelectItem value="client">
                 <div className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" />
+                  <UserCheck className="size-4" />
                   Pet Owner
                 </div>
               </SelectItem>
@@ -249,47 +249,47 @@ export default function ProfilePage() {
       </div>
 
       {/* Profile Overview Card */}
-      <Card className="border-0 shadow-card mb-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-secondary/5" />
-        <CardContent className="p-6 relative">
-          <div className="flex flex-col lg:flex-row gap-8">
+      <Card className="shadow-card relative mb-8 overflow-hidden border-0">
+        <div className="from-primary/5 to-secondary/5 absolute inset-0 bg-linear-to-br via-transparent" />
+        <CardContent className="relative p-6">
+          <div className="flex flex-col gap-8 lg:flex-row">
             <div className="flex flex-col items-center lg:items-start">
-              <div className="relative group">
-                <Avatar className="w-32 h-32 mb-4 ring-4 ring-background shadow-xl transition-all duration-300 group-hover:ring-primary/20 group-hover:shadow-2xl">
+              <div className="group relative">
+                <Avatar className="ring-background group-hover:ring-primary/20 mb-4 h-32 w-32 shadow-xl ring-4 transition-all duration-300 group-hover:shadow-2xl">
                   <AvatarImage src="" alt={currentUser.name} />
-                  <AvatarFallback className="text-3xl bg-linear-to-br from-primary/20 to-secondary/20">
+                  <AvatarFallback className="from-primary/20 to-secondary/20 bg-linear-to-br text-3xl">
                     {currentUser.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <Camera className="h-8 w-8 text-white" />
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="mb-4 shadow-sm hover:shadow-md transition-shadow"
+                className="mb-4 shadow-sm transition-shadow hover:shadow-md"
               >
-                <Camera className="h-4 w-4 mr-2" />
+                <Camera className="mr-2 size-4" />
                 Change Photo
               </Button>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
+              <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                <CheckCircle2 className="text-success size-4" />
                 <span>Active since {currentUser.hireDate}</span>
               </div>
             </div>
 
             <div className="flex-1 space-y-6">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-3xl font-bold bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                <div className="mb-2 flex items-center gap-3">
+                  <h2 className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent">
                     {currentUser.name}
                   </h2>
                   <Badge
-                    className={`shadow-sm ${getUserTypeColor(currentUserType)}`}
+                    className={`shadow-sm ${getUserTypeColor(currentUserType)} `}
                   >
                     {getUserTypeIcon(currentUserType)}
                     <span className="ml-1">{currentUser.role}</span>
@@ -300,33 +300,33 @@ export default function ProfilePage() {
                     {currentUser.facility}
                   </p>
                 )}
-                <div className="flex flex-wrap gap-2 mt-3">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="secondary" className="shadow-sm">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    <CheckCircle2 className="mr-1 h-3 w-3" />
                     {currentUser.status}
                   </Badge>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Mail className="h-4 w-4 text-primary" />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors">
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <Mail className="text-primary size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <p className="text-muted-foreground text-xs tracking-wide uppercase">
                       Email
                     </p>
                     <p className="font-medium">{currentUser.email}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Phone className="h-4 w-4 text-primary" />
+                <div className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors">
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <Phone className="text-primary size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <p className="text-muted-foreground text-xs tracking-wide uppercase">
                       Phone
                     </p>
                     <p className="font-medium">{currentUser.phone}</p>
@@ -334,12 +334,12 @@ export default function ProfilePage() {
                 </div>
 
                 {currentUser.type === "facility" && currentUser.facility && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Building2 className="h-4 w-4 text-primary" />
+                  <div className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors">
+                    <div className="bg-primary/10 rounded-lg p-2">
+                      <Building2 className="text-primary size-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <p className="text-muted-foreground text-xs tracking-wide uppercase">
                         Facility
                       </p>
                       <p className="font-medium">{currentUser.facility}</p>
@@ -347,12 +347,12 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Calendar className="h-4 w-4 text-primary" />
+                <div className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors">
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <Calendar className="text-primary size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <p className="text-muted-foreground text-xs tracking-wide uppercase">
                       Last Login
                     </p>
                     <p className="font-medium">{currentUser.lastLogin}</p>
@@ -360,12 +360,12 @@ export default function ProfilePage() {
                 </div>
 
                 {currentUser.type === "client" && currentUser.pets && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <PawPrint className="h-4 w-4 text-primary" />
+                  <div className="bg-muted/30 hover:bg-muted/50 flex items-center gap-3 rounded-lg p-3 transition-colors">
+                    <div className="bg-primary/10 rounded-lg p-2">
+                      <PawPrint className="text-primary size-4" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <p className="text-muted-foreground text-xs tracking-wide uppercase">
                         Pets
                       </p>
                       <p className="font-medium">
@@ -377,9 +377,9 @@ export default function ProfilePage() {
               </div>
 
               {currentUser.type === "client" && currentUser.pets && (
-                <div className="p-4 rounded-lg bg-linear-gradient-to-r from-primary/5 to-secondary/5 border">
-                  <div className="flex items-center gap-2 mb-3">
-                    <PawPrint className="h-5 w-5 text-primary" />
+                <div className="bg-linear-gradient-to-r from-primary/5 to-secondary/5 rounded-lg border p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <PawPrint className="text-primary h-5 w-5" />
                     <p className="text-sm font-medium">My Pets</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -389,7 +389,7 @@ export default function ProfilePage() {
                         variant="outline"
                         className="shadow-sm"
                       >
-                        <PawPrint className="h-3 w-3 mr-1" />
+                        <PawPrint className="mr-1 h-3 w-3" />
                         {pet.name} ({pet.type}, {pet.age}y)
                       </Badge>
                     ))}
@@ -404,37 +404,37 @@ export default function ProfilePage() {
       {/* Settings Tabs */}
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList
-          className={`grid w-full ${currentUser.type === "client" ? "grid-cols-5" : "grid-cols-4"}`}
+          className={`grid w-full ${currentUser.type === "client" ? `grid-cols-5` : `grid-cols-4`} `}
         >
           <TabsTrigger value="profile" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <User className="size-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger value="preferences" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <Settings className="size-4" />
             Preferences
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
+            <Shield className="size-4" />
             Security
           </TabsTrigger>
           <TabsTrigger
             value="notifications"
             className="flex items-center gap-2"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="size-4" />
             Notifications
           </TabsTrigger>
           {currentUser.type === "client" && (
             <TabsTrigger value="pets" className="flex items-center gap-2">
-              <PawPrint className="h-4 w-4" />
+              <PawPrint className="size-4" />
               Pets
             </TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -442,7 +442,7 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   {isEditing ? (
@@ -458,7 +458,7 @@ export default function ProfilePage() {
                       className="shadow-sm"
                     />
                   ) : (
-                    <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="bg-muted/50 rounded-lg border p-3">
                       <p className="font-medium">{currentUser.name}</p>
                     </div>
                   )}
@@ -480,7 +480,7 @@ export default function ProfilePage() {
                       className="shadow-sm"
                     />
                   ) : (
-                    <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="bg-muted/50 rounded-lg border p-3">
                       <p className="font-medium">{currentUser.email}</p>
                     </div>
                   )}
@@ -501,7 +501,7 @@ export default function ProfilePage() {
                       className="shadow-sm"
                     />
                   ) : (
-                    <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="bg-muted/50 rounded-lg border p-3">
                       <p className="font-medium">{currentUser.phone}</p>
                     </div>
                   )}
@@ -509,7 +509,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label>Member Since</Label>
-                  <div className="p-3 bg-muted/50 rounded-lg border">
+                  <div className="bg-muted/50 rounded-lg border p-3">
                     <p className="font-medium">{currentUser.hireDate}</p>
                   </div>
                 </div>
@@ -519,7 +519,7 @@ export default function ProfilePage() {
                 {isEditing ? (
                   <>
                     <Button onClick={handleSave} className="shadow-sm">
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="mr-2 size-4" />
                       Save Changes
                     </Button>
                     <Button
@@ -535,7 +535,7 @@ export default function ProfilePage() {
                     onClick={() => setIsEditing(true)}
                     className="shadow-sm"
                   >
-                    <Edit className="h-4 w-4 mr-2" />
+                    <Edit className="mr-2 size-4" />
                     Edit Profile
                   </Button>
                 )}
@@ -543,7 +543,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
@@ -551,13 +551,13 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {currentUser.permissions.map((permission, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 rounded-lg bg-muted/30"
+                    className="bg-muted/30 flex items-center gap-2 rounded-lg p-2"
                   >
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 className="text-success size-4" />
                     <span className="text-sm capitalize">
                       {permission.replace("_", " ")}
                     </span>
@@ -569,7 +569,7 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="preferences" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
@@ -579,11 +579,11 @@ export default function ProfilePage() {
             <CardContent className="space-y-8">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
                     <Globe className="h-5 w-5" />
                     Localization
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Language</Label>
                       <Select
@@ -667,11 +667,11 @@ export default function ProfilePage() {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
                     <Clock className="h-5 w-5" />
                     Date & Time
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label>Time Format</Label>
                       <Select
@@ -734,7 +734,7 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
@@ -743,10 +743,10 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-lg border">
+                <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-1">
                     <p className="font-medium">Change Password</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Update your account password regularly for security
                     </p>
                   </div>
@@ -755,10 +755,10 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border">
+                <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-1">
                     <p className="font-medium">Two-Factor Authentication</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Add an extra layer of security with 2FA
                     </p>
                   </div>
@@ -792,7 +792,7 @@ export default function ProfilePage() {
                     <Label className="text-base font-medium">
                       Session Timeout
                     </Label>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-muted-foreground mb-3 text-sm">
                       Automatically log out after period of inactivity
                     </p>
                     <Select
@@ -817,7 +817,7 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label className="text-base">Login Alerts</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Get notified of new login attempts
                       </p>
                     </div>
@@ -835,7 +835,7 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
@@ -845,17 +845,17 @@ export default function ProfilePage() {
             <CardContent className="space-y-8">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
                     <Mail className="h-5 w-5" />
                     Email Notifications
                   </h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                       <div className="space-y-0.5">
                         <Label className="text-base">
                           Booking Confirmations
                         </Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Receive emails when bookings are confirmed or updated
                         </p>
                       </div>
@@ -870,10 +870,10 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                       <div className="space-y-0.5">
                         <Label className="text-base">System Updates</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Get notified about system maintenance and updates
                         </p>
                       </div>
@@ -889,12 +889,12 @@ export default function ProfilePage() {
                     </div>
 
                     {currentUser.type === "client" && (
-                      <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                      <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                         <div className="space-y-0.5">
                           <Label className="text-base">
                             Marketing & Promotions
                           </Label>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Receive emails about new features and special offers
                           </p>
                         </div>
@@ -915,15 +915,15 @@ export default function ProfilePage() {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
                     <Bell className="h-5 w-5" />
                     Push Notifications
                   </h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                       <div className="space-y-0.5">
                         <Label className="text-base">Booking Alerts</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Push notifications for booking changes and reminders
                         </p>
                       </div>
@@ -938,10 +938,10 @@ export default function ProfilePage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                       <div className="space-y-0.5">
                         <Label className="text-base">General Updates</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Notifications about facility news and updates
                         </p>
                       </div>
@@ -957,10 +957,10 @@ export default function ProfilePage() {
                     </div>
 
                     {currentUser.type === "client" && (
-                      <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                      <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                         <div className="space-y-0.5">
                           <Label className="text-base">Reminders</Label>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Gentle reminders for upcoming appointments
                           </p>
                         </div>
@@ -981,15 +981,15 @@ export default function ProfilePage() {
                 <Separator />
 
                 <div>
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <h3 className="mb-4 flex items-center gap-2 text-lg font-medium">
                     <Phone className="h-5 w-5" />
                     SMS Notifications
                   </h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                    <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                       <div className="space-y-0.5">
                         <Label className="text-base">Emergency Alerts</Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Critical alerts about pets or facility emergencies
                         </p>
                       </div>
@@ -1005,12 +1005,12 @@ export default function ProfilePage() {
                     </div>
 
                     {currentUser.type === "client" && (
-                      <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                      <div className="hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors">
                         <div className="space-y-0.5">
                           <Label className="text-base">
                             Appointment Reminders
                           </Label>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             SMS reminders for upcoming appointments
                           </p>
                         </div>
@@ -1034,13 +1034,13 @@ export default function ProfilePage() {
 
         {currentUser.type === "client" && (
           <TabsContent value="pets" className="space-y-6">
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <PawPrint className="h-5 w-5" />
                   Pet Management
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Manage your pets&apos; information and preferences
                 </p>
               </CardHeader>
@@ -1051,21 +1051,21 @@ export default function ProfilePage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <PawPrint className="h-6 w-6 text-primary" />
+                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary h-6 w-6" />
                             </div>
                             <div>
-                              <h3 className="font-semibold text-lg">
+                              <h3 className="text-lg font-semibold">
                                 {pet.name}
                               </h3>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 {pet.type} • {pet.age} years old
                               </p>
                             </div>
                           </div>
                           <div className="flex gap-2">
                             <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4 mr-2" />
+                              <Edit className="mr-2 size-4" />
                               Edit
                             </Button>
                             <Button variant="outline" size="sm">
@@ -1080,7 +1080,7 @@ export default function ProfilePage() {
 
                 <div className="flex justify-center pt-4">
                   <Button className="shadow-sm">
-                    <PawPrint className="h-4 w-4 mr-2" />
+                    <PawPrint className="mr-2 size-4" />
                     Add New Pet
                   </Button>
                 </div>

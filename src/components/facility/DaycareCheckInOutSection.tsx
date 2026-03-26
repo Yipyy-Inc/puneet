@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -85,7 +86,7 @@ const petImages: Record<number, string> = {
 const getPetImage = (petId: number) => petImages[petId];
 
 export function DaycareCheckInOutSection() {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const [searchQuery, setSearchQuery] = useState("");
   const [checkInOutMode, setCheckInOutMode] = useState<
     "check-in" | "check-out" | "view" | null
@@ -94,10 +95,6 @@ export function DaycareCheckInOutSection() {
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Helper function to find client for a pet
   const findClientForPet = (petId: number) => {
@@ -361,7 +358,7 @@ export function DaycareCheckInOutSection() {
   const getServiceBadge = () => {
     return (
       <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-        <Sun className="h-3 w-3 mr-1" />
+        <Sun className="mr-1 h-3 w-3" />
         Daycare
       </Badge>
     );
@@ -373,19 +370,19 @@ export function DaycareCheckInOutSection() {
 
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <PawPrint className="h-5 w-5 text-primary" />
+            <PawPrint className="text-primary h-5 w-5" />
             <h3 className="text-lg font-semibold">Daycare Check-In/Out</h3>
           </div>
 
           <div className="flex flex-col items-start gap-3">
             {/* Section Visibility Toggle */}
             <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <div className="flex rounded-lg border p-1 gap-1">
+              <Eye className="text-muted-foreground size-4" />
+              <div className="flex gap-1 rounded-lg border p-1">
                 <Button
                   size="sm"
                   variant={showCheckedIn ? "default" : "ghost"}
@@ -417,7 +414,7 @@ export function DaycareCheckInOutSection() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by pet name, owner, breed, or phone..."
             value={searchQuery}
@@ -435,26 +432,26 @@ export function DaycareCheckInOutSection() {
                     .length === 2
                 ? "lg:grid-cols-2"
                 : "lg:grid-cols-3"
-          }`}
+          } `}
         >
           {/* Scheduled Arrivals */}
           {showScheduled && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-4 w-4 text-orange-600" />
+                  <Clock className="size-4 text-orange-600" />
                   Scheduled Arrivals
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{scheduledArrivals.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     daycare arrivals
                   </span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {scheduledArrivals.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     No arrivals scheduled
                   </p>
                 ) : (
@@ -463,10 +460,10 @@ export function DaycareCheckInOutSection() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors cursor-pointer"
+                        className="flex cursor-pointer items-center justify-between rounded-lg border bg-orange-50/50 p-3 transition-colors hover:bg-orange-100/50 dark:bg-orange-950/20 dark:hover:bg-orange-950/30"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -476,7 +473,7 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -495,26 +492,26 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
                                 <PawPrint className="h-5 w-5 text-orange-600" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
                               {getServiceBadge()}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
                           </div>
@@ -543,19 +540,19 @@ export function DaycareCheckInOutSection() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <LogIn className="h-4 w-4 text-green-600" />
+                  <LogIn className="size-4 text-green-600" />
                   Currently Checked In
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{displayedPets.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     daycare guests
                   </span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {displayedPets.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     {searchQuery
                       ? "No pets match your search"
                       : "No pets currently checked in"}
@@ -566,10 +563,10 @@ export function DaycareCheckInOutSection() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="bg-card hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -579,7 +576,7 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -598,29 +595,29 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <PawPrint className="h-5 w-5 text-primary" />
+                              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                                <PawPrint className="text-primary h-5 w-5" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
                               {getServiceBadge()}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
                               <Clock className="h-3 w-3" />
                               <span>In: {formatTime(item.checkInTime)}</span>
                               <span>•</span>
@@ -639,7 +636,7 @@ export function DaycareCheckInOutSection() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex shrink-0 gap-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -666,19 +663,19 @@ export function DaycareCheckInOutSection() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
+                  <CheckCircle className="size-4 text-gray-600" />
                   Checked Out Today
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{checkedOutToday.length}</Badge>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     daycare checkouts
                   </span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {checkedOutToday.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     No checkouts today
                   </p>
                 ) : (
@@ -687,10 +684,10 @@ export function DaycareCheckInOutSection() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100/50 dark:hover:bg-gray-950/30 transition-colors cursor-pointer"
+                        className="flex cursor-pointer items-center justify-between rounded-lg border bg-gray-50/50 p-3 transition-colors hover:bg-gray-100/50 dark:bg-gray-950/20 dark:hover:bg-gray-950/30"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -700,7 +697,7 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -719,29 +716,29 @@ export function DaycareCheckInOutSection() {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
                                 <PawPrint className="h-5 w-5 text-gray-600" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
                               {getServiceBadge()}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
                               <Clock className="h-3 w-3" />
                               <span>
                                 Out:{" "}
@@ -800,7 +797,7 @@ export function DaycareCheckInOutSection() {
 
             {selectedItem && (
               <div className="space-y-4 py-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                   {(() => {
                     const client = findClientForPet(selectedItem.petId);
                     return getPetImage(selectedItem.petId) ? (
@@ -811,7 +808,7 @@ export function DaycareCheckInOutSection() {
                             : "#"
                         }
                       >
-                        <div className="h-12 w-12 rounded-full overflow-hidden">
+                        <div className="h-12 w-12 overflow-hidden rounded-full">
                           <Image
                             src={getPetImage(selectedItem.petId)!}
                             alt={selectedItem.petName}
@@ -829,8 +826,8 @@ export function DaycareCheckInOutSection() {
                             : "#"
                         }
                       >
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-primary" />
+                        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary h-6 w-6" />
                         </div>
                       </Link>
                     );
@@ -846,7 +843,7 @@ export function DaycareCheckInOutSection() {
                                 ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                 : "#"
                             }
-                            className="font-semibold text-lg hover:underline"
+                            className="text-lg font-semibold hover:underline"
                           >
                             {selectedItem.petName}
                           </Link>
@@ -854,7 +851,7 @@ export function DaycareCheckInOutSection() {
                       })()}
                       {getServiceBadge()}
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Owner: {selectedItem.ownerName}
                     </p>
                   </div>
@@ -867,7 +864,7 @@ export function DaycareCheckInOutSection() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Phone</p>
-                    <p className="font-medium flex items-center gap-1">
+                    <p className="flex items-center gap-1 font-medium">
                       <Phone className="h-3 w-3" />
                       {selectedItem.ownerPhone}
                     </p>
@@ -888,13 +885,13 @@ export function DaycareCheckInOutSection() {
                         );
                         return (
                           <p
-                            className={`font-medium flex items-center gap-1 ${
+                            className={`flex items-center gap-1 font-medium ${
                               checkoutStatus.status === "early"
                                 ? "text-blue-600"
                                 : checkoutStatus.status === "late"
                                   ? "text-orange-600"
                                   : "text-green-600"
-                            }`}
+                            } `}
                           >
                             {checkoutStatus.status === "early" ? (
                               <Clock className="h-3 w-3" />
@@ -943,7 +940,7 @@ export function DaycareCheckInOutSection() {
                     {selectedItem.status === "checked-in" && (
                       <Button
                         variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        className="border-orange-600 text-orange-600 hover:bg-orange-50"
                         onClick={() => revertToScheduled(selectedItem)}
                       >
                         Revert to Scheduled
@@ -953,14 +950,14 @@ export function DaycareCheckInOutSection() {
                       <>
                         <Button
                           variant="outline"
-                          className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                          className="border-orange-600 text-orange-600 hover:bg-orange-50"
                           onClick={() => revertToScheduled(selectedItem)}
                         >
                           Revert to Scheduled
                         </Button>
                         <Button
                           variant="outline"
-                          className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50"
                           onClick={() => revertToCheckedIn(selectedItem)}
                         >
                           Revert to Checked In
@@ -993,8 +990,8 @@ export function DaycareCheckInOutSection() {
                     onClick={confirmCheckInOut}
                     className={
                       checkInOutMode === "check-in"
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-orange-600 hover:bg-orange-700"
+                        ? `bg-green-600 hover:bg-green-700`
+                        : `bg-orange-600 hover:bg-orange-700`
                     }
                   >
                     {checkInOutMode === "check-in"

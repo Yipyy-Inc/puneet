@@ -11,12 +11,7 @@ import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
   SheetContent,
@@ -53,9 +48,7 @@ function formatDateTime(iso: string) {
 }
 
 function servicesLabel(services: BookingRequest["services"]) {
-  return services
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(", ");
+  return services.map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ");
 }
 
 export default function OnlineBookingPage() {
@@ -78,18 +71,22 @@ export default function OnlineBookingPage() {
     [facilityRequests],
   );
 
-  const [activeTab, setActiveTab] = React.useState<"requests" | "waitlist" | "settings">(
-    "requests",
-  );
+  const [activeTab, setActiveTab] = React.useState<
+    "requests" | "waitlist" | "settings"
+  >("requests");
   const [selected, setSelected] = React.useState<BookingRequest | null>(null);
 
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [confirmAction, setConfirmAction] = React.useState<ConfirmAction>("decline");
-  const [confirmTarget, setConfirmTarget] = React.useState<BookingRequest | null>(null);
+  const [confirmAction, setConfirmAction] =
+    React.useState<ConfirmAction>("decline");
+  const [confirmTarget, setConfirmTarget] =
+    React.useState<BookingRequest | null>(null);
 
   const [postActionOpen, setPostActionOpen] = React.useState(false);
-  const [postActionType, setPostActionType] = React.useState<ConfirmAction>("decline");
-  const [postActionTarget, setPostActionTarget] = React.useState<BookingRequest | null>(null);
+  const [postActionType, setPostActionType] =
+    React.useState<ConfirmAction>("decline");
+  const [postActionTarget, setPostActionTarget] =
+    React.useState<BookingRequest | null>(null);
   const [notifyMode, setNotifyMode] = React.useState<NotifyMode>("none");
 
   const openConfirm = (action: ConfirmAction, req: BookingRequest) => {
@@ -123,7 +120,9 @@ export default function OnlineBookingPage() {
       setRequests((prev) => prev.filter((r) => r.id !== target.id));
     } else {
       setRequests((prev) =>
-        prev.map((r) => (r.id === target.id ? { ...r, status: "waitlisted" } : r)),
+        prev.map((r) =>
+          r.id === target.id ? { ...r, status: "waitlisted" } : r,
+        ),
       );
     }
 
@@ -140,16 +139,19 @@ export default function OnlineBookingPage() {
 
   const completePostAction = () => {
     if (!postActionTarget) return;
-    toast.success(postActionType === "decline" ? "Request declined" : "Moved to waitlist", {
-      description:
-        notifyMode === "none"
-          ? "No customer message sent"
-          : notifyMode === "both"
-            ? "Send text + email"
-            : notifyMode === "text"
-              ? "Send text"
-              : "Send email",
-    });
+    toast.success(
+      postActionType === "decline" ? "Request declined" : "Moved to waitlist",
+      {
+        description:
+          notifyMode === "none"
+            ? "No customer message sent"
+            : notifyMode === "both"
+              ? "Send text + email"
+              : notifyMode === "text"
+                ? "Send text"
+                : "Send email",
+      },
+    );
     setPostActionOpen(false);
     setPostActionTarget(null);
   };
@@ -161,7 +163,9 @@ export default function OnlineBookingPage() {
       icon: Clock,
       sortable: true,
       sortValue: (r) => +new Date(r.createdAt),
-      render: (r) => <div className="text-xs">{formatDateTime(r.createdAt)}</div>,
+      render: (r) => (
+        <div className="text-xs">{formatDateTime(r.createdAt)}</div>
+      ),
     },
     {
       key: "appointmentAt",
@@ -169,7 +173,9 @@ export default function OnlineBookingPage() {
       icon: CalendarClock,
       sortable: true,
       sortValue: (r) => +new Date(r.appointmentAt),
-      render: (r) => <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>,
+      render: (r) => (
+        <div className="text-xs">{formatDateTime(r.appointmentAt)}</div>
+      ),
     },
     {
       key: "clientName",
@@ -182,7 +188,9 @@ export default function OnlineBookingPage() {
       key: "clientContact",
       label: "Contact",
       sortable: false,
-      render: (r) => <div className="text-xs text-muted-foreground">{r.clientContact}</div>,
+      render: (r) => (
+        <div className="text-muted-foreground text-xs">{r.clientContact}</div>
+      ),
     },
     {
       key: "petName",
@@ -197,14 +205,22 @@ export default function OnlineBookingPage() {
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Online booking</h2>
-        <p className="text-muted-foreground">Booking requests &amp; waiting list</p>
+        <p className="text-muted-foreground">
+          Booking requests &amp; waiting list
+        </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="grid w-full grid-cols-3 max-w-xl">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+      >
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             Booking requests
-            <Badge variant={pending.length > 0 ? "warning" : "secondary"} className="ml-1">
+            <Badge
+              variant={pending.length > 0 ? "warning" : "secondary"}
+              className="ml-1"
+            >
               {pending.length}
             </Badge>
           </TabsTrigger>
@@ -224,7 +240,9 @@ export default function OnlineBookingPage() {
             </CardHeader>
             <CardContent>
               <DataTable
-                data={[...pending].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))}
+                data={[...pending].sort(
+                  (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+                )}
                 columns={[
                   ...columns,
                   {
@@ -232,7 +250,9 @@ export default function OnlineBookingPage() {
                     label: "Service(s)",
                     sortable: false,
                     render: (r) => (
-                      <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {servicesLabel(r.services)}
+                      </div>
                     ),
                   },
                 ]}
@@ -248,10 +268,18 @@ export default function OnlineBookingPage() {
                     <Button size="sm" onClick={() => schedule(r)}>
                       Schedule
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openConfirm("decline", r)}
+                    >
                       Decline
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => openConfirm("waitlist", r)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openConfirm("waitlist", r)}
+                    >
                       To waitlist
                     </Button>
                   </div>
@@ -268,7 +296,9 @@ export default function OnlineBookingPage() {
             </CardHeader>
             <CardContent>
               <DataTable
-                data={[...waitlisted].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))}
+                data={[...waitlisted].sort(
+                  (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+                )}
                 columns={[
                   ...columns,
                   {
@@ -276,7 +306,9 @@ export default function OnlineBookingPage() {
                     label: "Service(s)",
                     sortable: false,
                     render: (r) => (
-                      <div className="text-xs text-muted-foreground">{servicesLabel(r.services)}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {servicesLabel(r.services)}
+                      </div>
                     ),
                   },
                 ]}
@@ -292,7 +324,11 @@ export default function OnlineBookingPage() {
                     <Button size="sm" onClick={() => schedule(r)}>
                       Schedule
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => openConfirm("decline", r)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openConfirm("decline", r)}
+                    >
                       Decline
                     </Button>
                   </div>
@@ -305,10 +341,13 @@ export default function OnlineBookingPage() {
         <TabsContent value="settings" className="mt-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Online booking settings</CardTitle>
+              <CardTitle className="text-base">
+                Online booking settings
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Settings UI isn’t required for this task; this tab is a placeholder for the online booking settings flow.
+            <CardContent className="text-muted-foreground text-sm">
+              Settings UI isn’t required for this task; this tab is a
+              placeholder for the online booking settings flow.
             </CardContent>
           </Card>
         </TabsContent>
@@ -321,29 +360,43 @@ export default function OnlineBookingPage() {
               <SheetHeader>
                 <SheetTitle>Booking request</SheetTitle>
               </SheetHeader>
-              <div className="p-4 space-y-4">
+              <div className="space-y-4 p-4">
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Submitted</div>
-                  <div className="text-sm font-medium">{formatDateTime(selected.createdAt)}</div>
+                  <div className="text-muted-foreground text-xs">Submitted</div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(selected.createdAt)}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Requested appointment</div>
-                  <div className="text-sm font-medium">{formatDateTime(selected.appointmentAt)}</div>
+                  <div className="text-muted-foreground text-xs">
+                    Requested appointment
+                  </div>
+                  <div className="text-sm font-medium">
+                    {formatDateTime(selected.appointmentAt)}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Customer / Pet</div>
+                  <div className="text-muted-foreground text-xs">
+                    Customer / Pet
+                  </div>
                   <div className="text-sm font-medium">
                     {selected.clientName} — {selected.petName}
                   </div>
-                  <div className="text-xs text-muted-foreground">{selected.clientContact}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {selected.clientContact}
+                  </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Service(s)</div>
-                  <div className="text-sm font-medium">{servicesLabel(selected.services)}</div>
+                  <div className="text-muted-foreground text-xs">
+                    Service(s)
+                  </div>
+                  <div className="text-sm font-medium">
+                    {servicesLabel(selected.services)}
+                  </div>
                 </div>
                 {selected.notes && (
                   <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground">Notes</div>
+                    <div className="text-muted-foreground text-xs">Notes</div>
                     <div className="text-sm">{selected.notes}</div>
                   </div>
                 )}
@@ -353,11 +406,19 @@ export default function OnlineBookingPage() {
                     Schedule
                   </Button>
                   {selected.status === "pending" && (
-                    <Button className="flex-1" variant="outline" onClick={() => openConfirm("waitlist", selected)}>
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onClick={() => openConfirm("waitlist", selected)}
+                    >
                       To waitlist
                     </Button>
                   )}
-                  <Button className="flex-1" variant="outline" onClick={() => openConfirm("decline", selected)}>
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    onClick={() => openConfirm("decline", selected)}
+                  >
                     Decline
                   </Button>
                 </div>
@@ -371,15 +432,20 @@ export default function OnlineBookingPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction === "decline" ? "Decline request?" : "Move to waitlist?"}
+              {confirmAction === "decline"
+                ? "Decline request?"
+                : "Move to waitlist?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action will update the request immediately. You can choose whether to notify the customer on the next step.
+              This action will update the request immediately. You can choose
+              whether to notify the customer on the next step.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={applyConfirm}>Confirm</AlertDialogAction>
+            <AlertDialogAction onClick={applyConfirm}>
+              Confirm
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -401,7 +467,10 @@ export default function OnlineBookingPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
 
-          <RadioGroup value={notifyMode} onValueChange={(v) => setNotifyMode(v as NotifyMode)}>
+          <RadioGroup
+            value={notifyMode}
+            onValueChange={(v) => setNotifyMode(v as NotifyMode)}
+          >
             <div className="flex items-center gap-2">
               <RadioGroupItem id="post-notify-none-online" value="none" />
               <Label htmlFor="post-notify-none-online">None</Label>
@@ -422,11 +491,12 @@ export default function OnlineBookingPage() {
 
           <AlertDialogFooter>
             <AlertDialogCancel>Close</AlertDialogCancel>
-            <AlertDialogAction onClick={completePostAction}>Done</AlertDialogAction>
+            <AlertDialogAction onClick={completePostAction}>
+              Done
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 }
-

@@ -87,11 +87,11 @@ const TAG_TYPE_CONFIG: Record<
   TagType,
   { label: string; icon: React.ReactNode }
 > = {
-  pet: { label: "Pet Tags", icon: <PawPrint className="h-4 w-4" /> },
-  customer: { label: "Customer Tags", icon: <Users className="h-4 w-4" /> },
+  pet: { label: "Pet Tags", icon: <PawPrint className="size-4" /> },
+  customer: { label: "Customer Tags", icon: <Users className="size-4" /> },
   booking: {
     label: "Booking Tags",
-    icon: <CalendarCheck className="h-4 w-4" />,
+    icon: <CalendarCheck className="size-4" />,
   },
 };
 
@@ -265,7 +265,7 @@ function TagBuilder() {
           {(Object.keys(TAG_TYPE_CONFIG) as TagType[]).map((type) => (
             <TabsContent key={type} value={type}>
               {filteredTags.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-muted-foreground py-8 text-center">
                   <p className="text-sm">
                     No {TAG_TYPE_CONFIG[type].label.toLowerCase()} created yet
                   </p>
@@ -285,23 +285,23 @@ function TagBuilder() {
                     return (
                       <div
                         key={tag.id}
-                        className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                        className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border p-3 transition-colors"
                       >
                         {/* Preview */}
                         <div
-                          className="flex items-center justify-center h-9 w-9 rounded-lg shrink-0"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                           style={{
                             backgroundColor: tag.color,
                             color: getContrastTextColor(tag.color),
                           }}
                         >
-                          <Icon className="h-4 w-4" />
+                          <Icon className="size-4" />
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
+                            <span className="text-sm font-medium">
                               {tag.name}
                             </span>
                             <Badge
@@ -322,7 +322,7 @@ function TagBuilder() {
                             </Badge>
                           </div>
                           {tag.description && (
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-xs">
                               {tag.description}
                             </p>
                           )}
@@ -332,7 +332,7 @@ function TagBuilder() {
                         <TagBadge tag={tag} size="sm" />
 
                         {/* Actions */}
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex shrink-0 gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -344,7 +344,7 @@ function TagBuilder() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive h-8 w-8 p-0"
                             onClick={() => setDeleteConfirm(tag)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -361,14 +361,14 @@ function TagBuilder() {
 
         {/* Phase 2 placeholder */}
         <div className="mt-6 rounded-lg border border-dashed p-4 opacity-60">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-4 w-4" />
-            <span className="font-medium text-sm">Tag Automations</span>
+          <div className="mb-1 flex items-center gap-2">
+            <Zap className="size-4" />
+            <span className="text-sm font-medium">Tag Automations</span>
             <Badge variant="secondary" className="text-[10px]">
               Coming Soon
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Automatically trigger actions when tags are assigned — add tasks,
             send notifications, and more.
           </p>
@@ -429,7 +429,7 @@ function TagBuilder() {
             onColorChange={(color) => setForm((f) => ({ ...f, color }))}
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Priority</Label>
               <Select
@@ -475,7 +475,7 @@ function TagBuilder() {
               <Label className="text-sm font-medium">
                 Visible to Customers
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {form.visibility === "internal"
                   ? "Only staff can see this tag"
                   : "Customers can see this tag on their portal"}
@@ -567,7 +567,7 @@ function NotesConfig() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <StickyNote className="h-5 w-5" />
           Notes Configuration
         </CardTitle>
@@ -579,7 +579,7 @@ function NotesConfig() {
             <Label className="text-sm font-medium">
               Default Note Visibility
             </Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {settings.noteSettings.defaultVisibility === "internal"
                 ? "New notes are internal by default"
                 : "New notes are shared with customers by default"}
@@ -605,16 +605,16 @@ function NotesConfig() {
 
         {/* Role permissions matrix */}
         <div>
-          <Label className="text-sm font-medium block mb-3">
+          <Label className="mb-3 block text-sm font-medium">
             Role Permissions by Note Category
           </Label>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b">
                   <th
                     scope="col"
-                    className="text-left py-2 pr-4 font-medium text-muted-foreground"
+                    className="text-muted-foreground py-2 pr-4 text-left font-medium"
                   >
                     Category / Action
                   </th>
@@ -622,7 +622,7 @@ function NotesConfig() {
                     <th
                       scope="col"
                       key={role}
-                      className="text-center py-2 px-2 font-medium text-muted-foreground text-xs"
+                      className="text-muted-foreground px-2 py-2 text-center text-xs font-medium"
                     >
                       {FACILITY_ROLE_LABELS[role]}
                     </th>
@@ -637,17 +637,17 @@ function NotesConfig() {
                         <tr
                           key={`${category}-${action}`}
                           className={cn(
-                            "border-b border-border/50",
+                            "border-border/50 border-b",
                             actionIdx === 0 && "border-t",
                           )}
                         >
                           <td className="py-1.5 pr-4">
                             {actionIdx === 0 ? (
-                              <span className="font-medium text-xs">
+                              <span className="text-xs font-medium">
                                 {NOTE_CATEGORY_LABELS[category]}
                               </span>
                             ) : null}
-                            <span className="text-xs text-muted-foreground block capitalize pl-2">
+                            <span className="text-muted-foreground block pl-2 text-xs capitalize">
                               {action}
                             </span>
                           </td>
@@ -659,7 +659,7 @@ function NotesConfig() {
                             return (
                               <td
                                 key={role}
-                                className="text-center py-1.5 px-2"
+                                className="px-2 py-1.5 text-center"
                               >
                                 <Checkbox
                                   checked={hasPermission}

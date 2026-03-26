@@ -1,10 +1,10 @@
 /**
  * Facility Loyalty Program Configuration
- * 
+ *
  * This module provides a comprehensive, rule-based configuration system
  * for facility loyalty programs. All settings are facility-specific and
  * configurable through the admin interface.
- * 
+ *
  * IMPORTANT: This is a rule-based system - nothing is hardcoded.
  * All loyalty behavior is driven by facility configuration.
  */
@@ -17,12 +17,12 @@
  * Points Earning Method Configuration
  * Facilities can choose how customers earn points
  */
-export type PointsEarningMethod = 
-  | "per_dollar"           // X points per $1 spent
-  | "per_booking"           // Fixed points per booking
-  | "per_service_type"     // Different points per service type
-  | "per_visit_count"      // Points based on visit count milestones
-  | "hybrid";              // Combination of methods
+export type PointsEarningMethod =
+  | "per_dollar" // X points per $1 spent
+  | "per_booking" // Fixed points per booking
+  | "per_service_type" // Different points per service type
+  | "per_visit_count" // Points based on visit count milestones
+  | "hybrid"; // Combination of methods
 
 /**
  * Points Earning Rule - Defines how points are calculated
@@ -30,25 +30,27 @@ export type PointsEarningMethod =
 export interface PointsEarningRule {
   id: string;
   method: PointsEarningMethod;
-  
+
   // Per Dollar Configuration
   perDollar?: {
     enabled: boolean;
-    basePoints: number;              // Base points per $1 (e.g., 1 point per $1)
-    tierMultipliers?: {              // Tier-based multipliers
+    basePoints: number; // Base points per $1 (e.g., 1 point per $1)
+    tierMultipliers?: {
+      // Tier-based multipliers
       tierId: string;
-      multiplier: number;            // e.g., 1.25 for Silver tier
+      multiplier: number; // e.g., 1.25 for Silver tier
     }[];
-    minimumPurchase?: number;        // Minimum purchase to earn points
+    minimumPurchase?: number; // Minimum purchase to earn points
     maximumPointsPerTransaction?: number; // Cap on points per transaction
   };
-  
+
   // Per Booking Configuration
   perBooking?: {
     enabled: boolean;
-    basePoints: number;              // Fixed points per booking
-    serviceTypePoints?: {            // Override per service type
-      serviceType: string;           // "grooming", "daycare", "boarding", etc.
+    basePoints: number; // Fixed points per booking
+    serviceTypePoints?: {
+      // Override per service type
+      serviceType: string; // "grooming", "daycare", "boarding", etc.
       points: number;
     }[];
     tierMultipliers?: {
@@ -56,32 +58,34 @@ export interface PointsEarningRule {
       multiplier: number;
     }[];
   };
-  
+
   // Per Service Type Configuration
   perServiceType?: {
     enabled: boolean;
-    servicePoints: {                  // Points per service type
+    servicePoints: {
+      // Points per service type
       serviceType: string;
       points: number;
-      pointsPerDollar?: number;      // Optional: also earn per dollar for this service
+      pointsPerDollar?: number; // Optional: also earn per dollar for this service
     }[];
   };
-  
+
   // Per Visit Count Configuration
   perVisitCount?: {
     enabled: boolean;
-    milestones: {                    // Visit count milestones
-      visitCount: number;            // e.g., 10 visits
-      bonusPoints: number;           // Bonus points awarded
-      description: string;           // e.g., "10th Visit Bonus"
+    milestones: {
+      // Visit count milestones
+      visitCount: number; // e.g., 10 visits
+      bonusPoints: number; // Bonus points awarded
+      description: string; // e.g., "10th Visit Bonus"
     }[];
-    serviceType?: string[];          // Which service types count (empty = all)
+    serviceType?: string[]; // Which service types count (empty = all)
   };
-  
+
   // Hybrid Configuration
   hybrid?: {
     enabled: boolean;
-    rules: PointsEarningRule[];     // Multiple rules combined
+    rules: PointsEarningRule[]; // Multiple rules combined
     combinationMethod: "add" | "max" | "weighted"; // How to combine rules
   };
 }
@@ -92,32 +96,32 @@ export interface PointsEarningRule {
 export interface PointsExpirationConfig {
   enabled: boolean;
   expirationType: "none" | "time_based" | "activity_based" | "tier_based";
-  
+
   // Time-based expiration
   timeBased?: {
-    expirationMonths: number;        // Points expire after X months
-    expirationDays?: number;         // Optional: more granular
+    expirationMonths: number; // Points expire after X months
+    expirationDays?: number; // Optional: more granular
     expirationPolicy: "fifo" | "lifo" | "proportional"; // Which points expire first
   };
-  
+
   // Activity-based expiration
   activityBased?: {
     expireAfterInactiveMonths: number; // Expire if no activity for X months
-    resetOnActivity: boolean;         // Reset expiration timer on any activity
+    resetOnActivity: boolean; // Reset expiration timer on any activity
   };
-  
+
   // Tier-based expiration
   tierBased?: {
     tiers: {
       tierId: string;
-      expirationMonths: number;      // Different expiration per tier
+      expirationMonths: number; // Different expiration per tier
     }[];
   };
-  
+
   // Expiration warnings
   warnings?: {
     enabled: boolean;
-    warnDaysBefore: number[];        // e.g., [30, 14, 7] - warn at these intervals
+    warnDaysBefore: number[]; // e.g., [30, 14, 7] - warn at these intervals
     sendEmail: boolean;
     sendSms: boolean;
     showInPortal: boolean;
@@ -132,25 +136,25 @@ export interface LoyaltyTierConfig {
   name: string;
   displayName: string;
   minPoints: number;
-  maxPoints?: number;                // Optional: max points for this tier
+  maxPoints?: number; // Optional: max points for this tier
   color: string;
   icon?: string;
-  
+
   // Tier Benefits
   benefits: {
     type: "discount" | "bonus_points" | "free_service" | "priority" | "custom";
-    value: number | string;          // Discount %, bonus multiplier, service name, etc.
+    value: number | string; // Discount %, bonus multiplier, service name, etc.
     description: string;
-    applicableTo?: string[];         // Which services/products this applies to
+    applicableTo?: string[]; // Which services/products this applies to
   }[];
-  
+
   // Tier-specific earning multipliers
-  earningMultiplier?: number;        // e.g., 1.25x points for Silver tier
-  
+  earningMultiplier?: number; // e.g., 1.25x points for Silver tier
+
   // Tier-specific discounts
-  discountPercentage?: number;       // e.g., 5% discount for Silver tier
+  discountPercentage?: number; // e.g., 5% discount for Silver tier
   discountApplicableTo?: ("services" | "retail" | "both")[];
-  
+
   // Tier upgrade requirements
   upgradeRequirements?: {
     pointsRequired: number;
@@ -162,18 +166,18 @@ export interface LoyaltyTierConfig {
 /**
  * Reward Type Configuration
  */
-export type RewardType = 
-  | "discount_code"      // Generate a discount code
-  | "credit_balance"     // Add credit to customer account
-  | "auto_apply"         // Automatically apply discount to next booking
-  | "free_service"       // Free service voucher
-  | "product_discount"   // Discount on specific products
-  | "custom";            // Custom reward (defined by facility)
+export type RewardType =
+  | "discount_code" // Generate a discount code
+  | "credit_balance" // Add credit to customer account
+  | "auto_apply" // Automatically apply discount to next booking
+  | "free_service" // Free service voucher
+  | "product_discount" // Discount on specific products
+  | "custom"; // Custom reward (defined by facility)
 
 export interface RewardTypeConfig {
   type: RewardType;
   enabled: boolean;
-  defaultExpiryDays?: number;        // Default expiration for this reward type
+  defaultExpiryDays?: number; // Default expiration for this reward type
   applicableTo?: ("services" | "retail" | "both")[];
   restrictions?: {
     minimumPurchase?: number;
@@ -189,31 +193,31 @@ export interface RewardTypeConfig {
 export interface PointsScopeConfig {
   enabled: boolean;
   scope: "services_only" | "retail_only" | "both";
-  
+
   // Service-specific rules
   services?: {
     enabled: boolean;
-    serviceTypes: string[];          // Which service types earn points
-    excludeServiceTypes?: string[];  // Which service types are excluded
-    minimumServiceAmount?: number;   // Minimum service amount to earn points
+    serviceTypes: string[]; // Which service types earn points
+    excludeServiceTypes?: string[]; // Which service types are excluded
+    minimumServiceAmount?: number; // Minimum service amount to earn points
   };
-  
+
   // Retail-specific rules
   retail?: {
     enabled: boolean;
-    categories?: string[];            // Which product categories earn points
-    excludeCategories?: string[];    // Which categories are excluded
-    excludeSaleItems?: boolean;      // Don't earn points on sale items
-    minimumPurchaseAmount?: number;  // Minimum purchase to earn points
+    categories?: string[]; // Which product categories earn points
+    excludeCategories?: string[]; // Which categories are excluded
+    excludeSaleItems?: boolean; // Don't earn points on sale items
+    minimumPurchaseAmount?: number; // Minimum purchase to earn points
   };
-  
+
   // Exclusions
   exclusions?: {
-    discountedItems?: boolean;       // Don't earn points on discounted items
-    giftCards?: boolean;              // Don't earn points on gift card purchases
-    packages?: boolean;               // Don't earn points on package purchases
-    memberships?: boolean;            // Don't earn points on membership purchases
-    customExclusions?: string[];     // Custom exclusion rules
+    discountedItems?: boolean; // Don't earn points on discounted items
+    giftCards?: boolean; // Don't earn points on gift card purchases
+    packages?: boolean; // Don't earn points on package purchases
+    memberships?: boolean; // Don't earn points on membership purchases
+    customExclusions?: string[]; // Custom exclusion rules
   };
 }
 
@@ -223,31 +227,31 @@ export interface PointsScopeConfig {
  */
 export interface DiscountStackingConfig {
   enabled: boolean;
-  
+
   // Stacking behavior
-  stackingBehavior: 
-    | "no_stacking"              // Loyalty discounts cannot stack with other discounts
-    | "stack_with_promos"       // Can stack with promo codes
-    | "stack_with_member"       // Can stack with member discounts
-    | "stack_all"               // Can stack with all discounts
-    | "best_discount_only"      // Apply only the best discount
-    | "custom";                 // Custom stacking rules
-  
+  stackingBehavior:
+    | "no_stacking" // Loyalty discounts cannot stack with other discounts
+    | "stack_with_promos" // Can stack with promo codes
+    | "stack_with_member" // Can stack with member discounts
+    | "stack_all" // Can stack with all discounts
+    | "best_discount_only" // Apply only the best discount
+    | "custom"; // Custom stacking rules
+
   // Custom stacking rules
   customRules?: {
-    canStackWith: string[];          // List of discount types that can stack
-    cannotStackWith: string[];       // List of discount types that cannot stack
-    stackingOrder: string[];         // Order in which discounts are applied
-    maximumTotalDiscount?: number;   // Maximum total discount percentage
+    canStackWith: string[]; // List of discount types that can stack
+    cannotStackWith: string[]; // List of discount types that cannot stack
+    stackingOrder: string[]; // Order in which discounts are applied
+    maximumTotalDiscount?: number; // Maximum total discount percentage
   };
-  
+
   // Tier discount stacking
   tierDiscountStacking?: {
     enabled: boolean;
     canStackWithOtherDiscounts: boolean;
     stackingPriority: "first" | "last" | "custom"; // When tier discount is applied
   };
-  
+
   // Points redemption stacking
   pointsRedemptionStacking?: {
     enabled: boolean;
@@ -260,17 +264,35 @@ export interface DiscountStackingConfig {
 /**
  * Bookable service types used across loyalty and referral configuration UIs
  */
-export const BOOKABLE_SERVICE_TYPES = ["grooming", "daycare", "boarding", "training", "spa", "walking"] as const;
+export const BOOKABLE_SERVICE_TYPES = [
+  "grooming",
+  "daycare",
+  "boarding",
+  "training",
+  "spa",
+  "walking",
+] as const;
 
 /**
  * Referral Reward Types
  */
-export type ReferralRewardType = "points" | "credit" | "discount" | "free_service" | "gift_card" | "free_add_on" | "discount_code";
+export type ReferralRewardType =
+  | "points"
+  | "credit"
+  | "discount"
+  | "free_service"
+  | "gift_card"
+  | "free_add_on"
+  | "discount_code";
 
 /**
  * Referral Trigger Condition Types
  */
-export type ReferralTriggerType = "after_first_booking" | "after_first_payment" | "after_total_reaches" | "after_n_visits";
+export type ReferralTriggerType =
+  | "after_first_booking"
+  | "after_first_payment"
+  | "after_total_reaches"
+  | "after_n_visits";
 
 /**
  * Referral Program Configuration
@@ -295,16 +317,16 @@ export interface ReferralProgramConfig {
   // Trigger condition — when the referral reward is issued
   triggerCondition?: {
     type: ReferralTriggerType;
-    threshold?: number;              // Dollar amount for after_total_reaches, visit count for after_n_visits
-    serviceTypes?: string[];         // Which services count toward triggers
-    description?: string;            // Human-readable description
+    threshold?: number; // Dollar amount for after_total_reaches, visit count for after_n_visits
+    serviceTypes?: string[]; // Which services count toward triggers
+    description?: string; // Human-readable description
   };
 
   // Referral requirements
   requirements?: {
-    minimumPurchase?: number;        // Referee must make minimum purchase
-    firstBookingOnly?: boolean;       // Reward only on first booking
-    serviceTypes?: string[];         // Only certain service types count
+    minimumPurchase?: number; // Referee must make minimum purchase
+    firstBookingOnly?: boolean; // Reward only on first booking
+    serviceTypes?: string[]; // Only certain service types count
   };
 
   // Referral tracking
@@ -320,28 +342,28 @@ export interface ReferralProgramConfig {
  */
 export interface SpecialEventRewardsConfig {
   enabled: boolean;
-  
+
   birthdayReward?: {
     enabled: boolean;
     type: "points" | "credit" | "discount" | "free_service";
     value: number | string;
     description: string;
-    validDays: number;               // Days before/after birthday
+    validDays: number; // Days before/after birthday
   };
-  
+
   anniversaryReward?: {
     enabled: boolean;
     type: "points" | "credit" | "discount";
     value: number | string;
     description: string;
-    anniversaryYears: number[];       // e.g., [1, 2, 5] - reward at these anniversaries
+    anniversaryYears: number[]; // e.g., [1, 2, 5] - reward at these anniversaries
   };
-  
+
   holidayRewards?: {
     enabled: boolean;
     holidays: {
       holidayName: string;
-      date: string;                   // ISO date or "MM-DD" format
+      date: string; // ISO date or "MM-DD" format
       reward: {
         type: "points" | "credit" | "discount";
         value: number | string;
@@ -357,7 +379,7 @@ export interface SpecialEventRewardsConfig {
 export interface FacilityLoyaltyConfig {
   facilityId: number;
   enabled: boolean;
-  
+
   // Core Configuration
   pointsEarning: PointsEarningRule;
   pointsExpiration: PointsExpirationConfig;
@@ -365,23 +387,23 @@ export interface FacilityLoyaltyConfig {
   rewardTypes: RewardTypeConfig[];
   pointsScope: PointsScopeConfig;
   discountStacking: DiscountStackingConfig;
-  
+
   // Additional Features
   referralProgram?: ReferralProgramConfig;
   specialEventRewards?: SpecialEventRewardsConfig;
-  
+
   // General Settings
   settings: {
-    pointsName: string;               // e.g., "Points", "Rewards", "Stars"
-    pointsValue: number;              // e.g., 100 points = $5 (for display)
+    pointsName: string; // e.g., "Points", "Rewards", "Stars"
+    pointsValue: number; // e.g., 100 points = $5 (for display)
     minimumRedemptionPoints?: number; // Minimum points to redeem
     maximumRedemptionPerTransaction?: number; // Max points per transaction
     allowPartialRedemption?: boolean; // Can redeem partial points
-    showPointsOnReceipt?: boolean;   // Display points earned on receipt
-    showPointsInPortal?: boolean;    // Show points balance in customer portal
-    allowPointsTransfer?: boolean;   // Allow transferring points between accounts
+    showPointsOnReceipt?: boolean; // Display points earned on receipt
+    showPointsInPortal?: boolean; // Show points balance in customer portal
+    allowPointsTransfer?: boolean; // Allow transferring points between accounts
   };
-  
+
   // Metadata
   createdAt: string;
   updatedAt: string;
@@ -401,7 +423,7 @@ export const defaultPerDollarEarningRule: PointsEarningRule = {
   method: "per_dollar",
   perDollar: {
     enabled: true,
-    basePoints: 1,                   // 1 point per $1
+    basePoints: 1, // 1 point per $1
     minimumPurchase: 0,
   },
 };
@@ -414,7 +436,7 @@ export const defaultPerBookingEarningRule: PointsEarningRule = {
   method: "per_booking",
   perBooking: {
     enabled: true,
-    basePoints: 50,                  // 50 points per booking
+    basePoints: 50, // 50 points per booking
     serviceTypePoints: [
       { serviceType: "grooming", points: 50 },
       { serviceType: "daycare", points: 50 },
@@ -449,10 +471,7 @@ export const defaultHybridEarningRule: PointsEarningRule = {
   hybrid: {
     enabled: true,
     combinationMethod: "add",
-    rules: [
-      defaultPerDollarEarningRule,
-      defaultPerBookingEarningRule,
-    ],
+    rules: [defaultPerDollarEarningRule, defaultPerBookingEarningRule],
   },
 };
 
@@ -740,9 +759,21 @@ export const exampleHybridWithMilestonesConfig: FacilityLoyaltyConfig = {
           perVisitCount: {
             enabled: true,
             milestones: [
-              { visitCount: 10, bonusPoints: 100, description: "10th Visit Bonus" },
-              { visitCount: 25, bonusPoints: 250, description: "25th Visit Bonus" },
-              { visitCount: 50, bonusPoints: 500, description: "50th Visit Bonus" },
+              {
+                visitCount: 10,
+                bonusPoints: 100,
+                description: "10th Visit Bonus",
+              },
+              {
+                visitCount: 25,
+                bonusPoints: 250,
+                description: "25th Visit Bonus",
+              },
+              {
+                visitCount: 50,
+                bonusPoints: 500,
+                description: "50th Visit Bonus",
+              },
             ],
           },
         },
@@ -799,7 +830,11 @@ export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
           perVisitCount: {
             enabled: true,
             milestones: [
-              { visitCount: 10, bonusPoints: 0, description: "10th Daycare Visit = 1 Free Daycare" },
+              {
+                visitCount: 10,
+                bonusPoints: 0,
+                description: "10th Daycare Visit = 1 Free Daycare",
+              },
             ],
             serviceType: ["daycare"],
           },
@@ -809,9 +844,7 @@ export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
           method: "per_service_type",
           perServiceType: {
             enabled: true,
-            servicePoints: [
-              { serviceType: "grooming", points: 10 },
-            ],
+            servicePoints: [{ serviceType: "grooming", points: 10 }],
           },
         },
       ],
@@ -820,8 +853,18 @@ export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
   pointsExpiration: { enabled: false, expirationType: "none" },
   tiers: [],
   rewardTypes: [
-    { type: "free_service", enabled: true, defaultExpiryDays: 60, applicableTo: ["services"] },
-    { type: "credit_balance", enabled: true, defaultExpiryDays: 90, applicableTo: ["services", "retail"] },
+    {
+      type: "free_service",
+      enabled: true,
+      defaultExpiryDays: 60,
+      applicableTo: ["services"],
+    },
+    {
+      type: "credit_balance",
+      enabled: true,
+      defaultExpiryDays: 90,
+      applicableTo: ["services", "retail"],
+    },
   ],
   pointsScope: {
     enabled: true,
@@ -831,10 +874,25 @@ export const exampleDoggievilleMTLConfig: FacilityLoyaltyConfig = {
   discountStacking: { enabled: false, stackingBehavior: "no_stacking" },
   referralProgram: {
     enabled: true,
-    referrerReward: { type: "credit", value: 25, description: "$25 credit for referring a friend" },
-    refereeReward: { type: "discount", value: 10, description: "10% off first booking" },
-    triggerCondition: { type: "after_first_booking", description: "Reward issued after referee completes first booking" },
-    tracking: { referralCodeLength: 8, customCodePrefix: "DGV", expirationDays: 90 },
+    referrerReward: {
+      type: "credit",
+      value: 25,
+      description: "$25 credit for referring a friend",
+    },
+    refereeReward: {
+      type: "discount",
+      value: 10,
+      description: "10% off first booking",
+    },
+    triggerCondition: {
+      type: "after_first_booking",
+      description: "Reward issued after referee completes first booking",
+    },
+    tracking: {
+      referralCodeLength: 8,
+      customCodePrefix: "DGV",
+      expirationDays: 90,
+    },
   },
   settings: {
     pointsName: "Paw Points",
@@ -863,7 +921,13 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
     enabled: true,
     expirationType: "time_based",
     timeBased: { expirationMonths: 18, expirationPolicy: "fifo" },
-    warnings: { enabled: true, warnDaysBefore: [30, 14], sendEmail: true, sendSms: false, showInPortal: true },
+    warnings: {
+      enabled: true,
+      warnDaysBefore: [30, 14],
+      sendEmail: true,
+      sendSms: false,
+      showInPortal: true,
+    },
   },
   tiers: [
     {
@@ -872,7 +936,9 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
       displayName: "Silver Guest",
       minPoints: 0,
       color: "#C0C0C0",
-      benefits: [{ type: "bonus_points", value: 1, description: "2 pts per $1 spent" }],
+      benefits: [
+        { type: "bonus_points", value: 1, description: "2 pts per $1 spent" },
+      ],
     },
     {
       id: "luxury-gold",
@@ -884,7 +950,11 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
       discountPercentage: 10,
       benefits: [
         { type: "bonus_points", value: 1.5, description: "3 pts per $1 spent" },
-        { type: "free_service", value: "spa_treatment", description: "Complimentary spa treatment" },
+        {
+          type: "free_service",
+          value: "spa_treatment",
+          description: "Complimentary spa treatment",
+        },
       ],
     },
     {
@@ -897,14 +967,32 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
       discountPercentage: 15,
       benefits: [
         { type: "bonus_points", value: 2, description: "4 pts per $1 spent" },
-        { type: "free_service", value: "suite_upgrade", description: "Free suite upgrade" },
-        { type: "free_service", value: "spa_treatment", description: "Complimentary spa treatment" },
+        {
+          type: "free_service",
+          value: "suite_upgrade",
+          description: "Free suite upgrade",
+        },
+        {
+          type: "free_service",
+          value: "spa_treatment",
+          description: "Complimentary spa treatment",
+        },
       ],
     },
   ],
   rewardTypes: [
-    { type: "free_service", enabled: true, defaultExpiryDays: 90, applicableTo: ["services"] },
-    { type: "credit_balance", enabled: true, defaultExpiryDays: 120, applicableTo: ["services", "retail"] },
+    {
+      type: "free_service",
+      enabled: true,
+      defaultExpiryDays: 90,
+      applicableTo: ["services"],
+    },
+    {
+      type: "credit_balance",
+      enabled: true,
+      defaultExpiryDays: 120,
+      applicableTo: ["services", "retail"],
+    },
   ],
   pointsScope: {
     enabled: true,
@@ -915,11 +1003,26 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
   discountStacking: { enabled: true, stackingBehavior: "best_discount_only" },
   referralProgram: {
     enabled: true,
-    referrerReward: { type: "gift_card", value: 50, description: "$50 gift card for referring a friend" },
-    refereeReward: { type: "gift_card", value: 25, description: "$25 gift card on first stay" },
-    triggerCondition: { type: "after_first_payment", description: "Reward issued after referee's first invoice payment" },
+    referrerReward: {
+      type: "gift_card",
+      value: 50,
+      description: "$50 gift card for referring a friend",
+    },
+    refereeReward: {
+      type: "gift_card",
+      value: 25,
+      description: "$25 gift card on first stay",
+    },
+    triggerCondition: {
+      type: "after_first_payment",
+      description: "Reward issued after referee's first invoice payment",
+    },
     requirements: { minimumPurchase: 100 },
-    tracking: { referralCodeLength: 6, customCodePrefix: "LUX", expirationDays: 180 },
+    tracking: {
+      referralCodeLength: 6,
+      customCodePrefix: "LUX",
+      expirationDays: 180,
+    },
   },
   settings: {
     pointsName: "Luxury Points",
@@ -940,7 +1043,9 @@ export const exampleLuxuryBoardingConfig: FacilityLoyaltyConfig = {
 /**
  * Get facility loyalty configuration
  */
-export function getFacilityLoyaltyConfig(facilityId: number): FacilityLoyaltyConfig | null {
+export function getFacilityLoyaltyConfig(
+  facilityId: number,
+): FacilityLoyaltyConfig | null {
   // In production, this would fetch from database
   // For now, return example configs based on facility ID
   const configs: Record<number, FacilityLoyaltyConfig> = {
@@ -965,90 +1070,94 @@ export function calculatePointsEarned(
     isBooking: boolean;
     visitCount?: number;
     customerTier?: string;
-  }
+  },
 ): number {
   if (!config.enabled) return 0;
-  
+
   const rule = config.pointsEarning;
   let totalPoints = 0;
-  
+
   // Per Dollar Calculation
   if (rule.perDollar?.enabled) {
-    const basePoints = Math.floor(transaction.amount * rule.perDollar.basePoints);
+    const basePoints = Math.floor(
+      transaction.amount * rule.perDollar.basePoints,
+    );
     let multiplier = 1;
-    
+
     // Apply tier multiplier if applicable
     if (transaction.customerTier && rule.perDollar.tierMultipliers) {
       const tierMultiplier = rule.perDollar.tierMultipliers.find(
-        (tm) => tm.tierId === transaction.customerTier
+        (tm) => tm.tierId === transaction.customerTier,
       );
       if (tierMultiplier) {
         multiplier = tierMultiplier.multiplier;
       }
     }
-    
+
     let points = Math.floor(basePoints * multiplier);
-    
+
     // Apply maximum per transaction if set
     if (rule.perDollar.maximumPointsPerTransaction) {
       points = Math.min(points, rule.perDollar.maximumPointsPerTransaction);
     }
-    
+
     totalPoints += points;
   }
-  
+
   // Per Booking Calculation
   if (rule.perBooking?.enabled && transaction.isBooking) {
     let points = rule.perBooking.basePoints;
-    
+
     // Service type override
     if (transaction.serviceType && rule.perBooking.serviceTypePoints) {
       const servicePoints = rule.perBooking.serviceTypePoints.find(
-        (stp) => stp.serviceType === transaction.serviceType
+        (stp) => stp.serviceType === transaction.serviceType,
       );
       if (servicePoints) {
         points = servicePoints.points;
       }
     }
-    
+
     // Apply tier multiplier
     if (transaction.customerTier && rule.perBooking.tierMultipliers) {
       const tierMultiplier = rule.perBooking.tierMultipliers.find(
-        (tm) => tm.tierId === transaction.customerTier
+        (tm) => tm.tierId === transaction.customerTier,
       );
       if (tierMultiplier) {
         points = Math.floor(points * tierMultiplier.multiplier);
       }
     }
-    
+
     totalPoints += points;
   }
-  
+
   // Per Service Type Calculation
   if (rule.perServiceType?.enabled && transaction.serviceType) {
     const servicePoints = rule.perServiceType.servicePoints.find(
-      (sp) => sp.serviceType === transaction.serviceType
+      (sp) => sp.serviceType === transaction.serviceType,
     );
     if (servicePoints) {
       totalPoints += servicePoints.points;
-      
+
       // Also earn per dollar if configured
       if (servicePoints.pointsPerDollar) {
-        totalPoints += Math.floor(transaction.amount * servicePoints.pointsPerDollar);
+        totalPoints += Math.floor(
+          transaction.amount * servicePoints.pointsPerDollar,
+        );
       }
     }
   }
-  
+
   // Visit Count Milestones
   if (rule.perVisitCount?.enabled && transaction.visitCount) {
     const milestone = rule.perVisitCount.milestones.find(
-      (m) => m.visitCount === transaction.visitCount
+      (m) => m.visitCount === transaction.visitCount,
     );
     if (milestone) {
       totalPoints += milestone.bonusPoints;
     }
   }
-  
+
   // Hybrid Calculation
   if (rule.hybrid?.enabled && rule.hybrid.rules) {
     const hybridPoints = rule.hybrid.rules.reduce((sum, subRule) => {
@@ -1058,7 +1167,7 @@ export function calculatePointsEarned(
       };
       return sum + calculatePointsEarned(subConfig, transaction);
     }, 0);
-    
+
     if (rule.hybrid.combinationMethod === "max") {
       // This would need more complex logic to track individual rule results
       totalPoints = Math.max(totalPoints, hybridPoints);
@@ -1066,7 +1175,7 @@ export function calculatePointsEarned(
       totalPoints += hybridPoints;
     }
   }
-  
+
   return totalPoints;
 }
 
@@ -1083,30 +1192,35 @@ export function isTransactionEligibleForPoints(
     isGiftCard?: boolean;
     isPackage?: boolean;
     isMembership?: boolean;
-  }
+  },
 ): boolean {
   if (!config.enabled || !config.pointsScope.enabled) return false;
-  
+
   const scope = config.pointsScope;
-  
+
   // Check scope
-  if (scope.scope === "services_only" && transaction.type !== "service") return false;
-  if (scope.scope === "retail_only" && transaction.type !== "retail") return false;
-  
+  if (scope.scope === "services_only" && transaction.type !== "service")
+    return false;
+  if (scope.scope === "retail_only" && transaction.type !== "retail")
+    return false;
+
   // Check service eligibility
   if (transaction.type === "service" && scope.services) {
     if (!scope.services.enabled) return false;
     if (scope.services.serviceTypes && transaction.serviceType) {
-      if (!scope.services.serviceTypes.includes(transaction.serviceType)) return false;
+      if (!scope.services.serviceTypes.includes(transaction.serviceType))
+        return false;
     }
     if (scope.services.excludeServiceTypes && transaction.serviceType) {
-      if (scope.services.excludeServiceTypes.includes(transaction.serviceType)) return false;
+      if (scope.services.excludeServiceTypes.includes(transaction.serviceType))
+        return false;
     }
     if (scope.services.minimumServiceAmount) {
-      if (transaction.amount < scope.services.minimumServiceAmount) return false;
+      if (transaction.amount < scope.services.minimumServiceAmount)
+        return false;
     }
   }
-  
+
   // Check retail eligibility
   if (transaction.type === "retail" && scope.retail) {
     if (!scope.retail.enabled) return false;
@@ -1114,15 +1228,16 @@ export function isTransactionEligibleForPoints(
       if (transaction.amount < scope.retail.minimumPurchaseAmount) return false;
     }
   }
-  
+
   // Check exclusions
   if (scope.exclusions) {
-    if (scope.exclusions.discountedItems && transaction.isDiscounted) return false;
+    if (scope.exclusions.discountedItems && transaction.isDiscounted)
+      return false;
     if (scope.exclusions.giftCards && transaction.isGiftCard) return false;
     if (scope.exclusions.packages && transaction.isPackage) return false;
     if (scope.exclusions.memberships && transaction.isMembership) return false;
   }
-  
+
   return true;
 }
 
@@ -1131,13 +1246,15 @@ export function isTransactionEligibleForPoints(
  */
 export function getCustomerTier(
   config: FacilityLoyaltyConfig,
-  points: number
+  points: number,
 ): LoyaltyTierConfig | null {
   if (!config.enabled || !config.tiers.length) return null;
-  
+
   // Sort tiers by minPoints descending to find highest applicable tier
-  const sortedTiers = [...config.tiers].sort((a, b) => b.minPoints - a.minPoints);
-  
+  const sortedTiers = [...config.tiers].sort(
+    (a, b) => b.minPoints - a.minPoints,
+  );
+
   for (const tier of sortedTiers) {
     if (points >= tier.minPoints) {
       if (!tier.maxPoints || points < tier.maxPoints) {
@@ -1145,7 +1262,7 @@ export function getCustomerTier(
       }
     }
   }
-  
+
   // Return lowest tier if no match
   return sortedTiers[sortedTiers.length - 1] || null;
 }
@@ -1155,16 +1272,16 @@ export function getCustomerTier(
  */
 export function canStackDiscounts(
   config: FacilityLoyaltyConfig,
-  discountTypes: string[]
+  discountTypes: string[],
 ): boolean {
   if (!config.discountStacking.enabled) return false;
-  
+
   const stacking = config.discountStacking;
-  
+
   if (stacking.stackingBehavior === "no_stacking") return false;
   if (stacking.stackingBehavior === "stack_all") return true;
   if (stacking.stackingBehavior === "best_discount_only") return false;
-  
+
   if (stacking.customRules) {
     // Check custom stacking rules
     for (const discountType of discountTypes) {
@@ -1173,6 +1290,6 @@ export function canStackDiscounts(
       }
     }
   }
-  
+
   return true;
 }

@@ -1,18 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Save, AlertCircle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnablementScopeSection } from "./EnablementScopeSection";
 import { TimingRemindersSection } from "./TimingRemindersSection";
 import { FormTemplateSection } from "./FormTemplateSection";
-import type { YipyyGoConfig, YipyyGoAddOnsApproval } from "@/data/yipyygo-config";
+import type {
+  YipyyGoConfig,
+  YipyyGoAddOnsApproval,
+} from "@/data/yipyygo-config";
 import { saveYipyyGoConfig } from "@/data/yipyygo-config";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
@@ -23,7 +31,11 @@ interface YipyyGoSettingsProps {
   facilityId: number;
 }
 
-export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoSettingsProps) {
+export function YipyyGoSettings({
+  config,
+  onConfigChange,
+  facilityId: _facilityId,
+}: YipyyGoSettingsProps) {
   const [localConfig, setLocalConfig] = useState<YipyyGoConfig>(config);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -66,8 +78,9 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
                 YipyyGo Pre-Check-In Forms
               </CardTitle>
               <CardDescription>
-                Configure pre-check-in forms that customers complete before arrival.
-                Streamline check-in and gather important information in advance.
+                Configure pre-check-in forms that customers complete before
+                arrival. Streamline check-in and gather important information in
+                advance.
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
@@ -83,7 +96,7 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
               </div>
               {hasChanges && (
                 <Button onClick={handleSave} disabled={isSaving}>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="mr-2 size-4" />
                   {isSaving ? "Saving..." : "Save Changes"}
                 </Button>
               )}
@@ -93,9 +106,10 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
         {!localConfig.enabled && (
           <CardContent>
             <Alert>
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" />
               <AlertDescription>
-                YipyyGo is currently disabled. Enable it to configure pre-check-in forms for your services.
+                YipyyGo is currently disabled. Enable it to configure
+                pre-check-in forms for your services.
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -106,10 +120,11 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
         <>
           {/* Info Alert */}
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="size-4" />
             <AlertDescription>
-              <strong>Mandatory vs Optional:</strong> Mandatory forms must be completed before check-in (staff can override if needed). 
-              Optional forms are recommended but don't block check-in.
+              <strong>Mandatory vs Optional:</strong> Mandatory forms must be
+              completed before check-in (staff can override if needed). Optional
+              forms are recommended but don&apos;t block check-in.
             </AlertDescription>
           </Alert>
 
@@ -118,7 +133,8 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
             <CardHeader>
               <CardTitle>Add-ons & staff notifications</CardTitle>
               <CardDescription>
-                How add-ons from YipyyGo forms are applied and when to notify staff.
+                How add-ons from YipyyGo forms are applied and when to notify
+                staff.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -126,34 +142,54 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
                 <Label>Add-ons approval</Label>
                 <RadioGroup
                   value={localConfig.addOnsApproval ?? "staff_approval"}
-                  onValueChange={(v) => handleConfigUpdate({ addOnsApproval: v as YipyyGoAddOnsApproval })}
+                  onValueChange={(v) =>
+                    handleConfigUpdate({
+                      addOnsApproval: v as YipyyGoAddOnsApproval,
+                    })
+                  }
                   className="flex flex-col gap-2"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="auto" id="addons-auto" />
-                    <Label htmlFor="addons-auto" className="font-normal cursor-pointer">
-                      Auto-approve add-ons – add directly to invoice when customer submits
+                    <Label
+                      htmlFor="addons-auto"
+                      className="cursor-pointer font-normal"
+                    >
+                      Auto-approve add-ons – add directly to invoice when
+                      customer submits
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="staff_approval" id="addons-staff" />
-                    <Label htmlFor="addons-staff" className="font-normal cursor-pointer">
-                      Require staff approval – add as &quot;pending add-on&quot; until staff approves
+                    <Label
+                      htmlFor="addons-staff"
+                      className="cursor-pointer font-normal"
+                    >
+                      Require staff approval – add as &quot;pending add-on&quot;
+                      until staff approves
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
-                  <Label htmlFor="notify-staff-email" className="cursor-pointer">Notify staff by email on submission</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    In-app notification is always sent when a customer submits a form.
+                  <Label
+                    htmlFor="notify-staff-email"
+                    className="cursor-pointer"
+                  >
+                    Notify staff by email on submission
+                  </Label>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    In-app notification is always sent when a customer submits a
+                    form.
                   </p>
                 </div>
                 <Switch
                   id="notify-staff-email"
                   checked={localConfig.notifyStaffEmailOnSubmit ?? false}
-                  onCheckedChange={(checked) => handleConfigUpdate({ notifyStaffEmailOnSubmit: checked })}
+                  onCheckedChange={(checked) =>
+                    handleConfigUpdate({ notifyStaffEmailOnSubmit: checked })
+                  }
                 />
               </div>
             </CardContent>
@@ -194,11 +230,11 @@ export function YipyyGoSettings({ config, onConfigChange, facilityId }: YipyyGoS
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     You have unsaved changes
                   </p>
                   <Button onClick={handleSave} disabled={isSaving} size="lg">
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="mr-2 size-4" />
                     {isSaving ? "Saving..." : "Save All Changes"}
                   </Button>
                 </div>

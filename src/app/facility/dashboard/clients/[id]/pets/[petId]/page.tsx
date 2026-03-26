@@ -54,7 +54,11 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import type { Evaluation, NewBooking as BookingData, Client } from "@/lib/types";
+import type {
+  Evaluation,
+  NewBooking as BookingData,
+  Client,
+} from "@/lib/types";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { useFacilityRole } from "@/hooks/use-facility-role";
@@ -200,9 +204,31 @@ export default function PetDetailPage({
 
   const [editedPet, setEditedPet] = useState<Pet | null>(pet || null);
 
+  const petEvaluations = (pet as { evaluations?: Evaluation[] } | undefined)
+    ?.evaluations;
+
+  const latestEvaluation = useMemo(() => {
+    const evals = petEvaluations || [];
+    return [...evals].sort((a, b) => {
+      const da = a.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
+      const db = b.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
+      return db - da;
+    })[0];
+  }, [petEvaluations]);
+
+  const latestFailedEvaluation = useMemo(() => {
+    const failed = petEvaluations?.filter((e) => e.status === "failed") || [];
+    return failed
+      .map((e) => ({
+        ...e,
+        evaluatedAtValue: e.evaluatedAt ? new Date(e.evaluatedAt).getTime() : 0,
+      }))
+      .sort((a, b) => b.evaluatedAtValue - a.evaluatedAtValue)[0];
+  }, [petEvaluations]);
+
   if (!client || !pet) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Pet not found</h2>
           <Button
@@ -210,7 +236,7 @@ export default function PetDetailPage({
             className="mt-4"
             onClick={() => router.push(`/facility/dashboard/clients/${id}`)}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to Client
           </Button>
         </div>
@@ -223,8 +249,13 @@ export default function PetDetailPage({
   const petBookings = bookings.filter((b) => b.petId === pet.id);
   const reports = reportCards.filter((r) => r.petId === pet.id);
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
-  const friends = relationships.filter((r) => r.relationshipType === "friend" || r.relationshipType === "best_friend");
-  const enemies = relationships.filter((r) => r.relationshipType === "keep_apart");
+  const friends = relationships.filter(
+    (r) =>
+      r.relationshipType === "friend" || r.relationshipType === "best_friend",
+  );
+  const enemies = relationships.filter(
+    (r) => r.relationshipType === "keep_apart",
+  );
   const totalStays = petBookings.filter((b) => b.status === "completed").length;
   const expiredVaccinations = vaccinations.filter(
     (v) => new Date(v.expiryDate) < new Date(),
@@ -255,8 +286,6 @@ export default function PetDetailPage({
     });
   };
 
-  const petEvaluations = (pet as { evaluations?: Evaluation[] }).evaluations;
-
   const hasValidEvaluation =
     petEvaluations?.some(
       (e) => e.status === "passed" && e.isExpired !== true,
@@ -264,27 +293,10 @@ export default function PetDetailPage({
 
   const hasExpiredEvaluation =
     petEvaluations?.some(
-      (e) => (e.status === "passed" && e.isExpired === true) || e.status === "outdated",
+      (e) =>
+        (e.status === "passed" && e.isExpired === true) ||
+        e.status === "outdated",
     ) ?? false;
-
-  const latestEvaluation = useMemo(() => {
-    const evals = petEvaluations || [];
-    return [...evals].sort((a, b) => {
-      const da = a.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
-      const db = b.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
-      return db - da;
-    })[0];
-  }, [petEvaluations]);
-
-  const latestFailedEvaluation = useMemo(() => {
-    const failed = petEvaluations?.filter((e) => e.status === "failed") || [];
-    return failed
-      .map((e) => ({
-        ...e,
-        evaluatedAtValue: e.evaluatedAt ? new Date(e.evaluatedAt).getTime() : 0,
-      }))
-      .sort((a, b) => b.evaluatedAtValue - a.evaluatedAtValue)[0];
-  }, [petEvaluations]);
 
   const getVaccinationStatus = (
     vaccination: (typeof vaccinationRecords)[0],
@@ -360,16 +372,16 @@ export default function PetDetailPage({
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+            <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-lg">
               {pet.type === "Dog" ? (
-                <Dog className="h-6 w-6 text-muted-foreground" />
+                <Dog className="text-muted-foreground h-6 w-6" />
               ) : (
-                <Cat className="h-6 w-6 text-muted-foreground" />
+                <Cat className="text-muted-foreground h-6 w-6" />
               )}
             </div>
             <div>
               <h2 className="text-3xl font-bold tracking-tight">{pet.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <Badge variant="outline">
                   {pet.type} • {pet.breed}
                 </Badge>
@@ -379,7 +391,7 @@ export default function PetDetailPage({
               </div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             Owner: {client.name}
           </p>
         </div>
@@ -387,11 +399,11 @@ export default function PetDetailPage({
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={handleCancel}>
-                <X className="h-4 w-4 mr-1" />
+                <X className="mr-1 size-4" />
                 Cancel
               </Button>
               <Button size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-1" />
+                <Save className="mr-1 size-4" />
                 Save
               </Button>
             </>
@@ -402,7 +414,7 @@ export default function PetDetailPage({
                 size="sm"
                 onClick={() => setIsEditing(true)}
               >
-                <Edit className="h-4 w-4 mr-1" />
+                <Edit className="mr-1 size-4" />
                 Edit
               </Button>
               <Button
@@ -410,11 +422,11 @@ export default function PetDetailPage({
                 size="sm"
                 onClick={() => setBookingModalOpen(true)}
               >
-                <Calendar className="h-4 w-4 mr-1" />
+                <Calendar className="mr-1 size-4" />
                 Book
               </Button>
               <Button variant="outline" size="sm">
-                <FileText className="h-4 w-4 mr-1" />
+                <FileText className="mr-1 size-4" />
                 Report
               </Button>
             </>
@@ -427,25 +439,25 @@ export default function PetDetailPage({
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{totalStays}</div>
-            <div className="text-xs text-muted-foreground">Total Stays</div>
+            <div className="text-muted-foreground text-xs">Total Stays</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{photos.length}</div>
-            <div className="text-xs text-muted-foreground">Photos</div>
+            <div className="text-muted-foreground text-xs">Photos</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{vaccinations.length}</div>
-            <div className="text-xs text-muted-foreground">Vaccinations</div>
+            <div className="text-muted-foreground text-xs">Vaccinations</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{reports.length}</div>
-            <div className="text-xs text-muted-foreground">Report Cards</div>
+            <div className="text-muted-foreground text-xs">Report Cards</div>
           </CardContent>
         </Card>
       </div>
@@ -454,9 +466,9 @@ export default function PetDetailPage({
       {(expiredVaccinations.length > 0 || upcomingVaccinations.length > 0) && (
         <div className="space-y-2">
           {expiredVaccinations.length > 0 && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">
+            <div className="border-destructive/20 bg-destructive/10 flex items-center gap-2 rounded-lg border p-3">
+              <AlertCircle className="text-destructive size-4" />
+              <span className="text-destructive text-sm font-medium">
                 {expiredVaccinations.length} vaccination
                 {expiredVaccinations.length > 1 ? "s" : ""} expired - Update
                 required
@@ -465,8 +477,8 @@ export default function PetDetailPage({
           )}
           {upcomingVaccinations.length > 0 &&
             expiredVaccinations.length === 0 && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                <Clock className="h-4 w-4 text-yellow-600" />
+              <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                <Clock className="size-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-800">
                   {upcomingVaccinations.length} vaccination
                   {upcomingVaccinations.length > 1 ? "s" : ""} expiring within
@@ -480,7 +492,7 @@ export default function PetDetailPage({
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList
-          className={`grid w-full ${canUseEvaluationForm ? "grid-cols-7" : "grid-cols-6"}`}
+          className={`grid w-full ${canUseEvaluationForm ? "grid-cols-7" : `grid-cols-6`} `}
         >
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="relationships">
@@ -510,7 +522,7 @@ export default function PetDetailPage({
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {hasValidEvaluation ? "Valid" : "Expired"}
                 </div>
                 <Badge
@@ -520,27 +532,31 @@ export default function PetDetailPage({
                       : "destructive"
                   }
                 >
-                  {hasValidEvaluation && !hasExpiredEvaluation ? "Valid" : "Expired"}
+                  {hasValidEvaluation && !hasExpiredEvaluation
+                    ? "Valid"
+                    : "Expired"}
                 </Badge>
               </div>
-                {latestEvaluation && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span className="font-medium">Last outcome:</span>
-                    <Badge
-                      variant={
-                        latestEvaluation.status === "passed" ? "secondary" : "destructive"
-                      }
-                      className="capitalize"
-                    >
-                      {latestEvaluation.status}
-                    </Badge>
-                    {latestEvaluation.isExpired && (
-                      <Badge variant="destructive">Expired</Badge>
-                    )}
-                  </div>
-                )}
+              {latestEvaluation && (
+                <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <span className="font-medium">Last outcome:</span>
+                  <Badge
+                    variant={
+                      latestEvaluation.status === "passed"
+                        ? "secondary"
+                        : "destructive"
+                    }
+                    className="capitalize"
+                  >
+                    {latestEvaluation.status}
+                  </Badge>
+                  {latestEvaluation.isExpired && (
+                    <Badge variant="destructive">Expired</Badge>
+                  )}
+                </div>
+              )}
               {latestFailedEvaluation?.notes && (
-                <div className="text-sm text-muted-foreground space-y-1">
+                <div className="text-muted-foreground space-y-1 text-sm">
                   <p className="font-semibold">Last failure reason (staff)</p>
                   <p>{latestFailedEvaluation.notes}</p>
                 </div>
@@ -632,7 +648,7 @@ export default function PetDetailPage({
                       }
                     />
                   </div>
-                  <div className="space-y-2 col-span-2">
+                  <div className="col-span-2 space-y-2">
                     <Label htmlFor="microchip">Microchip</Label>
                     <Input
                       id="microchip"
@@ -649,30 +665,30 @@ export default function PetDetailPage({
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Type</p>
+                    <p className="text-muted-foreground text-sm">Type</p>
                     <p className="font-medium">{pet.type}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Breed</p>
+                    <p className="text-muted-foreground text-sm">Breed</p>
                     <p className="font-medium">{pet.breed}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Age</p>
+                    <p className="text-muted-foreground text-sm">Age</p>
                     <p className="font-medium">
                       {pet.age} {pet.age === 1 ? "year" : "years"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Weight</p>
+                    <p className="text-muted-foreground text-sm">Weight</p>
                     <p className="font-medium">{pet.weight} kg</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Color</p>
+                    <p className="text-muted-foreground text-sm">Color</p>
                     <p className="font-medium">{pet.color}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Microchip</p>
-                    <p className="font-medium font-mono text-sm">
+                    <p className="text-muted-foreground text-sm">Microchip</p>
+                    <p className="font-mono text-sm font-medium">
                       {pet.microchip}
                     </p>
                   </div>
@@ -720,7 +736,7 @@ export default function PetDetailPage({
               ) : (
                 <>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm">
                       Allergies
                     </p>
                     <Badge
@@ -732,7 +748,7 @@ export default function PetDetailPage({
                     </Badge>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm">
                       Special Needs
                     </p>
                     <p className="text-sm">{pet.specialNeeds}</p>
@@ -748,12 +764,12 @@ export default function PetDetailPage({
           {/* Friends Section */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <Heart className="h-4 w-4 text-green-600" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Heart className="size-4 text-green-600" />
                 Friends ({friends.length})
               </CardTitle>
               <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-1" />
+                <UserPlus className="mr-1 size-4" />
                 Add Friend
               </Button>
             </CardHeader>
@@ -763,10 +779,10 @@ export default function PetDetailPage({
                   {friends.map((rel) => (
                     <div
                       key={rel.id}
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors"
+                      className="bg-card hover:bg-muted flex items-center justify-between rounded-lg border p-4 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
                           {rel.relatedPetType === "Dog" ? (
                             <Dog className="h-5 w-5 text-green-600" />
                           ) : (
@@ -774,10 +790,10 @@ export default function PetDetailPage({
                           )}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-sm">
+                          <h4 className="text-sm font-semibold">
                             {rel.relatedPetName}
                           </h4>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {rel.relatedPetBreed}
                           </p>
                         </div>
@@ -785,16 +801,24 @@ export default function PetDetailPage({
                       <div className="flex items-center gap-3">
                         <Badge
                           variant="outline"
-                          className={rel.relationshipType === "best_friend"
-                            ? "bg-pink-50 text-pink-700 border-pink-200"
-                            : "bg-green-50 text-green-700 border-green-200"}
+                          className={
+                            rel.relationshipType === "best_friend"
+                              ? "border-pink-200 bg-pink-50 text-pink-700"
+                              : "border-green-200 bg-green-50 text-green-700"
+                          }
                         >
-                          {rel.relationshipType === "best_friend" ? "Best Friend" : "Friend"}
+                          {rel.relationshipType === "best_friend"
+                            ? "Best Friend"
+                            : "Friend"}
                         </Badge>
                         <Badge
                           variant={rel.allowAlerts ? "default" : "secondary"}
-                          className="text-xs cursor-pointer"
-                          title={rel.allowAlerts ? "Playdate alerts enabled for this friend" : "Playdate alerts disabled for this friend"}
+                          className="cursor-pointer text-xs"
+                          title={
+                            rel.allowAlerts
+                              ? "Playdate alerts enabled for this friend"
+                              : "Playdate alerts disabled for this friend"
+                          }
                         >
                           {rel.allowAlerts ? "Alerts On" : "Alerts Off"}
                         </Badge>
@@ -805,7 +829,7 @@ export default function PetDetailPage({
                     rel.notes ? (
                       <div
                         key={`${rel.id}-notes`}
-                        className="text-xs text-muted-foreground px-4 -mt-2"
+                        className="text-muted-foreground -mt-2 px-4 text-xs"
                       >
                         Note: {rel.notes}
                       </div>
@@ -813,9 +837,9 @@ export default function PetDetailPage({
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Heart className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No friends added yet
                   </p>
                 </div>
@@ -826,12 +850,12 @@ export default function PetDetailPage({
           {/* Enemies Section */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <AlertTriangle className="text-destructive size-4" />
                 Keep Apart ({enemies.length})
               </CardTitle>
               <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-1" />
+                <UserPlus className="mr-1 size-4" />
                 Add
               </Button>
             </CardHeader>
@@ -841,22 +865,22 @@ export default function PetDetailPage({
                   {enemies.map((rel) => (
                     <div
                       key={rel.id}
-                      className="p-4 rounded-lg border border-destructive/20 bg-destructive/5"
+                      className="border-destructive/20 bg-destructive/5 rounded-lg border p-4"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                          <div className="bg-destructive/10 flex h-10 w-10 items-center justify-center rounded-full">
                             {rel.relatedPetType === "Dog" ? (
-                              <Dog className="h-5 w-5 text-destructive" />
+                              <Dog className="text-destructive h-5 w-5" />
                             ) : (
-                              <Cat className="h-5 w-5 text-destructive" />
+                              <Cat className="text-destructive h-5 w-5" />
                             )}
                           </div>
                           <div>
-                            <h4 className="font-semibold text-sm">
+                            <h4 className="text-sm font-semibold">
                               {rel.relatedPetName}
                             </h4>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {rel.relatedPetBreed}
                             </p>
                           </div>
@@ -864,8 +888,8 @@ export default function PetDetailPage({
                         <Badge variant="destructive">Keep Apart</Badge>
                       </div>
                       {rel.notes && (
-                        <div className="mt-3 p-2 rounded bg-destructive/10 text-xs text-destructive">
-                          <AlertTriangle className="h-3 w-3 inline mr-1" />
+                        <div className="bg-destructive/10 text-destructive mt-3 rounded-sm p-2 text-xs">
+                          <AlertTriangle className="mr-1 inline h-3 w-3" />
                           {rel.notes}
                         </div>
                       )}
@@ -873,9 +897,9 @@ export default function PetDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Users className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No pets to keep apart
                   </p>
                 </div>
@@ -892,7 +916,7 @@ export default function PetDetailPage({
                 Photo Gallery
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="mr-1 size-4" />
                 Upload Photo
               </Button>
             </CardHeader>
@@ -902,10 +926,10 @@ export default function PetDetailPage({
                   {photos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="relative group cursor-pointer"
+                      className="group relative cursor-pointer"
                     >
-                      <div className="aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <div className="bg-muted flex aspect-square items-center justify-center overflow-hidden rounded-lg">
+                        <ImageIcon className="text-muted-foreground h-12 w-12" />
                       </div>
                       {photo.isPrimary && (
                         <Badge className="absolute top-2 right-2 text-xs">
@@ -914,11 +938,11 @@ export default function PetDetailPage({
                       )}
                       <div className="mt-2">
                         {photo.caption && (
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-muted-foreground truncate text-xs">
                             {photo.caption}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {formatDate(photo.uploadedAt)}
                         </p>
                       </div>
@@ -926,9 +950,9 @@ export default function PetDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Camera className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No photos yet</p>
+                <div className="py-8 text-center">
+                  <Camera className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">No photos yet</p>
                 </div>
               )}
             </CardContent>
@@ -943,7 +967,7 @@ export default function PetDetailPage({
                 Vaccination Records
               </CardTitle>
               <Button variant="outline" size="sm">
-                <Syringe className="h-4 w-4 mr-1" />
+                <Syringe className="mr-1 size-4" />
                 Add Vaccination
               </Button>
             </CardHeader>
@@ -961,37 +985,37 @@ export default function PetDetailPage({
                       return (
                         <div
                           key={vax.id}
-                          className="flex items-start justify-between p-4 rounded-lg border bg-card"
+                          className="bg-card flex items-start justify-between rounded-lg border p-4"
                         >
                           <div className="flex items-start gap-3">
                             <div
-                              className={`p-2 rounded-lg ${
+                              className={`rounded-lg p-2 ${
                                 status.status === "expired"
                                   ? "bg-destructive/10"
                                   : status.status === "expiring-soon"
                                     ? "bg-yellow-100"
                                     : "bg-green-100"
-                              }`}
+                              } `}
                             >
                               <Syringe
-                                className={`h-4 w-4 ${
+                                className={`size-4 ${
                                   status.status === "expired"
                                     ? "text-destructive"
                                     : status.status === "expiring-soon"
                                       ? "text-yellow-600"
                                       : "text-green-600"
-                                }`}
+                                } `}
                               />
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm">
+                              <h4 className="text-sm font-semibold">
                                 {vax.vaccineName}
                               </h4>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 Administered: {formatDate(vax.administeredDate)}
                               </p>
                               {vax.veterinarianName && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                   By: {vax.veterinarianName}
                                 </p>
                               )}
@@ -1013,7 +1037,7 @@ export default function PetDetailPage({
                                   ? `Expires in ${status.days} days`
                                   : `Valid for ${status.days} days`}
                             </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               Expires: {formatDate(vax.expiryDate)}
                             </p>
                           </div>
@@ -1022,9 +1046,9 @@ export default function PetDetailPage({
                     })}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Syringe className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Syringe className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No vaccination records
                   </p>
                 </div>
@@ -1053,17 +1077,17 @@ export default function PetDetailPage({
                     .map((booking) => (
                       <div
                         key={booking.id}
-                        className="flex items-start justify-between p-4 rounded-lg border bg-card hover:bg-muted transition-colors cursor-pointer"
+                        className="bg-card hover:bg-muted flex cursor-pointer items-start justify-between rounded-lg border p-4 transition-colors"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-muted">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div className="bg-muted rounded-lg p-2">
+                            <Calendar className="text-muted-foreground size-4" />
                           </div>
                           <div>
-                            <h4 className="font-semibold text-sm">
+                            <h4 className="text-sm font-semibold">
                               {booking.service}
                             </h4>
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className="text-muted-foreground mt-1 text-xs">
                               {formatDate(booking.startDate)} -{" "}
                               {formatDate(booking.endDate)}
                             </p>
@@ -1081,7 +1105,7 @@ export default function PetDetailPage({
                           >
                             {booking.status}
                           </Badge>
-                          <p className="text-sm font-medium mt-1">
+                          <p className="mt-1 text-sm font-medium">
                             ${booking.totalCost}
                           </p>
                         </div>
@@ -1089,9 +1113,9 @@ export default function PetDetailPage({
                     ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="py-8 text-center">
+                  <Calendar className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                  <p className="text-muted-foreground text-sm">
                     No booking history
                   </p>
                 </div>
@@ -1117,19 +1141,19 @@ export default function PetDetailPage({
                 return (
                   <div
                     key={report.id}
-                    className={`relative overflow-hidden rounded-xl border ${theme.cardBg}`}
+                    className={`relative overflow-hidden rounded-xl border ${theme.cardBg} `}
                   >
                     {/* Decorative corner icon */}
                     <DecorativeIcon
-                      className={`absolute h-20 w-20 opacity-[0.06] text-gray-900 ${
+                      className={`absolute h-20 w-20 text-gray-900 opacity-[0.06] ${
                         theme.iconPosition === "top-right"
                           ? "-top-1 -right-1"
                           : theme.iconPosition === "top-left"
                             ? "-top-1 -left-1"
                             : theme.iconPosition === "bottom-right"
-                              ? "-bottom-1 -right-1"
+                              ? "-right-1 -bottom-1"
                               : "-bottom-1 -left-1"
-                      }`}
+                      } `}
                     />
 
                     {/* Themed header banner */}
@@ -1149,13 +1173,13 @@ export default function PetDetailPage({
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge
-                          className={`${getMoodColor(report.mood)} capitalize text-xs`}
+                          className={` ${getMoodColor(report.mood)} text-xs capitalize`}
                         >
                           {report.mood}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="text-xs capitalize border-white/40 text-white/90"
+                          className="border-white/40 text-xs text-white/90 capitalize"
                         >
                           {report.serviceType}
                         </Badge>
@@ -1163,12 +1187,12 @@ export default function PetDetailPage({
                     </div>
 
                     {/* Card body */}
-                    <div className="relative p-4 space-y-4">
+                    <div className="relative space-y-4 p-4">
                       {/* Activities */}
                       {report.activities.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <Activity className="h-4 w-4" />
+                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <Activity className="size-4" />
                             Activities
                           </h4>
                           <div className="flex flex-wrap gap-1.5">
@@ -1188,28 +1212,25 @@ export default function PetDetailPage({
                       {/* Meals */}
                       {report.meals.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <Utensils className="h-4 w-4" />
+                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <Utensils className="size-4" />
                             Meals
                           </h4>
                           <div className="space-y-2">
                             {report.meals.map((meal, idx) => (
                               <div
                                 key={idx}
-                                className="flex items-center justify-between p-2 rounded bg-gray-50"
+                                className="flex items-center justify-between rounded-sm bg-gray-50 p-2"
                               >
                                 <div>
                                   <p className="text-sm font-medium">
                                     {meal.time} - {meal.food}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">
+                                  <p className="text-muted-foreground text-xs">
                                     {meal.amount}
                                   </p>
                                 </div>
-                                <Badge
-                                  variant="outline"
-                                  className="capitalize"
-                                >
+                                <Badge variant="outline" className="capitalize">
                                   {meal.consumed}
                                 </Badge>
                               </div>
@@ -1221,8 +1242,8 @@ export default function PetDetailPage({
                       {/* Potty Breaks */}
                       {report.pottyBreaks.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4" />
+                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <CheckCircle className="size-4" />
                             Potty Breaks
                           </h4>
                           <div className="flex flex-wrap gap-2">
@@ -1249,17 +1270,17 @@ export default function PetDetailPage({
                       {/* Photos */}
                       {report.photos.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                            <Camera className="h-4 w-4" />
+                          <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <Camera className="size-4" />
                             Photos ({report.photos.length})
                           </h4>
                           <div className="grid grid-cols-4 gap-2">
                             {report.photos.map((photo, idx) => (
                               <div
                                 key={idx}
-                                className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center"
+                                className="flex aspect-square items-center justify-center rounded-lg bg-gray-100"
                               >
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                <ImageIcon className="text-muted-foreground h-8 w-8" />
                               </div>
                             ))}
                           </div>
@@ -1268,18 +1289,18 @@ export default function PetDetailPage({
 
                       {/* Staff Notes */}
                       {report.staffNotes && (
-                        <div className="pt-3 border-t">
-                          <h4 className="text-sm font-semibold mb-1">
+                        <div className="border-t pt-3">
+                          <h4 className="mb-1 text-sm font-semibold">
                             Staff Notes
                           </h4>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {report.staffNotes}
                           </p>
                         </div>
                       )}
 
                       {report.sentToOwner && report.sentAt && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                        <div className="text-muted-foreground flex items-center gap-2 border-t pt-2 text-xs">
                           <CheckCircle className="h-3 w-3 text-green-500" />
                           Sent to owner on {formatDateTime(report.sentAt)}
                         </div>
@@ -1287,7 +1308,7 @@ export default function PetDetailPage({
                     </div>
 
                     {/* Theme label footer */}
-                    <div className="px-5 pb-3 flex justify-end">
+                    <div className="flex justify-end px-5 pb-3">
                       <span className="text-xs font-medium text-gray-400">
                         {theme.emoji} {theme.label} Theme
                       </span>
@@ -1297,9 +1318,9 @@ export default function PetDetailPage({
               })
           ) : (
             <Card>
-              <CardContent className="text-center py-8">
-                <Award className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="py-8 text-center">
+                <Award className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                <p className="text-muted-foreground text-sm">
                   No report cards yet
                 </p>
               </CardContent>
@@ -1318,12 +1339,15 @@ export default function PetDetailPage({
               <CardContent className="space-y-3">
                 {(() => {
                   const evals = (
-                    ("evaluations" in (pet as unknown as Record<string, unknown>)
+                    ("evaluations" in
+                    (pet as unknown as Record<string, unknown>)
                       ? ((pet as unknown as { evaluations?: Evaluation[] })
                           .evaluations ?? [])
                       : []) as Evaluation[]
                   ).map((ev) => {
-                    const expired = (ev as any).isExpired === true || ev.status === "outdated";
+                    const expired =
+                      (ev as any).isExpired === true ||
+                      ev.status === "outdated";
                     const outcome =
                       ev.status === "passed"
                         ? "PASS"
@@ -1336,7 +1360,7 @@ export default function PetDetailPage({
 
                   if (evals.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         No evaluations found for this pet.
                       </p>
                     );
@@ -1352,14 +1376,22 @@ export default function PetDetailPage({
                           key: "evaluatedAt",
                           label: "Date",
                           render: (row: any) =>
-                            row.evaluatedAt ? formatDateTime(row.evaluatedAt) : "Not completed",
+                            row.evaluatedAt
+                              ? formatDateTime(row.evaluatedAt)
+                              : "Not completed",
                         },
                         {
                           key: "outcome",
                           label: "Outcome",
                           render: (row: any) => (
                             <Badge
-                              variant={row.outcome === "PASS" ? "secondary" : row.outcome === "FAIL" ? "destructive" : "outline"}
+                              variant={
+                                row.outcome === "PASS"
+                                  ? "secondary"
+                                  : row.outcome === "FAIL"
+                                    ? "destructive"
+                                    : "outline"
+                              }
                             >
                               {row.outcome}
                             </Badge>
@@ -1369,8 +1401,13 @@ export default function PetDetailPage({
                           key: "validity",
                           label: "Validity",
                           render: (row: any) =>
-                            row.status === "passed" || row.status === "outdated" ? (
-                              <Badge variant={row.expired ? "destructive" : "secondary"}>
+                            row.status === "passed" ||
+                            row.status === "outdated" ? (
+                              <Badge
+                                variant={
+                                  row.expired ? "destructive" : "secondary"
+                                }
+                              >
                                 {row.validity}
                               </Badge>
                             ) : (
@@ -1396,7 +1433,10 @@ export default function PetDetailPage({
                         },
                       ]}
                       actions={(row: any) => (
-                        <Button size="sm" onClick={() => setActiveEvaluation(row)}>
+                        <Button
+                          size="sm"
+                          onClick={() => setActiveEvaluation(row)}
+                        >
                           Complete Evaluation
                         </Button>
                       )}

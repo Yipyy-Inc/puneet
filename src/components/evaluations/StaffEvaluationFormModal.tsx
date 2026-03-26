@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -115,7 +115,12 @@ function TagInput({
             }
           }}
         />
-        <Button type="button" variant="outline" onClick={add} disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={add}
+          disabled={disabled}
+        >
           Add
         </Button>
       </div>
@@ -152,22 +157,36 @@ export function StaffEvaluationFormModal({
   petName: string;
 }) {
   const key = useMemo(() => storageKey(evaluation.id), [evaluation.id]);
-  const [form, setForm] = useState<FormState>(defaultState);
-  const [resultError, setResultError] = useState("");
 
-  useEffect(() => {
-    if (!open) return;
+  const loadFormFromStorage = (storageKey: string): FormState => {
+    if (typeof window === "undefined") return defaultState;
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(storageKey);
       if (raw) {
-        setForm({ ...defaultState, ...(JSON.parse(raw) as Partial<FormState>) });
-      } else {
-        setForm(defaultState);
+        return {
+          ...defaultState,
+          ...(JSON.parse(raw) as Partial<FormState>),
+        };
       }
     } catch {
-      setForm(defaultState);
+      // ignore
     }
-  }, [open, key]);
+    return defaultState;
+  };
+
+  const [form, setForm] = useState<FormState>(() =>
+    open ? loadFormFromStorage(key) : defaultState,
+  );
+  const [prevKey, setPrevKey] = useState(key);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen || key !== prevKey) {
+    setPrevOpen(open);
+    setPrevKey(key);
+    if (open) {
+      setForm(loadFormFromStorage(key));
+    }
+  }
+  const [resultError, setResultError] = useState("");
 
   const canSave =
     form.dogFriendly !== "" &&
@@ -212,7 +231,7 @@ export function StaffEvaluationFormModal({
       size="lg"
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="space-y-3">
             <Label>Dog-friendly</Label>
             <RadioGroup
@@ -268,13 +287,16 @@ export function StaffEvaluationFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Energy level</Label>
             <Select
               value={form.energyLevel}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, energyLevel: v as FormState["energyLevel"] }))
+                setForm((p) => ({
+                  ...p,
+                  energyLevel: v as FormState["energyLevel"],
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -293,7 +315,10 @@ export function StaffEvaluationFormModal({
             <Select
               value={form.anxietyLevel}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, anxietyLevel: v as FormState["anxietyLevel"] }))
+                setForm((p) => ({
+                  ...p,
+                  anxietyLevel: v as FormState["anxietyLevel"],
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -312,7 +337,10 @@ export function StaffEvaluationFormModal({
             <Select
               value={form.reactivity}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, reactivity: v as FormState["reactivity"] }))
+                setForm((p) => ({
+                  ...p,
+                  reactivity: v as FormState["reactivity"],
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -327,13 +355,16 @@ export function StaffEvaluationFormModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Play style</Label>
             <Select
               value={form.playStyle}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, playStyle: v as FormState["playStyle"] }))
+                setForm((p) => ({
+                  ...p,
+                  playStyle: v as FormState["playStyle"],
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -354,7 +385,10 @@ export function StaffEvaluationFormModal({
             <Select
               value={form.playGroup}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, playGroup: v as FormState["playGroup"] }))
+                setForm((p) => ({
+                  ...p,
+                  playGroup: v as FormState["playGroup"],
+                }))
               }
             >
               <SelectTrigger className="w-full">
@@ -382,11 +416,13 @@ export function StaffEvaluationFormModal({
         <TagInput
           label="Internal Warnings / Notes"
           value={form.internalWarnings}
-          onChange={(next) => setForm((p) => ({ ...p, internalWarnings: next }))}
+          onChange={(next) =>
+            setForm((p) => ({ ...p, internalWarnings: next }))
+          }
           placeholder="e.g. resource-guarding"
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Temperament notes</Label>
             <Textarea
@@ -450,7 +486,7 @@ export function StaffEvaluationFormModal({
                 </label>
               </RadioGroup>
               {resultError && (
-                <p className="text-sm text-destructive" role="alert">
+                <p className="text-destructive text-sm" role="alert">
                   {resultError}
                 </p>
               )}
@@ -461,7 +497,7 @@ export function StaffEvaluationFormModal({
               className="space-y-3 data-[disabled=true]:opacity-50"
             >
               <Label>Service approvals</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <label className="flex items-center gap-2 rounded-md border p-3">
                   <Checkbox
                     checked={form.approvedServices.daycare}
@@ -497,7 +533,8 @@ export function StaffEvaluationFormModal({
                 <label className="flex items-center gap-2 rounded-md border p-3">
                   <Checkbox
                     checked={
-                      form.approvedServices.daycare && form.approvedServices.boarding
+                      form.approvedServices.daycare &&
+                      form.approvedServices.boarding
                     }
                     disabled={form.evaluationResult !== "pass"}
                     onCheckedChange={(checked) =>
@@ -566,4 +603,3 @@ export function StaffEvaluationFormModal({
     </Modal>
   );
 }
-

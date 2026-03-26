@@ -134,7 +134,7 @@ export default function DaycareRatesPage() {
       render: (item) => (
         <div className="flex items-center gap-2">
           <div
-            className={`w-2 h-2 rounded-full ${item.isActive ? "bg-success" : "bg-muted"}`}
+            className={`h-2 w-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
           />
           <span className="font-medium">{item.name}</span>
         </div>
@@ -183,7 +183,7 @@ export default function DaycareRatesPage() {
       label: "Size Pricing",
       defaultVisible: true,
       render: (item) => (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex flex-wrap gap-1">
           <Badge variant="outline" className="text-xs">
             S: ${item.sizePricing.small}
           </Badge>
@@ -229,13 +229,13 @@ export default function DaycareRatesPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Pricing Configuration</CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Base pricing and discount settings for daycare services
               </p>
             </div>
             {!isEditingPricing ? (
               <Button onClick={() => setIsEditingPricing(true)}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-2 size-4" />
                 Edit
               </Button>
             ) : (
@@ -247,7 +247,7 @@ export default function DaycareRatesPage() {
                   Cancel
                 </Button>
                 <Button onClick={() => setIsEditingPricing(false)}>
-                  <Save className="mr-2 h-4 w-4" />
+                  <Save className="mr-2 size-4" />
                   Save
                 </Button>
               </div>
@@ -289,7 +289,7 @@ export default function DaycareRatesPage() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Enable Package Discounts</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Offer discounted rates for daycare packages
               </p>
             </div>
@@ -332,12 +332,12 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 text-primary" />
+              <div className="bg-primary/10 rounded-lg p-2">
+                <DollarSign className="text-primary h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{rates.length}</p>
-                <p className="text-sm text-muted-foreground">Total Rates</p>
+                <p className="text-muted-foreground text-sm">Total Rates</p>
               </div>
             </div>
           </CardContent>
@@ -345,12 +345,12 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-success/10">
-                <Clock className="h-5 w-5 text-success" />
+              <div className="bg-success/10 rounded-lg p-2">
+                <Clock className="text-success h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeRates}</p>
-                <p className="text-sm text-muted-foreground">Active Rates</p>
+                <p className="text-muted-foreground text-sm">Active Rates</p>
               </div>
             </div>
           </CardContent>
@@ -358,12 +358,12 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-info/10">
-                <DollarSign className="h-5 w-5 text-info" />
+              <div className="bg-info/10 rounded-lg p-2">
+                <DollarSign className="text-info h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold">${avgPrice}</p>
-                <p className="text-sm text-muted-foreground">Avg. Base Price</p>
+                <p className="text-muted-foreground text-sm">Avg. Base Price</p>
               </div>
             </div>
           </CardContent>
@@ -377,16 +377,16 @@ export default function DaycareRatesPage() {
           .map((rate) => (
             <Card
               key={rate.id}
-              className="relative overflow-hidden hover:shadow-md transition-shadow"
+              className="relative overflow-hidden transition-shadow hover:shadow-md"
             >
               <div
-                className={`absolute top-0 left-0 right-0 h-1 ${
+                className={`absolute top-0 right-0 left-0 h-1 ${
                   rate.type === "full-day"
                     ? "bg-primary"
                     : rate.type === "half-day"
                       ? "bg-secondary"
                       : "bg-muted-foreground"
-                }`}
+                } `}
               />
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -414,34 +414,34 @@ export default function DaycareRatesPage() {
                       / {rate.durationHours}h
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {rate.description}
                   </p>
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">
+                  <div className="border-t pt-2">
+                    <p className="text-muted-foreground mb-2 text-xs">
                       Size-based pricing:
                     </p>
                     <div className="grid grid-cols-4 gap-2 text-center">
-                      <div className="p-2 rounded bg-muted/50">
-                        <p className="text-xs text-muted-foreground">Small</p>
+                      <div className="bg-muted/50 rounded-sm p-2">
+                        <p className="text-muted-foreground text-xs">Small</p>
                         <p className="font-semibold">
                           ${rate.sizePricing.small}
                         </p>
                       </div>
-                      <div className="p-2 rounded bg-muted/50">
-                        <p className="text-xs text-muted-foreground">Medium</p>
+                      <div className="bg-muted/50 rounded-sm p-2">
+                        <p className="text-muted-foreground text-xs">Medium</p>
                         <p className="font-semibold">
                           ${rate.sizePricing.medium}
                         </p>
                       </div>
-                      <div className="p-2 rounded bg-muted/50">
-                        <p className="text-xs text-muted-foreground">Large</p>
+                      <div className="bg-muted/50 rounded-sm p-2">
+                        <p className="text-muted-foreground text-xs">Large</p>
                         <p className="font-semibold">
                           ${rate.sizePricing.large}
                         </p>
                       </div>
-                      <div className="p-2 rounded bg-muted/50">
-                        <p className="text-xs text-muted-foreground">Giant</p>
+                      <div className="bg-muted/50 rounded-sm p-2">
+                        <p className="text-muted-foreground text-xs">Giant</p>
                         <p className="font-semibold">
                           ${rate.sizePricing.giant}
                         </p>
@@ -460,7 +460,7 @@ export default function DaycareRatesPage() {
           <div className="flex items-center justify-between">
             <CardTitle>All Rates</CardTitle>
             <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Rate
             </Button>
           </div>
@@ -478,14 +478,14 @@ export default function DaycareRatesPage() {
                   size="icon"
                   onClick={() => handleEdit(item)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-4" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteClick(item)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
               </div>
             )}
@@ -516,7 +516,7 @@ export default function DaycareRatesPage() {
               <div className="space-y-2">
                 <Label>Rate Type</Label>
                 <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
+                  className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors"
                   value={formData.type}
                   onChange={(e) =>
                     setFormData({
@@ -582,7 +582,7 @@ export default function DaycareRatesPage() {
               <Label>Size-Based Pricing</Label>
               <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Small</Label>
+                  <Label className="text-muted-foreground text-xs">Small</Label>
                   <Input
                     type="number"
                     value={formData.sizePricing.small}
@@ -599,7 +599,7 @@ export default function DaycareRatesPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label className="text-muted-foreground text-xs">
                     Medium
                   </Label>
                   <Input
@@ -618,7 +618,7 @@ export default function DaycareRatesPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Large</Label>
+                  <Label className="text-muted-foreground text-xs">Large</Label>
                   <Input
                     type="number"
                     value={formData.sizePricing.large}
@@ -635,7 +635,7 @@ export default function DaycareRatesPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Giant</Label>
+                  <Label className="text-muted-foreground text-xs">Giant</Label>
                   <Input
                     type="number"
                     value={formData.sizePricing.giant}
@@ -666,11 +666,11 @@ export default function DaycareRatesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              <X className="h-4 w-4 mr-2" />
+              <X className="mr-2 size-4" />
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={!formData.name}>
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="mr-2 size-4" />
               {editingRate ? "Save Changes" : "Add Rate"}
             </Button>
           </DialogFooter>
@@ -696,7 +696,7 @@ export default function DaycareRatesPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 size-4" />
               Delete
             </Button>
           </DialogFooter>

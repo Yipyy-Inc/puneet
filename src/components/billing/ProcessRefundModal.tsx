@@ -110,9 +110,9 @@ export function ProcessRefundModal({
         <div className="space-y-4 py-4">
           <Card>
             <CardContent className="p-4">
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Original Payment
                   </p>
                   <p className="text-2xl font-bold">
@@ -120,7 +120,7 @@ export function ProcessRefundModal({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Payment Method
                   </p>
                   <p className="font-medium capitalize">
@@ -205,8 +205,8 @@ export function ProcessRefundModal({
             />
           </div>
 
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <AlertCircle className="mt-0.5 size-4 text-amber-600" />
             <div className="text-sm text-amber-800">
               <p className="font-medium">Refund Processing</p>
               <p>
@@ -223,7 +223,7 @@ export function ProcessRefundModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit} variant="destructive">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="mr-2 size-4" />
             Process Refund $
             {(refundType === "full" ? maxRefundable : refundAmount).toFixed(2)}
           </Button>

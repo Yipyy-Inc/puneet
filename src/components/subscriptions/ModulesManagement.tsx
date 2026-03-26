@@ -221,12 +221,12 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
+    <Card className="flex h-full flex-col transition-shadow hover:shadow-lg">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Icon className="h-6 w-6 text-primary" />
+            <div className="bg-primary/10 rounded-lg p-2">
+              <Icon className="text-primary h-6 w-6" />
             </div>
             <div className="space-y-1">
               <CardTitle className="text-lg">{module.name}</CardTitle>
@@ -240,16 +240,16 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
 
       <CardContent className="space-y-4">
         {/* Category & Status */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant="outline"
-            className={`capitalize ${getCategoryColor(module.category)}`}
+            className={`capitalize ${getCategoryColor(module.category)} `}
           >
             {module.category}
           </Badge>
           <Badge
             variant="outline"
-            className={`capitalize ${getTierBadgeColor(module.requiredTier)}`}
+            className={`capitalize ${getTierBadgeColor(module.requiredTier)} `}
           >
             {module.requiredTier === "all"
               ? "All Tiers"
@@ -262,21 +262,21 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
         {/* Pricing */}
         {module.pricing.monthly > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-muted-foreground">
+            <h4 className="text-muted-foreground text-sm font-semibold">
               Add-on Pricing
             </h4>
             <div className="grid grid-cols-3 gap-2">
-              <div className="text-center p-2 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-2 text-center">
                 <p className="text-lg font-bold">${module.pricing.monthly}</p>
-                <p className="text-xs text-muted-foreground">/mo</p>
+                <p className="text-muted-foreground text-xs">/mo</p>
               </div>
-              <div className="text-center p-2 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-2 text-center">
                 <p className="text-lg font-bold">${module.pricing.quarterly}</p>
-                <p className="text-xs text-muted-foreground">/qtr</p>
+                <p className="text-muted-foreground text-xs">/qtr</p>
               </div>
-              <div className="text-center p-2 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-2 text-center">
                 <p className="text-lg font-bold">${module.pricing.yearly}</p>
-                <p className="text-xs text-muted-foreground">/yr</p>
+                <p className="text-muted-foreground text-xs">/yr</p>
               </div>
             </div>
           </div>
@@ -284,18 +284,18 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
 
         {/* Features */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Features ({module.features.length})
           </h4>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="max-h-32 space-y-1 overflow-y-auto">
             {module.features.slice(0, 4).map((feature, index) => (
               <div key={index} className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <Check className="mt-0.5 size-4 shrink-0 text-green-500" />
                 <p className="text-sm">{feature}</p>
               </div>
             ))}
             {module.features.length > 4 && (
-              <p className="text-xs text-muted-foreground pl-6">
+              <p className="text-muted-foreground pl-6 text-xs">
                 + {module.features.length - 4} more features
               </p>
             )}
@@ -305,7 +305,7 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
         {/* Dependencies */}
         {module.dependencies.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-1">
+            <h4 className="text-muted-foreground flex items-center gap-1 text-sm font-semibold">
               <Lock className="h-3 w-3" />
               Dependencies
             </h4>
@@ -320,14 +320,14 @@ function ModuleCard({ module, onEdit, onToggle, allModules }: ModuleCardProps) {
         )}
       </CardContent>
 
-      <CardFooter className="gap-2 mt-auto">
+      <CardFooter className="mt-auto gap-2">
         <Button
           variant="outline"
           size="sm"
           className="flex-1"
           onClick={() => onEdit(module)}
         >
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 size-4" />
           Edit
         </Button>
         <Button
@@ -351,7 +351,7 @@ interface PackageCardProps {
 
 function PackageCard({ pkg, onEdit, onDelete, allModules }: PackageCardProps) {
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="transition-shadow hover:shadow-lg">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -371,28 +371,28 @@ function PackageCard({ pkg, onEdit, onDelete, allModules }: PackageCardProps) {
       <CardContent className="space-y-4">
         {/* Pricing */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Package Pricing
           </h4>
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${pkg.pricing.monthly}</p>
-              <p className="text-xs text-muted-foreground">/ month</p>
+              <p className="text-muted-foreground text-xs">/ month</p>
             </div>
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${pkg.pricing.quarterly}</p>
-              <p className="text-xs text-muted-foreground">/ quarter</p>
+              <p className="text-muted-foreground text-xs">/ quarter</p>
             </div>
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${pkg.pricing.yearly}</p>
-              <p className="text-xs text-muted-foreground">/ year</p>
+              <p className="text-muted-foreground text-xs">/ year</p>
             </div>
           </div>
         </div>
 
         {/* Included Modules */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Included Modules ({pkg.modules.length})
           </h4>
           <div className="flex flex-wrap gap-1">
@@ -415,7 +415,7 @@ function PackageCard({ pkg, onEdit, onDelete, allModules }: PackageCardProps) {
           className="flex-1"
           onClick={() => onEdit(pkg)}
         >
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 size-4" />
           Edit
         </Button>
         <Button
@@ -424,7 +424,7 @@ function PackageCard({ pkg, onEdit, onDelete, allModules }: PackageCardProps) {
           className="text-destructive hover:text-destructive"
           onClick={() => onDelete(pkg)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
         </Button>
       </CardFooter>
     </Card>
@@ -638,7 +638,7 @@ export function ModulesManagement() {
             </TabsList>
 
             <TabsContent value={selectedCategory} className="mt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {getModulesToDisplay().map((module) => (
                   <ModuleCard
                     key={module.id}
@@ -657,11 +657,11 @@ export function ModulesManagement() {
           <div className="space-y-4">
             <div className="flex justify-end">
               <Button onClick={handleCreatePackage}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Create Package
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {packages.map((pkg) => (
                 <PackageCard
                   key={pkg.id}
@@ -681,7 +681,7 @@ export function ModulesManagement() {
         open={isEditModuleDialogOpen}
         onOpenChange={setIsEditModuleDialogOpen}
       >
-        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Module</DialogTitle>
             <DialogDescription>
@@ -864,7 +864,7 @@ export function ModulesManagement() {
                     .map((module) => (
                       <div
                         key={module.id}
-                        className="flex items-center gap-2 p-2 border rounded-lg"
+                        className="flex items-center gap-2 rounded-lg border p-2"
                       >
                         <Checkbox
                           id={`dep-${module.id}`}
@@ -890,7 +890,7 @@ export function ModulesManagement() {
                         />
                         <Label
                           htmlFor={`dep-${module.id}`}
-                          className="text-sm cursor-pointer"
+                          className="cursor-pointer text-sm"
                         >
                           {module.name}
                         </Label>
@@ -935,7 +935,7 @@ export function ModulesManagement() {
         open={isEditPackageDialogOpen}
         onOpenChange={setIsEditPackageDialogOpen}
       >
-        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Package</DialogTitle>
             <DialogDescription>
@@ -1051,7 +1051,7 @@ export function ModulesManagement() {
                   {modules.map((module) => (
                     <div
                       key={module.id}
-                      className="flex items-center gap-2 p-2 border rounded-lg"
+                      className="flex items-center gap-2 rounded-lg border p-2"
                     >
                       <Checkbox
                         id={`pkg-module-${module.id}`}
@@ -1072,7 +1072,7 @@ export function ModulesManagement() {
                       />
                       <Label
                         htmlFor={`pkg-module-${module.id}`}
-                        className="text-sm cursor-pointer"
+                        className="cursor-pointer text-sm"
                       >
                         {module.name}
                       </Label>
@@ -1100,7 +1100,7 @@ export function ModulesManagement() {
         open={isCreatePackageDialogOpen}
         onOpenChange={setIsCreatePackageDialogOpen}
       >
-        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Package</DialogTitle>
             <DialogDescription>
@@ -1216,7 +1216,7 @@ export function ModulesManagement() {
                   {modules.map((module) => (
                     <div
                       key={module.id}
-                      className="flex items-center gap-2 p-2 border rounded-lg"
+                      className="flex items-center gap-2 rounded-lg border p-2"
                     >
                       <Checkbox
                         id={`new-pkg-module-${module.id}`}
@@ -1237,7 +1237,7 @@ export function ModulesManagement() {
                       />
                       <Label
                         htmlFor={`new-pkg-module-${module.id}`}
-                        className="text-sm cursor-pointer"
+                        className="cursor-pointer text-sm"
                       >
                         {module.name}
                       </Label>

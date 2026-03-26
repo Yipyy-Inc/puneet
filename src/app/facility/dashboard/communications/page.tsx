@@ -15,7 +15,7 @@ export default function CommunicationsPage() {
   }, [router]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -27,16 +27,16 @@ export default function CommunicationsPage() {
       </div>
 
       {/* Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+      <div className="grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <div className="rounded-lg bg-blue-100 p-3">
                 <Phone className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <CardTitle>Calling</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Voice calls, dialer, and call routing
                 </p>
               </div>
@@ -48,20 +48,20 @@ export default function CommunicationsPage() {
               className="w-full"
             >
               Go to Calling
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <ArrowRight className="ml-2 size-4" />
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+        <Card className="cursor-pointer transition-shadow hover:shadow-lg">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 rounded-lg">
+              <div className="rounded-lg bg-green-100 p-3">
                 <MessageSquare className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <CardTitle>Messaging</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Email, SMS, automations, and internal communications
                 </p>
               </div>
@@ -73,7 +73,7 @@ export default function CommunicationsPage() {
               className="w-full"
             >
               Go to Messaging
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <ArrowRight className="ml-2 size-4" />
             </Button>
           </CardContent>
         </Card>

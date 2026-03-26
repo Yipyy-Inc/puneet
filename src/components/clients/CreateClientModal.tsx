@@ -231,7 +231,7 @@ export function CreateClientModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -247,20 +247,16 @@ export function CreateClientModal({
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 py-2">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-              step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"
-            }`}
+            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"} `}
           >
-            <User className="h-4 w-4" />
+            <User className="size-4" />
             <span className="text-sm font-medium">Client Info</span>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="text-muted-foreground size-4" />
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
-              step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"
-            }`}
+            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"} `}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className="size-4" />
             <span className="text-sm font-medium">Pet Info</span>
           </div>
         </div>
@@ -283,7 +279,7 @@ export function CreateClientModal({
                 aria-invalid={!!errors.name}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
+                <p className="text-destructive text-sm">{errors.name}</p>
               )}
             </div>
 
@@ -303,7 +299,7 @@ export function CreateClientModal({
                 aria-invalid={!!errors.email}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
+                <p className="text-destructive text-sm">{errors.email}</p>
               )}
             </div>
 
@@ -351,13 +347,13 @@ export function CreateClientModal({
                   {pets.map((pet, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted"
+                      className="bg-muted flex items-center justify-between rounded-lg p-3"
                     >
                       <div className="flex items-center gap-3">
-                        <Heart className="h-4 w-4 text-muted-foreground" />
+                        <Heart className="text-muted-foreground size-4" />
                         <div>
                           <p className="font-medium">{pet.name}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {pet.type} • {pet.breed}
                           </p>
                         </div>
@@ -377,7 +373,7 @@ export function CreateClientModal({
             )}
 
             {/* Pet Form */}
-            <div className="space-y-4 p-4 border rounded-lg">
+            <div className="space-y-4 rounded-lg border p-4">
               <Label className="text-base font-semibold">Add a Pet</Label>
 
               <div className="grid grid-cols-2 gap-4">
@@ -396,7 +392,7 @@ export function CreateClientModal({
                     aria-invalid={!!errors.petName}
                   />
                   {errors.petName && (
-                    <p className="text-sm text-destructive">{errors.petName}</p>
+                    <p className="text-destructive text-sm">{errors.petName}</p>
                   )}
                 </div>
 
@@ -435,7 +431,7 @@ export function CreateClientModal({
                     aria-invalid={!!errors.breed}
                   />
                   {errors.breed && (
-                    <p className="text-sm text-destructive">{errors.breed}</p>
+                    <p className="text-destructive text-sm">{errors.breed}</p>
                   )}
                 </div>
 
@@ -532,7 +528,7 @@ export function CreateClientModal({
                 onClick={handleAddPet}
                 className="w-full"
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 Add Pet
               </Button>
             </div>
@@ -551,20 +547,20 @@ export function CreateClientModal({
               </Button>
               <Button type="button" onClick={handleNext}>
                 Next
-                <ChevronRight className="ml-2 h-4 w-4" />
+                <ChevronRight className="ml-2 size-4" />
               </Button>
             </>
           ) : (
             <>
               <Button type="button" variant="outline" onClick={handleBack}>
-                <ChevronLeft className="mr-2 h-4 w-4" />
+                <ChevronLeft className="mr-2 size-4" />
                 Back
               </Button>
               <Button type="button" variant="outline" onClick={handleSkip}>
                 Skip & Create
               </Button>
               <Button type="button" onClick={handleSubmit}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 Create Client
               </Button>
             </>

@@ -150,7 +150,7 @@ export function SecurityManagement() {
       render: (item: MFASettings) => (
         <div>
           <div className="font-medium">{item.userName}</div>
-          <div className="text-xs text-muted-foreground">{item.userRole}</div>
+          <div className="text-muted-foreground text-xs">{item.userRole}</div>
         </div>
       ),
     },
@@ -196,11 +196,11 @@ export function SecurityManagement() {
   const mfaActions = (item: MFASettings) => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
       {item.mfaEnabled && (
         <Button variant="ghost" size="sm">
-          <Eye className="h-4 w-4" />
+          <Eye className="size-4" />
         </Button>
       )}
     </div>
@@ -211,8 +211,8 @@ export function SecurityManagement() {
       label: "IP Address",
       render: (item: IPWhitelist) => (
         <div>
-          <div className="font-medium font-mono">{item.ipAddress}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="font-mono font-medium">{item.ipAddress}</div>
+          <div className="text-muted-foreground text-xs">
             {item.description}
           </div>
         </div>
@@ -261,17 +261,17 @@ export function SecurityManagement() {
     <div className="flex gap-2">
       {item.status === "Blocked" ? (
         <Button variant="ghost" size="sm" className="gap-1">
-          <CheckCircle2 className="h-4 w-4" />
+          <CheckCircle2 className="size-4" />
           Unblock
         </Button>
       ) : (
         <Button variant="ghost" size="sm" className="gap-1">
-          <Ban className="h-4 w-4" />
+          <Ban className="size-4" />
           Block
         </Button>
       )}
       <Button variant="ghost" size="sm">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
     </div>
   );
@@ -284,7 +284,7 @@ export function SecurityManagement() {
       render: (item: SessionManagement) => (
         <div>
           <div className="font-medium">{item.userName}</div>
-          <div className="text-xs text-muted-foreground">{item.userRole}</div>
+          <div className="text-muted-foreground text-xs">{item.userRole}</div>
         </div>
       ),
     },
@@ -295,10 +295,10 @@ export function SecurityManagement() {
         const DeviceIcon = getDeviceIcon(item.deviceType);
         return (
           <div className="flex items-center gap-2">
-            <DeviceIcon className="h-4 w-4 text-muted-foreground" />
+            <DeviceIcon className="text-muted-foreground size-4" />
             <div>
               <div className="text-sm">{item.deviceType}</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {item.browser}
               </div>
             </div>
@@ -311,7 +311,7 @@ export function SecurityManagement() {
       label: "Location",
       render: (item: SessionManagement) => (
         <div className="flex items-center gap-1 text-sm">
-          <MapPin className="h-3 w-3 text-muted-foreground" />
+          <MapPin className="text-muted-foreground h-3 w-3" />
           {item.location}
         </div>
       ),
@@ -341,12 +341,12 @@ export function SecurityManagement() {
     <div className="flex gap-2">
       {item.status === "Active" && (
         <Button variant="ghost" size="sm" className="text-destructive gap-1">
-          <XCircle className="h-4 w-4" />
+          <XCircle className="size-4" />
           Terminate
         </Button>
       )}
       <Button variant="ghost" size="sm">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
     </div>
   );
@@ -359,7 +359,7 @@ export function SecurityManagement() {
       render: (item: PasswordPolicy) => (
         <div>
           <div className="font-medium">{item.policyName}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.description}
           </div>
         </div>
@@ -369,9 +369,9 @@ export function SecurityManagement() {
       key: "requirements",
       label: "Requirements",
       render: (item: PasswordPolicy) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div>Min Length: {item.minLength}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Expires: {item.expirationDays} days
           </div>
         </div>
@@ -422,11 +422,11 @@ export function SecurityManagement() {
   const policyActions = (item: PasswordPolicy) => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
       {item.status === "Active" && (
         <Button variant="ghost" size="sm">
-          <Eye className="h-4 w-4" />
+          <Eye className="size-4" />
         </Button>
       )}
     </div>
@@ -439,11 +439,11 @@ export function SecurityManagement() {
       label: "Account / IP",
       render: (item: FailedLoginAttempt) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.email}</div>
-          <div className="text-xs text-muted-foreground font-mono">
+          <div className="truncate font-medium">{item.email}</div>
+          <div className="text-muted-foreground font-mono text-xs">
             {item.ipAddress}
           </div>
-          <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <div className="text-muted-foreground flex items-center gap-1 text-xs">
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{item.location}</span>
           </div>
@@ -458,7 +458,7 @@ export function SecurityManagement() {
           <Badge variant="outline" className="text-xs">
             {item.failureReason}
           </Badge>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.attemptTime).toLocaleDateString()}
           </div>
         </div>
@@ -470,7 +470,7 @@ export function SecurityManagement() {
       render: (item: FailedLoginAttempt) => (
         <div className="space-y-1">
           {getSeverityBadge(item.severity)}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.attemptCount} attempts
           </div>
         </div>
@@ -498,11 +498,11 @@ export function SecurityManagement() {
       label: "Alert Details",
       render: (item: SecurityAlert) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.title}</div>
-          <div className="text-xs text-muted-foreground line-clamp-1">
+          <div className="truncate font-medium">{item.title}</div>
+          <div className="text-muted-foreground line-clamp-1 text-xs">
             {item.description}
           </div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.alertType}
           </Badge>
         </div>
@@ -514,12 +514,12 @@ export function SecurityManagement() {
       render: (item: SecurityAlert) => (
         <div className="min-w-0">
           {item.userName && (
-            <div className="text-sm font-medium truncate">{item.userName}</div>
+            <div className="truncate text-sm font-medium">{item.userName}</div>
           )}
-          <div className="text-xs text-muted-foreground font-mono truncate">
+          <div className="text-muted-foreground truncate font-mono text-xs">
             {item.ipAddress}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.detectedAt).toLocaleDateString()}
           </div>
         </div>
@@ -540,11 +540,11 @@ export function SecurityManagement() {
   const alertActions = (item: SecurityAlert) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
       {item.status === "New" && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Play className="h-4 w-4" />
+          <Play className="size-4" />
         </Button>
       )}
     </div>
@@ -558,7 +558,7 @@ export function SecurityManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Security Management</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage access control and monitor security threats
           </p>
         </div>
@@ -566,84 +566,84 @@ export function SecurityManagement() {
 
       {/* Security Dashboard Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Security Score
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {securityDashboardStats.securityScore}%
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Excellent security posture
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
                 <ShieldCheck className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Alerts
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {securityDashboardStats.activeAlerts}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {securityDashboardStats.criticalAlerts} critical
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
                 <ShieldAlert className="h-6 w-6 text-red-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Sessions
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {securityDashboardStats.activeSessions}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Users currently logged in
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
                 <Users className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   MFA Adoption
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {securityDashboardStats.mfaAdoptionRate}%
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Users with MFA enabled
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
                 <Lock className="h-6 w-6 text-purple-600" />
               </div>
             </div>
@@ -663,13 +663,13 @@ export function SecurityManagement() {
         {/* Access Control Tab */}
         <TabsContent value="access-control" className="space-y-6">
           {/* MFA Settings */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Lock className="h-5 w-5" />
                 Multi-Factor Authentication
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Manage MFA settings for users
               </p>
             </CardHeader>
@@ -683,13 +683,13 @@ export function SecurityManagement() {
           </Card>
 
           {/* IP Whitelist */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Globe className="h-5 w-5" />
                 IP Whitelist Management
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Control access based on IP addresses
               </p>
             </CardHeader>
@@ -703,13 +703,13 @@ export function SecurityManagement() {
           </Card>
 
           {/* Active Sessions */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Clock className="h-5 w-5" />
                 Active Sessions
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Monitor and manage user sessions
               </p>
             </CardHeader>
@@ -723,13 +723,13 @@ export function SecurityManagement() {
           </Card>
 
           {/* Password Policies */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Key className="h-5 w-5" />
                 Password Policies
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Configure password requirements and rules
               </p>
             </CardHeader>
@@ -750,7 +750,7 @@ export function SecurityManagement() {
         >
           <div className="grid gap-6 md:grid-cols-2">
             {/* Failed Logins Trend */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
                   Failed Login Attempts (7 Days)
@@ -786,14 +786,14 @@ export function SecurityManagement() {
             </Card>
 
             {/* Alert Types Distribution */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
                   Alert Types Distribution
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col lg:flex-row items-center gap-4">
+                <div className="flex flex-col items-center gap-4 lg:flex-row">
                   <ResponsiveContainer
                     width="100%"
                     height={180}
@@ -821,14 +821,14 @@ export function SecurityManagement() {
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="flex-1 space-y-2 w-full">
+                  <div className="w-full flex-1 space-y-2">
                     {securityDashboardStats.alertsByType.map((entry, index) => (
                       <div
                         key={index}
                         className="flex items-center gap-2 text-sm"
                       >
                         <div
-                          className="w-3 h-3 rounded-full shrink-0"
+                          className="h-3 w-3 shrink-0 rounded-full"
                           style={{
                             backgroundColor: COLORS[index % COLORS.length],
                           }}
@@ -844,12 +844,12 @@ export function SecurityManagement() {
           </div>
 
           {/* Top Threats */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Top Security Threats
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Most frequent security threats detected
               </p>
             </CardHeader>
@@ -858,22 +858,22 @@ export function SecurityManagement() {
                 {securityDashboardStats.topThreats.map((threat, index) => (
                   <div key={index} className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-destructive/10 text-destructive font-semibold text-xs shrink-0">
+                      <div className="bg-destructive/10 text-destructive flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
                         {index + 1}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">
                           {threat.threat}
                         </div>
                       </div>
                       {getSeverityBadge(threat.severity)}
-                      <span className="text-xs text-muted-foreground shrink-0">
+                      <span className="text-muted-foreground shrink-0 text-xs">
                         {threat.count}
                       </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden ml-8">
+                    <div className="bg-muted ml-8 h-1.5 w-full overflow-hidden rounded-full">
                       <div
-                        className="bg-destructive rounded-full h-1.5"
+                        className="bg-destructive h-1.5 rounded-full"
                         style={{
                           width: `${(threat.count / securityDashboardStats.topThreats[0].count) * 100}%`,
                         }}
@@ -886,13 +886,13 @@ export function SecurityManagement() {
           </Card>
 
           {/* Failed Login Attempts */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <AlertTriangle className="h-5 w-5" />
                 Failed Login Attempts
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Track and analyze failed authentication attempts
               </p>
             </CardHeader>
@@ -905,13 +905,13 @@ export function SecurityManagement() {
           </Card>
 
           {/* Security Alerts */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <ShieldAlert className="h-5 w-5" />
                 Security Alerts
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Real-time security threats and suspicious activities
               </p>
             </CardHeader>

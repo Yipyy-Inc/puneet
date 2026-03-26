@@ -19,7 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createForm, type FormType, type FormAppliesTo, type FormSettings } from "@/data/forms";
+import {
+  createForm,
+  type FormType,
+  type FormAppliesTo,
+  type FormSettings,
+} from "@/data/forms";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
@@ -58,13 +63,17 @@ export function CreateFormModal({
   const [themeColor, setThemeColor] = useState("");
   const [petTypes, setPetTypes] = useState<string[]>([]);
   const [serviceTypes, setServiceTypes] = useState<string[]>([]);
-  const [locationIds, setLocationIds] = useState<string[]>([]);
+  const [locationIds, _setLocationIds] = useState<string[]>([]);
 
   const togglePetType = (p: string) => {
-    setPetTypes((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+    setPetTypes((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+    );
   };
   const toggleServiceType = (s: string) => {
-    setServiceTypes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+    setServiceTypes((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -74,8 +83,10 @@ export function CreateFormModal({
     if (welcomeMessage.trim()) settings.welcomeMessage = welcomeMessage.trim();
     if (themeColor) settings.themeColor = themeColor;
     const appliesTo: FormAppliesTo = {};
-    if (petTypes.length) appliesTo.petTypes = petTypes.map((p) => p.toLowerCase());
-    if (serviceTypes.length) appliesTo.serviceTypes = serviceTypes.map((s) => s.toLowerCase());
+    if (petTypes.length)
+      appliesTo.petTypes = petTypes.map((p) => p.toLowerCase());
+    if (serviceTypes.length)
+      appliesTo.serviceTypes = serviceTypes.map((s) => s.toLowerCase());
     if (locationIds.length) appliesTo.locationIds = locationIds;
 
     const form = createForm({
@@ -104,7 +115,10 @@ export function CreateFormModal({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label>Form Type</Label>
-            <Select value={formType} onValueChange={(v) => setFormType(v as FormType)}>
+            <Select
+              value={formType}
+              onValueChange={(v) => setFormType(v as FormType)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -129,7 +143,7 @@ export function CreateFormModal({
           <div className="space-y-2">
             <Label>Welcome Message (optional)</Label>
             <textarea
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+              className="border-input flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm"
               value={welcomeMessage}
               onChange={(e) => setWelcomeMessage(e.target.value)}
               placeholder="Brief intro shown at the top of the form"
@@ -137,7 +151,10 @@ export function CreateFormModal({
           </div>
           <div className="space-y-2">
             <Label>Theme Color (optional)</Label>
-            <Select value={themeColor || "default"} onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}>
+            <Select
+              value={themeColor || "default"}
+              onValueChange={(v) => setThemeColor(v === "default" ? "" : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Default" />
               </SelectTrigger>
@@ -147,7 +164,7 @@ export function CreateFormModal({
                     <span className="flex items-center gap-2">
                       {c.value && (
                         <span
-                          className="h-4 w-4 rounded border"
+                          className="size-4 rounded-sm border"
                           style={{ backgroundColor: c.value }}
                         />
                       )}
@@ -187,7 +204,11 @@ export function CreateFormModal({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Create & Open Builder</Button>

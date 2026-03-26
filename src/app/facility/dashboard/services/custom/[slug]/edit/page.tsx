@@ -9,19 +9,19 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 export default function EditCustomServicePage() {
   const { slug } = useParams<{ slug: string }>();
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(slug);
+  const serviceModule = getModuleBySlug(slug);
 
-  if (!module) {
+  if (!serviceModule) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center space-y-2">
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="space-y-2 text-center">
           <h2 className="text-lg font-semibold">Module not found</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             No custom service with slug &quot;{slug}&quot; exists.
           </p>
           <Link
             href="/facility/dashboard/services/custom"
-            className="text-sm text-primary hover:underline"
+            className="text-primary text-sm hover:underline"
           >
             Back to Custom Services
           </Link>
@@ -32,21 +32,21 @@ export default function EditCustomServicePage() {
 
   return (
     <div>
-      <div className="border-b border-border bg-card px-4 py-3">
-        <div className="mx-auto max-w-4xl flex items-center gap-2">
+      <div className="border-border bg-card border-b px-4 py-3">
+        <div className="mx-auto flex max-w-4xl items-center gap-2">
           <Link
             href={`/facility/dashboard/services/custom/${slug}`}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
           >
-            <ChevronLeft className="h-4 w-4" />
-            {module.name}
+            <ChevronLeft className="size-4" />
+            {serviceModule.name}
           </Link>
           <span className="text-muted-foreground">/</span>
           <span className="text-sm font-medium">Edit Module</span>
         </div>
       </div>
 
-      <CustomServiceWizard initialData={module} />
+      <CustomServiceWizard initialData={serviceModule} />
     </div>
   );
 }

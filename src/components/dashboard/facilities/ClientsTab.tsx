@@ -27,9 +27,9 @@ interface ClientsTabProps {
 
 export function ClientsTab({ clients }: ClientsTabProps) {
   return (
-    <Card className="border-0 shadow-card">
+    <Card className="shadow-card border-0">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <UserCheck className="h-5 w-5" />
           Clients
           <Badge variant="secondary" className="ml-2">
@@ -53,7 +53,7 @@ export function ClientsTab({ clients }: ClientsTabProps) {
                 <TableRow key={index}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 font-semibold text-xs text-primary">
+                      <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold">
                         {client.person.name
                           .split(" ")
                           .map((n) => n[0])
@@ -64,14 +64,14 @@ export function ClientsTab({ clients }: ClientsTabProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
                       {client.person.email}
                     </span>
                   </TableCell>
                   <TableCell>
                     {client.person.phone ? (
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="text-muted-foreground flex items-center gap-1.5">
                         <Phone className="h-3.5 w-3.5" />
                         {client.person.phone}
                       </span>

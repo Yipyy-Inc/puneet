@@ -69,20 +69,32 @@ export function CustomServiceDetails({
   selectedPets,
 }: CustomServiceDetailsProps) {
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(serviceId);
+  const serviceModule = getModuleBySlug(serviceId);
 
-  if (!module) {
+  if (!serviceModule) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-muted-foreground py-8 text-center">
         Service configuration not found.
       </div>
     );
   }
 
-  const Icon = resolveIcon(module.icon);
+  const Icon = resolveIcon(serviceModule.icon);
 
   if (currentSubStep === 0) {
-    return <ScheduleStep module={module} startDate={startDate} setStartDate={setStartDate} checkInTime={checkInTime} setCheckInTime={setCheckInTime} checkOutTime={checkOutTime} setCheckOutTime={setCheckOutTime} selectedPets={selectedPets} Icon={Icon} />;
+    return (
+      <ScheduleStep
+        serviceModule={serviceModule}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        checkInTime={checkInTime}
+        setCheckInTime={setCheckInTime}
+        checkOutTime={checkOutTime}
+        setCheckOutTime={setCheckOutTime}
+        selectedPets={selectedPets}
+        Icon={Icon}
+      />
+    );
   }
 
   return null;
@@ -93,7 +105,7 @@ export function CustomServiceDetails({
 // ========================================
 
 function ScheduleStep({
-  module,
+  serviceModule,
   startDate,
   setStartDate,
   checkInTime,
@@ -103,7 +115,7 @@ function ScheduleStep({
   selectedPets,
   Icon,
 }: {
-  module: CustomServiceModule;
+  serviceModule: CustomServiceModule;
   startDate: string;
   setStartDate: (date: string) => void;
   checkInTime: string;
@@ -114,7 +126,7 @@ function ScheduleStep({
   Icon: React.ComponentType<{ className?: string }>;
 }) {
   const [selectedDuration, setSelectedDuration] = React.useState<string>(
-    module.calendar.durationOptions[0]?.minutes.toString() ?? "60",
+    serviceModule.calendar.durationOptions[0]?.minutes.toString() ?? "60",
   );
 
   const handleDateSelect = (date: Date) => {
@@ -131,14 +143,16 @@ function ScheduleStep({
   return (
     <div className="space-y-6">
       {/* Service info banner */}
-      <Card className="border-none bg-muted/50">
+      <Card className="bg-muted/50 border-none">
         <CardContent className="flex items-center gap-3 py-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-            <Icon className="h-4 w-4 text-primary" />
+          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+            <Icon className="text-primary size-4" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">{module.name}</p>
-            <p className="text-xs text-muted-foreground">{module.description}</p>
+            <p className="text-sm font-medium">{serviceModule.name}</p>
+            <p className="text-muted-foreground text-xs">
+              {serviceModule.description}
+            </p>
           </div>
           {selectedPets.length > 0 && (
             <Badge variant="secondary" className="gap-1">
@@ -164,12 +178,12 @@ function ScheduleStep({
       {startDate && (
         <div className="space-y-4">
           {/* Duration selection (if variable) */}
-          {module.calendar.durationMode === "variable" &&
-            module.calendar.durationOptions.length > 1 && (
+          {serviceModule.calendar.durationMode === "variable" &&
+            serviceModule.calendar.durationOptions.length > 1 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Duration</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {module.calendar.durationOptions.map((opt) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {serviceModule.calendar.durationOptions.map((opt) => (
                     <button
                       key={opt.minutes}
                       type="button"
@@ -179,13 +193,13 @@ function ScheduleStep({
                       className={`flex flex-col items-center gap-1 rounded-lg border p-3 text-sm transition-colors ${
                         selectedDuration === opt.minutes.toString()
                           ? "border-primary bg-primary/5 text-primary"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                          : `border-border hover:border-primary/50`
+                      } `}
                     >
-                      <Clock className="h-4 w-4" />
+                      <Clock className="size-4" />
                       <span className="font-medium">{opt.label}</span>
                       {opt.price !== undefined && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           ${opt.price}
                         </span>
                       )}
@@ -199,10 +213,15 @@ function ScheduleStep({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Start Time</Label>
-              <Select value={checkInTime} onValueChange={(val) => {
-                setCheckInTime(val);
-                setCheckOutTime(calcCheckoutTime(val, parseInt(selectedDuration)));
-              }}>
+              <Select
+                value={checkInTime}
+                onValueChange={(val) => {
+                  setCheckInTime(val);
+                  setCheckOutTime(
+                    calcCheckoutTime(val, parseInt(selectedDuration)),
+                  );
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select time" />
                 </SelectTrigger>
@@ -222,30 +241,27 @@ function ScheduleStep({
           </div>
 
           {/* Transport-specific: address input */}
-          {module.category === "transport" && (
+          {serviceModule.category === "transport" && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <MapPin className="size-4" />
                 Pickup Address
               </Label>
-              <Textarea
-                placeholder="Enter pickup address..."
-                rows={2}
-              />
+              <Textarea placeholder="Enter pickup address..." rows={2} />
             </div>
           )}
 
           {/* Event-specific: participant count */}
-          {module.category === "event_based" && (
+          {serviceModule.category === "event_based" && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Users className="h-4 w-4" />
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Users className="size-4" />
                 Number of Pets Attending
               </Label>
               <Input
                 type="number"
                 min={1}
-                max={module.onlineBooking.maxDogsPerSession}
+                max={serviceModule.onlineBooking.maxDogsPerSession}
                 defaultValue={selectedPets.length}
               />
             </div>
@@ -257,23 +273,26 @@ function ScheduleStep({
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Date</span>
                 <span className="font-medium">
-                  {new Date(startDate + "T12:00:00").toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  {new Date(startDate + "T12:00:00").toLocaleDateString(
+                    "en-US",
+                    {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    },
+                  )}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm mt-1">
+              <div className="mt-1 flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Time</span>
                 <span className="font-medium">
                   {checkInTime} — {checkOutTime}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm mt-1">
+              <div className="mt-1 flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Price</span>
-                <span className="font-medium text-primary">
-                  ${module.pricing.basePrice}
+                <span className="text-primary font-medium">
+                  ${serviceModule.pricing.basePrice}
                 </span>
               </div>
             </CardContent>

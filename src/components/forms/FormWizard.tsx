@@ -58,7 +58,7 @@ function loadDraft(formId: string, petId: number): Record<string, unknown> {
 function saveDraft(
   formId: string,
   petId: number,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
 ): void {
   if (typeof window === "undefined") return;
   try {
@@ -98,10 +98,10 @@ function WizardQuestionLabel({
     <>
       <Label className="text-sm font-medium">
         {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
+        {required && <span className="ml-0.5 text-red-500">*</span>}
       </Label>
       {helpText && (
-        <p className="text-xs text-muted-foreground -mt-1">{helpText}</p>
+        <p className="text-muted-foreground -mt-1 text-xs">{helpText}</p>
       )}
     </>
   );
@@ -145,11 +145,11 @@ function WizardQuestionInput({
               <button
                 key={o.value}
                 type="button"
-                className={`flex-1 min-h-12 rounded-lg border-2 text-base font-medium transition-colors touch-manipulation ${
+                className={`min-h-12 flex-1 touch-manipulation rounded-lg border-2 text-base font-medium transition-colors ${
                   value === o.value
                     ? "border-primary bg-primary/10 text-primary"
-                    : "border-input hover:border-muted-foreground/30"
-                }`}
+                    : `border-input hover:border-muted-foreground/30`
+                } `}
                 onClick={() => onChange(o.value)}
               >
                 {o.label}
@@ -173,7 +173,7 @@ function WizardQuestionInput({
             {opts.map((o) => (
               <label
                 key={o.value}
-                className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer touch-manipulation hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 flex cursor-pointer touch-manipulation items-center gap-3 rounded-lg border p-3 transition-colors"
               >
                 <input
                   type="radio"
@@ -201,7 +201,7 @@ function WizardQuestionInput({
           />
           <textarea
             id={htmlId}
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+            className="border-input flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-base"
             value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
@@ -221,7 +221,7 @@ function WizardQuestionInput({
           />
           <select
             id={htmlId}
-            className="flex min-h-12 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base"
+            className="border-input flex min-h-12 w-full rounded-md border bg-transparent px-3 py-2 text-base"
             value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
@@ -256,7 +256,7 @@ function WizardQuestionInput({
             {opts.map((o) => (
               <label
                 key={o.value}
-                className="flex items-center gap-2 text-base min-h-12 cursor-pointer touch-manipulation"
+                className="flex min-h-12 cursor-pointer touch-manipulation items-center gap-2 text-base"
               >
                 <input
                   type="checkbox"
@@ -275,7 +275,7 @@ function WizardQuestionInput({
     // ---- checkbox (single boolean) ----
     case "checkbox":
       return (
-        <div className="flex items-center gap-2 min-h-12 touch-manipulation">
+        <div className="flex min-h-12 touch-manipulation items-center gap-2">
           <input
             id={htmlId}
             type="checkbox"
@@ -286,11 +286,11 @@ function WizardQuestionInput({
           <Label htmlFor={htmlId}>
             {question.label}
             {question.required && (
-              <span className="text-red-500 ml-0.5">*</span>
+              <span className="ml-0.5 text-red-500">*</span>
             )}
           </Label>
           {help && (
-            <span className="text-xs text-muted-foreground">{help}</span>
+            <span className="text-muted-foreground text-xs">{help}</span>
           )}
         </div>
       );
@@ -307,7 +307,7 @@ function WizardQuestionInput({
           <Input
             id={htmlId}
             type="date"
-            className="text-base min-h-12"
+            className="min-h-12 text-base"
             value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             required={question.required}
@@ -327,7 +327,7 @@ function WizardQuestionInput({
           <Input
             id={htmlId}
             type="number"
-            className="text-base min-h-12"
+            className="min-h-12 text-base"
             value={(value as number) ?? question.defaultValue ?? ""}
             onChange={(e) =>
               onChange(e.target.value ? Number(e.target.value) : undefined)
@@ -347,7 +347,7 @@ function WizardQuestionInput({
             required={question.required}
             helpText={help}
           />
-          <div className="rounded-lg border-2 border-dashed border-input p-6 text-center">
+          <div className="border-input rounded-lg border-2 border-dashed p-6 text-center">
             <input
               id={htmlId}
               type="file"
@@ -360,8 +360,11 @@ function WizardQuestionInput({
                 if (file) onChange(file.name);
               }}
             />
-            <label htmlFor={htmlId} className="cursor-pointer touch-manipulation">
-              <div className="text-sm text-muted-foreground">
+            <label
+              htmlFor={htmlId}
+              className="cursor-pointer touch-manipulation"
+            >
+              <div className="text-muted-foreground text-sm">
                 {value ? (
                   <span className="text-foreground font-medium">
                     {String(value)}
@@ -370,7 +373,7 @@ function WizardQuestionInput({
                   <>Click to upload a file</>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {question.validation?.allowedFileTypes
                   ? `Allowed: ${question.validation.allowedFileTypes.join(", ")}`
                   : "PDF, JPG, PNG, DOC accepted"}
@@ -389,10 +392,10 @@ function WizardQuestionInput({
             required={question.required}
             helpText={help}
           />
-          <div className="rounded-lg border border-input p-4 space-y-3">
-            <div className="h-24 bg-muted/30 rounded flex items-center justify-center text-sm text-muted-foreground">
+          <div className="border-input space-y-3 rounded-lg border p-4">
+            <div className="bg-muted/30 text-muted-foreground flex h-24 items-center justify-center rounded-sm text-sm">
               {value ? (
-                <p className="font-medium text-foreground italic text-lg">
+                <p className="text-foreground text-lg font-medium italic">
                   {String(value)}
                 </p>
               ) : (
@@ -404,9 +407,9 @@ function WizardQuestionInput({
               value={(value as string) ?? ""}
               onChange={(e) => onChange(e.target.value)}
               required={question.required}
-              className="text-base min-h-12"
+              className="min-h-12 text-base"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               By typing your name above, you agree this serves as your
               electronic signature.
             </p>
@@ -426,7 +429,7 @@ function WizardQuestionInput({
           <Input
             id={htmlId}
             type="tel"
-            className="text-base min-h-12 touch-manipulation"
+            className="min-h-12 touch-manipulation text-base"
             value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder ?? "(555) 123-4567"}
@@ -447,7 +450,7 @@ function WizardQuestionInput({
           <Input
             id={htmlId}
             type="email"
-            className="text-base min-h-12 touch-manipulation"
+            className="min-h-12 touch-manipulation text-base"
             value={(value as string) ?? question.defaultValue ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder ?? "name@example.com"}
@@ -479,7 +482,7 @@ function WizardQuestionInput({
               placeholder="Street address"
               value={addr.street ?? ""}
               onChange={(e) => update("street", e.target.value)}
-              className="text-base min-h-12"
+              className="min-h-12 text-base"
               required={question.required}
             />
             <div className="grid grid-cols-3 gap-2">
@@ -487,19 +490,19 @@ function WizardQuestionInput({
                 placeholder="City"
                 value={addr.city ?? ""}
                 onChange={(e) => update("city", e.target.value)}
-                className="text-base min-h-12 col-span-1"
+                className="col-span-1 min-h-12 text-base"
               />
               <Input
                 placeholder="State"
                 value={addr.state ?? ""}
                 onChange={(e) => update("state", e.target.value)}
-                className="text-base min-h-12"
+                className="min-h-12 text-base"
               />
               <Input
                 placeholder="ZIP"
                 value={addr.zip ?? ""}
                 onChange={(e) => update("zip", e.target.value)}
-                className="text-base min-h-12"
+                className="min-h-12 text-base"
               />
             </div>
           </div>
@@ -524,7 +527,7 @@ function WizardQuestionInput({
             onChange={(e) => onChange(e.target.value)}
             placeholder={question.placeholder}
             required={question.required}
-            className="text-base min-h-12 touch-manipulation"
+            className="min-h-12 touch-manipulation text-base"
           />
         </div>
       );
@@ -543,12 +546,9 @@ export function FormWizard({
 }: FormWizardProps) {
   // ---- State ----
   const [currentStep, setCurrentStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [error, setError] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  const draftLoadedRef = useRef(false);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Derive incomplete forms ----
@@ -560,7 +560,7 @@ export function FormWizard({
       (f) =>
         !f.internal &&
         f.status !== "archived" &&
-        (f.type === "intake" || f.type === "pet")
+        (f.type === "intake" || f.type === "pet"),
     );
 
     // Check which forms have already been completed for this pet
@@ -572,35 +572,45 @@ export function FormWizard({
 
   const totalSteps = incompleteForms.length;
   const currentForm: Form | undefined = incompleteForms[currentStep];
+  const loading = false;
 
   // ---- If no forms needed, signal completion immediately ----
+  const [prevTotalSteps, setPrevTotalSteps] = useState(totalSteps);
+  if (totalSteps === 0 && totalSteps !== prevTotalSteps) {
+    setPrevTotalSteps(totalSteps);
+    setAllDone(true);
+  }
   useEffect(() => {
-    if (totalSteps === 0) {
-      setLoading(false);
-      setAllDone(true);
+    if (totalSteps === 0 && allDone) {
       const timer = setTimeout(() => onComplete(), 1500);
       return () => clearTimeout(timer);
     }
-    setLoading(false);
-  }, [totalSteps, onComplete]);
+  }, [totalSteps, allDone, onComplete]);
 
   // ---- Load draft when step changes ----
-  useEffect(() => {
-    if (!currentForm) return;
-    const draft = loadDraft(currentForm.id, petId);
-    setAnswers(draft);
+  const currentFormId = currentForm?.id;
+  const [answers, setAnswers] = useState<Record<string, unknown>>(() => {
+    if (currentFormId) {
+      return loadDraft(currentFormId, petId);
+    }
+    return {};
+  });
+
+  const [prevFormId, setPrevFormId] = useState(currentFormId);
+  if (currentFormId && currentFormId !== prevFormId) {
+    setPrevFormId(currentFormId);
+    setAnswers(loadDraft(currentFormId, petId));
     setError(null);
-    draftLoadedRef.current = true;
-  }, [currentForm?.id, petId]);
+  }
 
   // ---- Autosave draft (debounced) ----
   useEffect(() => {
-    if (!currentForm || allDone) return;
+    if (!currentFormId || allDone) return;
     const timer = setTimeout(() => {
-      saveDraft(currentForm.id, petId, answers);
+      saveDraft(currentFormId, petId, answers);
     }, 800);
     return () => clearTimeout(timer);
-  }, [currentForm?.id, petId, answers, allDone]);
+  }, [currentFormId, petId, answers, allDone]);
 
   // ---- Cleanup completion timer on unmount ----
   useEffect(() => {
@@ -610,10 +620,9 @@ export function FormWizard({
   }, []);
 
   // ---- Evaluate logic rules for current form ----
-  const logicEffects = useMemo(() => {
-    if (!currentForm?.logicRules?.length) return null;
-    return evaluateLogicRules(currentForm.logicRules, answers);
-  }, [currentForm?.logicRules, answers]);
+  const logicEffects = currentForm?.logicRules?.length
+    ? evaluateLogicRules(currentForm.logicRules, answers)
+    : null;
 
   // ---- Visible questions for current step ----
   const visibleQuestions = useMemo(() => {
@@ -639,14 +648,13 @@ export function FormWizard({
 
       // Validate required fields
       const requiredQuestions = visibleQuestions.filter(
-        (q) =>
-          q.required || logicEffects?.requiredQuestionIds.has(q.id)
+        (q) => q.required || logicEffects?.requiredQuestionIds.has(q.id),
       );
       const missing = requiredQuestions.filter(
         (q) =>
           answers[q.id] === undefined ||
           answers[q.id] === "" ||
-          answers[q.id] === null
+          answers[q.id] === null,
       );
 
       if (missing.length > 0) {
@@ -655,7 +663,7 @@ export function FormWizard({
             ? `Please answer: "${missing[0].label}".`
             : `Please complete these required fields: ${missing
                 .map((q) => `"${q.label}"`)
-                .join(", ")}.`
+                .join(", ")}.`,
         );
         return;
       }
@@ -718,7 +726,7 @@ export function FormWizard({
       currentStep,
       totalSteps,
       onComplete,
-    ]
+    ],
   );
 
   const handleBack = useCallback(() => {
@@ -732,11 +740,11 @@ export function FormWizard({
   // ---- Render: loading ----
   if (loading) {
     return (
-      <Card className="w-full max-w-lg mx-auto">
+      <Card className="mx-auto w-full max-w-lg">
         <CardContent className="pt-6">
           <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="ml-3 text-sm text-muted-foreground">
+            <div className="border-primary h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+            <span className="text-muted-foreground ml-3 text-sm">
               Loading required forms...
             </span>
           </div>
@@ -748,17 +756,15 @@ export function FormWizard({
   // ---- Render: all done (no forms required, or wizard complete) ----
   if (allDone) {
     return (
-      <Card className="w-full max-w-lg mx-auto">
-        <CardContent className="pt-6 flex flex-col items-center text-center py-12">
-          <div className="h-16 w-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
+      <Card className="mx-auto w-full max-w-lg">
+        <CardContent className="flex flex-col items-center py-12 pt-6 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
             <CheckCircle className="h-10 w-10 text-emerald-600" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">
-            {totalSteps === 0
-              ? "No Forms Required"
-              : "All Forms Completed"}
+          <h2 className="mb-2 text-xl font-semibold">
+            {totalSteps === 0 ? "No Forms Required" : "All Forms Completed"}
           </h2>
-          <p className="text-muted-foreground text-sm max-w-xs">
+          <p className="text-muted-foreground max-w-xs text-sm">
             {totalSteps === 0
               ? "There are no required forms for this pet at this time."
               : "Thank you! All required forms have been submitted successfully."}
@@ -772,7 +778,7 @@ export function FormWizard({
   if (!currentForm) return null;
 
   const answered = visibleQuestions.filter(
-    (q) => answers[q.id] !== undefined && answers[q.id] !== ""
+    (q) => answers[q.id] !== undefined && answers[q.id] !== "",
   ).length;
   const progressPct =
     visibleQuestions.length > 0
@@ -780,31 +786,31 @@ export function FormWizard({
       : 0;
 
   return (
-    <Card className="w-full max-w-lg mx-auto">
+    <Card className="mx-auto w-full max-w-lg">
       {/* Step indicator header */}
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <Badge
             variant="secondary"
-            className="text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-100"
+            className="bg-slate-100 text-xs font-medium text-slate-700 hover:bg-slate-100"
           >
             Step {currentStep + 1} of {totalSteps}
           </Badge>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {answered} of {visibleQuestions.length}{" "}
             {visibleQuestions.length === 1 ? "question" : "questions"} answered
           </span>
         </div>
         <CardTitle className="text-lg sm:text-xl">{currentForm.name}</CardTitle>
         {currentForm.settings?.welcomeMessage && (
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             {currentForm.settings.welcomeMessage}
           </p>
         )}
 
         {/* Step dots */}
         {totalSteps > 1 && (
-          <div className="flex items-center gap-1.5 mt-3">
+          <div className="mt-3 flex items-center gap-1.5">
             {incompleteForms.map((_, idx) => (
               <div
                 key={idx}
@@ -812,9 +818,9 @@ export function FormWizard({
                   idx < currentStep
                     ? "bg-emerald-400"
                     : idx === currentStep
-                    ? "bg-primary"
-                    : "bg-slate-200"
-                }`}
+                      ? "bg-primary"
+                      : "bg-slate-200"
+                } `}
               />
             ))}
           </div>
@@ -823,9 +829,9 @@ export function FormWizard({
         {/* Question-level progress bar */}
         {visibleQuestions.length > 0 && (
           <div className="mt-3">
-            <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full bg-primary/70 transition-all duration-300"
+                className="bg-primary/70 h-full transition-all duration-300"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
@@ -835,13 +841,13 @@ export function FormWizard({
 
       <CardContent>
         {/* Autosave notice */}
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="text-muted-foreground mb-4 text-xs">
           Your progress is saved automatically.
         </p>
 
         {/* End form message from logic rules */}
         {logicEffects?.endFormMessage ? (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-center">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
             <p className="text-sm font-medium text-amber-800">
               {logicEffects.endFormMessage}
             </p>
@@ -851,10 +857,12 @@ export function FormWizard({
             {/* Validation error */}
             {error && (
               <div
-                className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700"
+                className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
                 role="alert"
               >
-                <p className="font-medium">Please complete the required fields</p>
+                <p className="font-medium">
+                  Please complete the required fields
+                </p>
                 <p className="mt-1 opacity-90">{error}</p>
               </div>
             )}
@@ -883,19 +891,19 @@ export function FormWizard({
                   className="min-h-12 touch-manipulation"
                   onClick={handleBack}
                 >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  <ArrowLeft className="mr-2 size-4" />
                   Back
                 </Button>
               )}
 
               <Button
                 type="submit"
-                className="flex-1 min-h-12 text-base touch-manipulation"
+                className="min-h-12 flex-1 touch-manipulation text-base"
               >
                 {currentStep < totalSteps - 1 ? (
                   <>
                     Continue
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="ml-2 size-4" />
                   </>
                 ) : (
                   "Submit & Finish"

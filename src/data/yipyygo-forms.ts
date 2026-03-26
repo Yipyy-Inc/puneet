@@ -1,6 +1,6 @@
 /**
  * YipyyGo Form Data Structures
- * 
+ *
  * Defines the data structures for YipyyGo pre-check-in forms
  */
 
@@ -13,7 +13,15 @@ import { bookings } from "@/data/bookings";
 
 export interface BelongingItem {
   id: string;
-  type: "food" | "treats" | "bedding" | "toys" | "crate" | "leash_collar" | "medication_bag" | "other";
+  type:
+    | "food"
+    | "treats"
+    | "bedding"
+    | "toys"
+    | "crate"
+    | "leash_collar"
+    | "medication_bag"
+    | "other";
   quantity?: number;
   notes?: string;
   photoUrl?: string;
@@ -94,22 +102,22 @@ export interface YipyyGoFormData {
   petId: number;
   petName: string;
   facilityId: number;
-  
+
   // Form sections
   belongings: BelongingItem[];
   belongingsPhotoUrl?: string;
-  
+
   feedingInstructions?: FeedingInstruction;
-  
+
   medications: MedicationItem[];
   noMedications: boolean;
-  
+
   behaviorNotes?: BehaviorNotes;
-  
+
   addOns: YipyyGoAddOn[];
-  
+
   tip?: TipSelection;
-  
+
   // Metadata
   submittedAt?: string;
   submittedBy?: number; // Client ID
@@ -157,7 +165,12 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     petName: "Max",
     facilityId: 11,
     belongings: [
-      { id: "b1", type: "food", quantity: 2, notes: "Pre-portioned bags for 2 days" },
+      {
+        id: "b1",
+        type: "food",
+        quantity: 2,
+        notes: "Pre-portioned bags for 2 days",
+      },
       { id: "b2", type: "bedding", notes: "Favorite blanket" },
       { id: "b3", type: "leash_collar" },
     ],
@@ -165,7 +178,10 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
       foodType: "Blue Buffalo Adult",
       portionSize: "1.5",
       portionUnit: "cups",
-      feedingSchedule: [{ time: "08:00", amount: "3/4 cup" }, { time: "18:00", amount: "3/4 cup" }],
+      feedingSchedule: [
+        { time: "08:00", amount: "3/4 cup" },
+        { time: "18:00", amount: "3/4 cup" },
+      ],
       notes: "Add warm water to soften",
     },
     medications: [],
@@ -176,7 +192,13 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
       specialNotes: "Loves fetch, can be vocal when excited",
     },
     addOns: [
-      { id: "ao1", name: "Extra playtime", price: 10, selected: true, quantity: 1 },
+      {
+        id: "ao1",
+        name: "Extra playtime",
+        price: 10,
+        selected: true,
+        quantity: 1,
+      },
       { id: "ao2", name: "Treat package", price: 5, selected: false },
     ],
     tip: { type: "percentage", percentage: 15, appliesTo: "stay_total" },
@@ -202,7 +224,10 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
       foodType: "Acana Grain-Free",
       portionSize: "1",
       portionUnit: "cups",
-      feedingSchedule: [{ time: "07:30", amount: "1/2 cup" }, { time: "17:30", amount: "1/2 cup" }],
+      feedingSchedule: [
+        { time: "07:30", amount: "1/2 cup" },
+        { time: "17:30", amount: "1/2 cup" },
+      ],
     },
     medications: [
       {
@@ -234,7 +259,8 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
     staffStatus: "corrections_requested",
     reviewedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     reviewedBy: 1,
-    requestChangesMessage: "Please upload a photo of the Apoquel label and confirm the 16mg dosage.",
+    requestChangesMessage:
+      "Please upload a photo of the Apoquel label and confirm the 16mg dosage.",
     qrCheckInToken: "qr_demo_4",
   },
   // Approved – already reviewed
@@ -252,7 +278,10 @@ const mockYipyyGoForms: YipyyGoFormData[] = [
       foodType: "Royal Canin Indoor",
       portionSize: "1/4",
       portionUnit: "cups",
-      feedingSchedule: [{ time: "09:00", amount: "1/8 cup" }, { time: "18:00", amount: "1/8 cup" }],
+      feedingSchedule: [
+        { time: "09:00", amount: "1/8 cup" },
+        { time: "18:00", amount: "1/8 cup" },
+      ],
     },
     medications: [],
     noMedications: true,
@@ -331,7 +360,10 @@ export type YipyyGoDisplayStatus =
   | "needs_review"
   | "precheck_missing";
 
-export function getYipyyGoForm(bookingId: number | string, petId?: number): YipyyGoFormData | null {
+export function getYipyyGoForm(
+  bookingId: number | string,
+  petId?: number,
+): YipyyGoFormData | null {
   const list = mockYipyyGoForms.filter((f) => f.bookingId === bookingId);
   if (petId != null) {
     const byPet = list.find((f) => f.petId === petId);
@@ -341,7 +373,9 @@ export function getYipyyGoForm(bookingId: number | string, petId?: number): Yipy
 }
 
 /** All forms for a booking (for multi-pet: one form per pet). */
-export function getYipyyGoFormsByBooking(bookingId: number | string): YipyyGoFormData[] {
+export function getYipyyGoFormsByBooking(
+  bookingId: number | string,
+): YipyyGoFormData[] {
   return mockYipyyGoForms.filter((f) => f.bookingId === bookingId);
 }
 
@@ -353,7 +387,7 @@ export function getLastStayFormForPet(
   clientId: number,
   petId: number,
   facilityId: number,
-  excludeBookingId?: number | string
+  excludeBookingId?: number | string,
 ): YipyyGoFormData | null {
   const today = new Date().toISOString().split("T")[0];
   const pastBookingIds = new Set(
@@ -364,9 +398,9 @@ export function getLastStayFormForPet(
           b.facilityId === facilityId &&
           (b.endDate || b.startDate) < today &&
           b.status !== "cancelled" &&
-          String(b.id) !== String(excludeBookingId)
+          String(b.id) !== String(excludeBookingId),
       )
-      .map((b) => b.id)
+      .map((b) => b.id),
   );
   const completedForms = mockYipyyGoForms.filter(
     (f) =>
@@ -374,7 +408,7 @@ export function getLastStayFormForPet(
       f.petId === petId &&
       f.facilityId === facilityId &&
       pastBookingIds.has(Number(f.bookingId)) &&
-      (f.submittedAt || f.staffStatus === "approved" || f.manuallyCompletedAt)
+      (f.submittedAt || f.staffStatus === "approved" || f.manuallyCompletedAt),
   );
   if (completedForms.length === 0) return null;
   completedForms.sort((a, b) => {
@@ -386,17 +420,25 @@ export function getLastStayFormForPet(
 }
 
 /** Derive display status for a booking (for staff lists and badges). Does not consider mandatory. */
-export function getYipyyGoDisplayStatus(bookingId: number | string, _petId?: number): YipyyGoDisplayStatus {
+export function getYipyyGoDisplayStatus(
+  bookingId: number | string,
+  _petId?: number,
+): YipyyGoDisplayStatus {
   const form = getYipyyGoForm(bookingId, _petId);
   if (!form) return "not_sent";
   if (form.manuallyCompletedAt) return "approved";
   if (form.staffStatus === "approved") return "approved";
-  if (form.staffStatus === "needs_review" || form.staffStatus === "corrections_requested")
+  if (
+    form.staffStatus === "needs_review" ||
+    form.staffStatus === "corrections_requested"
+  )
     return "needs_review";
   if (form.submittedAt) return "submitted";
   const hasData =
     (form.belongings && form.belongings.length > 0) ||
-    (form.feedingInstructions && (form.feedingInstructions.portionSize || form.feedingInstructions.foodType)) ||
+    (form.feedingInstructions &&
+      (form.feedingInstructions.portionSize ||
+        form.feedingInstructions.foodType)) ||
     (form.medications && form.medications.length > 0) ||
     (form.behaviorNotes && form.behaviorNotes.energyLevel) ||
     (form.addOns && form.addOns.some((a) => a.selected));
@@ -409,32 +451,41 @@ export function getYipyyGoDisplayStatus(bookingId: number | string, _petId?: num
  */
 export function getYipyyGoDisplayStatusForBooking(
   bookingId: number | string,
-  options: { facilityId: number; service?: string }
+  options: { facilityId: number; service?: string },
 ): YipyyGoDisplayStatus {
   const base = getYipyyGoDisplayStatus(bookingId);
   if (base === "approved") return base;
   const config = getYipyyGoConfig(options.facilityId);
   if (!config?.enabled || !options.service) return base;
-  const svc = options.service.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
-  const serviceConfig = config.serviceConfigs.find((s) => s.serviceType === svc);
-  const isMandatory = serviceConfig?.enabled && serviceConfig?.requirement === "mandatory";
+  const svc = options.service.toLowerCase() as
+    | "daycare"
+    | "boarding"
+    | "grooming"
+    | "training";
+  const serviceConfig = config.serviceConfigs.find(
+    (s) => s.serviceType === svc,
+  );
+  const isMandatory =
+    serviceConfig?.enabled && serviceConfig?.requirement === "mandatory";
   if (isMandatory) return "precheck_missing";
   return base;
 }
 
 export function saveYipyyGoForm(formData: YipyyGoFormData): YipyyGoFormData {
-  const index = mockYipyyGoForms.findIndex((f) => f.bookingId === formData.bookingId);
+  const index = mockYipyyGoForms.findIndex(
+    (f) => f.bookingId === formData.bookingId,
+  );
   const updated = {
     ...formData,
     submittedAt: formData.submittedAt || new Date().toISOString(),
   };
-  
+
   if (index >= 0) {
     mockYipyyGoForms[index] = updated;
   } else {
     mockYipyyGoForms.push(updated);
   }
-  
+
   return updated;
 }
 
@@ -446,7 +497,7 @@ export function updateYipyyGoStaffStatus(
     reviewedBy?: number;
     requestChangesMessage?: string;
     internalEditReason?: string;
-  }
+  },
 ): YipyyGoFormData | null {
   const form = getYipyyGoForm(bookingId);
   if (!form) return null;
@@ -464,7 +515,7 @@ export function updateYipyyGoStaffStatus(
 /** Staff marks form as manually completed (customer didn't submit) */
 export function setYipyyGoManuallyCompleted(
   bookingId: number | string,
-  completedBy: number
+  completedBy: number,
 ): YipyyGoFormData | null {
   const form = getYipyyGoForm(bookingId);
   if (!form) return null;
@@ -515,11 +566,11 @@ export function createStubYipyyGoFormManuallyCompleted(params: {
 export function generateVerificationCode(
   bookingId: number | string,
   email?: string,
-  phone?: string
+  phone?: string,
 ): YipyyGoVerificationCode {
   // Generate 6-digit code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
+
   const verificationCode: YipyyGoVerificationCode = {
     code,
     bookingId,
@@ -529,37 +580,40 @@ export function generateVerificationCode(
     attempts: 0,
     maxAttempts: 5,
   };
-  
+
   mockVerificationCodes.push(verificationCode);
-  
+
   // In production, send code via email/SMS
   console.log(`Verification code for booking ${bookingId}: ${code}`);
-  
+
   return verificationCode;
 }
 
 export function verifyCode(
   code: string,
-  bookingId: number | string
+  bookingId: number | string,
 ): { valid: boolean; error?: string } {
   const verification = mockVerificationCodes.find(
-    (v) => v.bookingId === bookingId && v.code === code
+    (v) => v.bookingId === bookingId && v.code === code,
   );
-  
+
   if (!verification) {
     return { valid: false, error: "Invalid code" };
   }
-  
+
   if (new Date(verification.expiresAt) < new Date()) {
     return { valid: false, error: "Code has expired" };
   }
-  
+
   if (verification.attempts >= verification.maxAttempts) {
-    return { valid: false, error: "Too many attempts. Please request a new code." };
+    return {
+      valid: false,
+      error: "Too many attempts. Please request a new code.",
+    };
   }
-  
+
   verification.attempts++;
-  
+
   return { valid: true };
 }
 
@@ -571,19 +625,19 @@ export function checkFormDeadline(deadline: string): {
   const deadlineDate = new Date(deadline);
   const now = new Date();
   const isPastDeadline = now >= deadlineDate;
-  
+
   if (isPastDeadline) {
     return {
       isPastDeadline: true,
       canEdit: false,
     };
   }
-  
+
   // Calculate time remaining
   const diff = deadlineDate.getTime() - now.getTime();
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   return {
     isPastDeadline: false,
     canEdit: true,

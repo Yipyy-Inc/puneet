@@ -29,7 +29,6 @@ import {
   X,
   User,
   Settings,
-  ArrowRightLeft,
   Building2,
   Shield,
 } from "lucide-react";
@@ -172,11 +171,11 @@ export function UserProfileSheet({
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
       case "success":
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return <CheckCircle className="text-success size-4" />;
       case "warning":
-        return <AlertCircle className="h-4 w-4 text-warning" />;
+        return <AlertCircle className="text-warning size-4" />;
       default:
-        return <Info className="h-4 w-4 text-info" />;
+        return <Info className="text-info size-4" />;
     }
   };
 
@@ -192,12 +191,12 @@ export function UserProfileSheet({
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 rounded-xl hover:bg-muted transition-colors relative"
+          className="hover:bg-muted relative h-9 w-9 rounded-xl transition-colors"
           onClick={() => setIsSheetOpen(true)}
         >
-          <Bell className="h-5 w-5 text-muted-foreground" />
+          <Bell className="text-muted-foreground h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+            <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-xs font-medium">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -226,7 +225,7 @@ export function UserProfileSheet({
             </Avatar>
             <div className="flex flex-col">
               <span className="font-medium">Super Admin</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 admin@yipyy.com
               </span>
             </div>
@@ -234,7 +233,7 @@ export function UserProfileSheet({
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
+              <User className="size-4" />
               Profile Settings
             </Link>
           </DropdownMenuItem>
@@ -243,12 +242,12 @@ export function UserProfileSheet({
               href="/dashboard/settings"
               className="flex items-center gap-2"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="size-4" />
               System Settings
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+          <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
             Context Switcher
           </DropdownMenuLabel>
           {isSuperAdmin && (
@@ -258,7 +257,7 @@ export function UserProfileSheet({
                 disabled={isPending}
                 className="flex items-center gap-2"
               >
-                <Building2 className="h-4 w-4" />
+                <Building2 className="size-4" />
                 Switch to Facility Admin
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -270,7 +269,7 @@ export function UserProfileSheet({
                 disabled={isPending}
                 className="flex items-center gap-2"
               >
-                <User className="h-4 w-4" />
+                <User className="size-4" />
                 Switch to Customer
               </DropdownMenuItem>
             </>
@@ -282,7 +281,7 @@ export function UserProfileSheet({
                 disabled={isPending}
                 className="flex items-center gap-2"
               >
-                <Shield className="h-4 w-4" />
+                <Shield className="size-4" />
                 Switch to Super Admin
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -294,7 +293,7 @@ export function UserProfileSheet({
                 disabled={isPending}
                 className="flex items-center gap-2"
               >
-                <User className="h-4 w-4" />
+                <User className="size-4" />
                 Switch to Customer
               </DropdownMenuItem>
             </>
@@ -304,7 +303,7 @@ export function UserProfileSheet({
             onClick={handleLogout}
             className="text-destructive focus:text-destructive"
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="mr-2 size-4" />
             Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -313,86 +312,84 @@ export function UserProfileSheet({
       {/* Notifications Sheet */}
       {showNotifications && (
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <div className="flex flex-col h-full">
-            {/* Header */}
-            <SheetHeader className="p-6 pb-4">
-              <SheetTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications
-                {unreadCount > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {unreadCount} new
-                  </Badge>
-                )}
-              </SheetTitle>
-            </SheetHeader>
-
-            {/* Notifications Content */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-6 space-y-4">
-                {unreadCount > 0 && (
-                  <div className="flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                      onClick={markAllAsRead}
-                    >
-                      Mark all as read
-                    </Button>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  {notifications.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
-                      No notifications
-                    </div>
-                  ) : (
-                    notifications.map((notification) => (
-                      <Link
-                        key={notification.id}
-                        href={notification.link || "#"}
-                        onClick={() => handleNotificationClick(notification)}
-                        className={`group block items-start gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors ${
-                          !notification.read ? "bg-primary/5" : ""
-                        }`}
-                      >
-                        <div className="mt-0.5">
-                          {getIcon(notification.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium leading-tight">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {notification.timestamp}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            removeNotification(notification.id);
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    ))
+          <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+            <div className="flex h-full flex-col">
+              {/* Header */}
+              <SheetHeader className="p-6 pb-4">
+                <SheetTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Notifications
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {unreadCount} new
+                    </Badge>
                   )}
+                </SheetTitle>
+              </SheetHeader>
+
+              {/* Notifications Content */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-4 p-6">
+                  {unreadCount > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground text-xs"
+                        onClick={markAllAsRead}
+                      >
+                        Mark all as read
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {notifications.length === 0 ? (
+                      <div className="text-muted-foreground p-8 text-center text-sm">
+                        No notifications
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <Link
+                          key={notification.id}
+                          href={notification.link || "#"}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`group hover:bg-muted/50 block cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors ${!notification.read ? "bg-primary/5" : ""} `}
+                        >
+                          <div className="mt-0.5">
+                            {getIcon(notification.type)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm/tight font-medium">
+                              {notification.title}
+                            </p>
+                            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                              {notification.message}
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {notification.timestamp}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeNotification(notification.id);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </SheetContent>
+          </SheetContent>
         </Sheet>
       )}
     </div>

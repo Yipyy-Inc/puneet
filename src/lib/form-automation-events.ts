@@ -37,9 +37,19 @@ export interface FormEventPayload {
 /**
  * Emit a form event for automation builder. In production this would push to an event bus or automation engine.
  */
-export function triggerFormEvent(eventType: FormAutomationEventType, payload: FormEventPayload): void {
-  if (typeof window !== "undefined" && (window as unknown as { __FORM_EVENTS__?: unknown[] }).__FORM_EVENTS__) {
-    (window as unknown as { __FORM_EVENTS__: unknown[] }).__FORM_EVENTS__.push({ eventType, payload, at: new Date().toISOString() });
+export function triggerFormEvent(
+  eventType: FormAutomationEventType,
+  payload: FormEventPayload,
+): void {
+  if (
+    typeof window !== "undefined" &&
+    (window as unknown as { __FORM_EVENTS__?: unknown[] }).__FORM_EVENTS__
+  ) {
+    (window as unknown as { __FORM_EVENTS__: unknown[] }).__FORM_EVENTS__.push({
+      eventType,
+      payload,
+      at: new Date().toISOString(),
+    });
   }
   // Server or no dev buffer: could send to analytics/automation API
 }

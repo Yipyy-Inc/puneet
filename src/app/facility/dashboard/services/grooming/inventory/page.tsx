@@ -200,7 +200,7 @@ export default function InventoryPage() {
       render: (product) => (
         <div>
           <p className="font-medium">{product.name}</p>
-          <p className="text-sm text-muted-foreground">{product.brand}</p>
+          <p className="text-muted-foreground text-sm">{product.brand}</p>
         </div>
       ),
     },
@@ -230,13 +230,13 @@ export default function InventoryPage() {
           100,
         );
         return (
-          <div className="space-y-1 min-w-32">
+          <div className="min-w-32 space-y-1">
             <div className="flex items-center justify-between text-sm">
               <span>
                 {product.currentStock} / {product.maxStock}
               </span>
               {level === "critical" && (
-                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertTriangle className="size-4 text-red-500" />
               )}
             </div>
             <Progress value={percentage} className={`h-2`} />
@@ -275,23 +275,23 @@ export default function InventoryPage() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleEdit(product)}>
-              <Edit className="mr-2 h-4 w-4" />
+              <Edit className="mr-2 size-4" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleOrderClick(product)}>
-              <ShoppingCart className="mr-2 h-4 w-4" />
+              <ShoppingCart className="mr-2 size-4" />
               Reorder
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleDeleteClick(product)}
               className="text-red-600"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 size-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -326,23 +326,23 @@ export default function InventoryPage() {
             <CardTitle className="text-sm font-medium">
               Total Products
             </CardTitle>
-            <BoxesIcon className="h-4 w-4 text-muted-foreground" />
+            <BoxesIcon className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProducts}</div>
-            <p className="text-xs text-muted-foreground">Active in inventory</p>
+            <p className="text-muted-foreground text-xs">Active in inventory</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-500" />
+            <AlertTriangle className="size-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
               {stats.lowStockCount}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {stats.outOfStockCount} out of stock
             </p>
           </CardContent>
@@ -352,13 +352,13 @@ export default function InventoryPage() {
             <CardTitle className="text-sm font-medium">
               Inventory Value
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${stats.totalInventoryValue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Retail: ${stats.totalRetailValue.toFixed(2)}
             </p>
           </CardContent>
@@ -368,11 +368,11 @@ export default function InventoryPage() {
             <CardTitle className="text-sm font-medium">
               Pending Orders
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <ShoppingCart className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-            <p className="text-xs text-muted-foreground">Awaiting delivery</p>
+            <p className="text-muted-foreground text-xs">Awaiting delivery</p>
           </CardContent>
         </Card>
       </div>
@@ -381,8 +381,8 @@ export default function InventoryPage() {
       {lowStockProducts.length > 0 && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-yellow-800">
-              <AlertTriangle className="h-4 w-4" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-yellow-800">
+              <AlertTriangle className="size-4" />
               Low Stock Alert - {lowStockProducts.length} products need
               reordering
             </CardTitle>
@@ -409,7 +409,7 @@ export default function InventoryPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Product Inventory</CardTitle>
           <Button onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Product
           </Button>
         </CardHeader>
@@ -434,15 +434,15 @@ export default function InventoryPage() {
             {inventoryOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between p-4 rounded-lg border"
+                className="flex items-center justify-between rounded-lg border p-4"
               >
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                    <Package className="h-5 w-5 text-muted-foreground" />
+                  <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                    <Package className="text-muted-foreground h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">{order.productName}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {order.quantity} units from {order.supplier}
                     </p>
                   </div>
@@ -452,7 +452,7 @@ export default function InventoryPage() {
                     <p className="font-medium">
                       ${order.totalPrice.toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {new Date(order.orderedAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -468,7 +468,7 @@ export default function InventoryPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingProduct ? "Edit Product" : "Add New Product"}
@@ -682,11 +682,11 @@ export default function InventoryPage() {
           </DialogHeader>
           {orderingProduct && (
             <div className="space-y-4 py-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex justify-between items-center">
+              <div className="bg-muted rounded-lg p-4">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{orderingProduct.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {orderingProduct.brand} • {orderingProduct.sku}
                     </p>
                   </div>
@@ -724,7 +724,7 @@ export default function InventoryPage() {
                     })
                   }
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Suggested:{" "}
                   {orderingProduct.maxStock - orderingProduct.currentStock}{" "}
                   units to reach max stock
@@ -742,20 +742,20 @@ export default function InventoryPage() {
                   rows={2}
                 />
               </div>
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-4">
                 <div className="flex justify-between">
                   <span>Supplier:</span>
                   <span className="font-medium">
                     {orderingProduct.supplier}
                   </span>
                 </div>
-                <div className="flex justify-between mt-2">
+                <div className="mt-2 flex justify-between">
                   <span>Unit Cost:</span>
                   <span className="font-medium">
                     ${orderingProduct.costPrice.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between mt-2 pt-2 border-t">
+                <div className="mt-2 flex justify-between border-t pt-2">
                   <span className="font-medium">Total:</span>
                   <span className="font-bold">
                     $
@@ -775,7 +775,7 @@ export default function InventoryPage() {
               Cancel
             </Button>
             <Button onClick={handlePlaceOrder}>
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="mr-2 size-4" />
               Place Order
             </Button>
           </DialogFooter>

@@ -280,11 +280,11 @@ export default function PackagesPage() {
             <CardTitle className="text-sm font-medium">
               Total Packages
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{servicePackages.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {servicePackages.filter((p) => p.status === "active").length}{" "}
               active
             </p>
@@ -293,11 +293,11 @@ export default function PackagesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Packages Sold</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <ShoppingBag className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPackagesSold}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
+            <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
         <Card>
@@ -305,23 +305,23 @@ export default function PackagesPage() {
             <CardTitle className="text-sm font-medium">
               Package Revenue
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${totalRevenue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">From package sales</p>
+            <p className="text-muted-foreground text-xs">From package sales</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg. Savings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgSavings.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Customer discount</p>
+            <p className="text-muted-foreground text-xs">Customer discount</p>
           </CardContent>
         </Card>
       </div>
@@ -329,7 +329,7 @@ export default function PackagesPage() {
       {/* Header with Add Button */}
       <div className="flex items-center justify-end">
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add Package
         </Button>
       </div>
@@ -345,14 +345,14 @@ export default function PackagesPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => handleEdit(item as unknown as ServicePackage)}
               >
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -361,7 +361,7 @@ export default function PackagesPage() {
                 }
                 className="text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -371,7 +371,7 @@ export default function PackagesPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPackage ? "Edit" : "Create"} Package
@@ -498,7 +498,7 @@ export default function PackagesPage() {
                               removeServiceFromPackage(s.serviceId)
                             }
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="text-destructive size-4" />
                           </Button>
                         </div>
                       </div>

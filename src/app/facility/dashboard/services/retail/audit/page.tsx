@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,28 +20,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getAuditLogs, type PaymentAuditLog, type AuditActionType } from "@/lib/payment-audit";
+import {
+  getAuditLogs,
+  type PaymentAuditLog,
+  type AuditActionType,
+} from "@/lib/payment-audit";
 import { formatTransactionTimestamp } from "@/lib/payment-method-utils";
-import { 
-  CreditCard, 
-  RotateCcw, 
-  XCircle, 
-  Edit, 
-  Smartphone, 
-  Printer,
-  Banknote,
-  Wallet,
-  Gift,
+import {
+  CreditCard,
+  RotateCcw,
+  XCircle,
+  Edit,
   Search,
   Download,
-  Filter,
 } from "lucide-react";
 
 export default function PaymentAuditPage() {
-  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "custom">("30d");
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "custom">(
+    "30d",
+  );
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
-  const [actionFilter, setActionFilter] = useState<AuditActionType | "all">("all");
+  const [actionFilter, setActionFilter] = useState<AuditActionType | "all">(
+    "all",
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
   const facilityId = 11; // TODO: Get from context
@@ -46,7 +54,9 @@ export default function PaymentAuditPage() {
     let start: Date;
 
     if (dateRange === "custom") {
-      start = customStartDate ? new Date(customStartDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+      start = customStartDate
+        ? new Date(customStartDate)
+        : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       const customEnd = customEndDate ? new Date(customEndDate) : end;
       return { startDate: start, endDate: customEnd };
     }
@@ -72,7 +82,7 @@ export default function PaymentAuditPage() {
           log.transactionNumber?.toLowerCase().includes(query) ||
           log.staffName.toLowerCase().includes(query) ||
           log.customerName?.toLowerCase().includes(query) ||
-          log.processorTransactionId?.toLowerCase().includes(query)
+          log.processorTransactionId?.toLowerCase().includes(query),
       );
     }
 
@@ -123,7 +133,7 @@ export default function PaymentAuditPage() {
       render: (item) => (
         <div className="flex flex-col">
           <span>{formatTransactionTimestamp(item.timestamp)}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {new Date(item.timestamp).toLocaleTimeString("en-US", {
               hour: "2-digit",
               minute: "2-digit",
@@ -141,9 +151,11 @@ export default function PaymentAuditPage() {
         const ActionIcon = getActionIcon(item.action);
         return (
           <div className="flex items-center gap-2">
-            <ActionIcon className="h-4 w-4 text-muted-foreground" />
+            <ActionIcon className="text-muted-foreground size-4" />
             <Badge variant={getActionBadgeVariant(item.action)}>
-              {item.action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+              {item.action
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase())}
             </Badge>
           </div>
         );
@@ -154,15 +166,16 @@ export default function PaymentAuditPage() {
       label: "Transaction #",
       defaultVisible: true,
       render: (item) => (
-        <span className="font-mono font-medium">{item.transactionNumber || "—"}</span>
+        <span className="font-mono font-medium">
+          {item.transactionNumber || "—"}
+        </span>
       ),
     },
     {
       key: "amount",
       label: "Amount",
       defaultVisible: true,
-      render: (item) => 
-        item.amount ? `$${item.amount.toFixed(2)}` : "—",
+      render: (item) => (item.amount ? `$${item.amount.toFixed(2)}` : "—"),
     },
     {
       key: "paymentMethod",
@@ -173,21 +186,28 @@ export default function PaymentAuditPage() {
         const method = item.paymentMethod;
         if (method === "yipyy_pay") return "Card (Pay with iPhone)";
         if (method === "clover_terminal") return "Card (Clover Terminal)";
-        if (method === "saved_card" || method === "manual_card_entry") return "Online Card (Saved)";
+        if (method === "saved_card" || method === "manual_card_entry")
+          return "Online Card (Saved)";
         if (method === "cash") return "Cash";
         if (method === "store_credit") return "Store Credit";
         if (method === "gift_card") return "Gift Card";
-        return method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+        return method
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase());
       },
     },
     {
       key: "processorTransactionId",
       label: "Processor ID",
       defaultVisible: true,
-      render: (item) => 
+      render: (item) =>
         item.processorTransactionId ? (
-          <span className="font-mono text-xs">{item.processorTransactionId}</span>
-        ) : "—",
+          <span className="font-mono text-xs">
+            {item.processorTransactionId}
+          </span>
+        ) : (
+          "—"
+        ),
     },
     {
       key: "staff",
@@ -196,7 +216,7 @@ export default function PaymentAuditPage() {
       render: (item) => (
         <div className="flex flex-col">
           <span className="font-medium">{item.staffName}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {item.staffRole} • ID: {item.staffId}
           </span>
         </div>
@@ -216,7 +236,9 @@ export default function PaymentAuditPage() {
         <div className="flex flex-col">
           <span className="text-sm">{item.notes || "—"}</span>
           {item.reason && (
-            <span className="text-xs text-muted-foreground">Reason: {item.reason}</span>
+            <span className="text-muted-foreground text-xs">
+              Reason: {item.reason}
+            </span>
           )}
         </div>
       ),
@@ -225,13 +247,19 @@ export default function PaymentAuditPage() {
       key: "overrideMethod",
       label: "Override Method",
       defaultVisible: false,
-      render: (item) => 
+      render: (item) =>
         item.action === "method_override" && item.overrideMethod ? (
           <div className="flex flex-col">
-            <span className="text-sm">Original: {item.originalPaymentMethod}</span>
-            <span className="text-sm font-medium">Override: {item.overrideMethod}</span>
+            <span className="text-sm">
+              Original: {item.originalPaymentMethod}
+            </span>
+            <span className="text-sm font-medium">
+              Override: {item.overrideMethod}
+            </span>
           </div>
-        ) : "—",
+        ) : (
+          "—"
+        ),
     },
   ];
 
@@ -240,13 +268,15 @@ export default function PaymentAuditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Payment Audit Logs</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Payment Audit Logs
+          </h2>
           <p className="text-muted-foreground">
             Complete audit trail of all payment-related actions
           </p>
         </div>
         <Button>
-          <Download className="h-4 w-4 mr-2" />
+          <Download className="mr-2 size-4" />
           Export Logs
         </Button>
       </div>
@@ -312,11 +342,17 @@ export default function PaymentAuditPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="payment_capture">Payment Capture</SelectItem>
+                  <SelectItem value="payment_capture">
+                    Payment Capture
+                  </SelectItem>
                   <SelectItem value="refund">Refund</SelectItem>
                   <SelectItem value="void">Void</SelectItem>
-                  <SelectItem value="method_override">Method Override</SelectItem>
-                  <SelectItem value="manual_card_entry">Manual Card Entry</SelectItem>
+                  <SelectItem value="method_override">
+                    Method Override
+                  </SelectItem>
+                  <SelectItem value="manual_card_entry">
+                    Manual Card Entry
+                  </SelectItem>
                   <SelectItem value="card_saved">Card Saved</SelectItem>
                   <SelectItem value="card_deleted">Card Deleted</SelectItem>
                 </SelectContent>
@@ -326,7 +362,7 @@ export default function PaymentAuditPage() {
             <div className="space-y-2">
               <Label>Search</Label>
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
                 <Input
                   placeholder="Transaction #, staff, customer..."
                   value={searchQuery}

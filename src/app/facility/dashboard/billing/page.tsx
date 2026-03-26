@@ -25,7 +25,6 @@ import { ProcessRefundModal } from "@/components/billing/ProcessRefundModal";
 import { CreateInvoiceModal } from "@/components/billing/CreateInvoiceModal";
 import { IssueGiftCardModal } from "@/components/billing/IssueGiftCardModal";
 import { AddCustomerCreditModal } from "@/components/billing/AddCustomerCreditModal";
-import { PermissionGuard } from "@/components/facility/PermissionGuard";
 import {
   Download,
   DollarSign,
@@ -247,9 +246,9 @@ export default function FacilityBillingPage() {
       defaultVisible: true,
       render: (p) => (
         <div className="flex items-center gap-2">
-          {p.paymentMethod === "card" && <CreditCard className="h-4 w-4" />}
-          {p.paymentMethod === "cash" && <Wallet className="h-4 w-4" />}
-          {p.paymentMethod === "gift_card" && <Gift className="h-4 w-4" />}
+          {p.paymentMethod === "card" && <CreditCard className="size-4" />}
+          {p.paymentMethod === "cash" && <Wallet className="size-4" />}
+          {p.paymentMethod === "gift_card" && <Gift className="size-4" />}
           <span className="capitalize">
             {p.paymentMethod.replace("_", " ")}
           </span>
@@ -301,7 +300,7 @@ export default function FacilityBillingPage() {
       render: (inv) => (
         <span
           className={
-            inv.amountDue > 0 ? "text-amber-600 font-medium" : "text-green-600"
+            inv.amountDue > 0 ? "font-medium text-amber-600" : "text-green-600"
           }
         >
           ${inv.amountDue.toFixed(2)}
@@ -400,18 +399,18 @@ export default function FacilityBillingPage() {
         </h2>
         <div className="flex items-center space-x-2">
           <Button variant="default" onClick={() => setShowTakePayment(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Take Payment
           </Button>
           <Button variant="outline" onClick={() => setShowCreateInvoice(true)}>
-            <FileText className="mr-2 h-4 w-4" />
+            <FileText className="mr-2 size-4" />
             Create Invoice
           </Button>
           <Button
             variant="outline"
             onClick={() => exportPaymentsToCSV(facilityPayments)}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             Export
           </Button>
         </div>
@@ -422,13 +421,13 @@ export default function FacilityBillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               ${totalRevenue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {paidTransactions} payments
             </p>
           </CardContent>
@@ -436,13 +435,13 @@ export default function FacilityBillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">
               ${pendingRevenue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {facilityPayments.filter((p) => p.status === "pending").length}{" "}
               pending
             </p>
@@ -451,13 +450,13 @@ export default function FacilityBillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            <AlertCircle className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               ${totalOutstanding.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {outstandingInvoices.length} invoices
             </p>
           </CardContent>
@@ -465,11 +464,11 @@ export default function FacilityBillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tips</CardTitle>
-            <Gift className="h-4 w-4 text-muted-foreground" />
+            <Gift className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalTips.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               From {paidTransactions} transactions
             </p>
           </CardContent>
@@ -477,13 +476,13 @@ export default function FacilityBillingPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Refunded</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            <TrendingDown className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               ${refundedAmount.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {facilityPayments.filter((p) => p.status === "refunded").length}{" "}
               refunds
             </p>
@@ -524,23 +523,23 @@ export default function FacilityBillingPage() {
                       ([method, stats]) => (
                         <div
                           key={method}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                          className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
                         >
                           <div className="flex items-center gap-3">
                             {method === "card" && (
-                              <CreditCard className="h-5 w-5 text-muted-foreground" />
+                              <CreditCard className="text-muted-foreground h-5 w-5" />
                             )}
                             {method === "cash" && (
-                              <Wallet className="h-5 w-5 text-muted-foreground" />
+                              <Wallet className="text-muted-foreground h-5 w-5" />
                             )}
                             {method === "gift_card" && (
-                              <Gift className="h-5 w-5 text-muted-foreground" />
+                              <Gift className="text-muted-foreground h-5 w-5" />
                             )}
                             <div>
                               <p className="font-medium capitalize">
                                 {method.replace("_", " ")}
                               </p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 {stats.count} payments
                               </p>
                             </div>
@@ -549,7 +548,7 @@ export default function FacilityBillingPage() {
                             <p className="font-bold">
                               ${stats.amount.toFixed(2)}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {totalRevenue > 0
                                 ? ((stats.amount / totalRevenue) * 100).toFixed(
                                     1,
@@ -562,7 +561,7 @@ export default function FacilityBillingPage() {
                       ),
                     )
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-muted-foreground py-4 text-center text-sm">
                       No payment data available
                     </p>
                   )}
@@ -583,13 +582,13 @@ export default function FacilityBillingPage() {
                     return (
                       <div
                         key={payment.id}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex items-center justify-between rounded-lg p-2"
                       >
                         <div>
                           <p className="text-sm font-medium">
                             {client?.name || "Unknown"}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {payment.description}
                           </p>
                         </div>
@@ -622,7 +621,7 @@ export default function FacilityBillingPage() {
                 size="sm"
                 onClick={() => setSelectedTransaction(payment)}
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="size-4" />
               </Button>
             )}
           />
@@ -644,7 +643,7 @@ export default function FacilityBillingPage() {
                   size="sm"
                   onClick={() => setSelectedInvoice(invoice)}
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye className="size-4" />
                 </Button>
                 {invoice.status === "sent" || invoice.status === "overdue" ? (
                   <Button
@@ -664,7 +663,7 @@ export default function FacilityBillingPage() {
                       );
                     }}
                   >
-                    <Send className="h-4 w-4 mr-1" />
+                    <Send className="mr-1 size-4" />
                     Remind
                   </Button>
                 ) : null}
@@ -675,9 +674,9 @@ export default function FacilityBillingPage() {
 
         {/* Gift Cards Tab */}
         <TabsContent value="giftcards" className="space-y-4">
-          <div className="flex justify-end mb-4">
+          <div className="mb-4 flex justify-end">
             <Button onClick={() => setShowIssueGiftCard(true)}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Issue Gift Card
             </Button>
           </div>
@@ -700,12 +699,12 @@ export default function FacilityBillingPage() {
                           {gc.status}
                         </Badge>
                       </div>
-                      <Gift className="h-5 w-5 text-muted-foreground" />
+                      <Gift className="text-muted-foreground h-5 w-5" />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-muted-foreground text-sm">
                         Balance:
                       </span>
                       <span className="font-bold">
@@ -713,7 +712,7 @@ export default function FacilityBillingPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-muted-foreground text-sm">
                         Initial:
                       </span>
                       <span className="text-sm">
@@ -721,8 +720,8 @@ export default function FacilityBillingPage() {
                       </span>
                     </div>
                     {gc.purchasedBy && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground">
+                      <div className="border-t pt-2">
+                        <p className="text-muted-foreground text-xs">
                           Purchased by:
                         </p>
                         <p className="text-sm font-medium">{gc.purchasedBy}</p>
@@ -730,7 +729,7 @@ export default function FacilityBillingPage() {
                     )}
                     {gc.recipientName && (
                       <div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           Recipient:
                         </p>
                         <p className="text-sm font-medium">
@@ -739,14 +738,14 @@ export default function FacilityBillingPage() {
                       </div>
                     )}
                     {gc.expiryDate && (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         Expires: {formatDate(gc.expiryDate)}
                       </div>
                     )}
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full mt-2"
+                      className="mt-2 w-full"
                       onClick={() => setSelectedGiftCard(gc)}
                     >
                       View Details
@@ -760,9 +759,9 @@ export default function FacilityBillingPage() {
 
         {/* Credits Tab */}
         <TabsContent value="credits" className="space-y-4">
-          <div className="flex justify-end mb-4">
+          <div className="mb-4 flex justify-end">
             <Button onClick={() => setShowAddCredit(true)}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Customer Credit
             </Button>
           </div>
@@ -774,7 +773,7 @@ export default function FacilityBillingPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="mb-2 flex items-center gap-2">
                           <h4 className="font-semibold">
                             {client?.name || "Unknown Client"}
                           </h4>
@@ -791,7 +790,7 @@ export default function FacilityBillingPage() {
                             {credit.reason}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-muted-foreground mb-2 text-sm">
                           {credit.description}
                         </p>
                         <div className="flex items-center gap-4 text-sm">
@@ -799,7 +798,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground">
                               Remaining:
                             </span>
-                            <span className="font-bold ml-1">
+                            <span className="ml-1 font-bold">
                               ${credit.remainingAmount.toFixed(2)}
                             </span>
                           </div>
@@ -827,7 +826,7 @@ export default function FacilityBillingPage() {
                         <div className="text-2xl font-bold text-green-600">
                           ${credit.remainingAmount.toFixed(2)}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {credit.amount > 0
                             ? Math.round(
                                 (credit.remainingAmount / credit.amount) * 100,
@@ -866,12 +865,12 @@ export default function FacilityBillingPage() {
                     }
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="mb-3 flex items-start justify-between">
                         <div>
                           <h4 className="font-semibold">
                             {client?.name || "Unknown Client"}
                           </h4>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Invoice: {invoice.invoiceNumber}
                           </p>
                         </div>
@@ -911,15 +910,15 @@ export default function FacilityBillingPage() {
                         </div>
                       </div>
                       {invoice.status === "overdue" && (
-                        <div className="mt-3 pt-3 border-t flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-destructive" />
-                          <span className="text-sm text-destructive font-medium">
+                        <div className="mt-3 flex items-center gap-2 border-t pt-3">
+                          <AlertCircle className="text-destructive size-4" />
+                          <span className="text-destructive text-sm font-medium">
                             {daysOverdue} days overdue • {invoice.reminderCount}{" "}
                             reminders sent
                           </span>
                         </div>
                       )}
-                      <div className="flex gap-2 mt-3">
+                      <div className="mt-3 flex gap-2">
                         <Button
                           variant="default"
                           size="sm"
@@ -937,7 +936,7 @@ export default function FacilityBillingPage() {
                             );
                           }}
                         >
-                          <Send className="h-4 w-4 mr-1" />
+                          <Send className="mr-1 size-4" />
                           Send Reminder
                         </Button>
                         <Button
@@ -945,7 +944,7 @@ export default function FacilityBillingPage() {
                           size="sm"
                           onClick={() => setSelectedInvoice(invoice)}
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="mr-1 size-4" />
                           View
                         </Button>
                       </div>
@@ -957,9 +956,9 @@ export default function FacilityBillingPage() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                <CheckCircle className="mx-auto mb-2 h-12 w-12 text-green-500" />
                 <h3 className="text-lg font-semibold">All Caught Up!</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   No outstanding invoices
                 </p>
               </CardContent>
@@ -973,7 +972,7 @@ export default function FacilityBillingPage() {
         open={!!selectedTransaction}
         onOpenChange={() => setSelectedTransaction(null)}
       >
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
@@ -1002,7 +1001,7 @@ export default function FacilityBillingPage() {
                     <CardContent className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Payment ID
                           </p>
                           <p className="font-medium">
@@ -1010,13 +1009,13 @@ export default function FacilityBillingPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Date</p>
+                          <p className="text-muted-foreground text-sm">Date</p>
                           <p className="font-medium">
                             {formatDateTime(selectedTransaction.createdAt)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Processed By
                           </p>
                           <p className="font-medium">
@@ -1025,7 +1024,7 @@ export default function FacilityBillingPage() {
                         </div>
                         {selectedTransaction.invoiceId && (
                           <div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Invoice
                             </p>
                             <p className="font-medium">
@@ -1044,7 +1043,7 @@ export default function FacilityBillingPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex justify-between items-center">
+                      <div className="flex items-center justify-between">
                         <span className="text-sm">Subtotal:</span>
                         <span className="font-medium">
                           ${selectedTransaction.amount.toFixed(2)}
@@ -1052,8 +1051,8 @@ export default function FacilityBillingPage() {
                       </div>
                       {selectedTransaction.tipAmount &&
                         selectedTransaction.tipAmount > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground text-sm">
                               Tip:
                             </span>
                             <span className="font-medium">
@@ -1063,7 +1062,7 @@ export default function FacilityBillingPage() {
                         )}
                       {selectedTransaction.creditUsed &&
                         selectedTransaction.creditUsed > 0 && (
-                          <div className="flex justify-between items-center">
+                          <div className="flex items-center justify-between">
                             <span className="text-sm text-green-600">
                               Credit Applied:
                             </span>
@@ -1072,7 +1071,7 @@ export default function FacilityBillingPage() {
                             </span>
                           </div>
                         )}
-                      <div className="flex justify-between items-center pt-2 border-t">
+                      <div className="flex items-center justify-between border-t pt-2">
                         <span className="font-semibold">Total:</span>
                         <span className="text-xl font-bold text-green-600">
                           ${selectedTransaction.totalAmount.toFixed(2)}
@@ -1098,7 +1097,7 @@ export default function FacilityBillingPage() {
                                 •••• {selectedTransaction.cardLast4}
                               </p>
                               {selectedTransaction.stripeChargeId && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                   Stripe: {selectedTransaction.stripeChargeId}
                                 </p>
                               )}
@@ -1131,17 +1130,17 @@ export default function FacilityBillingPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div>
-                        <p className="text-sm text-muted-foreground">Name</p>
+                        <p className="text-muted-foreground text-sm">Name</p>
                         <p className="font-medium">
                           {client?.name || "Unknown"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="text-muted-foreground text-sm">Email</p>
                         <p className="text-sm">{client?.email || "N/A"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Description
                         </p>
                         <p className="text-sm">
@@ -1150,7 +1149,7 @@ export default function FacilityBillingPage() {
                       </div>
                       {selectedTransaction.notes && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Notes</p>
+                          <p className="text-muted-foreground text-sm">Notes</p>
                           <p className="text-sm">{selectedTransaction.notes}</p>
                         </div>
                       )}
@@ -1160,20 +1159,20 @@ export default function FacilityBillingPage() {
                   {selectedTransaction.refundAmount && (
                     <Card className="border-destructive">
                       <CardHeader>
-                        <CardTitle className="text-sm font-semibold text-destructive">
+                        <CardTitle className="text-destructive text-sm font-semibold">
                           Refund Information
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-sm">Refund Amount:</span>
-                          <span className="font-bold text-destructive">
+                          <span className="text-destructive font-bold">
                             ${selectedTransaction.refundAmount.toFixed(2)}
                           </span>
                         </div>
                         {selectedTransaction.refundReason && (
                           <div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Reason:
                             </p>
                             <p className="text-sm">
@@ -1182,7 +1181,7 @@ export default function FacilityBillingPage() {
                           </div>
                         )}
                         {selectedTransaction.refundedAt && (
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Refunded on:{" "}
                             {formatDateTime(selectedTransaction.refundedAt)}
                           </div>
@@ -1203,7 +1202,7 @@ export default function FacilityBillingPage() {
                           );
                         }}
                       >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="mr-2 size-4" />
                         Download Receipt
                       </Button>
                     )}
@@ -1218,7 +1217,7 @@ export default function FacilityBillingPage() {
                             setSelectedTransaction(null);
                           }}
                         >
-                          <RefreshCw className="h-4 w-4 mr-2" />
+                          <RefreshCw className="mr-2 size-4" />
                           Process Refund
                         </Button>
                       )}
@@ -1234,7 +1233,7 @@ export default function FacilityBillingPage() {
         open={!!selectedInvoice}
         onOpenChange={() => setSelectedInvoice(null)}
       >
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -1255,7 +1254,7 @@ export default function FacilityBillingPage() {
                           <CardTitle className="text-lg">
                             {selectedInvoice.invoiceNumber}
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-muted-foreground mt-1 text-sm">
                             Issued: {formatDate(selectedInvoice.issuedDate)}
                           </p>
                         </div>
@@ -1275,18 +1274,18 @@ export default function FacilityBillingPage() {
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Client
                           </p>
                           <p className="font-medium">
                             {client?.name || "Unknown"}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {client?.email}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Due Date
                           </p>
                           <p className="font-medium">
@@ -1308,11 +1307,11 @@ export default function FacilityBillingPage() {
                         {selectedInvoice.items.map((item) => (
                           <div
                             key={item.id}
-                            className="flex justify-between py-2 border-b last:border-0"
+                            className="flex justify-between border-b py-2 last:border-0"
                           >
                             <div>
                               <p className="font-medium">{item.description}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 ${item.unitPrice.toFixed(2)} × {item.quantity}
                               </p>
                             </div>
@@ -1323,7 +1322,7 @@ export default function FacilityBillingPage() {
                         ))}
                       </div>
 
-                      <div className="space-y-2 mt-4 pt-4 border-t">
+                      <div className="mt-4 space-y-2 border-t pt-4">
                         <div className="flex justify-between">
                           <span className="text-sm">Subtotal:</span>
                           <span className="font-medium">
@@ -1353,14 +1352,14 @@ export default function FacilityBillingPage() {
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between pt-2 border-t">
+                        <div className="flex justify-between border-t pt-2">
                           <span className="font-bold">Total:</span>
                           <span className="text-xl font-bold">
                             ${selectedInvoice.total.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             Amount Paid:
                           </span>
                           <span className="font-medium text-green-600">
@@ -1380,15 +1379,15 @@ export default function FacilityBillingPage() {
                   {selectedInvoice.isRecurring && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                          <RefreshCw className="h-4 w-4" />
+                        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                          <RefreshCw className="size-4" />
                           Recurring Invoice
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Frequency
                             </p>
                             <p className="font-medium capitalize">
@@ -1397,7 +1396,7 @@ export default function FacilityBillingPage() {
                           </div>
                           {selectedInvoice.nextInvoiceDate && (
                             <div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground text-sm">
                                 Next Invoice
                               </p>
                               <p className="font-medium">
@@ -1420,7 +1419,7 @@ export default function FacilityBillingPage() {
                         );
                       }}
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="mr-2 size-4" />
                       Download PDF
                     </Button>
                     {selectedInvoice.status === "draft" && (
@@ -1437,7 +1436,7 @@ export default function FacilityBillingPage() {
                           setSelectedInvoice(null);
                         }}
                       >
-                        <Send className="h-4 w-4 mr-2" />
+                        <Send className="mr-2 size-4" />
                         Send Invoice
                       </Button>
                     )}
@@ -1457,7 +1456,7 @@ export default function FacilityBillingPage() {
                           setSelectedInvoice(null);
                         }}
                       >
-                        <Send className="h-4 w-4 mr-2" />
+                        <Send className="mr-2 size-4" />
                         Send Reminder
                       </Button>
                     )}
@@ -1504,7 +1503,7 @@ export default function FacilityBillingPage() {
                       <p className="text-3xl font-bold text-green-600">
                         ${selectedGiftCard.currentBalance.toFixed(2)}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Current Balance
                       </p>
                     </div>
@@ -1513,7 +1512,7 @@ export default function FacilityBillingPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Initial Amount
                       </p>
                       <p className="font-medium">
@@ -1521,13 +1520,13 @@ export default function FacilityBillingPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Type</p>
+                      <p className="text-muted-foreground text-sm">Type</p>
                       <Badge variant="outline" className="capitalize">
                         {selectedGiftCard.type}
                       </Badge>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Purchase Date
                       </p>
                       <p className="font-medium">
@@ -1536,7 +1535,7 @@ export default function FacilityBillingPage() {
                     </div>
                     {selectedGiftCard.expiryDate && (
                       <div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Expiry Date
                         </p>
                         <p className="font-medium">
@@ -1548,10 +1547,10 @@ export default function FacilityBillingPage() {
 
                   {(selectedGiftCard.purchasedBy ||
                     selectedGiftCard.recipientName) && (
-                    <div className="pt-4 border-t">
+                    <div className="border-t pt-4">
                       {selectedGiftCard.purchasedBy && (
                         <div className="mb-3">
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Purchased By
                           </p>
                           <p className="font-medium">
@@ -1561,14 +1560,14 @@ export default function FacilityBillingPage() {
                       )}
                       {selectedGiftCard.recipientName && (
                         <div className="mb-3">
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Recipient
                           </p>
                           <p className="font-medium">
                             {selectedGiftCard.recipientName}
                           </p>
                           {selectedGiftCard.recipientEmail && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {selectedGiftCard.recipientEmail}
                             </p>
                           )}
@@ -1576,7 +1575,7 @@ export default function FacilityBillingPage() {
                       )}
                       {selectedGiftCard.message && (
                         <div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Message
                           </p>
                           <p className="text-sm italic">
@@ -1588,15 +1587,15 @@ export default function FacilityBillingPage() {
                   )}
 
                   {selectedGiftCard.transactionHistory.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <h4 className="font-semibold mb-3">
+                    <div className="border-t pt-4">
+                      <h4 className="mb-3 font-semibold">
                         Transaction History
                       </h4>
                       <div className="space-y-2">
                         {selectedGiftCard.transactionHistory.map((tx) => (
                           <div
                             key={tx.id}
-                            className="flex justify-between items-center p-2 rounded bg-muted/50"
+                            className="bg-muted/50 flex items-center justify-between rounded-sm p-2"
                           >
                             <div>
                               <Badge
@@ -1609,18 +1608,22 @@ export default function FacilityBillingPage() {
                               >
                                 {tx.type}
                               </Badge>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 {formatDateTime(tx.timestamp)}
                               </p>
                             </div>
                             <div className="text-right">
                               <p
-                                className={`font-semibold ${tx.type === "redemption" ? "text-red-600" : "text-green-600"}`}
+                                className={`font-semibold ${
+                                  tx.type === "redemption"
+                                    ? `text-red-600`
+                                    : `text-green-600`
+                                } `}
                               >
                                 {tx.type === "redemption" ? "-" : "+"}$
                                 {tx.amount.toFixed(2)}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 Balance: ${tx.balanceAfter.toFixed(2)}
                               </p>
                             </div>

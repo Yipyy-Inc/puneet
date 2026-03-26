@@ -3,7 +3,7 @@ import { SubscriptionAnalytics } from "@/components/subscriptions/SubscriptionAn
 
 export default function TrackingPage() {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
           Subscription Tracking & Analytics

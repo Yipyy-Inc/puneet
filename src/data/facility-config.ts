@@ -128,8 +128,10 @@ export const facilityConfig = {
   messaging: {
     officeHours: {
       enabled: true,
-      responseTimeExpectation: "We typically respond within 24 hours during business days",
-      awayMessage: "We're currently away. We'll respond to your message as soon as we're back!",
+      responseTimeExpectation:
+        "We typically respond within 24 hours during business days",
+      awayMessage:
+        "We're currently away. We'll respond to your message as soon as we're back!",
       autoReplyEnabled: true,
     },
   },
@@ -270,7 +272,8 @@ export const facilityConfig = {
         mustScheduleWithinDays: 30, // Must schedule makeup within 30 days of missed session
         expiresAfterDays: 60, // Makeup credit expires after 60 days if not used
       },
-      cancellationPolicy: "Free cancellation up to 24 hours before makeup session",
+      cancellationPolicy:
+        "Free cancellation up to 24 hours before makeup session",
       refundPolicy: "Makeup sessions are non-refundable once scheduled",
     },
     courseDetails: {
@@ -281,8 +284,10 @@ export const facilityConfig = {
         "Water bottle for your dog",
         "Waste bags",
       ],
-      defaultCancellationPolicy: "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
-      defaultRefundPolicy: "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
+      defaultCancellationPolicy:
+        "Free cancellation up to 48 hours before the series starts. After that, a 25% cancellation fee applies. No refunds after the series begins.",
+      defaultRefundPolicy:
+        "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
     },
   },
 };

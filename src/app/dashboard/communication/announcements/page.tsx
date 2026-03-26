@@ -223,8 +223,8 @@ export default function AnnouncementsPage() {
       defaultVisible: true,
       render: (announcement) => (
         <div className="max-w-xs">
-          <p className="font-medium truncate">{announcement.title}</p>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="truncate font-medium">{announcement.title}</p>
+          <p className="text-muted-foreground truncate text-xs">
             {announcement.content}
           </p>
         </div>
@@ -239,9 +239,9 @@ export default function AnnouncementsPage() {
         <Badge
           className={
             announcement.status === "Published"
-              ? "bg-success/10 text-success hover:bg-success/20 border-0"
+              ? `bg-success/10 text-success hover:bg-success/20 border-0`
               : announcement.status === "Draft"
-                ? "bg-warning/10 text-warning hover:bg-warning/20 border-0"
+                ? `bg-warning/10 text-warning hover:bg-warning/20 border-0`
                 : "bg-muted text-muted-foreground border-0"
           }
         >
@@ -258,9 +258,9 @@ export default function AnnouncementsPage() {
         <Badge
           className={
             announcement.priority === "High"
-              ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border-0"
+              ? `bg-destructive/10 text-destructive hover:bg-destructive/20 border-0`
               : announcement.priority === "Normal"
-                ? "bg-info/10 text-info hover:bg-info/20 border-0"
+                ? `bg-info/10 text-info hover:bg-info/20 border-0`
                 : "bg-muted text-muted-foreground border-0"
           }
         >
@@ -275,7 +275,7 @@ export default function AnnouncementsPage() {
       defaultVisible: true,
       render: (announcement) => (
         <div className="flex items-center gap-1.5">
-          <Building className="h-3.5 w-3.5 text-muted-foreground" />
+          <Building className="text-muted-foreground h-3.5 w-3.5" />
           <span className="text-sm">{announcement.target}</span>
         </div>
       ),
@@ -398,11 +398,11 @@ export default function AnnouncementsPage() {
       {formData.target === "Specific Facilities" && (
         <div>
           <Label>Select Facilities</Label>
-          <div className="mt-1.5 max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+          <div className="mt-1.5 max-h-32 space-y-1 overflow-y-auto rounded-md border p-2">
             {facilities.slice(0, 5).map((facility) => (
               <label
                 key={facility.id}
-                className="flex items-center gap-2 p-1.5 hover:bg-muted/50 rounded cursor-pointer"
+                className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-sm p-1.5"
               >
                 <input
                   type="checkbox"
@@ -422,7 +422,7 @@ export default function AnnouncementsPage() {
                       });
                     }
                   }}
-                  className="rounded"
+                  className="rounded-sm"
                 />
                 <span className="text-sm">{facility.name}</span>
               </label>
@@ -442,7 +442,7 @@ export default function AnnouncementsPage() {
             }
             className="mt-1.5"
           />
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             Leave empty to publish immediately or save as draft
           </p>
         </div>
@@ -452,7 +452,7 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="flex-1 overflow-auto p-6 pt-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Announcements</h1>
           <p className="text-muted-foreground mt-1">
@@ -466,18 +466,18 @@ export default function AnnouncementsPage() {
           >
             <DialogTrigger asChild>
               <Button variant="destructive" className="shadow-sm">
-                <Radio className="h-4 w-4 mr-2" />
+                <Radio className="mr-2 size-4" />
                 Emergency Broadcast
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-destructive">
+                <DialogTitle className="text-destructive flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
                   Emergency Broadcast
                 </DialogTitle>
               </DialogHeader>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-4 text-sm">
                 This will immediately send a high-priority notification to ALL
                 facilities. Use only for critical situations.
               </p>
@@ -520,7 +520,7 @@ export default function AnnouncementsPage() {
                   onClick={handleEmergencyBroadcast}
                   disabled={!formData.title || !formData.content}
                 >
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="mr-2 size-4" />
                   Broadcast Now
                 </Button>
               </DialogFooter>
@@ -533,7 +533,7 @@ export default function AnnouncementsPage() {
           >
             <DialogTrigger asChild>
               <Button className="shadow-sm" onClick={resetForm}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Create Announcement
               </Button>
             </DialogTrigger>
@@ -544,14 +544,14 @@ export default function AnnouncementsPage() {
               {renderAnnouncementForm()}
               <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => handleCreate("Draft")}>
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="mr-2 size-4" />
                   Save as Draft
                 </Button>
                 <Button
                   onClick={() => handleCreate("Published")}
                   disabled={!formData.title || !formData.content}
                 >
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="mr-2 size-4" />
                   Publish Now
                 </Button>
               </DialogFooter>
@@ -561,7 +561,7 @@ export default function AnnouncementsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Published"
           value={publishedCount.toString()}
@@ -596,30 +596,30 @@ export default function AnnouncementsPage() {
         <TabsList className="h-12 max-w-lg">
           <TabsTrigger
             value="all"
-            className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
           >
-            <Megaphone className="h-4 w-4" />
+            <Megaphone className="size-4" />
             All ({announcementsState.length})
           </TabsTrigger>
           <TabsTrigger
             value="published"
-            className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
           >
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="size-4" />
             Published ({publishedCount})
           </TabsTrigger>
           <TabsTrigger
             value="drafts"
-            className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
           >
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             Drafts ({draftCount})
           </TabsTrigger>
           <TabsTrigger
             value="archived"
-            className="gap-2 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+            className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary gap-2"
           >
-            <Archive className="h-4 w-4" />
+            <Archive className="size-4" />
             Archived ({archivedCount})
           </TabsTrigger>
         </TabsList>
@@ -664,7 +664,7 @@ export default function AnnouncementsPage() {
                             size="icon"
                             className="h-8 w-8"
                           >
-                            <MoreVertical className="h-4 w-4" />
+                            <MoreVertical className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -674,20 +674,20 @@ export default function AnnouncementsPage() {
                               setIsViewDialogOpen(true);
                             }}
                           >
-                            <Eye className="h-4 w-4 mr-2" />
+                            <Eye className="mr-2 size-4" />
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => openEditDialog(announcement)}
                           >
-                            <Edit className="h-4 w-4 mr-2" />
+                            <Edit className="mr-2 size-4" />
                             Edit
                           </DropdownMenuItem>
                           {announcement.status === "Draft" && (
                             <DropdownMenuItem
                               onClick={() => handlePublish(announcement)}
                             >
-                              <Send className="h-4 w-4 mr-2" />
+                              <Send className="mr-2 size-4" />
                               Publish
                             </DropdownMenuItem>
                           )}
@@ -695,7 +695,7 @@ export default function AnnouncementsPage() {
                             <DropdownMenuItem
                               onClick={() => handleArchive(announcement)}
                             >
-                              <Archive className="h-4 w-4 mr-2" />
+                              <Archive className="mr-2 size-4" />
                               Archive
                             </DropdownMenuItem>
                           )}
@@ -707,7 +707,7 @@ export default function AnnouncementsPage() {
                               setIsDeleteDialogOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="mr-2 size-4" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -726,7 +726,7 @@ export default function AnnouncementsPage() {
         <DialogContent className="min-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-primary" />
+              <Megaphone className="text-primary h-5 w-5" />
               {selectedAnnouncement?.title}
             </DialogTitle>
           </DialogHeader>
@@ -754,33 +754,33 @@ export default function AnnouncementsPage() {
                   {selectedAnnouncement.priority} Priority
                 </Badge>
               </div>
-              <div className="p-4 bg-muted/50 rounded-xl">
+              <div className="bg-muted/50 rounded-xl p-4">
                 <p className="text-sm whitespace-pre-wrap">
                   {selectedAnnouncement.content}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Target</p>
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Target</p>
                   <p className="text-sm font-medium">
                     {selectedAnnouncement.target}
                   </p>
                 </div>
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Author</p>
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Author</p>
                   <p className="text-sm font-medium">
                     {selectedAnnouncement.author}
                   </p>
                 </div>
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-xs text-muted-foreground">Created</p>
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">Created</p>
                   <p className="text-sm font-medium">
                     {new Date(selectedAnnouncement.createdAt).toLocaleString()}
                   </p>
                 </div>
                 {selectedAnnouncement.status === "Published" && (
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-muted-foreground text-xs">
                       Read Receipts
                     </p>
                     <p className="text-sm font-medium">
@@ -797,7 +797,7 @@ export default function AnnouncementsPage() {
               {selectedAnnouncement.facilities &&
                 selectedAnnouncement.facilities.length > 0 && (
                   <div>
-                    <p className="text-xs text-muted-foreground mb-2">
+                    <p className="text-muted-foreground mb-2 text-xs">
                       Target Facilities
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -846,12 +846,12 @@ export default function AnnouncementsPage() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="min-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Delete Announcement
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Are you sure you want to delete &quot;{selectedAnnouncement?.title}
             &quot;? This action cannot be undone.
           </p>

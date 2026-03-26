@@ -32,14 +32,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${plusJakarta.variable}`}
+      className={` ${inter.variable} ${plusJakarta.variable} `}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <div className="min-h-screen flex flex-col pb-16">
+        <div className="flex min-h-screen flex-col pb-16">
           <main className="flex-1">{children}</main>
         </div>
-        <footer className="fixed bottom-0 left-0 right-0 border-t px-4 py-4 text-xs text-muted-foreground flex items-center justify-center bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-40">
+        <footer className="bg-background/95 text-muted-foreground supports-backdrop-filter:bg-background/80 fixed right-0 bottom-0 left-0 z-40 flex items-center justify-center border-t px-4 py-4 text-xs backdrop-blur-sm">
           © 2026 Yipyy. All rights reserved.
         </footer>
         <Toaster />

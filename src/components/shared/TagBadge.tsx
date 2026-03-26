@@ -48,7 +48,7 @@ export function TagBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full font-medium whitespace-nowrap shrink-0 transition-all",
+        `inline-flex shrink-0 items-center rounded-full font-medium whitespace-nowrap transition-all`,
         SIZE_CLASSES[size],
         PRIORITY_RING[tag.priority],
         className,
@@ -80,7 +80,7 @@ export function TagBadge({
             e.stopPropagation();
             onRemove();
           }}
-          className="ml-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 p-0.5 transition-colors"
+          className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
           aria-label={`Remove ${tag.name} tag`}
         >
           <X className={size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5"} />

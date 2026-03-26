@@ -2,7 +2,7 @@ import { AlertsNotifications } from "@/components/system-health/AlertsNotificati
 
 export default function AlertsNotificationsPage() {
   return (
-    <div className="min-h-screen bg-linear-to-br from-background via-background to-muted/20 p-6">
+    <div className="from-background via-background to-muted/20 min-h-screen bg-linear-to-br p-6">
       <AlertsNotifications />
     </div>
   );

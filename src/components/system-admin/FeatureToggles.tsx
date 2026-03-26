@@ -200,7 +200,7 @@ export function FeatureToggles() {
       render: (config) => (
         <div>
           <p className="font-medium">{config.tenantName}</p>
-          <p className="text-xs text-muted-foreground">{config.tenantId}</p>
+          <p className="text-muted-foreground text-xs">{config.tenantId}</p>
         </div>
       ),
     },
@@ -211,7 +211,7 @@ export function FeatureToggles() {
       defaultVisible: true,
       render: (config) => (
         <Badge
-          className={`${getTierBadge(config.subscriptionTier)} border capitalize`}
+          className={` ${getTierBadge(config.subscriptionTier)} border capitalize`}
         >
           {config.subscriptionTier}
         </Badge>
@@ -241,7 +241,7 @@ export function FeatureToggles() {
       defaultVisible: true,
       render: (config) =>
         config.moduleOverrides.length > 0 ? (
-          <Badge variant="outline" className="text-warning border-warning/30">
+          <Badge variant="outline" className="border-warning/30 text-warning">
             {config.moduleOverrides.length} active
           </Badge>
         ) : (
@@ -285,7 +285,7 @@ export function FeatureToggles() {
       render: (flag) => (
         <div>
           <p className="font-medium">{flag.name}</p>
-          <p className="text-xs text-muted-foreground font-mono">{flag.key}</p>
+          <p className="text-muted-foreground font-mono text-xs">{flag.key}</p>
         </div>
       ),
     },
@@ -327,7 +327,7 @@ export function FeatureToggles() {
           );
         }
         return (
-          <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
+          <span className="bg-muted rounded-sm px-2 py-1 font-mono text-sm">
             {flag.currentValue.length > 30
               ? flag.currentValue.substring(0, 30) + "..."
               : flag.currentValue}
@@ -344,7 +344,7 @@ export function FeatureToggles() {
         const scopeInfo = getScopeBadge(flag.scope);
         const Icon = scopeInfo.icon;
         return (
-          <Badge className={`${scopeInfo.color} border-0 gap-1`}>
+          <Badge className={` ${scopeInfo.color} gap-1 border-0`}>
             <Icon className="h-3 w-3" />
             {flag.scope}
           </Badge>
@@ -359,10 +359,10 @@ export function FeatureToggles() {
       render: (flag) => (
         <div className="flex items-center gap-2">
           {syncingFlags.includes(flag.id) ? (
-            <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+            <RefreshCw className="text-primary size-4 animate-spin" />
           ) : (
             <Badge
-              className={`${getSyncStatusBadge(flag.syncStatus)} border capitalize`}
+              className={` ${getSyncStatusBadge(flag.syncStatus)} border capitalize`}
             >
               {flag.syncStatus}
             </Badge>
@@ -447,13 +447,13 @@ export function FeatureToggles() {
               disabled={syncingFlags.length > 0}
             >
               <RefreshCw
-                className={`h-4 w-4 mr-2 ${syncingFlags.length > 0 ? "animate-spin" : ""}`}
+                className={`mr-2 size-4 ${syncingFlags.length > 0 ? `animate-spin` : ""} `}
               />
               Sync All ({stats.pendingSync})
             </Button>
           )}
           <Button onClick={() => setIsNewFlagModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             New Config Flag
           </Button>
         </div>
@@ -507,17 +507,17 @@ export function FeatureToggles() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 max-w-lg">
+        <TabsList className="grid h-12 w-full max-w-lg grid-cols-3">
           <TabsTrigger value="tenants" className="gap-2">
-            <Building className="h-4 w-4" />
+            <Building className="size-4" />
             Tenant Modules
           </TabsTrigger>
           <TabsTrigger value="flags" className="gap-2">
-            <Flag className="h-4 w-4" />
+            <Flag className="size-4" />
             Remote Config
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
-            <History className="h-4 w-4" />
+            <History className="size-4" />
             Change History
           </TabsTrigger>
         </TabsList>
@@ -552,7 +552,7 @@ export function FeatureToggles() {
                         setIsTenantModalOpen(true);
                       }}
                     >
-                      <Settings className="h-4 w-4 mr-1" />
+                      <Settings className="mr-1 size-4" />
                       Configure
                     </Button>
                   </div>
@@ -576,8 +576,8 @@ export function FeatureToggles() {
                     applied instantly.
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Zap className="h-4 w-4 text-success" />
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Zap className="text-success size-4" />
                   Real-time sync enabled
                 </div>
               </div>
@@ -600,10 +600,10 @@ export function FeatureToggles() {
                         setIsFlagModalOpen(true);
                       }}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                     <Button variant="ghost" size="sm">
-                      <Copy className="h-4 w-4" />
+                      <Copy className="size-4" />
                     </Button>
                   </div>
                 )}
@@ -628,10 +628,10 @@ export function FeatureToggles() {
                 {configChangeLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
                   >
                     <div
-                      className={`p-2 rounded-lg ${
+                      className={`rounded-lg p-2 ${
                         log.action === "toggled"
                           ? "bg-primary/10"
                           : log.action === "updated"
@@ -639,25 +639,25 @@ export function FeatureToggles() {
                             : log.action === "created"
                               ? "bg-success/10"
                               : "bg-muted"
-                      }`}
+                      } `}
                     >
                       {log.action === "toggled" ? (
-                        <ToggleRight className="h-5 w-5 text-primary" />
+                        <ToggleRight className="text-primary h-5 w-5" />
                       ) : log.action === "updated" ? (
-                        <Edit className="h-5 w-5 text-warning" />
+                        <Edit className="text-warning h-5 w-5" />
                       ) : log.action === "created" ? (
-                        <Plus className="h-5 w-5 text-success" />
+                        <Plus className="text-success h-5 w-5" />
                       ) : (
-                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                        <RefreshCw className="text-muted-foreground h-5 w-5" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
                         <span className="font-medium capitalize">
                           {log.action}
                         </span>
                         <span className="text-muted-foreground">•</span>
-                        <code className="text-sm bg-muted px-2 py-0.5 rounded">
+                        <code className="bg-muted rounded-sm px-2 py-0.5 text-sm">
                           {log.configKey}
                         </code>
                       </div>
@@ -668,7 +668,7 @@ export function FeatureToggles() {
                               ? log.previousValue.substring(0, 50) + "..."
                               : log.previousValue}
                           </span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <ArrowRight className="text-muted-foreground h-3 w-3" />
                           <span className="text-foreground">
                             {log.newValue.length > 50
                               ? log.newValue.substring(0, 50) + "..."
@@ -677,11 +677,11 @@ export function FeatureToggles() {
                         </div>
                       )}
                       {!log.previousValue && log.newValue && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Created with value: {log.newValue}
                         </p>
                       )}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
                           {log.actor}
@@ -724,7 +724,7 @@ export function FeatureToggles() {
 
       {/* Tenant Module Configuration Modal */}
       <Dialog open={isTenantModalOpen} onOpenChange={setIsTenantModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col">
+        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building className="h-5 w-5" />
@@ -737,29 +737,29 @@ export function FeatureToggles() {
           </DialogHeader>
 
           {selectedTenant && (
-            <div className="flex-1 overflow-y-auto space-y-6 py-4">
+            <div className="flex-1 space-y-6 overflow-y-auto py-4">
               {/* Tenant Info */}
-              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="bg-muted/50 flex items-center gap-4 rounded-lg p-4">
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Subscription Tier
                   </p>
                   <Badge
-                    className={`${getTierBadge(selectedTenant.subscriptionTier)} border capitalize mt-1`}
+                    className={` ${getTierBadge(selectedTenant.subscriptionTier)} mt-1 border capitalize`}
                   >
                     {selectedTenant.subscriptionTier}
                   </Badge>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Enabled Modules
                   </p>
-                  <p className="text-2xl font-bold text-success">
+                  <p className="text-success text-2xl font-bold">
                     {selectedTenant.enabledModules.length}
                   </p>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">Last Updated</p>
+                  <p className="text-muted-foreground text-sm">Last Updated</p>
                   <p className="text-sm font-medium">
                     {new Date(selectedTenant.lastUpdated).toLocaleDateString()}
                   </p>
@@ -791,15 +791,19 @@ export function FeatureToggles() {
                     return (
                       <div
                         key={module.id}
-                        className={`flex items-center justify-between p-4 border rounded-lg ${
+                        className={`flex items-center justify-between rounded-lg border p-4 ${
                           isEnabled
                             ? "border-success/30 bg-success/5"
                             : "border-muted"
-                        }`}
+                        } `}
                       >
                         <div className="flex items-center gap-3">
                           <Package
-                            className={`h-5 w-5 ${isEnabled ? "text-success" : "text-muted-foreground"}`}
+                            className={`h-5 w-5 ${
+                              isEnabled
+                                ? "text-success"
+                                : `text-muted-foreground`
+                            } `}
                           />
                           <div>
                             <div className="flex items-center gap-2">
@@ -816,7 +820,7 @@ export function FeatureToggles() {
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               Required tier:{" "}
                               {module.tier === "all"
                                 ? "All tiers"
@@ -828,7 +832,7 @@ export function FeatureToggles() {
                           {!tierAllowed && !hasOverride && (
                             <Badge
                               variant="outline"
-                              className="text-xs text-muted-foreground"
+                              className="text-muted-foreground text-xs"
                             >
                               Tier upgrade required
                             </Badge>
@@ -854,23 +858,23 @@ export function FeatureToggles() {
               {/* Active Overrides */}
               {selectedTenant.moduleOverrides.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="font-semibold flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
+                  <h4 className="flex items-center gap-2 font-semibold">
+                    <Shield className="size-4" />
                     Active Module Overrides
                   </h4>
                   <div className="space-y-2">
                     {selectedTenant.moduleOverrides.map((override) => (
                       <div
                         key={override.moduleId}
-                        className="flex items-center justify-between p-3 bg-warning/5 border border-warning/20 rounded-lg"
+                        className="border-warning/20 bg-warning/5 flex items-center justify-between rounded-lg border p-3"
                       >
                         <div>
                           <p className="font-medium">{override.moduleName}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {override.overrideReason}
                           </p>
                           {override.expiresAt && (
-                            <p className="text-xs text-warning mt-1">
+                            <p className="text-warning mt-1 text-xs">
                               Expires:{" "}
                               {new Date(
                                 override.expiresAt,
@@ -883,7 +887,7 @@ export function FeatureToggles() {
                           size="sm"
                           className="text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     ))}
@@ -901,7 +905,7 @@ export function FeatureToggles() {
               Close
             </Button>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Override
             </Button>
           </DialogFooter>
@@ -917,7 +921,7 @@ export function FeatureToggles() {
               {selectedFlag?.name}
             </DialogTitle>
             <DialogDescription>
-              <code className="text-sm bg-muted px-2 py-0.5 rounded">
+              <code className="bg-muted rounded-sm px-2 py-0.5 text-sm">
                 {selectedFlag?.key}
               </code>
             </DialogDescription>
@@ -930,28 +934,28 @@ export function FeatureToggles() {
               </p>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Type</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Type</p>
                   <Badge variant="outline" className="capitalize">
                     {selectedFlag.type}
                   </Badge>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Scope</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Scope</p>
                   <Badge
-                    className={`${getScopeBadge(selectedFlag.scope).color} border-0`}
+                    className={` ${getScopeBadge(selectedFlag.scope).color} border-0`}
                   >
                     {selectedFlag.scope}
                   </Badge>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">
                     Environment
                   </p>
                   <Badge variant="outline">{selectedFlag.environment}</Badge>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Version</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Version</p>
                   <span className="font-mono">v{selectedFlag.version}</span>
                 </div>
               </div>
@@ -968,7 +972,7 @@ export function FeatureToggles() {
               <div className="space-y-2">
                 <Label>Current Value</Label>
                 {selectedFlag.type === "boolean" ? (
-                  <div className="flex items-center gap-3 p-3 border rounded-lg">
+                  <div className="flex items-center gap-3 rounded-lg border p-3">
                     <Switch
                       checked={selectedFlag.currentValue === "true"}
                       disabled={syncingFlags.includes(selectedFlag.id)}
@@ -986,7 +990,7 @@ export function FeatureToggles() {
                         : "Disabled"}
                     </span>
                     {syncingFlags.includes(selectedFlag.id) && (
-                      <RefreshCw className="h-4 w-4 animate-spin ml-auto" />
+                      <RefreshCw className="ml-auto size-4 animate-spin" />
                     )}
                   </div>
                 ) : (
@@ -1017,13 +1021,13 @@ export function FeatureToggles() {
                   </div>
                 )}
 
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
+              <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3 text-sm">
                 <span className="text-muted-foreground">
                   Last synced:{" "}
                   {new Date(selectedFlag.lastSynced).toLocaleString()}
                 </span>
                 <Badge
-                  className={`${getSyncStatusBadge(selectedFlag.syncStatus)} border`}
+                  className={` ${getSyncStatusBadge(selectedFlag.syncStatus)} border`}
                 >
                   {selectedFlag.syncStatus}
                 </Badge>
@@ -1036,11 +1040,11 @@ export function FeatureToggles() {
               Close
             </Button>
             <Button variant="destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 size-4" />
               Delete Flag
             </Button>
             <Button>
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="mr-2 size-4" />
               Force Sync
             </Button>
           </DialogFooter>
@@ -1129,7 +1133,7 @@ export function FeatureToggles() {
               Cancel
             </Button>
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Create Flag
             </Button>
           </DialogFooter>

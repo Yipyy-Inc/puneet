@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
   MessageSquare,
@@ -173,15 +172,20 @@ export function YipyyGoStaffReviewModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
-          <p className="text-muted-foreground">No YipyyGo form found for this booking.</p>
-          <p className="text-sm text-muted-foreground">
-            You can mark as manually completed if the customer did not submit. This is logged for audit.
+          <p className="text-muted-foreground">
+            No YipyyGo form found for this booking.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            You can mark as manually completed if the customer did not submit.
+            This is logged for audit.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            <Button onClick={handleManualCompleteNoForm}>Mark Manually Completed</Button>
+            <Button onClick={handleManualCompleteNoForm}>
+              Mark Manually Completed
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -199,7 +203,7 @@ export function YipyyGoStaffReviewModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>YipyyGo Review – Booking #{bookingId}</DialogTitle>
           </DialogHeader>
@@ -208,17 +212,18 @@ export function YipyyGoStaffReviewModal({
             {/* Belongings + photo */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Package className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Package className="size-4" />
                   Belongings
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
                 {form.belongings?.length ? (
-                  <ul className="list-disc pl-4 space-y-1">
+                  <ul className="list-disc space-y-1 pl-4">
                     {form.belongings.map((b) => (
                       <li key={b.id}>
-                        {b.type.replace("_", " ")} {b.quantity ? `× ${b.quantity}` : ""}
+                        {b.type.replace("_", " ")}{" "}
+                        {b.quantity ? `× ${b.quantity}` : ""}
                         {b.notes ? ` – ${b.notes}` : ""}
                       </li>
                     ))}
@@ -227,7 +232,7 @@ export function YipyyGoStaffReviewModal({
                   <p className="text-muted-foreground">None listed</p>
                 )}
                 {form.belongingsPhotoUrl && (
-                  <p className="mt-2 text-muted-foreground">Photo attached</p>
+                  <p className="text-muted-foreground mt-2">Photo attached</p>
                 )}
               </CardContent>
             </Card>
@@ -235,15 +240,17 @@ export function YipyyGoStaffReviewModal({
             {/* Feeding */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Utensils className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Utensils className="size-4" />
                   Feeding
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
-                {form.feedingInstructions?.foodType || form.feedingInstructions?.portionSize ? (
+                {form.feedingInstructions?.foodType ||
+                form.feedingInstructions?.portionSize ? (
                   <p>
-                    {form.feedingInstructions.foodType} – {form.feedingInstructions.portionSize}{" "}
+                    {form.feedingInstructions.foodType} –{" "}
+                    {form.feedingInstructions.portionSize}{" "}
                     {form.feedingInstructions.portionUnit}
                   </p>
                 ) : (
@@ -255,8 +262,8 @@ export function YipyyGoStaffReviewModal({
             {/* Medications */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Pill className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Pill className="size-4" />
                   Medications
                 </CardTitle>
               </CardHeader>
@@ -264,7 +271,7 @@ export function YipyyGoStaffReviewModal({
                 {form.noMedications ? (
                   <p className="text-muted-foreground">No medications</p>
                 ) : form.medications?.length ? (
-                  <ul className="list-disc pl-4 space-y-1">
+                  <ul className="list-disc space-y-1 pl-4">
                     {form.medications.map((m) => (
                       <li key={m.id}>
                         {m.name} – {m.dosage}, {m.frequency}
@@ -280,8 +287,8 @@ export function YipyyGoStaffReviewModal({
             {/* Notes / behavior */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Heart className="size-4" />
                   Notes
                 </CardTitle>
               </CardHeader>
@@ -297,8 +304,8 @@ export function YipyyGoStaffReviewModal({
             {/* Add-ons + tip */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <DollarSign className="size-4" />
                   Add-ons & tip
                 </CardTitle>
               </CardHeader>
@@ -307,7 +314,8 @@ export function YipyyGoStaffReviewModal({
                   <ul className="list-disc pl-4">
                     {selectedAddOns.map((a) => (
                       <li key={a.id}>
-                        {a.name} {a.quantity ? `× ${a.quantity}` : ""} – ${a.price}
+                        {a.name} {a.quantity ? `× ${a.quantity}` : ""} – $
+                        {a.price}
                       </li>
                     ))}
                   </ul>
@@ -326,21 +334,30 @@ export function YipyyGoStaffReviewModal({
             {hasSubmitted ? (
               <>
                 <Button onClick={handleApprove}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <CheckCircle2 className="mr-2 size-4" />
                   Approve
                 </Button>
-                <Button variant="secondary" onClick={() => setRequestChangesOpen(true)}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
+                <Button
+                  variant="secondary"
+                  onClick={() => setRequestChangesOpen(true)}
+                >
+                  <MessageSquare className="mr-2 size-4" />
                   Request changes
                 </Button>
-                <Button variant="secondary" onClick={() => setEditReasonOpen(true)}>
-                  <Pencil className="h-4 w-4 mr-2" />
+                <Button
+                  variant="secondary"
+                  onClick={() => setEditReasonOpen(true)}
+                >
+                  <Pencil className="mr-2 size-4" />
                   Edit internally
                 </Button>
               </>
             ) : null}
-            <Button variant="outline" onClick={() => setManualCompleteOpen(true)}>
-              <UserCheck className="h-4 w-4 mr-2" />
+            <Button
+              variant="outline"
+              onClick={() => setManualCompleteOpen(true)}
+            >
+              <UserCheck className="mr-2 size-4" />
               Manual completion
             </Button>
           </DialogFooter>
@@ -361,7 +378,10 @@ export function YipyyGoStaffReviewModal({
             rows={4}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRequestChangesOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setRequestChangesOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleRequestChanges}>Send request</Button>
@@ -386,7 +406,10 @@ export function YipyyGoStaffReviewModal({
             <Button variant="outline" onClick={() => setEditReasonOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditInternally} disabled={!internalEditReason.trim()}>
+            <Button
+              onClick={handleEditInternally}
+              disabled={!internalEditReason.trim()}
+            >
               Save & approve
             </Button>
           </DialogFooter>
@@ -399,12 +422,16 @@ export function YipyyGoStaffReviewModal({
           <DialogHeader>
             <DialogTitle>Manual completion</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Mark this booking’s YipyyGo as completed without a customer submission. Use when the
-            customer provided info in person or by phone.
+          <p className="text-muted-foreground text-sm">
+            Mark this booking’s YipyyGo as completed without a customer
+            submission. Use when the customer provided info in person or by
+            phone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setManualCompleteOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setManualCompleteOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleManualComplete}>Mark completed</Button>

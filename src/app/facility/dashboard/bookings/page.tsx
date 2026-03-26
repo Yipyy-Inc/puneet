@@ -297,7 +297,7 @@ export default function FacilityBookingsPage() {
         return (
           <div className="flex flex-col">
             <span className="font-medium">{client?.name || "Unknown"}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               Pet: {pet?.name || "Unknown"}
             </span>
           </div>
@@ -328,11 +328,11 @@ export default function FacilityBookingsPage() {
           <div className="flex flex-col">
             <span className="text-sm">{booking.startDate}</span>
             {booking.startDate !== booking.endDate && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 to {booking.endDate}
               </span>
             )}
-            <span className="text-xs text-muted-foreground mt-0.5">
+            <span className="text-muted-foreground mt-0.5 text-xs">
               {duration}
             </span>
           </div>
@@ -393,7 +393,7 @@ export default function FacilityBookingsPage() {
       render: (booking) => {
         const count = getNoteCount("booking", booking.id);
         return count > 0 ? (
-          <Badge variant="outline" className="text-xs gap-1">
+          <Badge variant="outline" className="gap-1 text-xs">
             {count} {count === 1 ? "note" : "notes"}
           </Badge>
         ) : (
@@ -712,7 +712,7 @@ export default function FacilityBookingsPage() {
               setViewMode(viewMode === "calendar" ? "table" : "calendar")
             }
           >
-            <CalendarDays className="mr-2 h-4 w-4" />
+            <CalendarDays className="mr-2 size-4" />
             {viewMode === "calendar" ? "Table View" : "Calendar View"}
           </Button>
           <Button
@@ -720,7 +720,7 @@ export default function FacilityBookingsPage() {
             size="sm"
             onClick={() => exportBookingsToCSV(getDataForTab())}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             {"Export"}
           </Button>
         </div>
@@ -733,11 +733,11 @@ export default function FacilityBookingsPage() {
             <CardTitle className="text-sm font-medium">
               {"All Bookings"}
             </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {upcomingBookings.length} upcoming bookings
             </p>
           </CardContent>
@@ -747,11 +747,11 @@ export default function FacilityBookingsPage() {
             <CardTitle className="text-sm font-medium">
               {"Today's Bookings"}
             </CardTitle>
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todayBookings.length}</div>
-            <p className="text-xs text-muted-foreground">{"Active today"}</p>
+            <p className="text-muted-foreground text-xs">{"Active today"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -759,11 +759,11 @@ export default function FacilityBookingsPage() {
             <CardTitle className="text-sm font-medium">
               {"Completed Bookings"}
             </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedBookings}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {totalBookings > 0
                 ? Math.round((completedBookings / totalBookings) * 100)
                 : 0}
@@ -776,11 +776,11 @@ export default function FacilityBookingsPage() {
             <CardTitle className="text-sm font-medium">
               {"Pending Bookings"}
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingBookings.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               ${pendingRevenue} pending revenue
             </p>
           </CardContent>
@@ -790,12 +790,12 @@ export default function FacilityBookingsPage() {
             <CardTitle className="text-sm font-medium">
               {"Total Revenue"}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalRevenue}</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
+            <p className="text-muted-foreground flex items-center text-xs">
+              <TrendingUp className="mr-1 h-3 w-3" />
               {"Total received"}
             </p>
           </CardContent>
@@ -813,7 +813,7 @@ export default function FacilityBookingsPage() {
               ([service, revenue]: [string, number]) => (
                 <div
                   key={service}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted"
+                  className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2"
                 >
                   <Badge variant="outline" className="capitalize">
                     {service}
@@ -870,7 +870,7 @@ export default function FacilityBookingsPage() {
               {"All"}
               <Badge
                 variant="secondary"
-                className="ml-2 px-1.5 py-0 text-xs h-5"
+                className="ml-2 h-5 px-1.5 py-0 text-xs"
               >
                 {allBookings.length}
               </Badge>
@@ -879,7 +879,7 @@ export default function FacilityBookingsPage() {
               {"Today"}
               <Badge
                 variant="secondary"
-                className="ml-2 px-1.5 py-0 text-xs h-5"
+                className="ml-2 h-5 px-1.5 py-0 text-xs"
               >
                 {todayBookings.length}
               </Badge>
@@ -888,7 +888,7 @@ export default function FacilityBookingsPage() {
               {"Upcoming"}
               <Badge
                 variant="secondary"
-                className="ml-2 px-1.5 py-0 text-xs h-5"
+                className="ml-2 h-5 px-1.5 py-0 text-xs"
               >
                 {upcomingBookings.length}
               </Badge>
@@ -897,7 +897,7 @@ export default function FacilityBookingsPage() {
               {"Past"}
               <Badge
                 variant="secondary"
-                className="ml-2 px-1.5 py-0 text-xs h-5"
+                className="ml-2 h-5 px-1.5 py-0 text-xs"
               >
                 {pastBookings.length}
               </Badge>
@@ -906,7 +906,7 @@ export default function FacilityBookingsPage() {
               {"Pending"}
               <Badge
                 variant="secondary"
-                className="ml-2 px-1.5 py-0 text-xs h-5"
+                className="ml-2 h-5 px-1.5 py-0 text-xs"
               >
                 {pendingBookings.length}
               </Badge>
@@ -917,11 +917,11 @@ export default function FacilityBookingsPage() {
             {getDataForTab().length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-16">
-                  <CalendarX className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
+                  <CalendarX className="text-muted-foreground/50 mb-4 h-16 w-16" />
+                  <h3 className="mb-2 text-lg font-semibold">
                     {"No bookings found"}
                   </h3>
-                  <p className="text-muted-foreground text-center max-w-md">
+                  <p className="text-muted-foreground max-w-md text-center">
                     {"There are no bookings in this category yet."}
                   </p>
                 </CardContent>
@@ -940,7 +940,7 @@ export default function FacilityBookingsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
@@ -950,7 +950,7 @@ export default function FacilityBookingsPage() {
                           setSelectedBooking(booking as unknown as Booking)
                         }
                       >
-                        <Eye className="mr-2 h-4 w-4" />
+                        <Eye className="mr-2 size-4" />
                         {"View Details"}
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -958,7 +958,7 @@ export default function FacilityBookingsPage() {
                           setEditingBooking(booking as unknown as Booking)
                         }
                       >
-                        <Pencil className="mr-2 h-4 w-4" />
+                        <Pencil className="mr-2 size-4" />
                         {"Edit Booking"}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -971,7 +971,7 @@ export default function FacilityBookingsPage() {
                             )
                           }
                         >
-                          <CheckCircle className="mr-2 h-4 w-4" />
+                          <CheckCircle className="mr-2 size-4" />
                           {"Confirm Booking"}
                         </DropdownMenuItem>
                       )}
@@ -983,7 +983,7 @@ export default function FacilityBookingsPage() {
                             )
                           }
                         >
-                          <CheckCircle className="mr-2 h-4 w-4" />
+                          <CheckCircle className="mr-2 size-4" />
                           {"Mark as Completed"}
                         </DropdownMenuItem>
                       )}
@@ -997,7 +997,7 @@ export default function FacilityBookingsPage() {
                               )
                             }
                           >
-                            <DollarSign className="mr-2 h-4 w-4" />
+                            <DollarSign className="mr-2 size-4" />
                             {"Process Payment"}
                           </DropdownMenuItem>
                         </>
@@ -1013,7 +1013,7 @@ export default function FacilityBookingsPage() {
                                 )
                               }
                             >
-                              <DollarSign className="mr-2 h-4 w-4" />
+                              <DollarSign className="mr-2 size-4" />
                               Process Refund
                             </DropdownMenuItem>
                           </>
@@ -1030,7 +1030,7 @@ export default function FacilityBookingsPage() {
                               )
                             }
                           >
-                            <X className="mr-2 h-4 w-4" />
+                            <X className="mr-2 size-4" />
                             {"Cancel Booking"}
                           </DropdownMenuItem>
                         </>
@@ -1088,8 +1088,8 @@ export default function FacilityBookingsPage() {
         open={!!selectedBooking}
         onOpenChange={() => setSelectedBooking(null)}
       >
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="sr-only">
               <DialogTitle>Booking #{selectedBooking?.id} Details</DialogTitle>
             </DialogHeader>

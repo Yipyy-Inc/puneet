@@ -54,15 +54,15 @@ export default function FacilityConfigPage() {
             </p>
           </div>
           <Button onClick={handleSave}>
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="mr-2 size-4" />
             {"Save All Changes"}
           </Button>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-start space-x-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600" />
             <div>
-              <div className="text-yellow-800 font-medium">{"Warning"}</div>
+              <div className="font-medium text-yellow-800">{"Warning"}</div>
               <div className="text-sm text-yellow-700">
                 {
                   "Some configuration changes may be destructive and could affect existing bookings, pricing, or facility operations. Please review changes carefully before saving."

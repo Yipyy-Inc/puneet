@@ -16,7 +16,7 @@ import type {
  */
 function evaluateRule(
   rule: FormScoringRule,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
 ): number {
   if (!rule.sourceFieldId) return rule.points; // unconditional points
 
@@ -56,7 +56,7 @@ function evaluateRule(
  */
 function determineOutcome(
   score: number,
-  thresholds?: FormScoringConfig["thresholds"]
+  thresholds?: FormScoringConfig["thresholds"],
 ): ScoreOutcome {
   const approveAbove = thresholds?.approveAbove ?? 80;
   const needsReviewAbove = thresholds?.needsReviewAbove ?? 50;
@@ -71,7 +71,7 @@ function determineOutcome(
  */
 export function computeSubmissionScore(
   config: FormScoringConfig,
-  answers: Record<string, unknown>
+  answers: Record<string, unknown>,
 ): SubmissionScore {
   if (!config.enabled || !config.rules?.length) {
     return {
@@ -109,10 +109,18 @@ export function getOutcomeDisplay(outcome: ScoreOutcome): {
 } {
   switch (outcome) {
     case "approve":
-      return { label: "Approved", color: "text-emerald-700", bg: "bg-emerald-50" };
+      return {
+        label: "Approved",
+        color: "text-emerald-700",
+        bg: "bg-emerald-50",
+      };
     case "deny":
       return { label: "Denied", color: "text-rose-700", bg: "bg-rose-50" };
     case "needs_review":
-      return { label: "Needs Review", color: "text-amber-700", bg: "bg-amber-50" };
+      return {
+        label: "Needs Review",
+        color: "text-amber-700",
+        bg: "bg-amber-50",
+      };
   }
 }

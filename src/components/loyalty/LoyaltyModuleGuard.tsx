@@ -2,7 +2,13 @@
 
 import { ReactNode } from "react";
 import { useLoyaltyConfig } from "@/hooks/use-loyalty-config";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Settings, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -45,7 +51,7 @@ export function LoyaltyModuleGuard({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-muted-foreground" />
+              <Lock className="text-muted-foreground h-5 w-5" />
               Loyalty Program Disabled
             </CardTitle>
             <CardDescription>
@@ -53,12 +59,12 @@ export function LoyaltyModuleGuard({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-muted-foreground mb-4 text-sm">
               Contact your facility administrator to enable the loyalty program.
             </p>
             <Button asChild variant="outline">
               <Link href="/facility/dashboard/settings">
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="mr-2 size-4" />
                 Go to Settings
               </Link>
             </Button>
@@ -92,7 +98,7 @@ export function LoyaltyModuleGuard({
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You don't have permission to view loyalty features.
+              You don&apos;t have permission to view loyalty features.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -107,7 +113,7 @@ export function LoyaltyModuleGuard({
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You don't have permission to manage loyalty settings.
+              You don&apos;t have permission to manage loyalty settings.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -122,7 +128,7 @@ export function LoyaltyModuleGuard({
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You don't have permission to view loyalty reports.
+              You don&apos;t have permission to view loyalty reports.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -146,7 +152,8 @@ export function LoyaltyModuleGuard({
             <CardHeader>
               <CardTitle>Feature Not Available</CardTitle>
               <CardDescription>
-                The {requireFeature} feature is not enabled in your loyalty program configuration.
+                The {requireFeature} feature is not enabled in your loyalty
+                program configuration.
               </CardDescription>
             </CardHeader>
           </Card>

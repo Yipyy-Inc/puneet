@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import type { YipyyGoConfig, ReminderRule, DeliveryChannel } from "@/data/yipyygo-config";
+import type {
+  YipyyGoConfig,
+  ReminderRule,
+  DeliveryChannel,
+} from "@/data/yipyygo-config";
 import { DELIVERY_CHANNEL_LABELS } from "@/data/yipyygo-config";
 
 interface TimingRemindersSectionProps {
@@ -45,7 +55,10 @@ export function TimingRemindersSection({
     }
   };
 
-  const handleDeliveryChannelToggle = (channel: DeliveryChannel, enabled: boolean) => {
+  const handleDeliveryChannelToggle = (
+    channel: DeliveryChannel,
+    enabled: boolean,
+  ) => {
     const channels = enabled
       ? [...config.timing.deliveryChannels, channel]
       : config.timing.deliveryChannels.filter((c) => c !== channel);
@@ -70,7 +83,7 @@ export function TimingRemindersSection({
 
   const handleReminderChange = (id: string, updates: Partial<ReminderRule>) => {
     const updated = config.timing.reminderRules.map((r) =>
-      r.id === id ? { ...r, ...updates } : r
+      r.id === id ? { ...r, ...updates } : r,
     );
     onConfigChange({
       timing: { ...config.timing, reminderRules: updated },
@@ -110,14 +123,12 @@ export function TimingRemindersSection({
                 value={config.timing.initialSendTime}
                 onChange={(e) => handleInitialSendTimeChange(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 When to send the initial form request
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="deadline">
-                Deadline (hours before check-in)
-              </Label>
+              <Label htmlFor="deadline">Deadline (hours before check-in)</Label>
               <Input
                 id="deadline"
                 type="number"
@@ -125,7 +136,7 @@ export function TimingRemindersSection({
                 value={config.timing.deadline}
                 onChange={(e) => handleDeadlineChange(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Must be completed by this time
               </p>
             </div>
@@ -145,7 +156,10 @@ export function TimingRemindersSection({
           {(["email", "sms", "push"] as DeliveryChannel[]).map((channel) => {
             const isEnabled = config.timing.deliveryChannels.includes(channel);
             return (
-              <div key={channel} className="flex items-center justify-between p-3 border rounded-lg">
+              <div
+                key={channel}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id={`channel-${channel}`}
@@ -154,13 +168,14 @@ export function TimingRemindersSection({
                       handleDeliveryChannelToggle(channel, checked === true)
                     }
                   />
-                  <Label htmlFor={`channel-${channel}`} className="cursor-pointer font-medium">
+                  <Label
+                    htmlFor={`channel-${channel}`}
+                    className="cursor-pointer font-medium"
+                  >
                     {DELIVERY_CHANNEL_LABELS[channel]}
                   </Label>
                 </div>
-                {isEnabled && (
-                  <Badge variant="secondary">Enabled</Badge>
-                )}
+                {isEnabled && <Badge variant="secondary">Enabled</Badge>}
               </div>
             );
           })}
@@ -178,19 +193,22 @@ export function TimingRemindersSection({
               </CardDescription>
             </div>
             <Button onClick={handleAddReminder} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Reminder
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {config.timing.reminderRules.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No reminder rules configured. Add one to send automatic reminders.
             </p>
           ) : (
             config.timing.reminderRules.map((reminder, index) => (
-              <div key={reminder.id} className="p-4 border rounded-lg space-y-3">
+              <div
+                key={reminder.id}
+                className="space-y-3 rounded-lg border p-4"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">Reminder {index + 1}</Badge>
@@ -200,7 +218,7 @@ export function TimingRemindersSection({
                     size="icon"
                     onClick={() => handleRemoveReminder(reminder.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

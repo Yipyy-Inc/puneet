@@ -2,14 +2,17 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
-import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Gift,
@@ -22,10 +25,8 @@ import {
   Award,
   GiftIcon,
   Sparkles,
-  ArrowRight,
   ExternalLink,
   Info,
-  X,
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,17 +38,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  customerLoyaltyData, 
-  loyaltySettings, 
-  referralCodes, 
+import {
+  customerLoyaltyData,
+  loyaltySettings,
+  referralCodes,
   badges,
   loyaltyRewards,
   pointsEarningRules,
   type LoyaltyReward,
   type PointsEarningRule,
 } from "@/data/marketing";
-import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { payments } from "@/data/payments";
 
@@ -59,31 +59,37 @@ export default function CustomerRewardsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
-  const [selectedReward, setSelectedReward] = useState<LoyaltyReward | null>(null);
+  const [selectedReward, setSelectedReward] = useState<LoyaltyReward | null>(
+    null,
+  );
   const [isRedeeming, setIsRedeeming] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Get customer data
-  const customer = useMemo(() => clients.find((c) => c.id === MOCK_CUSTOMER_ID), []);
-
   // Get loyalty data
   const loyaltyData = useMemo(() => {
-    const customerLoyalty = customerLoyaltyData.find((l) => l.clientId === MOCK_CUSTOMER_ID);
+    const customerLoyalty = customerLoyaltyData.find(
+      (l) => l.clientId === MOCK_CUSTOMER_ID,
+    );
     if (!customerLoyalty) return null;
 
-    const currentTier = loyaltySettings.tiers.find((t) => t.id === customerLoyalty.tier);
-    const nextTier = loyaltySettings.tiers.find(
-      (t) => t.minPoints > customerLoyalty.points
+    const currentTier = loyaltySettings.tiers.find(
+      (t) => t.id === customerLoyalty.tier,
     );
-    const pointsToNextTier = nextTier ? nextTier.minPoints - customerLoyalty.points : 0;
+    const nextTier = loyaltySettings.tiers.find(
+      (t) => t.minPoints > customerLoyalty.points,
+    );
+    const pointsToNextTier = nextTier
+      ? nextTier.minPoints - customerLoyalty.points
+      : 0;
     const currentTierMaxPoints = nextTier ? nextTier.minPoints : Infinity;
     const currentTierMinPoints = currentTier?.minPoints || 0;
     const progressInTier = customerLoyalty.points - currentTierMinPoints;
     const tierRange = currentTierMaxPoints - currentTierMinPoints;
-    const progressPercentage = tierRange > 0 ? (progressInTier / tierRange) * 100 : 0;
+    const progressPercentage =
+      tierRange > 0 ? (progressInTier / tierRange) * 100 : 0;
 
     return {
       ...customerLoyalty,
@@ -103,7 +109,8 @@ export default function CustomerRewardsPage() {
   const customerBookings = useMemo(() => {
     if (!selectedFacility) return [];
     return bookings.filter(
-      (b) => b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id
+      (b) =>
+        b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id,
     );
   }, [selectedFacility]);
 
@@ -111,7 +118,10 @@ export default function CustomerRewardsPage() {
   const customerPayments = useMemo(() => {
     if (!selectedFacility) return [];
     return payments.filter(
-      (p) => p.clientId === MOCK_CUSTOMER_ID && p.facilityId === selectedFacility.id && p.status === "completed"
+      (p) =>
+        p.clientId === MOCK_CUSTOMER_ID &&
+        p.facilityId === selectedFacility.id &&
+        p.status === "completed",
     );
   }, [selectedFacility]);
 
@@ -126,12 +136,24 @@ export default function CustomerRewardsPage() {
 
     badges.forEach((badge) => {
       let earnedBadge = false;
-      if (badge.criteria.type === "bookings_count" && bookingCount >= badge.criteria.threshold) {
+      if (
+        badge.criteria.type === "bookings_count" &&
+        bookingCount >= badge.criteria.threshold
+      ) {
         earnedBadge = true;
-      } else if (badge.criteria.type === "total_spent" && totalSpent >= badge.criteria.threshold) {
+      } else if (
+        badge.criteria.type === "total_spent" &&
+        totalSpent >= badge.criteria.threshold
+      ) {
         earnedBadge = true;
-      } else if (badge.criteria.type === "referrals" && customerReferralCodes.length > 0) {
-        const totalReferrals = customerReferralCodes.reduce((sum, ref) => sum + ref.timesUsed, 0);
+      } else if (
+        badge.criteria.type === "referrals" &&
+        customerReferralCodes.length > 0
+      ) {
+        const totalReferrals = customerReferralCodes.reduce(
+          (sum, ref) => sum + ref.timesUsed,
+          0,
+        );
         if (totalReferrals >= badge.criteria.threshold) {
           earnedBadge = true;
         }
@@ -153,17 +175,6 @@ export default function CustomerRewardsPage() {
     });
   };
 
-  const formatDateTime = (dateString: string) => {
-    if (!isMounted) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const copyToClipboard = (text: string, codeId: string) => {
     navigator.clipboard.writeText(text);
     setCopiedCode(codeId);
@@ -179,12 +190,14 @@ export default function CustomerRewardsPage() {
 
   if (!loyaltySettings.enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+        <div className="mx-auto max-w-4xl">
           <Card>
             <CardContent className="p-12 text-center">
-              <Gift className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h2 className="text-2xl font-bold mb-2">Loyalty Program Not Available</h2>
+              <Gift className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
+              <h2 className="mb-2 text-2xl font-bold">
+                Loyalty Program Not Available
+              </h2>
               <p className="text-muted-foreground">
                 The loyalty program is not currently enabled for this facility.
               </p>
@@ -196,8 +209,8 @@ export default function CustomerRewardsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Loyalty & Rewards</h1>
@@ -208,21 +221,21 @@ export default function CustomerRewardsPage() {
 
         {/* Points Summary Card */}
         {loyaltyData && (
-          <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20">
+          <Card className="border-primary/20 from-primary/10 via-primary/5 to-background bg-linear-to-br">
             <CardContent className="p-6">
               <div className="space-y-4">
                 {/* Points Balance and Value */}
-                <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="p-4 rounded-full bg-primary/20">
-                      <Star className="h-8 w-8 text-primary" />
+                    <div className="bg-primary/20 rounded-full p-4">
+                      <Star className="text-primary h-8 w-8" />
                     </div>
                     <div>
                       <div className="text-4xl font-bold">
                         {loyaltyData.points.toLocaleString()} Points
                       </div>
                       {loyaltySettings.pointsValue > 0 && (
-                        <div className="text-sm text-muted-foreground mt-1">
+                        <div className="text-muted-foreground mt-1 text-sm">
                           ≈ ${pointsValue.toFixed(2)} value
                         </div>
                       )}
@@ -235,41 +248,51 @@ export default function CustomerRewardsPage() {
 
                 {/* Tier and Progress */}
                 {loyaltyData.currentTier && (
-                  <div className="space-y-3 pt-4 border-t">
+                  <div className="space-y-3 border-t pt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="default" 
+                        <Badge
+                          variant="default"
                           className="text-sm font-semibold"
                           style={{
-                            backgroundColor: loyaltyData.currentTier.color || undefined,
-                            color: loyaltyData.currentTier.color ? "#fff" : undefined,
+                            backgroundColor:
+                              loyaltyData.currentTier.color || undefined,
+                            color: loyaltyData.currentTier.color
+                              ? "#fff"
+                              : undefined,
                           }}
                         >
                           {loyaltyData.currentTier.name} Tier
                         </Badge>
                       </div>
                       {loyaltyData.nextTier && (
-                        <div className="text-sm font-medium text-muted-foreground">
-                          {loyaltyData.pointsToNextTier.toLocaleString()} points away from {loyaltyData.nextTier.name} Tier
+                        <div className="text-muted-foreground text-sm font-medium">
+                          {loyaltyData.pointsToNextTier.toLocaleString()} points
+                          away from {loyaltyData.nextTier.name} Tier
                         </div>
                       )}
                       {!loyaltyData.nextTier && (
-                        <div className="text-sm font-medium text-muted-foreground">
+                        <div className="text-muted-foreground text-sm font-medium">
                           Highest tier achieved! 🎉
                         </div>
                       )}
                     </div>
-                    
+
                     {loyaltyData.nextTier && (
                       <>
-                        <Progress value={loyaltyData.progressPercentage} className="h-3" />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <Progress
+                          value={loyaltyData.progressPercentage}
+                          className="h-3"
+                        />
+                        <div className="text-muted-foreground flex items-center justify-between text-xs">
                           <span>
-                            {loyaltyData.points.toLocaleString()} / {loyaltyData.nextTier.minPoints.toLocaleString()} points
+                            {loyaltyData.points.toLocaleString()} /{" "}
+                            {loyaltyData.nextTier.minPoints.toLocaleString()}{" "}
+                            points
                           </span>
                           <span>
-                            {Math.round(loyaltyData.progressPercentage)}% to {loyaltyData.nextTier.name}
+                            {Math.round(loyaltyData.progressPercentage)}% to{" "}
+                            {loyaltyData.nextTier.name}
                           </span>
                         </div>
                       </>
@@ -279,9 +302,11 @@ export default function CustomerRewardsPage() {
 
                 {/* Summary Text (Example Format) */}
                 {loyaltyData.nextTier && (
-                  <div className="pt-2 border-t">
+                  <div className="border-t pt-2">
                     <p className="text-base font-medium">
-                      {loyaltyData.points.toLocaleString()} Points – {loyaltyData.pointsToNextTier.toLocaleString()} points away from {loyaltyData.nextTier.name} Tier
+                      {loyaltyData.points.toLocaleString()} Points –{" "}
+                      {loyaltyData.pointsToNextTier.toLocaleString()} points
+                      away from {loyaltyData.nextTier.name} Tier
                     </p>
                   </div>
                 )}
@@ -298,32 +323,47 @@ export default function CustomerRewardsPage() {
               How Points Are Earned
             </CardTitle>
             <CardDescription>
-              Ways to earn loyalty points at {selectedFacility?.name || "this facility"}
+              Ways to earn loyalty points at{" "}
+              {selectedFacility?.name || "this facility"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {pointsEarningRules.map((rule: PointsEarningRule, index: number) => (
-                <div key={index} className="flex items-start gap-3 p-3 rounded-lg border bg-background/60">
-                  <div className="p-2 rounded-full bg-primary/10 mt-0.5">
-                    <Star className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{rule.description}</div>
-                    {rule.applicableServices && rule.applicableServices.length > 0 && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Applies to: {rule.applicableServices.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}
+              {pointsEarningRules.map(
+                (rule: PointsEarningRule, index: number) => (
+                  <div
+                    key={index}
+                    className="bg-background/60 flex items-start gap-3 rounded-lg border p-3"
+                  >
+                    <div className="bg-primary/10 mt-0.5 rounded-full p-2">
+                      <Star className="text-primary size-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">
+                        {rule.description}
                       </div>
-                    )}
-                    {rule.conditions && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        <Info className="h-3 w-3 inline mr-1" />
-                        {rule.conditions}
-                      </div>
-                    )}
+                      {rule.applicableServices &&
+                        rule.applicableServices.length > 0 && (
+                          <div className="text-muted-foreground mt-1 text-xs">
+                            Applies to:{" "}
+                            {rule.applicableServices
+                              .map(
+                                (s: string) =>
+                                  s.charAt(0).toUpperCase() + s.slice(1),
+                              )
+                              .join(", ")}
+                          </div>
+                        )}
+                      {rule.conditions && (
+                        <div className="text-muted-foreground mt-1 text-xs">
+                          <Info className="mr-1 inline h-3 w-3" />
+                          {rule.conditions}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
@@ -338,18 +378,19 @@ export default function CustomerRewardsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {loyaltyData.currentTier.benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="text-primary mt-0.5 h-5 w-5 shrink-0" />
                     <span className="text-sm">{benefit}</span>
                   </div>
                 ))}
               </div>
               {loyaltyData.currentTier.discountPercentage > 0 && (
-                <div className="mt-4 p-3 bg-primary/10 rounded-lg">
-                  <div className="text-sm font-medium text-primary">
-                    {loyaltyData.currentTier.discountPercentage}% discount on all services
+                <div className="bg-primary/10 mt-4 rounded-lg p-3">
+                  <div className="text-primary text-sm font-medium">
+                    {loyaltyData.currentTier.discountPercentage}% discount on
+                    all services
                   </div>
                 </div>
               )}
@@ -372,7 +413,7 @@ export default function CustomerRewardsPage() {
               <CardHeader>
                 <CardTitle>Loyalty History</CardTitle>
                 <CardDescription>
-                  Track how you've earned and redeemed points
+                  Track how you&apos;ve earned and redeemed points
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -381,54 +422,66 @@ export default function CustomerRewardsPage() {
                     <table className="w-full">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Date</th>
-                          <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Activity</th>
-                          <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Points</th>
+                          <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
+                            Date
+                          </th>
+                          <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
+                            Activity
+                          </th>
+                          <th className="text-muted-foreground px-4 py-3 text-right text-sm font-semibold">
+                            Points
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {loyaltyData.pointsHistory
-                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .sort(
+                            (a, b) =>
+                              new Date(b.date).getTime() -
+                              new Date(a.date).getTime(),
+                          )
                           .map((entry, index) => {
                             const isEarned = entry.type === "earned";
                             const isRedeemed = entry.type === "redeemed";
                             const isExpired = entry.type === "expired";
-                            
+
                             return (
                               <tr
                                 key={index}
-                                className="border-b hover:bg-muted/50 transition-colors"
+                                className="hover:bg-muted/50 border-b transition-colors"
                               >
-                                <td className="py-3 px-4 text-sm font-medium">
+                                <td className="px-4 py-3 text-sm font-medium">
                                   {formatDate(entry.date)}
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="px-4 py-3">
                                   <div className="flex items-center gap-2">
                                     {isEarned ? (
-                                      <div className="p-1.5 rounded-full bg-green-100 dark:bg-green-900/20">
+                                      <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/20">
                                         <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                                       </div>
                                     ) : isRedeemed ? (
-                                      <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                                      <div className="rounded-full bg-blue-100 p-1.5 dark:bg-blue-900/20">
                                         <GiftIcon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                                       </div>
                                     ) : (
-                                      <div className="p-1.5 rounded-full bg-red-100 dark:bg-red-900/20">
+                                      <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/20">
                                         <Clock className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                                       </div>
                                     )}
-                                    <span className="text-sm">{entry.description}</span>
+                                    <span className="text-sm">
+                                      {entry.description}
+                                    </span>
                                   </div>
                                 </td>
-                                <td className="py-3 px-4 text-right">
+                                <td className="px-4 py-3 text-right">
                                   <span
                                     className={`font-semibold ${
                                       isEarned
-                                        ? "text-green-600 dark:text-green-400"
+                                        ? `text-green-600 dark:text-green-400`
                                         : isExpired
-                                        ? "text-red-600 dark:text-red-400"
-                                        : "text-blue-600 dark:text-blue-400"
-                                    }`}
+                                          ? `text-red-600 dark:text-red-400`
+                                          : `text-blue-600 dark:text-blue-400`
+                                    } `}
                                   >
                                     {entry.points > 0 ? "+" : ""}
                                     {entry.points}
@@ -441,33 +494,47 @@ export default function CustomerRewardsPage() {
                     </table>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <TrendingUp className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No points history yet</p>
-                    <p className="text-xs mt-1">Start booking services to earn points!</p>
+                    <p className="mt-1 text-xs">
+                      Start booking services to earn points!
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Stats Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{loyaltyData?.points || 0}</div>
-                  <div className="text-sm text-muted-foreground">Current Points</div>
+                  <div className="text-2xl font-bold">
+                    {loyaltyData?.points || 0}
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Current Points
+                  </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{loyaltyData?.lifetimePoints || 0}</div>
-                  <div className="text-sm text-muted-foreground">Lifetime Points</div>
+                  <div className="text-2xl font-bold">
+                    {loyaltyData?.lifetimePoints || 0}
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Lifetime Points
+                  </div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
-                  <div className="text-sm text-muted-foreground">Total Spent</div>
+                  <div className="text-2xl font-bold">
+                    ${totalSpent.toFixed(2)}
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Total Spent
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -490,48 +557,76 @@ export default function CustomerRewardsPage() {
                   <div className="space-y-4">
                     {/* Active Rewards */}
                     {loyaltyRewards
-                      .filter((reward: LoyaltyReward) => reward.isActive && (reward.requiredPoints === 0 || loyaltyData.points >= reward.requiredPoints))
+                      .filter(
+                        (reward: LoyaltyReward) =>
+                          reward.isActive &&
+                          (reward.requiredPoints === 0 ||
+                            loyaltyData.points >= reward.requiredPoints),
+                      )
                       .map((reward: LoyaltyReward) => (
                         <Card key={reward.id} className="border-primary/20">
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold">{reward.name}</h3>
+                                <div className="mb-1 flex items-center gap-2">
+                                  <h3 className="font-semibold">
+                                    {reward.name}
+                                  </h3>
                                   {reward.requiredPoints === 0 && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
                                       Visit-Based
                                     </Badge>
                                   )}
                                 </div>
-                                <p className="text-sm text-muted-foreground mb-2">
+                                <p className="text-muted-foreground mb-2 text-sm">
                                   {reward.description}
                                 </p>
                                 <div className="flex items-center gap-4 text-sm">
                                   {reward.requiredPoints > 0 && (
                                     <div>
-                                      <span className="text-muted-foreground">Required: </span>
-                                      <span className="font-semibold">{reward.requiredPoints.toLocaleString()} points</span>
+                                      <span className="text-muted-foreground">
+                                        Required:{" "}
+                                      </span>
+                                      <span className="font-semibold">
+                                        {reward.requiredPoints.toLocaleString()}{" "}
+                                        points
+                                      </span>
                                     </div>
                                   )}
                                   {reward.expiryDays && (
                                     <div>
-                                      <span className="text-muted-foreground">Expires: </span>
-                                      <span className="font-semibold">{reward.expiryDays} days</span>
-                                    </div>
-                                  )}
-                                  {reward.applicableServices && reward.applicableServices.length > 0 && (
-                                    <div>
-                                      <span className="text-muted-foreground">Services: </span>
+                                      <span className="text-muted-foreground">
+                                        Expires:{" "}
+                                      </span>
                                       <span className="font-semibold">
-                                        {reward.applicableServices.map((s: string) => s.charAt(0).toUpperCase() + s.slice(1)).join(", ")}
+                                        {reward.expiryDays} days
                                       </span>
                                     </div>
                                   )}
+                                  {reward.applicableServices &&
+                                    reward.applicableServices.length > 0 && (
+                                      <div>
+                                        <span className="text-muted-foreground">
+                                          Services:{" "}
+                                        </span>
+                                        <span className="font-semibold">
+                                          {reward.applicableServices
+                                            .map(
+                                              (s: string) =>
+                                                s.charAt(0).toUpperCase() +
+                                                s.slice(1),
+                                            )
+                                            .join(", ")}
+                                        </span>
+                                      </div>
+                                    )}
                                 </div>
                                 {reward.terms && (
-                                  <div className="mt-2 p-2 bg-muted rounded text-xs text-muted-foreground">
-                                    <Info className="h-3 w-3 inline mr-1" />
+                                  <div className="bg-muted text-muted-foreground mt-2 rounded-sm p-2 text-xs">
+                                    <Info className="mr-1 inline h-3 w-3" />
                                     {reward.terms}
                                   </div>
                                 )}
@@ -539,23 +634,28 @@ export default function CustomerRewardsPage() {
                               <div className="flex flex-col items-end gap-2">
                                 {reward.requiredPoints > 0 && (
                                   <div className="text-right">
-                                    <div className="text-2xl font-bold text-primary">
+                                    <div className="text-primary text-2xl font-bold">
                                       {reward.requiredPoints.toLocaleString()}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">points</div>
+                                    <div className="text-muted-foreground text-xs">
+                                      points
+                                    </div>
                                   </div>
                                 )}
                                 <Button
                                   size="sm"
                                   disabled={
-                                    reward.requiredPoints > 0 && loyaltyData.points < reward.requiredPoints
+                                    reward.requiredPoints > 0 &&
+                                    loyaltyData.points < reward.requiredPoints
                                   }
                                   onClick={() => {
                                     setSelectedReward(reward);
                                     setRedeemDialogOpen(true);
                                   }}
                                 >
-                                  {reward.requiredPoints === 0 ? "View Details" : "Redeem"}
+                                  {reward.requiredPoints === 0
+                                    ? "View Details"
+                                    : "Redeem"}
                                 </Button>
                               </div>
                             </div>
@@ -565,29 +665,44 @@ export default function CustomerRewardsPage() {
 
                     {/* Rewards Not Yet Available */}
                     {loyaltyRewards
-                      .filter((reward: LoyaltyReward) => reward.isActive && reward.requiredPoints > 0 && loyaltyData.points < reward.requiredPoints)
+                      .filter(
+                        (reward: LoyaltyReward) =>
+                          reward.isActive &&
+                          reward.requiredPoints > 0 &&
+                          loyaltyData.points < reward.requiredPoints,
+                      )
                       .map((reward: LoyaltyReward) => (
-                        <Card key={reward.id} className="border-muted opacity-60">
+                        <Card
+                          key={reward.id}
+                          className="border-muted opacity-60"
+                        >
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold text-muted-foreground">{reward.name}</h3>
+                                <div className="mb-1 flex items-center gap-2">
+                                  <h3 className="text-muted-foreground font-semibold">
+                                    {reward.name}
+                                  </h3>
                                 </div>
-                                <p className="text-sm text-muted-foreground mb-2">
+                                <p className="text-muted-foreground mb-2 text-sm">
                                   {reward.description}
                                 </p>
-                                <div className="text-sm text-muted-foreground">
-                                  Need {reward.requiredPoints.toLocaleString()} points • You have {loyaltyData.points.toLocaleString()} points
+                                <div className="text-muted-foreground text-sm">
+                                  Need {reward.requiredPoints.toLocaleString()}{" "}
+                                  points • You have{" "}
+                                  {loyaltyData.points.toLocaleString()} points
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-2xl font-bold text-muted-foreground">
+                                <div className="text-muted-foreground text-2xl font-bold">
                                   {reward.requiredPoints.toLocaleString()}
                                 </div>
-                                <div className="text-xs text-muted-foreground">points</div>
-                                <div className="text-xs text-muted-foreground mt-2">
-                                  {reward.requiredPoints - loyaltyData.points} more needed
+                                <div className="text-muted-foreground text-xs">
+                                  points
+                                </div>
+                                <div className="text-muted-foreground mt-2 text-xs">
+                                  {reward.requiredPoints - loyaltyData.points}{" "}
+                                  more needed
                                 </div>
                               </div>
                             </div>
@@ -595,17 +710,20 @@ export default function CustomerRewardsPage() {
                         </Card>
                       ))}
 
-                    {loyaltyRewards.filter((r: LoyaltyReward) => r.isActive).length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    {loyaltyRewards.filter((r: LoyaltyReward) => r.isActive)
+                      .length === 0 && (
+                      <div className="text-muted-foreground py-8 text-center">
+                        <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
                         <p>No rewards available at this time</p>
-                        <p className="text-xs mt-1">Check back later for new rewards!</p>
+                        <p className="mt-1 text-xs">
+                          Check back later for new rewards!
+                        </p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No loyalty data available</p>
                   </div>
                 )}
@@ -630,24 +748,38 @@ export default function CustomerRewardsPage() {
                   customerReferralCodes.map((refCode) => (
                     <Card key={refCode.id} className="border-primary/20">
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="flex-1 min-w-[200px]">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Label className="text-sm font-medium">Your Referral Code</Label>
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div className="min-w-[200px] flex-1">
+                            <div className="mb-2 flex items-center gap-2">
+                              <Label className="text-sm font-medium">
+                                Your Referral Code
+                              </Label>
                               <Badge variant="outline" className="font-mono">
                                 {refCode.code}
                               </Badge>
                             </div>
-                            <div className="text-sm text-muted-foreground space-y-1">
+                            <div className="text-muted-foreground space-y-1 text-sm">
                               <div>
-                                You earn: <span className="font-semibold">${refCode.referrerReward}</span> per referral
+                                You earn:{" "}
+                                <span className="font-semibold">
+                                  ${refCode.referrerReward}
+                                </span>{" "}
+                                per referral
                               </div>
                               <div>
-                                Friend gets: <span className="font-semibold">${refCode.refereeReward}</span> off their first booking
+                                Friend gets:{" "}
+                                <span className="font-semibold">
+                                  ${refCode.refereeReward}
+                                </span>{" "}
+                                off their first booking
                               </div>
                               <div>
-                                Used: <span className="font-semibold">{refCode.timesUsed}</span>
-                                {refCode.maxUses && ` / ${refCode.maxUses}`} times
+                                Used:{" "}
+                                <span className="font-semibold">
+                                  {refCode.timesUsed}
+                                </span>
+                                {refCode.maxUses && ` / ${refCode.maxUses}`}{" "}
+                                times
                               </div>
                             </div>
                           </div>
@@ -655,16 +787,18 @@ export default function CustomerRewardsPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => copyToClipboard(refCode.code, refCode.id)}
+                              onClick={() =>
+                                copyToClipboard(refCode.code, refCode.id)
+                              }
                             >
                               {copiedCode === refCode.id ? (
                                 <>
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  <CheckCircle2 className="mr-2 size-4" />
                                   Copied!
                                 </>
                               ) : (
                                 <>
-                                  <Copy className="h-4 w-4 mr-2" />
+                                  <Copy className="mr-2 size-4" />
                                   Copy Code
                                 </>
                               )}
@@ -684,7 +818,7 @@ export default function CustomerRewardsPage() {
                                 }
                               }}
                             >
-                              <ExternalLink className="h-4 w-4 mr-2" />
+                              <ExternalLink className="mr-2 size-4" />
                               Share
                             </Button>
                           </div>
@@ -693,10 +827,10 @@ export default function CustomerRewardsPage() {
                     </Card>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No referral codes available</p>
-                    <p className="text-xs mt-1">
+                    <p className="mt-1 text-xs">
                       Contact the facility to get your referral code
                     </p>
                   </div>
@@ -705,11 +839,18 @@ export default function CustomerRewardsPage() {
                 {/* How Referrals Work */}
                 <Card className="bg-muted/50">
                   <CardContent className="p-4">
-                    <div className="text-sm font-medium mb-2">How Referrals Work:</div>
-                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <div className="mb-2 text-sm font-medium">
+                      How Referrals Work:
+                    </div>
+                    <ol className="text-muted-foreground list-inside list-decimal space-y-1 text-sm">
                       <li>Share your unique referral code with friends</li>
-                      <li>When they sign up and make their first booking using your code, they get a discount</li>
-                      <li>You earn a reward credit for each successful referral</li>
+                      <li>
+                        When they sign up and make their first booking using
+                        your code, they get a discount
+                      </li>
+                      <li>
+                        You earn a reward credit for each successful referral
+                      </li>
                       <li>Rewards are automatically added to your account</li>
                     </ol>
                   </CardContent>
@@ -732,15 +873,17 @@ export default function CustomerRewardsPage() {
               </CardHeader>
               <CardContent>
                 {earnedBadges.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {earnedBadges.map((badge) => (
                       <Card key={badge.id} className="border-primary/20">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <div className="text-3xl">{badge.icon}</div>
                             <div className="flex-1">
-                              <div className="font-semibold mb-1">{badge.name}</div>
-                              <div className="text-sm text-muted-foreground mb-2">
+                              <div className="mb-1 font-semibold">
+                                {badge.name}
+                              </div>
+                              <div className="text-muted-foreground mb-2 text-sm">
                                 {badge.description}
                               </div>
                               {badge.reward && (
@@ -749,22 +892,24 @@ export default function CustomerRewardsPage() {
                                   {badge.reward.type === "discount"
                                     ? `${badge.reward.value}% off`
                                     : badge.reward.type === "points"
-                                    ? `${badge.reward.value} points`
-                                    : badge.reward.value}
+                                      ? `${badge.reward.value} points`
+                                      : badge.reward.value}
                                 </Badge>
                               )}
                             </div>
-                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Award className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Award className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No badges earned yet</p>
-                    <p className="text-xs mt-1">Keep booking and referring to unlock badges!</p>
+                    <p className="mt-1 text-xs">
+                      Keep booking and referring to unlock badges!
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -783,58 +928,86 @@ export default function CustomerRewardsPage() {
             </DialogHeader>
             {selectedReward && loyaltyData && (
               <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="font-semibold mb-2">{selectedReward.name}</div>
-                  <div className="text-sm text-muted-foreground mb-3">
+                <div className="bg-muted rounded-lg p-4">
+                  <div className="mb-2 font-semibold">
+                    {selectedReward.name}
+                  </div>
+                  <div className="text-muted-foreground mb-3 text-sm">
                     {selectedReward.description}
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Points Required:</span>
-                    <span className="font-semibold">{selectedReward.requiredPoints.toLocaleString()} points</span>
+                    <span className="text-muted-foreground">
+                      Points Required:
+                    </span>
+                    <span className="font-semibold">
+                      {selectedReward.requiredPoints.toLocaleString()} points
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm mt-2">
+                  <div className="mt-2 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Your Points:</span>
-                    <span className="font-semibold">{loyaltyData.points.toLocaleString()} points</span>
+                    <span className="font-semibold">
+                      {loyaltyData.points.toLocaleString()} points
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-sm mt-2 font-semibold">
+                  <div className="mt-2 flex items-center justify-between text-sm font-semibold">
                     <span>Points After Redemption:</span>
                     <span className="text-primary">
-                      {(loyaltyData.points - selectedReward.requiredPoints).toLocaleString()} points
+                      {(
+                        loyaltyData.points - selectedReward.requiredPoints
+                      ).toLocaleString()}{" "}
+                      points
                     </span>
                   </div>
                 </div>
 
                 {selectedReward.terms && (
-                  <div className="p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                  <div className="border-warning/20 bg-warning/10 rounded-lg border p-3">
                     <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
-                      <div className="text-xs text-warning-foreground">
-                        <div className="font-medium mb-1">Terms & Conditions:</div>
+                      <Info className="text-warning mt-0.5 size-4 shrink-0" />
+                      <div className="text-warning-foreground text-xs">
+                        <div className="mb-1 font-medium">
+                          Terms & Conditions:
+                        </div>
                         {selectedReward.terms}
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <div className="text-sm font-medium mb-1">What happens next:</div>
-                  <div className="text-xs text-muted-foreground space-y-1">
+                <div className="bg-primary/10 rounded-lg p-3">
+                  <div className="mb-1 text-sm font-medium">
+                    What happens next:
+                  </div>
+                  <div className="text-muted-foreground space-y-1 text-xs">
                     {selectedReward.rewardType === "discount_code" && (
-                      <p>• A discount code will be generated and added to your account</p>
+                      <p>
+                        • A discount code will be generated and added to your
+                        account
+                      </p>
                     )}
                     {selectedReward.rewardType === "credit_balance" && (
-                      <p>• ${selectedReward.rewardValue} will be added to your account credit balance</p>
+                      <p>
+                        • ${selectedReward.rewardValue} will be added to your
+                        account credit balance
+                      </p>
                     )}
                     {selectedReward.rewardType === "auto_apply" && (
-                      <p>• This reward will automatically apply to your next eligible booking</p>
+                      <p>
+                        • This reward will automatically apply to your next
+                        eligible booking
+                      </p>
                     )}
                     {selectedReward.rewardType === "free_service" && (
-                      <p>• A free service voucher will be added to your account</p>
+                      <p>
+                        • A free service voucher will be added to your account
+                      </p>
                     )}
                     <p>• Points will be deducted from your account</p>
                     <p>• Transaction will be logged in your points history</p>
                     {selectedReward.expiryDays && (
-                      <p>• Reward expires in {selectedReward.expiryDays} days</p>
+                      <p>
+                        • Reward expires in {selectedReward.expiryDays} days
+                      </p>
                     )}
                   </div>
                 </div>
@@ -870,7 +1043,8 @@ export default function CustomerRewardsPage() {
                       rewardDetails = `$${selectedReward.rewardValue} credit added to your account`;
                       toast.success(`Reward redeemed! ${rewardDetails}`);
                     } else if (selectedReward.rewardType === "auto_apply") {
-                      rewardDetails = "Reward will be automatically applied to your next booking";
+                      rewardDetails =
+                        "Reward will be automatically applied to your next booking";
                       toast.success(`Reward redeemed! ${rewardDetails}`);
                     } else if (selectedReward.rewardType === "free_service") {
                       rewardDetails = `Free ${selectedReward.rewardValue} service voucher added`;
@@ -886,17 +1060,26 @@ export default function CustomerRewardsPage() {
 
                     setRedeemDialogOpen(false);
                     setSelectedReward(null);
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to redeem reward");
+                  } catch (error: unknown) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to redeem reward",
+                    );
                   } finally {
                     setIsRedeeming(false);
                   }
                 }}
-                disabled={isRedeeming || !selectedReward || !loyaltyData || loyaltyData.points < selectedReward.requiredPoints}
+                disabled={
+                  isRedeeming ||
+                  !selectedReward ||
+                  !loyaltyData ||
+                  loyaltyData.points < selectedReward.requiredPoints
+                }
               >
                 {isRedeeming ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Redeeming...
                   </>
                 ) : (

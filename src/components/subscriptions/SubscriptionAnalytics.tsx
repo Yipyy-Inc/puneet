@@ -106,11 +106,11 @@ export function SubscriptionAnalytics() {
             <CardTitle className="text-sm font-medium">
               Total Subscriptions
             </CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <Building className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSubscriptions}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {activeSubscriptions} active · {trialSubscriptions} trial
             </p>
           </CardContent>
@@ -119,11 +119,11 @@ export function SubscriptionAnalytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">MRR</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalMRR)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {formatCurrency(totalARR)} ARR
             </p>
           </CardContent>
@@ -134,11 +134,11 @@ export function SubscriptionAnalytics() {
             <CardTitle className="text-sm font-medium">
               Upsell Opportunities
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{upsellOpportunities}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               High usage facilities
             </p>
           </CardContent>
@@ -147,11 +147,11 @@ export function SubscriptionAnalytics() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">At Risk</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{churnRisk}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {expiringSoon} expiring soon
             </p>
           </CardContent>
@@ -176,12 +176,12 @@ export function SubscriptionAnalytics() {
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <Activity className="text-muted-foreground size-4" />
                     <span className="text-sm font-medium">{item.tier}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{item.count}</Badge>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       {totalSubscriptions > 0
                         ? `${Math.round((item.count / totalSubscriptions) * 100)}%`
                         : "0%"}
@@ -209,12 +209,12 @@ export function SubscriptionAnalytics() {
                   className="flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <Target className="h-4 w-4 text-muted-foreground" />
+                    <Target className="text-muted-foreground size-4" />
                     <span className="text-sm font-medium">{item.module}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{item.count}</Badge>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       {activeSubscriptions > 0
                         ? `${Math.round((item.count / activeSubscriptions) * 100)}%`
                         : "0%"}
@@ -238,11 +238,11 @@ export function SubscriptionAnalytics() {
         <CardContent>
           <div className="space-y-3">
             {upsellOpportunities > 0 && (
-              <div className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg bg-blue-500/10 p-3">
+                <TrendingUp className="mt-0.5 h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-sm font-medium">Upsell Opportunity</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {upsellOpportunities} facilities are using over 80% of their
                     tier limits. Consider reaching out for an upgrade.
                   </p>
@@ -251,11 +251,11 @@ export function SubscriptionAnalytics() {
             )}
 
             {expiringSoon > 0 && (
-              <div className="flex items-start gap-3 p-3 bg-orange-500/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-orange-500 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg bg-orange-500/10 p-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-orange-500" />
                 <div>
                   <p className="text-sm font-medium">Expiring Subscriptions</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {expiringSoon} subscriptions are expiring within 30 days.
                     Follow up to ensure renewals.
                   </p>
@@ -264,11 +264,11 @@ export function SubscriptionAnalytics() {
             )}
 
             {trialSubscriptions > 0 && (
-              <div className="flex items-start gap-3 p-3 bg-purple-500/10 rounded-lg">
-                <Users className="h-5 w-5 text-purple-500 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg bg-purple-500/10 p-3">
+                <Users className="mt-0.5 h-5 w-5 text-purple-500" />
                 <div>
                   <p className="text-sm font-medium">Active Trials</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {trialSubscriptions} facilities are currently on trial.
                     Monitor their usage and engage before trial ends.
                   </p>
@@ -277,11 +277,11 @@ export function SubscriptionAnalytics() {
             )}
 
             {churnRisk > 0 && (
-              <div className="flex items-start gap-3 p-3 bg-red-500/10 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-lg bg-red-500/10 p-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 text-red-500" />
                 <div>
                   <p className="text-sm font-medium">Churn Risk</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {churnRisk} subscriptions are at risk (suspended or not
                     auto-renewing). Immediate action required.
                   </p>

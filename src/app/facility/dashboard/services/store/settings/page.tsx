@@ -102,11 +102,11 @@ export default function StoreSettingsPage() {
           {isEditing ? (
             <>
               <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="mr-2 h-4 w-4" />
+                <RotateCcw className="mr-2 size-4" />
                 Cancel
               </Button>
               <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-2 size-4" />
                 Save Changes
               </Button>
             </>
@@ -127,7 +127,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Store</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enable the store for customers
                 </p>
               </div>
@@ -154,7 +154,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Online Ordering</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to place orders online
                 </p>
               </div>
@@ -169,7 +169,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable In-Store Pickup</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to pick up orders at the facility
                 </p>
               </div>
@@ -219,7 +219,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Open on Weekends</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Store operates on Saturday and Sunday
                 </p>
               </div>
@@ -287,7 +287,7 @@ export default function StoreSettingsPage() {
                 disabled={!isEditing}
                 className="w-32"
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Alert when stock falls below this quantity
               </p>
             </div>
@@ -295,7 +295,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Low Stock Alerts</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send notifications when items are low in stock
                 </p>
               </div>
@@ -310,7 +310,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto-Hide Out of Stock</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Automatically hide products when out of stock
                 </p>
               </div>
@@ -325,7 +325,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Show Stock Quantity</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Display available quantity to customers
                 </p>
               </div>
@@ -372,7 +372,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Member Pricing</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer special pricing for members
                 </p>
               </div>
@@ -408,7 +408,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Round Prices</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Round prices to nearest cent
                 </p>
               </div>
@@ -514,7 +514,7 @@ export default function StoreSettingsPage() {
                 disabled={!isEditing}
                 className="w-32"
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Set to 0 for no minimum
               </p>
             </div>
@@ -538,7 +538,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Gift Wrapping</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer gift wrapping service
                 </p>
               </div>
@@ -580,7 +580,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Account for Purchase</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Customers must create an account to purchase
                 </p>
               </div>
@@ -598,7 +598,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Guest Checkout</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow purchases without an account
                 </p>
               </div>
@@ -614,7 +614,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Wishlist</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to save items for later
                 </p>
               </div>
@@ -629,7 +629,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Product Reviews</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to review products
                 </p>
               </div>
@@ -654,7 +654,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Order Confirmation</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send confirmation email after purchase
                 </p>
               </div>
@@ -670,7 +670,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Ready for Pickup</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Notify when order is ready for pickup
                 </p>
               </div>
@@ -686,7 +686,7 @@ export default function StoreSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Low Stock Alerts</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send alerts when inventory is low
                 </p>
               </div>

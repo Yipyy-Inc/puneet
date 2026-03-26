@@ -72,7 +72,7 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="transition-shadow hover:shadow-lg">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -81,7 +81,7 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
           </div>
           <Badge
             variant="outline"
-            className={`capitalize ${getTierColor(tier.type)}`}
+            className={`capitalize ${getTierColor(tier.type)} `}
           >
             {tier.type}
           </Badge>
@@ -91,62 +91,62 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
       <CardContent className="space-y-4">
         {/* Pricing */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Pricing
           </h4>
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${tier.pricing.monthly}</p>
-              <p className="text-xs text-muted-foreground">/ month</p>
+              <p className="text-muted-foreground text-xs">/ month</p>
             </div>
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${tier.pricing.quarterly}</p>
-              <p className="text-xs text-muted-foreground">/ quarter</p>
+              <p className="text-muted-foreground text-xs">/ quarter</p>
             </div>
-            <div className="text-center p-2 bg-muted rounded-lg">
+            <div className="bg-muted rounded-lg p-2 text-center">
               <p className="text-2xl font-bold">${tier.pricing.yearly}</p>
-              <p className="text-xs text-muted-foreground">/ year</p>
+              <p className="text-muted-foreground text-xs">/ year</p>
             </div>
           </div>
         </div>
 
         {/* Limitations */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Limitations
           </h4>
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-2">
+              <Users className="text-muted-foreground size-4" />
               <div>
-                <p className="text-xs text-muted-foreground">Users</p>
+                <p className="text-muted-foreground text-xs">Users</p>
                 <p className="text-sm font-medium">
                   {formatLimit(tier.limitations.maxUsers)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-2">
+              <Calendar className="text-muted-foreground size-4" />
               <div>
-                <p className="text-xs text-muted-foreground">Reservations</p>
+                <p className="text-muted-foreground text-xs">Reservations</p>
                 <p className="text-sm font-medium">
                   {formatLimit(tier.limitations.maxReservations)}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-2">
+              <HardDrive className="text-muted-foreground size-4" />
               <div>
-                <p className="text-xs text-muted-foreground">Storage</p>
+                <p className="text-muted-foreground text-xs">Storage</p>
                 <p className="text-sm font-medium">
                   {formatLimit(tier.limitations.storageGB)} GB
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
+            <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-2">
+              <MapPin className="text-muted-foreground size-4" />
               <div>
-                <p className="text-xs text-muted-foreground">Locations</p>
+                <p className="text-muted-foreground text-xs">Locations</p>
                 <p className="text-sm font-medium">
                   {formatLimit(tier.limitations.maxLocations)}
                 </p>
@@ -157,8 +157,8 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
 
         {/* Included Modules */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-            <Blocks className="h-4 w-4" />
+          <h4 className="text-muted-foreground flex items-center gap-2 text-sm font-semibold">
+            <Blocks className="size-4" />
             Modules ({tier.availableModules.length})
           </h4>
           <div className="flex flex-wrap gap-1">
@@ -175,18 +175,18 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
 
         {/* Features */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">
+          <h4 className="text-muted-foreground text-sm font-semibold">
             Features ({tier.features.length})
           </h4>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="max-h-32 space-y-1 overflow-y-auto">
             {tier.features.slice(0, 5).map((feature, index) => (
               <div key={index} className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                <Check className="mt-0.5 size-4 shrink-0 text-green-500" />
                 <p className="text-sm">{feature}</p>
               </div>
             ))}
             {tier.features.length > 5 && (
-              <p className="text-xs text-muted-foreground pl-6">
+              <p className="text-muted-foreground pl-6 text-xs">
                 + {tier.features.length - 5} more features
               </p>
             )}
@@ -209,7 +209,7 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
           className="flex-1"
           onClick={() => onEdit(tier)}
         >
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 size-4" />
           Edit
         </Button>
         <Button
@@ -218,7 +218,7 @@ function TierCard({ tier, onEdit, onDelete }: TierCardProps) {
           className="text-destructive hover:text-destructive"
           onClick={() => onDelete(tier)}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="size-4" />
         </Button>
       </CardFooter>
     </Card>
@@ -356,12 +356,12 @@ export function SubscriptionTiersGrid() {
           </p>
         </div>
         <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 size-4" />
           Create Tier
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {tiers.map((tier) => (
           <TierCard
             key={tier.id}
@@ -374,7 +374,7 @@ export function SubscriptionTiersGrid() {
 
       {/* Edit Tier Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Subscription Tier</DialogTitle>
             <DialogDescription>
@@ -573,7 +573,7 @@ export function SubscriptionTiersGrid() {
                   {modules.map((module) => (
                     <div
                       key={module.id}
-                      className="flex items-center gap-2 p-2 border rounded-lg"
+                      className="flex items-center gap-2 rounded-lg border p-2"
                     >
                       <Checkbox
                         id={`module-${module.id}`}
@@ -600,7 +600,7 @@ export function SubscriptionTiersGrid() {
                       />
                       <Label
                         htmlFor={`module-${module.id}`}
-                        className="text-sm cursor-pointer"
+                        className="cursor-pointer text-sm"
                       >
                         {module.name}
                       </Label>
@@ -642,7 +642,7 @@ export function SubscriptionTiersGrid() {
 
       {/* Create Tier Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="min-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Subscription Tier</DialogTitle>
             <DialogDescription>
@@ -855,7 +855,7 @@ export function SubscriptionTiersGrid() {
                   {modules.map((module) => (
                     <div
                       key={module.id}
-                      className="flex items-center gap-2 p-2 border rounded-lg"
+                      className="flex items-center gap-2 rounded-lg border p-2"
                     >
                       <Checkbox
                         id={`create-module-${module.id}`}
@@ -879,7 +879,7 @@ export function SubscriptionTiersGrid() {
                       />
                       <Label
                         htmlFor={`create-module-${module.id}`}
-                        className="text-sm cursor-pointer"
+                        className="cursor-pointer text-sm"
                       >
                         {module.name}
                       </Label>

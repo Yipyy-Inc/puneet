@@ -17,7 +17,13 @@ import {
 import { notifyFacilityStaffYipyyGoSubmitted } from "@/data/facility-notifications";
 import { getOrCreateCheckInToken } from "@/lib/qr-checkin";
 import { logCustomerSubmission } from "@/lib/checkin-audit";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +31,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   ArrowLeft,
   Lock,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   Clock,
@@ -72,7 +77,9 @@ export default function YipyyGoFormPage({
 
   const pet = useMemo(() => {
     if (!customer || !booking) return null;
-    const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+    const petId = Array.isArray(booking.petId)
+      ? booking.petId[0]
+      : booking.petId;
     return customer.pets?.find((p) => p.id === petId);
   }, [customer, booking]);
 
@@ -88,19 +95,19 @@ export default function YipyyGoFormPage({
   // Check deadline
   // For development/testing: always allow editing (bypass deadline check)
   const DEV_MODE = process.env.NODE_ENV === "development";
-  
+
   const deadlineInfo = useMemo(() => {
     if (!booking || !yipyyGoConfig) return null;
-    
+
     const checkInDate = new Date(booking.startDate);
     if (booking.checkInTime) {
       const [hours, minutes] = booking.checkInTime.split(":").map(Number);
       checkInDate.setHours(hours, minutes, 0, 0);
     }
-    
+
     const deadline = new Date(checkInDate);
     deadline.setHours(deadline.getHours() - yipyyGoConfig.timing.deadline);
-    
+
     // In development mode, always allow editing
     if (DEV_MODE) {
       return {
@@ -109,9 +116,9 @@ export default function YipyyGoFormPage({
         timeRemaining: "Unlimited (Dev Mode)",
       };
     }
-    
+
     return checkFormDeadline(deadline.toISOString());
-  }, [booking, yipyyGoConfig]);
+  }, [booking, yipyyGoConfig, DEV_MODE]);
 
   // Initialize form data
   useEffect(() => {
@@ -119,10 +126,10 @@ export default function YipyyGoFormPage({
 
     // Check if user is logged in (mock - in production, check auth context)
     const isLoggedIn = true; // TODO: Get from auth context
-    
+
     if (isLoggedIn) {
       setAuthState("authenticated");
-      
+
       // Load existing form or create new one
       const existingForm = getYipyyGoForm(booking.id);
       if (existingForm) {
@@ -135,12 +142,16 @@ export default function YipyyGoFormPage({
           checkInDate.setHours(hours, minutes, 0, 0);
         }
         const deadline = new Date(checkInDate);
-        deadline.setHours(deadline.getHours() - (yipyyGoConfig?.timing.deadline || 12));
+        deadline.setHours(
+          deadline.getHours() - (yipyyGoConfig?.timing.deadline || 12),
+        );
 
         const newForm: YipyyGoFormData = {
           bookingId: booking.id,
           clientId: booking.clientId,
-          petId: Array.isArray(booking.petId) ? booking.petId[0] : booking.petId,
+          petId: Array.isArray(booking.petId)
+            ? booking.petId[0]
+            : booking.petId,
           petName: pet.name,
           facilityId: booking.facilityId,
           belongings: [],
@@ -148,22 +159,22 @@ export default function YipyyGoFormPage({
           noMedications: false,
           addOns: [],
           // In development mode, always allow editing
-          isLocked: DEV_MODE ? false : (deadlineInfo?.isPastDeadline || false),
+          isLocked: DEV_MODE ? false : deadlineInfo?.isPastDeadline || false,
           deadline: deadline.toISOString(),
-          canEdit: DEV_MODE ? true : (deadlineInfo?.canEdit || false),
+          canEdit: DEV_MODE ? true : deadlineInfo?.canEdit || false,
         };
         setFormData(newForm);
       }
     } else {
       setAuthState("login");
     }
-  }, [booking, pet, customer, yipyyGoConfig, deadlineInfo]);
+  }, [booking, pet, customer, yipyyGoConfig, deadlineInfo, DEV_MODE]);
 
   // Handle verification code request
   const handleRequestCode = async () => {
     if (!booking || !customer) return;
-    
-    const code = generateVerificationCode(booking.id, customer.email, customer.phone);
+
+    generateVerificationCode(booking.id, customer.email, customer.phone);
     setCodeSent(true);
     toast.success("Verification code sent to your email/SMS");
   };
@@ -171,12 +182,12 @@ export default function YipyyGoFormPage({
   // Handle verification code submission
   const handleVerifyCode = () => {
     if (!booking || !verificationCode) return;
-    
+
     const result = verifyCode(verificationCode, booking.id);
     if (result.valid) {
       setAuthState("authenticated");
       toast.success("Verified successfully!");
-      
+
       // Initialize form data
       const existingForm = getYipyyGoForm(booking.id);
       if (existingForm) {
@@ -203,9 +214,15 @@ export default function YipyyGoFormPage({
       });
 
       // Generate QR check-in token (booking_id + pet_id + token, no PII)
-      const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+      const petId = Array.isArray(booking.petId)
+        ? booking.petId[0]
+        : booking.petId;
       if (!saved.qrCheckInToken) {
-        const token = getOrCreateCheckInToken(booking.id, petId, booking.facilityId);
+        const token = getOrCreateCheckInToken(
+          booking.id,
+          petId,
+          booking.facilityId,
+        );
         saved = saveYipyyGoForm({ ...saved, qrCheckInToken: token });
       }
 
@@ -232,7 +249,9 @@ export default function YipyyGoFormPage({
         sendEmail: yipyyGoConfig?.notifyStaffEmailOnSubmit ?? false,
       });
 
-      toast.success("YipyyGo form submitted successfully! You're check-in ready!");
+      toast.success(
+        "YipyyGo form submitted successfully! You're check-in ready!",
+      );
       router.push(`/customer/bookings/${booking.id}/check-in-qr`);
     } catch (error) {
       toast.error("Failed to submit form. Please try again.");
@@ -251,19 +270,36 @@ export default function YipyyGoFormPage({
   // Last stay form for "Use same as last time" (plane check-in style, under 2–4 min)
   const lastStayForm = useMemo(() => {
     if (!booking || !pet) return null;
-    const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
-    return getLastStayFormForPet(booking.clientId, petId, booking.facilityId, booking.id);
+    const petId = Array.isArray(booking.petId)
+      ? booking.petId[0]
+      : booking.petId;
+    return getLastStayFormForPet(
+      booking.clientId,
+      petId,
+      booking.facilityId,
+      booking.id,
+    );
   }, [booking, pet]);
 
   const applyLastStayPreferences = () => {
     if (!formData || !lastStayForm) return;
     setFormData({
       ...formData,
-      belongings: lastStayForm.belongings?.length ? lastStayForm.belongings.map((b) => ({ ...b, id: `item-${Date.now()}-${Math.random().toString(36).slice(2)}` })) : formData.belongings,
-      belongingsPhotoUrl: lastStayForm.belongingsPhotoUrl ?? formData.belongingsPhotoUrl,
-      feedingInstructions: lastStayForm.feedingInstructions ?? formData.feedingInstructions,
+      belongings: lastStayForm.belongings?.length
+        ? lastStayForm.belongings.map((b) => ({
+            ...b,
+            id: `item-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          }))
+        : formData.belongings,
+      belongingsPhotoUrl:
+        lastStayForm.belongingsPhotoUrl ?? formData.belongingsPhotoUrl,
+      feedingInstructions:
+        lastStayForm.feedingInstructions ?? formData.feedingInstructions,
       medications: lastStayForm.medications?.length
-        ? lastStayForm.medications.map((m) => ({ ...m, id: `med-${Date.now()}-${Math.random().toString(36).slice(2)}` }))
+        ? lastStayForm.medications.map((m) => ({
+            ...m,
+            id: `med-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          }))
         : formData.medications,
       noMedications: lastStayForm.noMedications ?? formData.noMedications,
       behaviorNotes: lastStayForm.behaviorNotes ?? formData.behaviorNotes,
@@ -276,7 +312,7 @@ export default function YipyyGoFormPage({
 
   if (!booking || !customer || !pet) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Booking not found</h2>
           <Button
@@ -284,7 +320,7 @@ export default function YipyyGoFormPage({
             className="mt-4"
             onClick={() => router.push("/customer/bookings")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to Bookings
           </Button>
         </div>
@@ -295,7 +331,7 @@ export default function YipyyGoFormPage({
   // Authentication screens
   if (authState === "checking") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -303,25 +339,32 @@ export default function YipyyGoFormPage({
 
   if (authState === "login") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
+      <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Access YipyyGo Form</CardTitle>
             <CardDescription>
-              Please log in or verify with a code to access the pre-check-in form
+              Please log in or verify with a code to access the pre-check-in
+              form
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button
               className="w-full"
-              onClick={() => router.push(`/customer/auth/login?redirect=/customer/bookings/${id}/yipyygo-form`)}
+              onClick={() =>
+                router.push(
+                  `/customer/auth/login?redirect=/customer/bookings/${id}/yipyygo-form`,
+                )
+              }
             >
               Log In to Portal
             </Button>
             <div className="relative">
               <Separator />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-background px-2 text-sm text-muted-foreground">OR</span>
+                <span className="bg-background text-muted-foreground px-2 text-sm">
+                  OR
+                </span>
               </div>
             </div>
             {!codeSent ? (
@@ -368,7 +411,7 @@ export default function YipyyGoFormPage({
 
   if (authState === "verification") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Verify Access</CardTitle>
@@ -402,11 +445,11 @@ export default function YipyyGoFormPage({
   // Form locked after deadline (skip in development mode)
   if (!DEV_MODE && formData?.isLocked && !formData.submittedAt) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
+              <Lock className="size-5" />
               Form Locked
             </CardTitle>
             <CardDescription>
@@ -415,14 +458,15 @@ export default function YipyyGoFormPage({
           </CardHeader>
           <CardContent>
             <Alert>
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" />
               <AlertDescription>
-                Please contact the facility directly to provide this information.
+                Please contact the facility directly to provide this
+                information.
               </AlertDescription>
             </Alert>
             <Button
               variant="outline"
-              className="w-full mt-4"
+              className="mt-4 w-full"
               onClick={() => router.push(`/customer/bookings/${booking.id}`)}
             >
               Back to Booking
@@ -436,7 +480,7 @@ export default function YipyyGoFormPage({
   // Main form
   if (!formData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
@@ -446,7 +490,11 @@ export default function YipyyGoFormPage({
     { id: "belongings", label: "Belongings", component: BelongingsSection },
     { id: "feeding", label: "Feeding Instructions", component: FeedingSection },
     { id: "medication", label: "Medications", component: MedicationSection },
-    { id: "behavior", label: "Behavior & Special Notes", component: BehaviorSection },
+    {
+      id: "behavior",
+      label: "Behavior & Special Notes",
+      component: BehaviorSection,
+    },
     ...(yipyyGoConfig?.formTemplate.features.addOnsSection
       ? [{ id: "addons", label: "Add-ons", component: AddOnsSection }]
       : []),
@@ -459,36 +507,39 @@ export default function YipyyGoFormPage({
   const CurrentSectionComponent = sections[currentSection]?.component;
 
   const totalSections = sections.length;
-  const stepLabel = currentSection === totalSections - 1 ? "Review" : `Step ${currentSection + 1} of ${totalSections - 1}`;
+  const stepLabel =
+    currentSection === totalSections - 1
+      ? "Review"
+      : `Step ${currentSection + 1} of ${totalSections - 1}`;
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="bg-background min-h-screen p-4">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header – plane check-in style: fast, clear */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push(`/customer/bookings/${booking.id}`)}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="mr-2 size-4" />
               Back
             </Button>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold">YipyyGo</h1>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                <Zap className="h-3 w-3" />
+              <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                <Zap className="size-3" />
                 ~2 min
               </span>
             </div>
-            <p className="text-muted-foreground text-sm mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-sm">
               {pet.name} · {booking.service} · {stepLabel}
             </p>
           </div>
           {deadlineInfo && !deadlineInfo.isPastDeadline && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+              <Clock className="size-4" />
               <span>{deadlineInfo.timeRemaining}</span>
             </div>
           )}
@@ -498,15 +549,16 @@ export default function YipyyGoFormPage({
         {lastStayForm && (
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="py-4">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <RotateCcw className="h-5 w-5 text-primary" />
+                  <div className="bg-primary/10 rounded-lg p-2">
+                    <RotateCcw className="text-primary h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-medium">Use same as last time</p>
-                    <p className="text-sm text-muted-foreground">
-                      Copy belongings, feeding, meds & behavior from your last stay
+                    <p className="text-muted-foreground text-sm">
+                      Copy belongings, feeding, meds & behavior from your last
+                      stay
                     </p>
                   </div>
                 </div>
@@ -521,7 +573,7 @@ export default function YipyyGoFormPage({
         {/* Booking Summary */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
                 <p className="text-muted-foreground">Pet</p>
                 <p className="font-medium">{pet.name}</p>
@@ -549,13 +601,13 @@ export default function YipyyGoFormPage({
           {sections.map((section, index) => (
             <div
               key={section.id}
-              className={`flex-1 h-2 rounded ${
+              className={`h-2 flex-1 rounded-sm ${
                 index < currentSection
                   ? "bg-primary"
                   : index === currentSection
                     ? "bg-primary/50"
                     : "bg-muted"
-              }`}
+              } `}
             />
           ))}
         </div>
@@ -596,7 +648,11 @@ export default function YipyyGoFormPage({
               Back
             </Button>
             <Button
-              onClick={() => setCurrentSection(Math.min(sections.length - 1, currentSection + 1))}
+              onClick={() =>
+                setCurrentSection(
+                  Math.min(sections.length - 1, currentSection + 1),
+                )
+              }
             >
               Next: {sections[currentSection + 1]?.label}
             </Button>

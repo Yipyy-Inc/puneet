@@ -18,7 +18,8 @@ export interface EligibilityRow {
 
 function evalBadge(indicator?: EvaluationIndicator) {
   if (!indicator) return null;
-  if (indicator === "valid") return <Badge variant="success">Eval: Valid</Badge>;
+  if (indicator === "valid")
+    return <Badge variant="success">Eval: Valid</Badge>;
   if (indicator === "expired")
     return <Badge variant="destructive">Eval: Expired</Badge>;
   if (indicator === "failed")
@@ -34,21 +35,21 @@ export function PetEligibilityList({ rows }: { rows: EligibilityRow[] }) {
       </CardHeader>
       <CardContent className="space-y-2">
         {rows.length === 0 ? (
-          <div className="text-sm text-muted-foreground">No pets.</div>
+          <div className="text-muted-foreground text-sm">No pets.</div>
         ) : (
           rows.map((row) => (
             <div
               key={row.petId}
               className={[
-                "rounded-md border p-3 flex items-start justify-between gap-4",
+                "flex items-start justify-between gap-4 rounded-md border p-3",
                 "data-[eligible=false]:bg-destructive/5 data-[eligible=false]:border-destructive/30",
                 "data-[eligible=false]:opacity-80",
               ].join(" ")}
               data-eligible={row.eligible}
             >
               <div className="min-w-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="font-medium truncate">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="truncate font-medium">
                     {row.petName}{" "}
                     <span className="text-muted-foreground font-normal">
                       ({row.breed})
@@ -58,17 +59,15 @@ export function PetEligibilityList({ rows }: { rows: EligibilityRow[] }) {
                     {row.petType}
                   </Badge>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-1 text-xs">
                   {row.eligible ? "Eligible" : "Ineligible"}
                   {!row.eligible && row.reasons.length > 0 && (
-                    <span className="ml-2">
-                      • {row.reasons.join(" • ")}
-                    </span>
+                    <span className="ml-2">• {row.reasons.join(" • ")}</span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 {row.evaluationRequired && evalBadge(row.evaluationIndicator)}
                 {row.eligible ? (
                   <Badge variant="success">OK</Badge>
@@ -83,4 +82,3 @@ export function PetEligibilityList({ rows }: { rows: EligibilityRow[] }) {
     </Card>
   );
 }
-

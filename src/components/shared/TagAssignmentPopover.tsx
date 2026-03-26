@@ -58,24 +58,24 @@ export function TagAssignmentPopover({
         className="w-72 max-w-[calc(100vw-2rem)] p-0"
         align="start"
       >
-        <div className="p-2 border-b">
+        <div className="border-b p-2">
           <div className="relative">
             <Search
-              className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
+              className="text-muted-foreground absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
               placeholder="Search tags..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-7 h-8 text-sm"
+              className="h-8 pl-7 text-sm"
             />
           </div>
         </div>
 
         <div className="max-h-60 overflow-y-auto p-1">
           {filtered.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No tags found
             </p>
           )}
@@ -96,41 +96,41 @@ export function TagAssignmentPopover({
                   }
                 }}
                 className={cn(
-                  "flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover:bg-accent transition-colors text-left",
+                  `hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors`,
                   isAssigned && "bg-accent/50",
                 )}
               >
                 <span
-                  className="flex items-center justify-center h-6 w-6 rounded-full shrink-0"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: tag.color, color: textColor }}
                 >
                   <Icon className="h-3 w-3" />
                 </span>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium truncate">{tag.name}</span>
+                    <span className="truncate font-medium">{tag.name}</span>
                     <span
                       className={cn(
-                        "text-[10px] uppercase tracking-wider px-1 rounded",
+                        "rounded-sm px-1 text-[10px] tracking-wider uppercase",
                         tag.priority === "critical" &&
-                          "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                          `bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400`,
                         tag.priority === "warning" &&
-                          "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                          `bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400`,
                         tag.priority === "informational" &&
-                          "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+                          `bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400`,
                       )}
                     >
                       {PRIORITY_LABELS[tag.priority]}
                     </span>
                   </div>
                   {tag.description && (
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-muted-foreground truncate text-xs">
                       {tag.description}
                     </p>
                   )}
                 </div>
                 {isAssigned && (
-                  <Check className="h-4 w-4 text-primary shrink-0" />
+                  <Check className="text-primary size-4 shrink-0" />
                 )}
               </button>
             );
@@ -141,7 +141,7 @@ export function TagAssignmentPopover({
         <div className="border-t p-2">
           <a
             href="/facility/dashboard/settings?tab=tags-notes"
-            className="flex items-center gap-1.5 text-xs text-primary hover:underline w-full px-2 py-1.5 rounded-md hover:bg-accent transition-colors"
+            className="text-primary hover:bg-accent flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors hover:underline"
             onClick={(e) => {
               e.stopPropagation();
               setOpen(false);

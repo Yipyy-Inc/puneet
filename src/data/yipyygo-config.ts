@@ -1,6 +1,6 @@
 /**
  * YipyyGo Configuration
- * 
+ *
  * Pre-check-in form system configuration for facilities.
  * Allows facilities to configure which services require pre-check-in forms,
  * timing, reminders, and form templates.
@@ -10,15 +10,28 @@
 // Core Types
 // ============================================================================
 
-export type ServiceType = "daycare" | "boarding" | "grooming" | "training" | "custom";
+export type ServiceType =
+  | "daycare"
+  | "boarding"
+  | "grooming"
+  | "training"
+  | "custom";
 
 export type YipyyGoRequirement = "mandatory" | "optional";
 
 export type DeliveryChannel = "email" | "sms" | "push";
 
-export type CustomQuestionType = "short_text" | "dropdown" | "checkbox" | "number" | "date" | "file_upload";
+export type CustomQuestionType =
+  | "short_text"
+  | "dropdown"
+  | "checkbox"
+  | "number"
+  | "date"
+  | "file_upload";
 
-export type MultiPetBehavior = "one_form_per_pet" | "combined_form_with_sections";
+export type MultiPetBehavior =
+  | "one_form_per_pet"
+  | "combined_form_with_sections";
 
 // ============================================================================
 // Service Configuration
@@ -60,21 +73,21 @@ export interface CustomQuestion {
   required: boolean;
   placeholder?: string;
   helpText?: string;
-  
+
   // For dropdown type
   options?: { value: string; label: string }[];
-  
+
   // For checkbox type
   defaultChecked?: boolean;
-  
+
   // For number type
   min?: number;
   max?: number;
-  
+
   // For date type
   minDate?: string;
   maxDate?: string;
-  
+
   // Display order
   order: number;
 }
@@ -99,20 +112,20 @@ export interface FormTemplateConfig {
     specialRequests: FormSection;
     customSections: FormSection[]; // Additional custom sections
   };
-  
+
   // Feature toggles
   features: {
     photoUploads: boolean;
     addOnsSection: boolean;
     tipSection: boolean;
   };
-  
+
   // Multi-pet behavior
   multiPetBehavior: MultiPetBehavior;
 
   /** Shared add-ons: apply to whole booking vs per-pet (when multi-pet) */
   addOnsScope: "booking" | "per_pet";
-  
+
   // Custom questions (global, not section-specific)
   globalCustomQuestions: CustomQuestion[];
 }
@@ -227,7 +240,10 @@ export const defaultFormTemplate: FormTemplateConfig = {
   globalCustomQuestions: [],
 };
 
-export const defaultYipyyGoConfig: Omit<YipyyGoConfig, "facilityId" | "createdAt" | "updatedAt" | "updatedBy"> = {
+export const defaultYipyyGoConfig: Omit<
+  YipyyGoConfig,
+  "facilityId" | "createdAt" | "updatedAt" | "updatedBy"
+> = {
   enabled: false,
   addOnsApproval: "staff_approval",
   notifyStaffEmailOnSubmit: false,
@@ -340,7 +356,7 @@ export function getYipyyGoConfig(facilityId: number): YipyyGoConfig | null {
   if (config) {
     return { ...config };
   }
-  
+
   // Return default config if not found
   return {
     ...defaultYipyyGoConfig,
@@ -353,18 +369,20 @@ export function getYipyyGoConfig(facilityId: number): YipyyGoConfig | null {
 
 export function saveYipyyGoConfig(config: YipyyGoConfig): YipyyGoConfig {
   // In production, this would save to database
-  const index = mockYipyyGoConfigs.findIndex((c) => c.facilityId === config.facilityId);
+  const index = mockYipyyGoConfigs.findIndex(
+    (c) => c.facilityId === config.facilityId,
+  );
   const updatedConfig = {
     ...config,
     updatedAt: new Date().toISOString(),
   };
-  
+
   if (index >= 0) {
     mockYipyyGoConfigs[index] = updatedConfig;
   } else {
     mockYipyyGoConfigs.push(updatedConfig);
   }
-  
+
   return updatedConfig;
 }
 

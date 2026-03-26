@@ -147,26 +147,24 @@ export function CustomReportBuilder({
             { num: 3, label: "Filters" },
             { num: 4, label: "Schedule" },
           ].map((s, idx) => (
-            <div key={s.num} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <div key={s.num} className="flex flex-1 items-center">
+              <div className="flex flex-1 flex-col items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                     step >= s.num
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
-                  }`}
+                  } `}
                 >
                   {s.num}
                 </div>
-                <div className="text-xs mt-1 text-muted-foreground">
+                <div className="text-muted-foreground mt-1 text-xs">
                   {s.label}
                 </div>
               </div>
               {idx < 3 && (
                 <div
-                  className={`h-0.5 flex-1 ${
-                    step > s.num ? "bg-primary" : "bg-muted"
-                  }`}
+                  className={`h-0.5 flex-1 ${step > s.num ? "bg-primary" : "bg-muted"} `}
                 />
               )}
             </div>
@@ -232,7 +230,7 @@ export function CustomReportBuilder({
           <div className="space-y-4">
             <div>
               <Label className="text-base">Select Fields to Include</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Choose which fields to include in your report
               </p>
             </div>
@@ -254,10 +252,10 @@ export function CustomReportBuilder({
                       />
                       <label
                         htmlFor={field.key}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         {field.label}
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <span className="text-muted-foreground ml-2 text-xs">
                           ({field.type})
                         </span>
                       </label>
@@ -272,7 +270,7 @@ export function CustomReportBuilder({
                 <Label className="text-sm">
                   Selected Fields ({config.selectedFields.length})
                 </Label>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {config.selectedFields.map((fieldKey) => {
                     const field = availableFields.find(
                       (f) => f.key === fieldKey,
@@ -294,7 +292,7 @@ export function CustomReportBuilder({
           <div className="space-y-4">
             <div>
               <Label className="text-base">Add Filters (Optional)</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Filter your data based on specific criteria
               </p>
             </div>
@@ -369,7 +367,7 @@ export function CustomReportBuilder({
                         size="icon"
                         variant="outline"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -390,11 +388,11 @@ export function CustomReportBuilder({
                     return (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3 border rounded-lg"
+                        className="flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="text-sm">
                           <span className="font-medium">{field?.label}</span>
-                          <span className="mx-2 text-muted-foreground">
+                          <span className="text-muted-foreground mx-2">
                             {filter.operator.replace("_", " ")}
                           </span>
                           <span className="font-medium">{filter.value}</span>
@@ -404,7 +402,7 @@ export function CustomReportBuilder({
                           size="sm"
                           onClick={() => handleRemoveFilter(idx)}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     );
@@ -413,7 +411,7 @@ export function CustomReportBuilder({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <div className="space-y-2">
                 <Label>Sort By</Label>
                 <Select
@@ -461,7 +459,7 @@ export function CustomReportBuilder({
           <div className="space-y-4">
             <div>
               <Label className="text-base">Schedule Report (Optional)</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Automatically send this report via email on a regular schedule
               </p>
             </div>
@@ -482,7 +480,7 @@ export function CustomReportBuilder({
               />
               <label
                 htmlFor="enableSchedule"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Enable automatic scheduling
               </label>
@@ -492,7 +490,7 @@ export function CustomReportBuilder({
               <>
                 <div className="space-y-2">
                   <Label htmlFor="frequency">
-                    <Calendar className="h-4 w-4 inline mr-2" />
+                    <Calendar className="mr-2 inline size-4" />
                     Frequency
                   </Label>
                   <Select
@@ -519,7 +517,7 @@ export function CustomReportBuilder({
 
                 <div className="space-y-2">
                   <Label htmlFor="recipients">
-                    <Mail className="h-4 w-4 inline mr-2" />
+                    <Mail className="mr-2 inline size-4" />
                     Email Recipients
                   </Label>
                   <div className="flex gap-2">
@@ -537,23 +535,23 @@ export function CustomReportBuilder({
                       }}
                     />
                     <Button onClick={handleAddRecipient} variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="mr-2 size-4" />
                       Add
                     </Button>
                   </div>
                   {config.schedule.recipients.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {config.schedule.recipients.map((email) => (
                         <Badge
                           key={email}
                           variant="secondary"
-                          className="pl-3 pr-1"
+                          className="pr-1 pl-3"
                         >
                           {email}
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-5 w-5 p-0 ml-2"
+                            className="ml-2 h-5 w-5 p-0"
                             onClick={() => handleRemoveRecipient(email)}
                           >
                             <X className="h-3 w-3" />
@@ -570,7 +568,7 @@ export function CustomReportBuilder({
       </div>
 
       <DialogFooter>
-        <div className="flex items-center justify-between w-full">
+        <div className="flex w-full items-center justify-between">
           <div>
             {step > 1 && (
               <Button

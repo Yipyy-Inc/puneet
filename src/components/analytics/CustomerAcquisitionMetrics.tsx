@@ -63,28 +63,28 @@ export function CustomerAcquisitionMetrics() {
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total New Customers
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.totalNewCustomers.toLocaleString()}
                   </h3>
-                  <span className="inline-flex items-center text-xs font-medium text-success">
-                    <TrendingUp className="h-3 w-3 mr-0.5" />+
+                  <span className="text-success inline-flex items-center text-xs font-medium">
+                    <TrendingUp className="mr-0.5 h-3 w-3" />+
                     {metrics.growthRate}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   This month
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -96,11 +96,11 @@ export function CustomerAcquisitionMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Avg Lifetime Value
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -108,12 +108,12 @@ export function CustomerAcquisitionMetrics() {
                     ${metrics.averageLifetimeValue.toLocaleString()}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Per customer
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -125,11 +125,11 @@ export function CustomerAcquisitionMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Monthly Growth
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -137,12 +137,12 @@ export function CustomerAcquisitionMetrics() {
                     +{metrics.monthlyGrowthRate}%
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   vs last month
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -154,11 +154,11 @@ export function CustomerAcquisitionMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Retention Rate
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -166,12 +166,12 @@ export function CustomerAcquisitionMetrics() {
                     {metrics.averageRetentionRate}%
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Average across facilities
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -187,12 +187,12 @@ export function CustomerAcquisitionMetrics() {
       {/* Charts Row */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Growth Trend Chart */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Customer Acquisition Trend
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Monthly new customer sign-ups with growth rates
             </p>
           </CardHeader>
@@ -259,12 +259,12 @@ export function CustomerAcquisitionMetrics() {
         </Card>
 
         {/* Channel Distribution Pie Chart */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Acquisition Channels
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Customer distribution by acquisition source
             </p>
           </CardHeader>
@@ -311,12 +311,12 @@ export function CustomerAcquisitionMetrics() {
       </div>
 
       {/* LTV vs CAC Analysis */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             LTV vs CAC by Channel
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Customer lifetime value compared to acquisition cost (higher ratio
             is better)
           </p>
@@ -349,7 +349,10 @@ export function CustomerAcquisitionMetrics() {
                     borderRadius: "12px",
                     boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                   }}
-                  formatter={(value: number | undefined) => [`$${value || 0}`, ""]}
+                  formatter={(value: number | undefined) => [
+                    `$${value || 0}`,
+                    "",
+                  ]}
                 />
                 <Legend />
                 <Bar
@@ -371,13 +374,13 @@ export function CustomerAcquisitionMetrics() {
             {ltvCacData.map((channel, index) => (
               <div
                 key={index}
-                className="p-3 rounded-lg bg-muted/50 text-center"
+                className="bg-muted/50 rounded-lg p-3 text-center"
               >
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-muted-foreground truncate text-xs">
                   {channel.channel}
                 </p>
-                <p className="text-lg font-bold mt-1">{channel.ratio}:1</p>
-                <p className="text-xs text-muted-foreground">LTV:CAC</p>
+                <p className="mt-1 text-lg font-bold">{channel.ratio}:1</p>
+                <p className="text-muted-foreground text-xs">LTV:CAC</p>
               </div>
             ))}
           </div>
@@ -385,12 +388,12 @@ export function CustomerAcquisitionMetrics() {
       </Card>
 
       {/* Channel Performance Details */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Channel Performance Details
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Detailed metrics for each acquisition channel
           </p>
         </CardHeader>
@@ -399,37 +402,37 @@ export function CustomerAcquisitionMetrics() {
             {metrics.channelBreakdown.map((channel, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="bg-muted/30 hover:bg-muted/50 flex items-center gap-4 rounded-xl p-4 transition-colors"
               >
                 <div
-                  className="w-3 h-12 rounded-full"
+                  className="h-12 w-3 rounded-full"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
                     <h4 className="font-semibold">{channel.channel}</h4>
                     <Badge variant="secondary" className="text-xs">
                       {channel.percentage.toFixed(1)}%
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {channel.customers.toLocaleString()} customers
                   </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-right">
                   <div>
-                    <p className="text-xs text-muted-foreground">CAC</p>
+                    <p className="text-muted-foreground text-xs">CAC</p>
                     <p className="font-semibold">${channel.cac}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">LTV</p>
+                    <p className="text-muted-foreground text-xs">LTV</p>
                     <p className="font-semibold">
                       ${channel.ltv.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">ROI</p>
-                    <p className="font-semibold text-success">
+                    <p className="text-muted-foreground text-xs">ROI</p>
+                    <p className="text-success font-semibold">
                       {((channel.ltv / channel.cac - 1) * 100).toFixed(0)}%
                     </p>
                   </div>

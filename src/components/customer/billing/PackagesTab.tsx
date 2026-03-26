@@ -2,8 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { membershipPlans, memberships, prepaidCredits } from "@/data/services-pricing";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  membershipPlans,
+  memberships,
+  prepaidCredits,
+} from "@/data/services-pricing";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +31,7 @@ import { toast } from "sonner";
 const MOCK_CUSTOMER_ID = "15";
 
 export function PackagesTab() {
-  const { selectedFacility } = useCustomerFacility();
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
@@ -59,7 +69,11 @@ export function PackagesTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-500">
+            Active
+          </Badge>
+        );
       case "paused":
         return <Badge variant="secondary">Paused</Badge>;
       case "cancelled":
@@ -83,7 +97,9 @@ export function PackagesTab() {
         {/* Active Memberships */}
         {customerMemberships.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Your Active Memberships</h2>
+            <h2 className="mb-4 text-2xl font-semibold">
+              Your Active Memberships
+            </h2>
             <div className="grid gap-4 md:grid-cols-2">
               {customerMemberships.map((membership) => (
                 <Card key={membership.id}>
@@ -103,15 +119,20 @@ export function PackagesTab() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Monthly Price:</span>
+                      <span className="text-muted-foreground">
+                        Monthly Price:
+                      </span>
                       <span className="font-semibold">
                         {formatCurrency(membership.monthlyPrice)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Credits Remaining:</span>
+                      <span className="text-muted-foreground">
+                        Credits Remaining:
+                      </span>
                       <span className="font-semibold">
-                        {membership.creditsRemaining} / {membership.creditsTotal}
+                        {membership.creditsRemaining} /{" "}
+                        {membership.creditsTotal}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -122,11 +143,13 @@ export function PackagesTab() {
                     </div>
                     {membership.nextBillingDate && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Next Renewal:</span>
+                        <span className="text-muted-foreground">
+                          Next Renewal:
+                        </span>
                         <span>{formatDate(membership.nextBillingDate)}</span>
                       </div>
                     )}
-                    <div className="pt-2 border-t space-y-1 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground space-y-1 border-t pt-2 text-xs">
                       <div className="flex items-center gap-2">
                         {membership.autoRenew ? (
                           <>
@@ -135,15 +158,16 @@ export function PackagesTab() {
                           </>
                         ) : (
                           <>
-                            <X className="h-3 w-3 text-muted-foreground" />
+                            <X className="text-muted-foreground h-3 w-3" />
                             Auto-renewal disabled
                           </>
                         )}
                       </div>
                       <p>
-                        Pause / cancel rules are defined by your facility. Typically, changes to
-                        memberships apply to the next billing cycle and may require notice (e.g.,
-                        7–14 days before renewal).
+                        Pause / cancel rules are defined by your facility.
+                        Typically, changes to memberships apply to the next
+                        billing cycle and may require notice (e.g., 7–14 days
+                        before renewal).
                       </p>
                     </div>
                   </CardContent>
@@ -156,7 +180,7 @@ export function PackagesTab() {
         {/* Prepaid Credits */}
         {customerPrepaidCredits.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Prepaid Credits</h2>
+            <h2 className="mb-4 text-2xl font-semibold">Prepaid Credits</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {customerPrepaidCredits.map((credit) => (
                 <Card key={credit.id}>
@@ -168,11 +192,17 @@ export function PackagesTab() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Current Balance:</span>
-                      <span className="text-2xl font-bold">{formatCurrency(credit.balance)}</span>
+                      <span className="text-muted-foreground">
+                        Current Balance:
+                      </span>
+                      <span className="text-2xl font-bold">
+                        {formatCurrency(credit.balance)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total Purchased:</span>
+                      <span className="text-muted-foreground">
+                        Total Purchased:
+                      </span>
                       <span>{formatCurrency(credit.totalPurchased)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
@@ -194,10 +224,15 @@ export function PackagesTab() {
 
         {/* Available Plans */}
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Available Membership Plans</h2>
+          <h2 className="mb-4 text-2xl font-semibold">
+            Available Membership Plans
+          </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {availablePlans.map((plan) => (
-              <Card key={plan.id} className={plan.isPopular ? "ring-2 ring-primary" : ""}>
+              <Card
+                key={plan.id}
+                className={plan.isPopular ? "ring-primary ring-2" : ""}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
@@ -216,8 +251,12 @@ export function PackagesTab() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <div className="text-3xl font-bold">{formatCurrency(plan.monthlyPrice)}</div>
-                    <div className="text-sm text-muted-foreground">per month</div>
+                    <div className="text-3xl font-bold">
+                      {formatCurrency(plan.monthlyPrice)}
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      per month
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -236,7 +275,7 @@ export function PackagesTab() {
                   {plan.perks.length > 0 && (
                     <div className="space-y-1">
                       <p className="text-sm font-medium">Perks:</p>
-                      <ul className="text-sm text-muted-foreground space-y-1">
+                      <ul className="text-muted-foreground space-y-1 text-sm">
                         {plan.perks.map((perk, idx) => (
                           <li key={idx} className="flex items-center gap-2">
                             <Check className="h-3 w-3 text-green-500" />
@@ -273,14 +312,15 @@ export function PackagesTab() {
           {selectedPlan && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   You will be charged monthly. You can cancel anytime.
                 </p>
                 <div className="flex items-center justify-between font-semibold">
                   <span>Monthly Price:</span>
                   <span>
                     {formatCurrency(
-                      membershipPlans.find((p) => p.id === selectedPlan)?.monthlyPrice || 0
+                      membershipPlans.find((p) => p.id === selectedPlan)
+                        ?.monthlyPrice || 0,
                     )}
                   </span>
                 </div>
@@ -288,7 +328,10 @@ export function PackagesTab() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPurchaseModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsPurchaseModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button onClick={handleConfirmPurchase}>Confirm Purchase</Button>

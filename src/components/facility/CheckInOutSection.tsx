@@ -703,7 +703,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     if (serviceType === "daycare") {
       return (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-          <Sun className="h-3 w-3 mr-1" />
+          <Sun className="mr-1 h-3 w-3" />
           Daycare
         </Badge>
       );
@@ -711,7 +711,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     if (serviceType === "boarding") {
       return (
         <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-          <Bed className="h-3 w-3 mr-1" />
+          <Bed className="mr-1 h-3 w-3" />
           Boarding
         </Badge>
       );
@@ -719,7 +719,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     // Custom service badge
     return (
       <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-        <PawPrint className="h-3 w-3 mr-1" />
+        <PawPrint className="mr-1 h-3 w-3" />
         {serviceType.charAt(0).toUpperCase() +
           serviceType.slice(1).replace(/-/g, " ")}
       </Badge>
@@ -732,11 +732,11 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
 
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* Compact header: title + dropdown filters */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
-            <PawPrint className="h-5 w-5 text-primary" />
+            <PawPrint className="text-primary h-5 w-5" />
             <h3 className="text-lg font-semibold">Daycare & Boarding</h3>
           </div>
 
@@ -744,7 +744,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
+                  <Filter className="size-4" />
                   Filters
                 </Button>
               </DropdownMenuTrigger>
@@ -799,7 +799,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     .length === 2
                 ? "lg:grid-cols-2"
                 : "lg:grid-cols-3"
-          }`}
+          } `}
         >
           {/* Scheduled Arrivals */}
           {showScheduled && (
@@ -807,14 +807,14 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               <CardHeader className="space-y-3 pb-4">
                 <div className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Clock className="h-4 w-4 text-orange-600" />
+                    <Clock className="size-4 text-orange-600" />
                     Scheduled Arrivals
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       {filteredScheduled.length}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {
                         filteredScheduled.filter(
                           (p) => p.serviceType === "boarding",
@@ -831,7 +831,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search arrivals..."
                     value={scheduledQuery}
@@ -840,9 +840,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {filteredScheduled.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     {scheduledQuery
                       ? "No arrivals match your search"
                       : "No arrivals scheduled"}
@@ -857,11 +857,11 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       <div
                         key={item.id}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100/50 dark:hover:bg-orange-950/30 transition-colors cursor-pointer",
+                          `flex cursor-pointer items-center justify-between rounded-lg border bg-orange-50/50 p-3 transition-colors hover:bg-orange-100/50 dark:bg-orange-950/20 dark:hover:bg-orange-950/30`,
                           isCritical &&
-                            "border-l-4 border-l-red-500 dark:border-l-red-400",
+                            `border-l-4 border-l-red-500 dark:border-l-red-400`,
                           isWarning &&
-                            "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                            `border-l-4 border-l-yellow-500 dark:border-l-yellow-400`,
                         )}
                         onClick={() => handleViewDetails(item)}
                       >
@@ -869,7 +869,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           <span className="sr-only">Critical alert</span>
                         )}
                         {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -879,7 +879,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -898,20 +898,20 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
                                 <PawPrint className="h-5 w-5 text-orange-600" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
@@ -923,19 +923,19 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               compact
                               maxVisible={2}
                             />
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
                             {item.serviceType === "boarding" &&
                               item.totalNights && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-muted-foreground text-xs">
                                   {item.totalNights} night
                                   {item.totalNights > 1 ? "s" : ""}
                                 </p>
                               )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex shrink-0 items-center gap-2">
                           {scheduledYipyyGoByItemId.get(item.id) && (
                             <YipyyGoStatusBadge
                               status={
@@ -970,14 +970,14 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               <CardHeader className="space-y-3 pb-4">
                 <div className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <LogIn className="h-4 w-4 text-green-600" />
+                    <LogIn className="size-4 text-green-600" />
                     Currently Checked In
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       {filteredCheckedIn.length}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {
                         filteredCheckedIn.filter(
                           (p) => p.serviceType === "boarding",
@@ -994,7 +994,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search checked-in pets..."
                     value={checkedInQuery}
@@ -1003,9 +1003,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {filteredCheckedIn.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     {checkedInQuery
                       ? "No pets match your search"
                       : "No pets currently checked in"}
@@ -1020,11 +1020,11 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       <div
                         key={item.id}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer",
+                          `bg-card hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors`,
                           isCritical &&
-                            "border-l-4 border-l-red-500 dark:border-l-red-400",
+                            `border-l-4 border-l-red-500 dark:border-l-red-400`,
                           isWarning &&
-                            "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                            `border-l-4 border-l-yellow-500 dark:border-l-yellow-400`,
                         )}
                         onClick={() => handleViewDetails(item)}
                       >
@@ -1032,7 +1032,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           <span className="sr-only">Critical alert</span>
                         )}
                         {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -1042,7 +1042,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -1061,20 +1061,20 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <PawPrint className="h-5 w-5 text-primary" />
+                              <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                                <PawPrint className="text-primary h-5 w-5" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
@@ -1086,10 +1086,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               compact
                               maxVisible={2}
                             />
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
                               <Clock className="h-3 w-3" />
                               <span>In: {formatTime(item.checkInTime)}</span>
                               <span>•</span>
@@ -1117,7 +1117,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex shrink-0 gap-2">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1145,14 +1145,14 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               <CardHeader className="space-y-3 pb-4">
                 <div className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <CheckCircle className="h-4 w-4 text-gray-600" />
+                    <CheckCircle className="size-4 text-gray-600" />
                     Checked Out Today
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       {filteredCheckedOut.length}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       {
                         filteredCheckedOut.filter(
                           (p) => p.serviceType === "boarding",
@@ -1169,7 +1169,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
                   <Input
                     placeholder="Search checkouts..."
                     value={checkedOutQuery}
@@ -1178,9 +1178,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+              <CardContent className="max-h-[400px] space-y-2 overflow-y-auto">
                 {filteredCheckedOut.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
+                  <p className="text-muted-foreground py-8 text-center text-sm">
                     {checkedOutQuery
                       ? "No checkouts match your search"
                       : "No checkouts today"}
@@ -1191,10 +1191,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-gray-50/50 dark:bg-gray-950/20 hover:bg-gray-100/50 dark:hover:bg-gray-950/30 transition-colors cursor-pointer"
+                        className="flex cursor-pointer items-center justify-between rounded-lg border bg-gray-50/50 p-3 transition-colors hover:bg-gray-100/50 dark:bg-gray-950/20 dark:hover:bg-gray-950/30"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -1204,7 +1204,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full overflow-hidden">
+                              <div className="h-10 w-10 overflow-hidden rounded-full">
                                 <Image
                                   src={getPetImage(item.petId)!}
                                   alt={item.petName}
@@ -1223,29 +1223,29 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               }
                               className="shrink-0"
                             >
-                              <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
                                 <PawPrint className="h-5 w-5 text-gray-600" />
                               </div>
                             </Link>
                           )}
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Link
                                 href={
                                   client
                                     ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
                                     : "#"
                                 }
-                                className="font-medium truncate hover:underline"
+                                className="truncate font-medium hover:underline"
                               >
                                 {item.petName}
                               </Link>
                               {getServiceBadge(item.serviceType)}
                             </div>
-                            <p className="text-sm text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate text-sm">
                               {item.ownerName} • {item.petBreed}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
                               <Clock className="h-3 w-3" />
                               <span>
                                 Out:{" "}
@@ -1280,8 +1280,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Pet Information</h4>
-                    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                    <h4 className="text-sm font-semibold">Pet Information</h4>
+                    <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                       {(() => {
                         const client = findClientForPet(selectedItem.petId);
                         return getPetImage(selectedItem.petId) ? (
@@ -1292,7 +1292,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <div className="h-12 w-12 overflow-hidden rounded-full">
                               <Image
                                 src={getPetImage(selectedItem.petId)!}
                                 alt={selectedItem.petName}
@@ -1310,8 +1310,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <PawPrint className="h-6 w-6 text-primary" />
+                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary h-6 w-6" />
                             </div>
                           </Link>
                         );
@@ -1327,7 +1327,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                     : "#"
                                 }
-                                className="font-semibold text-lg hover:underline"
+                                className="text-lg font-semibold hover:underline"
                               >
                                 {selectedItem.petName}
                               </Link>
@@ -1335,15 +1335,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           })()}
                           {getServiceBadge(selectedItem.serviceType)}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {selectedItem.serviceType === "boarding"
                             ? `Kennel: ${selectedItem.kennelName}`
                             : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Owner: {selectedItem.ownerName}
                         </p>
                       </div>
@@ -1351,12 +1351,12 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Owner Information</h4>
+                    <h4 className="text-sm font-semibold">Owner Information</h4>
                     {(() => {
                       const client = findClientForPet(selectedItem.petId);
                       return client ? (
-                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                        <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
+                          <div className="h-12 w-12 overflow-hidden rounded-full">
                             <Image
                               src="/people/person-2.jpg"
                               alt={client.name}
@@ -1366,18 +1366,18 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             />
                           </div>
                           <div>
-                            <p className="font-semibold text-lg">
+                            <p className="text-lg font-semibold">
                               {client.name}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <Mail className="h-3 w-3" />
                               {client.email}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <Phone className="h-3 w-3" />
                               {client.phone}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <MapPin className="h-3 w-3" />
                               {client.address
                                 ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
@@ -1386,7 +1386,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Client information not available
                         </p>
                       );
@@ -1395,8 +1395,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Booking Details</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
+                  <h4 className="text-sm font-semibold">Booking Details</h4>
+                  <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Service</p>
                       <p className="font-medium capitalize">
@@ -1429,7 +1429,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t">
+              <div className="flex items-center justify-end gap-2 border-t pt-4">
                 <Button variant="outline" onClick={closeCheckInModal}>
                   Cancel
                 </Button>
@@ -1459,8 +1459,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Pet Information</h4>
-                    <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                    <h4 className="text-sm font-semibold">Pet Information</h4>
+                    <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                       {(() => {
                         const client = findClientForPet(selectedItem.petId);
                         return getPetImage(selectedItem.petId) ? (
@@ -1471,7 +1471,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <div className="h-12 w-12 overflow-hidden rounded-full">
                               <Image
                                 src={getPetImage(selectedItem.petId)!}
                                 alt={selectedItem.petName}
@@ -1489,8 +1489,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 : "#"
                             }
                           >
-                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <PawPrint className="h-6 w-6 text-primary" />
+                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary h-6 w-6" />
                             </div>
                           </Link>
                         );
@@ -1506,7 +1506,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                     : "#"
                                 }
-                                className="font-semibold text-lg hover:underline"
+                                className="text-lg font-semibold hover:underline"
                               >
                                 {selectedItem.petName}
                               </Link>
@@ -1514,15 +1514,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           })()}
                           {getServiceBadge(selectedItem.serviceType)}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {selectedItem.serviceType === "boarding"
                             ? `Kennel: ${selectedItem.kennelName}`
                             : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Owner: {selectedItem.ownerName}
                         </p>
                       </div>
@@ -1530,12 +1530,12 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Owner Information</h4>
+                    <h4 className="text-sm font-semibold">Owner Information</h4>
                     {(() => {
                       const client = findClientForPet(selectedItem.petId);
                       return client ? (
-                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                        <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
+                          <div className="h-12 w-12 overflow-hidden rounded-full">
                             <Image
                               src="/people/person-2.jpg"
                               alt={client.name}
@@ -1545,18 +1545,18 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             />
                           </div>
                           <div>
-                            <p className="font-semibold text-lg">
+                            <p className="text-lg font-semibold">
                               {client.name}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <Mail className="h-3 w-3" />
                               {client.email}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <Phone className="h-3 w-3" />
                               {client.phone}
                             </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <p className="text-muted-foreground flex items-center gap-1 text-sm">
                               <MapPin className="h-3 w-3" />
                               {client.address
                                 ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
@@ -1565,7 +1565,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           Client information not available
                         </p>
                       );
@@ -1574,8 +1574,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Pickup Information</h4>
-                  <div className="p-4 rounded-lg bg-muted/50">
+                  <h4 className="text-sm font-semibold">Pickup Information</h4>
+                  <div className="bg-muted/50 rounded-lg p-4">
                     <p className="text-sm">
                       Pickup by: {pickupPerson || selectedItem.ownerName}
                     </p>
@@ -1583,8 +1583,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Booking Details</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
+                  <h4 className="text-sm font-semibold">Booking Details</h4>
+                  <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Service</p>
                       <p className="font-medium capitalize">
@@ -1618,23 +1618,23 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
 
                 {paymentStatus && (
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Payment Status</h4>
-                    <div className="p-4 rounded-lg bg-muted/50">
+                    <h4 className="text-sm font-semibold">Payment Status</h4>
+                    <div className="bg-muted/50 rounded-lg p-4">
                       {paymentStatus === "processing" && (
-                        <p className="text-sm flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 animate-pulse" />
+                        <p className="flex items-center gap-2 text-sm">
+                          <CreditCard className="size-4 animate-pulse" />
                           Processing payment...
                         </p>
                       )}
                       {paymentStatus === "succeeded" && (
-                        <p className="text-sm flex items-center gap-2 text-green-600">
-                          <CheckCircle className="h-4 w-4" />
+                        <p className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="size-4" />
                           Payment succeeded
                         </p>
                       )}
                       {paymentStatus === "failed" && (
-                        <p className="text-sm flex items-center gap-2 text-red-600">
-                          <AlertTriangle className="h-4 w-4" />
+                        <p className="flex items-center gap-2 text-sm text-red-600">
+                          <AlertTriangle className="size-4" />
                           Payment failed: Insufficient funds
                         </p>
                       )}
@@ -1643,7 +1643,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t">
+              <div className="flex items-center justify-end gap-2 border-t pt-4">
                 {paymentStatus === null && (
                   <Button variant="outline" onClick={closeCheckOutModal}>
                     Cancel
@@ -1682,10 +1682,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">
+                        <h4 className="text-sm font-semibold">
                           Pet Information
                         </h4>
-                        <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                        <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                           {(() => {
                             const client = findClientForPet(selectedItem.petId);
                             return getPetImage(selectedItem.petId) ? (
@@ -1696,7 +1696,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     : "#"
                                 }
                               >
-                                <div className="h-12 w-12 rounded-full overflow-hidden">
+                                <div className="h-12 w-12 overflow-hidden rounded-full">
                                   <Image
                                     src={getPetImage(selectedItem.petId)!}
                                     alt={selectedItem.petName}
@@ -1714,8 +1714,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                     : "#"
                                 }
                               >
-                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <PawPrint className="h-6 w-6 text-primary" />
+                                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                                  <PawPrint className="text-primary h-6 w-6" />
                                 </div>
                               </Link>
                             );
@@ -1733,7 +1733,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                         ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                         : "#"
                                     }
-                                    className="font-semibold text-lg hover:underline"
+                                    className="text-lg font-semibold hover:underline"
                                   >
                                     {selectedItem.petName}
                                   </Link>
@@ -1741,15 +1741,15 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               })()}
                               {getServiceBadge(selectedItem.serviceType)}
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Breed: {selectedItem.petBreed}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {selectedItem.serviceType === "boarding"
                                 ? `Kennel: ${selectedItem.kennelName}`
                                 : `Play Group: ${selectedItem.playGroup || "Not assigned"}`}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Owner: {selectedItem.ownerName}
                             </p>
                           </div>
@@ -1757,14 +1757,14 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       </div>
 
                       <div className="space-y-2">
-                        <h4 className="font-semibold text-sm">
+                        <h4 className="text-sm font-semibold">
                           Owner Information
                         </h4>
                         {(() => {
                           const client = findClientForPet(selectedItem.petId);
                           return client ? (
-                            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                              <div className="h-12 w-12 rounded-full overflow-hidden">
+                            <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
+                              <div className="h-12 w-12 overflow-hidden rounded-full">
                                 <Image
                                   src="/people/person-2.jpg"
                                   alt={client.name}
@@ -1774,18 +1774,18 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                 />
                               </div>
                               <div>
-                                <p className="font-semibold text-lg">
+                                <p className="text-lg font-semibold">
                                   {client.name}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-muted-foreground flex items-center gap-1 text-sm">
                                   <Mail className="h-3 w-3" />
                                   {client.email}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-muted-foreground flex items-center gap-1 text-sm">
                                   <Phone className="h-3 w-3" />
                                   {client.phone}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-muted-foreground flex items-center gap-1 text-sm">
                                   <MapPin className="h-3 w-3" />
                                   {client.address
                                     ? `${client.address.street}, ${client.address.city}, ${client.address.state} ${client.address.zip}`
@@ -1794,7 +1794,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               Client information not available
                             </p>
                           );
@@ -1803,10 +1803,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-sm">
+                      <h4 className="text-sm font-semibold">
                         Pickup Information
                       </h4>
-                      <div className="p-4 rounded-lg bg-muted/50">
+                      <div className="bg-muted/50 rounded-lg p-4">
                         <p className="text-sm">
                           Pickup by: {pickupPerson || selectedItem.ownerName}
                         </p>
@@ -1814,8 +1814,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-sm">Booking Details</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm p-4 rounded-lg bg-muted/50">
+                      <h4 className="text-sm font-semibold">Booking Details</h4>
+                      <div className="bg-muted/50 grid grid-cols-2 gap-4 rounded-lg p-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Service</p>
                           <p className="font-medium capitalize">
@@ -1850,17 +1850,17 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-sm">Payment Status</h4>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm flex items-center gap-2 text-green-600">
-                          <CheckCircle className="h-4 w-4" />
+                      <h4 className="text-sm font-semibold">Payment Status</h4>
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <p className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="size-4" />
                           Payment succeeded
                         </p>
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                  <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                     {(() => {
                       const client = findClientForPet(selectedItem.petId);
                       return getPetImage(selectedItem.petId) ? (
@@ -1871,7 +1871,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               : "#"
                           }
                         >
-                          <div className="h-12 w-12 rounded-full overflow-hidden">
+                          <div className="h-12 w-12 overflow-hidden rounded-full">
                             <Image
                               src={getPetImage(selectedItem.petId)!}
                               alt={selectedItem.petName}
@@ -1889,8 +1889,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               : "#"
                           }
                         >
-                          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <PawPrint className="h-6 w-6 text-primary" />
+                          <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                            <PawPrint className="text-primary h-6 w-6" />
                           </div>
                         </Link>
                       );
@@ -1906,7 +1906,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                   ? `/facility/dashboard/clients/${client.id}/pets/${selectedItem.petId}`
                                   : "#"
                               }
-                              className="font-semibold text-lg hover:underline"
+                              className="text-lg font-semibold hover:underline"
                             >
                               {selectedItem.petName}
                             </Link>
@@ -1914,7 +1914,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                         })()}
                         {getServiceBadge(selectedItem.serviceType)}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Owner: {selectedItem.ownerName}
                       </p>
                     </div>
@@ -1922,7 +1922,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                 )}
               </div>
 
-              <div className="flex items-center justify-between w-full gap-2 pt-4 border-t">
+              <div className="flex w-full items-center justify-between gap-2 border-t pt-4">
                 <div className="flex gap-2">
                   <Link href="/facility/dashboard/bookings">
                     <Button variant="outline">Booking Details</Button>
@@ -1930,7 +1930,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   {selectedItem.status === "checked-in" && (
                     <Button
                       variant="outline"
-                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      className="border-orange-600 text-orange-600 hover:bg-orange-50"
                       onClick={() => revertToScheduled(selectedItem)}
                     >
                       Revert to Scheduled
@@ -1940,14 +1940,14 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     <>
                       <Button
                         variant="outline"
-                        className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                        className="border-orange-600 text-orange-600 hover:bg-orange-50"
                         onClick={() => revertToScheduled(selectedItem)}
                       >
                         Revert to Scheduled
                       </Button>
                       <Button
                         variant="outline"
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
                         onClick={() => revertToCheckedIn(selectedItem)}
                       >
                         Revert to Checked In
@@ -1955,7 +1955,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     </>
                   )}
                 </div>
-                <div className="flex gap-2 ml-auto">
+                <div className="ml-auto flex gap-2">
                   <Button variant="outline" onClick={closeDetailsModal}>
                     Close
                   </Button>

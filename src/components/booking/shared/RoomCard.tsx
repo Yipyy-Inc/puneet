@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { CheckCircle, Bed, Dog, Cat, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -58,40 +59,38 @@ export function RoomCard({
   const content = (
     <>
       <div
-        className={cn(
-          "bg-muted relative shrink-0",
-          compact ? "h-36" : "h-44"
-        )}
+        className={cn("bg-muted relative shrink-0", compact ? "h-36" : "h-44")}
       >
         {room.image ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <Image
             src={room.image}
             alt={room.name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            unoptimized
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Bed className="h-8 w-8 text-muted-foreground" />
+          <div className="flex h-full w-full items-center justify-center">
+            <Bed className="text-muted-foreground h-8 w-8" />
           </div>
         )}
         {selected && (
-          <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-            <CheckCircle className={compact ? "h-4 w-4" : "h-5 w-5"} />
+          <div className="bg-primary text-primary-foreground absolute top-2 right-2 rounded-full p-1">
+            <CheckCircle className={compact ? "size-4" : "h-5 w-5"} />
           </div>
         )}
       </div>
-      <div className={cn("flex flex-col flex-1", compact ? "p-3" : "p-4")}>
+      <div className={cn("flex flex-1 flex-col", compact ? "p-3" : "p-4")}>
         <h3 className={cn("font-semibold", compact ? "" : "text-lg")}>
           {room.name}
         </h3>
-        <p className="text-primary font-bold text-sm mt-0.5">
+        <p className="text-primary mt-0.5 text-sm font-bold">
           ${room.price}/night
         </p>
         <p
           className={cn(
-            "text-muted-foreground line-clamp-2 mt-1",
-            compact ? "text-xs" : "text-sm"
+            "text-muted-foreground mt-1 line-clamp-2",
+            compact ? "text-xs" : "text-sm",
           )}
         >
           {room.description}
@@ -99,20 +98,20 @@ export function RoomCard({
         <ul
           className={cn(
             "text-muted-foreground mt-2 space-y-1",
-            compact ? "text-xs space-y-0.5" : "text-xs"
+            compact ? "space-y-0.5 text-xs" : "text-xs",
           )}
         >
           {(compact ? room.included.slice(0, 3) : room.included).map(
             (item, i) => (
               <li key={i} className="flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                <CheckCircle className="text-primary h-3.5 w-3.5 shrink-0" />
                 {item}
               </li>
-            )
+            ),
           )}
         </ul>
         {room.allowedPetTypes && room.allowedPetTypes.length > 0 && (
-          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs">
             {room.allowedPetTypes.includes("Dog") && (
               <Dog className="h-3.5 w-3.5" />
             )}
@@ -122,15 +121,12 @@ export function RoomCard({
             {(room.minWeightLbs != null || room.maxWeightLbs != null) && (
               <span>
                 {room.minWeightLbs != null && `≥${room.minWeightLbs} lbs`}
-                {room.maxWeightLbs != null &&
-                  ` ≤${room.maxWeightLbs} lbs`}
+                {room.maxWeightLbs != null && ` ≤${room.maxWeightLbs} lbs`}
               </span>
             )}
           </div>
         )}
-        {label && (
-          <p className="text-xs text-muted-foreground mt-1">{label}</p>
-        )}
+        {label && <p className="text-muted-foreground mt-1 text-xs">{label}</p>}
         {onViewDetails && (
           <Button
             type="button"
@@ -142,7 +138,7 @@ export function RoomCard({
               onViewDetails();
             }}
           >
-            <Info className="h-3.5 w-3.5 mr-1" />
+            <Info className="mr-1 h-3.5 w-3.5" />
             View details
           </Button>
         )}
@@ -151,13 +147,18 @@ export function RoomCard({
   );
 
   const wrapperClass = cn(
-    "flex flex-col border-2 rounded-xl overflow-hidden transition-all text-left",
+    "flex flex-col overflow-hidden rounded-xl border-2 text-left transition-all",
     compact ? "min-h-[300px]" : "min-h-[360px]",
-    disabled && "opacity-60 cursor-not-allowed",
+    disabled && "cursor-not-allowed opacity-60",
     !disabled && "cursor-pointer",
-    selected && !disabled && "ring-2 ring-primary border-primary bg-primary/5",
-    !selected && !disabled && "border-border hover:border-primary/50",
-    className
+    selected && !disabled && "border-primary bg-primary/5 ring-2 ring-primary",
+    !selected &&
+      !disabled &&
+      `
+      border-border
+      hover:border-primary/50
+    `,
+    className,
   );
 
   if (onClick && !disabled) {

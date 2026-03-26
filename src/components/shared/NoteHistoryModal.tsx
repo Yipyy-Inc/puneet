@@ -32,9 +32,9 @@ export function NoteHistoryModal({
     >
       <div className="space-y-4" role="region" aria-label="Edit history">
         {/* Current version */}
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-xs font-medium text-primary uppercase tracking-wider">
+        <div className="border-primary/20 bg-primary/5 rounded-lg border p-3">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="text-primary text-xs font-medium tracking-wider uppercase">
               Current Version
             </span>
           </div>
@@ -47,37 +47,37 @@ export function NoteHistoryModal({
             <li key={edit.id} className="relative pl-6">
               {/* Timeline line */}
               {index < sortedEdits.length - 1 && (
-                <div className="absolute left-[11px] top-6 bottom-0 w-px bg-border" />
+                <div className="bg-border absolute top-6 bottom-0 left-[11px] w-px" />
               )}
               {/* Timeline dot */}
-              <div className="absolute left-0 top-1 flex items-center justify-center h-6 w-6 rounded-full bg-muted border border-border">
-                <User className="h-3 w-3 text-muted-foreground" />
+              <div className="border-border bg-muted absolute top-1 left-0 flex h-6 w-6 items-center justify-center rounded-full border">
+                <User className="text-muted-foreground h-3 w-3" />
               </div>
 
               <div className="pb-4">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="mb-1 flex items-center gap-2">
                   <span className="text-sm font-medium">{edit.editedBy}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {formatNoteDate(edit.editedAt)}
                   </span>
                 </div>
 
                 {/* Previous content */}
-                <div className="rounded border bg-red-50/50 dark:bg-red-950/20 p-2 mb-1">
-                  <span className="text-[10px] font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">
+                <div className="mb-1 rounded-sm border bg-red-50/50 p-2 dark:bg-red-950/20">
+                  <span className="text-[10px] font-medium tracking-wider text-red-600 uppercase dark:text-red-400">
                     Previous
                   </span>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs whitespace-pre-wrap">
                     {edit.previousContent}
                   </p>
                 </div>
 
                 {/* New content */}
-                <div className="rounded border bg-green-50/50 dark:bg-green-950/20 p-2">
-                  <span className="text-[10px] font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">
+                <div className="rounded-sm border bg-green-50/50 p-2 dark:bg-green-950/20">
+                  <span className="text-[10px] font-medium tracking-wider text-green-600 uppercase dark:text-green-400">
                     Changed to
                   </span>
-                  <p className="text-xs whitespace-pre-wrap mt-0.5">
+                  <p className="mt-0.5 text-xs whitespace-pre-wrap">
                     {edit.newContent}
                   </p>
                 </div>
@@ -87,7 +87,7 @@ export function NoteHistoryModal({
         </ol>
 
         {sortedEdits.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-muted-foreground py-4 text-center text-sm">
             No edit history
           </p>
         )}

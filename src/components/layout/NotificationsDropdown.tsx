@@ -78,21 +78,21 @@ export function NotificationsDropdown() {
   const getIcon = (type: Notification["type"]) => {
     switch (type) {
       case "success":
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return <CheckCircle className="text-success size-4" />;
       case "warning":
-        return <AlertCircle className="h-4 w-4 text-warning" />;
+        return <AlertCircle className="text-warning size-4" />;
       default:
-        return <Info className="h-4 w-4 text-info" />;
+        return <Info className="text-info size-4" />;
     }
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative flex items-center justify-center h-10 w-10 rounded-xl hover:bg-muted transition-colors">
-          <Bell className="h-5 w-5 text-muted-foreground" />
+        <button className="hover:bg-muted relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors">
+          <Bell className="text-muted-foreground h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span className="bg-primary absolute top-2 right-2 h-2 w-2 animate-pulse rounded-full" />
           )}
         </button>
       </DropdownMenuTrigger>
@@ -110,7 +110,7 @@ export function NotificationsDropdown() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-auto p-0 text-xs"
               onClick={markAllAsRead}
             >
               Mark all as read
@@ -120,27 +120,25 @@ export function NotificationsDropdown() {
         <DropdownMenuSeparator />
         <div className="max-h-[300px] overflow-y-auto">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground p-4 text-center text-sm">
               No notifications
             </div>
           ) : (
             notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`flex items-start gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
-                  !notification.read ? "bg-primary/5" : ""
-                }`}
+                className={`hover:bg-muted/50 flex cursor-pointer items-start gap-3 p-3 transition-colors ${!notification.read ? "bg-primary/5" : ""} `}
                 onClick={() => markAsRead(notification.id)}
               >
                 <div className="mt-0.5">{getIcon(notification.type)}</div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium leading-tight">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm/tight font-medium">
                     {notification.title}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
                     {notification.message}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {notification.timestamp}
                   </p>
                 </div>

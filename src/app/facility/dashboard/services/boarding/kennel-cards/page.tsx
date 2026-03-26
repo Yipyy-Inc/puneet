@@ -122,14 +122,14 @@ export default function KennelCardsPage() {
       {/* Generator Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <CreditCard className="h-5 w-5" />
             Generate Kennel Card
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-2 flex-1 min-w-[250px]">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="min-w-[250px] flex-1 space-y-2">
               <Label>Select Pet</Label>
               <Select
                 value={selectedGuestId}
@@ -142,7 +142,7 @@ export default function KennelCardsPage() {
                   {currentGuests.map((guest) => (
                     <SelectItem key={guest.id} value={guest.id}>
                       <div className="flex items-center gap-2">
-                        <PawPrint className="h-4 w-4" />
+                        <PawPrint className="size-4" />
                         {guest.petName} - {guest.kennelName}
                       </div>
                     </SelectItem>
@@ -151,14 +151,14 @@ export default function KennelCardsPage() {
               </Select>
             </div>
             <Button onClick={handleGenerateCard} disabled={!selectedGuestId}>
-              <CreditCard className="h-4 w-4 mr-2" />
+              <CreditCard className="mr-2 size-4" />
               Generate Card
             </Button>
           </div>
 
           {selectedGuest && (
-            <div className="mt-4 p-4 rounded-lg bg-muted/50">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-muted/50 mt-4 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                 <div>
                   <p className="text-muted-foreground">Pet</p>
                   <p className="font-medium">{selectedGuest.petName}</p>
@@ -184,15 +184,15 @@ export default function KennelCardsPage() {
       {/* Generated Cards List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <CreditCard className="h-5 w-5" />
             Generated Kennel Cards
           </CardTitle>
         </CardHeader>
         <CardContent>
           {currentGuests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <PawPrint className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <div className="text-muted-foreground py-8 text-center">
+              <PawPrint className="mx-auto mb-3 h-12 w-12 opacity-50" />
               <p>No boarding guests currently</p>
             </div>
           ) : (
@@ -202,16 +202,16 @@ export default function KennelCardsPage() {
                 return (
                   <div
                     key={guest.id}
-                    className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="bg-card hover:bg-muted/50 rounded-lg border p-4 transition-colors"
                   >
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="mb-3 flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          <PawPrint className="h-5 w-5 text-primary" />
+                        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-semibold">{guest.petName}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {guest.kennelName}
                           </p>
                         </div>
@@ -223,7 +223,7 @@ export default function KennelCardsPage() {
                       )}
                     </div>
 
-                    <div className="space-y-1 text-sm mb-3">
+                    <div className="mb-3 space-y-1 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Check-in:</span>
                         <span>{formatDate(guest.checkInDate)}</span>
@@ -248,7 +248,7 @@ export default function KennelCardsPage() {
                               setIsPreviewOpen(true);
                             }}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Eye className="mr-1 size-4" />
                             View
                           </Button>
                           <Button
@@ -256,7 +256,7 @@ export default function KennelCardsPage() {
                             variant="outline"
                             onClick={() => handleRegenerateCard(guest.id)}
                           >
-                            <RefreshCw className="h-4 w-4" />
+                            <RefreshCw className="size-4" />
                           </Button>
                         </>
                       ) : (
@@ -268,7 +268,7 @@ export default function KennelCardsPage() {
                             handleGenerateCard();
                           }}
                         >
-                          <CreditCard className="h-4 w-4 mr-1" />
+                          <CreditCard className="mr-1 size-4" />
                           Generate
                         </Button>
                       )}
@@ -283,7 +283,7 @@ export default function KennelCardsPage() {
 
       {/* Preview Modal */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
@@ -296,15 +296,15 @@ export default function KennelCardsPage() {
               {/* Printable Card */}
               <div
                 ref={printRef}
-                className="border-2 border-dashed rounded-lg p-6 bg-white text-black print:border-solid"
+                className="rounded-lg border-2 border-dashed bg-white p-6 text-black print:border-solid"
               >
                 {/* Header */}
-                <div className="flex items-start justify-between border-b pb-4 mb-4">
+                <div className="mb-4 flex items-start justify-between border-b pb-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden">
+                    <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-gray-200">
                       {selectedGuest.petPhotoUrl ? (
-                        <div className="w-full h-full bg-primary/20 flex items-center justify-center">
-                          <PawPrint className="h-10 w-10 text-primary" />
+                        <div className="bg-primary/20 flex h-full w-full items-center justify-center">
+                          <PawPrint className="text-primary h-10 w-10" />
                         </div>
                       ) : (
                         <PawPrint className="h-10 w-10 text-gray-400" />
@@ -315,7 +315,7 @@ export default function KennelCardsPage() {
                         {selectedGuest.petName}
                       </h2>
                       <p className="text-gray-600">{selectedGuest.petBreed}</p>
-                      <div className="flex gap-2 mt-1 text-sm">
+                      <div className="mt-1 flex gap-2 text-sm">
                         <span>{selectedGuest.petSize.toUpperCase()}</span>
                         <span>•</span>
                         <span>{selectedGuest.petWeight} lbs</span>
@@ -325,50 +325,50 @@ export default function KennelCardsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-lg">
+                    <p className="text-lg font-bold">
                       {selectedGuest.kennelName}
                     </p>
-                    <div className="w-16 h-16 bg-gray-200 rounded mt-2 flex items-center justify-center">
+                    <div className="mt-2 flex h-16 w-16 items-center justify-center rounded-sm bg-gray-200">
                       <QrCode className="h-10 w-10 text-gray-500" />
                     </div>
                   </div>
                 </div>
 
                 {/* Owner Info */}
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-1">
-                    <User className="h-4 w-4" />
+                <div className="mb-4 rounded-lg bg-gray-50 p-3">
+                  <div className="mb-1 flex items-center gap-2">
+                    <User className="size-4" />
                     <span className="font-semibold">Owner:</span>
                     <span>{selectedGuest.ownerName}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                    <Phone className="size-4" />
                     <span className="font-semibold">Phone:</span>
                     <span>{selectedGuest.ownerPhone}</span>
                   </div>
                 </div>
 
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="mb-4 grid grid-cols-2 gap-4">
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-green-600" />
+                      <Calendar className="size-4 text-green-600" />
                       <span className="font-semibold text-green-800">
                         Check-In
                       </span>
                     </div>
-                    <p className="text-lg font-bold mt-1">
+                    <p className="mt-1 text-lg font-bold">
                       {formatDate(selectedGuest.checkInDate)}
                     </p>
                   </div>
-                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-orange-600" />
+                      <Calendar className="size-4 text-orange-600" />
                       <span className="font-semibold text-orange-800">
                         Check-Out
                       </span>
                     </div>
-                    <p className="text-lg font-bold mt-1">
+                    <p className="mt-1 text-lg font-bold">
                       {formatDate(selectedGuest.checkOutDate)}
                     </p>
                   </div>
@@ -376,12 +376,12 @@ export default function KennelCardsPage() {
 
                 {/* Allergies */}
                 {selectedGuest.allergies.length > 0 && (
-                  <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
                     <div className="flex items-center gap-2 text-red-800">
                       <AlertTriangle className="h-5 w-5" />
                       <span className="font-bold">ALLERGIES</span>
                     </div>
-                    <p className="mt-1 text-red-700 font-medium">
+                    <p className="mt-1 font-medium text-red-700">
                       {selectedGuest.allergies.join(", ")}
                     </p>
                   </div>
@@ -389,7 +389,7 @@ export default function KennelCardsPage() {
 
                 {/* Medications */}
                 {selectedGuest.medications.length > 0 && (
-                  <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
                     <div className="flex items-center gap-2 text-purple-800">
                       <Pill className="h-5 w-5" />
                       <span className="font-bold">MEDICATIONS</span>
@@ -408,7 +408,7 @@ export default function KennelCardsPage() {
                 )}
 
                 {/* Feeding */}
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                   <div className="flex items-center gap-2 text-blue-800">
                     <Utensils className="h-5 w-5" />
                     <span className="font-bold">FEEDING</span>
@@ -435,7 +435,7 @@ export default function KennelCardsPage() {
                 </div>
 
                 {/* Emergency Vet */}
-                <div className="p-3 bg-gray-100 rounded-lg">
+                <div className="rounded-lg bg-gray-100 p-3">
                   <p className="text-sm">
                     <span className="font-semibold">Emergency Vet:</span>{" "}
                     {selectedGuest.emergencyVetContact}
@@ -444,8 +444,8 @@ export default function KennelCardsPage() {
 
                 {/* Notes */}
                 {selectedGuest.notes && (
-                  <div className="mt-4 p-3 border rounded-lg">
-                    <p className="font-semibold mb-1">Notes:</p>
+                  <div className="mt-4 rounded-lg border p-3">
+                    <p className="mb-1 font-semibold">Notes:</p>
                     <p className="text-sm text-gray-600">
                       {selectedGuest.notes}
                     </p>
@@ -453,7 +453,7 @@ export default function KennelCardsPage() {
                 )}
 
                 {/* Footer */}
-                <div className="mt-4 pt-3 border-t text-center text-xs text-gray-500">
+                <div className="mt-4 border-t pt-3 text-center text-xs text-gray-500">
                   <p>
                     Generated:{" "}
                     {currentCard
@@ -464,7 +464,7 @@ export default function KennelCardsPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mt-4">
+              <div className="mt-4 flex gap-3">
                 <Button
                   variant="outline"
                   className="flex-1"
@@ -473,7 +473,7 @@ export default function KennelCardsPage() {
                   Close
                 </Button>
                 <Button className="flex-1" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" />
+                  <Printer className="mr-2 size-4" />
                   Print Card
                 </Button>
               </div>

@@ -160,50 +160,50 @@ export function OverviewTab({
       {/* Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Contact & Owner Info */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Contact Information */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <Phone className="h-5 w-5" />
                   Contact Information
                 </CardTitle>
                 <Button variant="outline" size="sm" onClick={handleEditContact}>
-                  <Edit className="h-4 w-4 mr-2" />
+                  <Edit className="mr-2 size-4" />
                   Edit
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                    <Mail className="h-4 w-4 text-primary" />
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                    <Mail className="text-primary size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-muted-foreground text-xs">Email</p>
                     <p className="text-sm font-medium">
                       {facility.contact?.email || "Not provided"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
-                    <Phone className="h-4 w-4 text-success" />
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                  <div className="bg-success/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                    <Phone className="text-success size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="text-muted-foreground text-xs">Phone</p>
                     <p className="text-sm font-medium">
                       {facility.contact?.phone || "Not provided"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-info/10">
-                    <Globe className="h-4 w-4 text-info" />
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                  <div className="bg-info/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                    <Globe className="text-info size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Website</p>
+                    <p className="text-muted-foreground text-xs">Website</p>
                     <p className="text-sm font-medium">
                       {facility.contact?.website || "Not provided"}
                     </p>
@@ -213,21 +213,21 @@ export function OverviewTab({
             </Card>
 
             {/* Owner / Admin Information */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <User className="h-5 w-5" />
                   Owner / Admin
                 </CardTitle>
                 <Button variant="outline" size="sm" onClick={handleEditOwner}>
-                  <Edit className="h-4 w-4 mr-2" />
+                  <Edit className="mr-2 size-4" />
                   Change
                 </Button>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
                   <div
-                    className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                     style={{
                       background:
                         "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -243,28 +243,28 @@ export function OverviewTab({
                     <p className="font-medium">
                       {facility.owner?.name || "Not provided"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Facility Owner
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                    <Mail className="h-4 w-4 text-primary" />
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                    <Mail className="text-primary size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-muted-foreground text-xs">Email</p>
                     <p className="text-sm font-medium">
                       {facility.owner?.email || "Not provided"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
-                    <Phone className="h-4 w-4 text-success" />
+                <div className="bg-muted/50 flex items-center gap-3 rounded-lg p-3">
+                  <div className="bg-success/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                    <Phone className="text-success size-4" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Phone</p>
+                    <p className="text-muted-foreground text-xs">Phone</p>
                     <p className="text-sm font-medium">
                       {facility.owner?.phone || "Not provided"}
                     </p>
@@ -275,17 +275,17 @@ export function OverviewTab({
           </div>
 
           {/* Quick Actions */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
+                  className="h-auto flex-col gap-2 py-4"
                   onClick={onNavigateToReports}
                 >
                   <FileText className="h-5 w-5" />
@@ -293,21 +293,21 @@ export function OverviewTab({
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
+                  className="h-auto flex-col gap-2 py-4"
                 >
                   <Mail className="h-5 w-5" />
                   <span className="text-xs">Send Notification</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
+                  className="h-auto flex-col gap-2 py-4"
                 >
                   <Key className="h-5 w-5" />
                   <span className="text-xs">Reset Password</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-auto py-4 flex-col gap-2"
+                  className="h-auto flex-col gap-2 py-4"
                   onClick={onNavigateToModules}
                 >
                   <Puzzle className="h-5 w-5" />
@@ -320,9 +320,9 @@ export function OverviewTab({
 
         {/* Right Column - Recent Activity */}
         <div className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Activity className="h-5 w-5" />
                 Recent Activity
               </CardTitle>
@@ -333,15 +333,15 @@ export function OverviewTab({
                   const Icon = getActivityIcon(activity.type);
                   return (
                     <div key={activity.id} className="flex gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                        <Icon className="text-muted-foreground size-4" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-muted-foreground truncate text-xs">
                           {activity.description}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-muted-foreground mt-0.5 text-xs">
                           {activity.time}
                         </p>
                       </div>
@@ -351,11 +351,11 @@ export function OverviewTab({
               </div>
               <Button
                 variant="ghost"
-                className="w-full mt-4"
+                className="mt-4 w-full"
                 onClick={onNavigateToLogs}
               >
                 View All Activity
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <ChevronRight className="ml-1 size-4" />
               </Button>
             </CardContent>
           </Card>
@@ -371,13 +371,13 @@ export function OverviewTab({
               Update the contact details for {facility.name}.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label
                 htmlFor="contact-email"
                 className="flex items-center gap-2"
               >
-                <Mail className="h-4 w-4" />
+                <Mail className="size-4" />
                 Email
               </Label>
               <Input
@@ -398,7 +398,7 @@ export function OverviewTab({
                 htmlFor="contact-phone"
                 className="flex items-center gap-2"
               >
-                <Phone className="h-4 w-4" />
+                <Phone className="size-4" />
                 Phone
               </Label>
               <Input
@@ -419,7 +419,7 @@ export function OverviewTab({
                 htmlFor="contact-website"
                 className="flex items-center gap-2"
               >
-                <Globe className="h-4 w-4" />
+                <Globe className="size-4" />
                 Website
               </Label>
               <Input
@@ -460,7 +460,7 @@ export function OverviewTab({
               or create a new owner.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="space-y-4 py-4">
             {/* Mode Selection */}
             <div className="flex gap-2">
               <Button
@@ -468,7 +468,7 @@ export function OverviewTab({
                 className="flex-1"
                 onClick={() => setOwnerMode("existing")}
               >
-                <Users className="h-4 w-4 mr-2" />
+                <Users className="mr-2 size-4" />
                 Existing Member
               </Button>
               <Button
@@ -476,7 +476,7 @@ export function OverviewTab({
                 className="flex-1"
                 onClick={() => setOwnerMode("new")}
               >
-                <User className="h-4 w-4 mr-2" />
+                <User className="mr-2 size-4" />
                 New Owner
               </Button>
             </div>
@@ -484,21 +484,21 @@ export function OverviewTab({
             {ownerMode === "existing" ? (
               <div className="space-y-3">
                 <Label>Select a staff member to promote to owner</Label>
-                <div className="max-h-[300px] overflow-y-auto space-y-2">
+                <div className="max-h-[300px] space-y-2 overflow-y-auto">
                   {facility.usersList.map((user, index) => (
                     <div
                       key={index}
                       className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all",
+                        `flex cursor-pointer items-center justify-between rounded-lg border-2 p-3 transition-all`,
                         selectedOwnerId === index
                           ? "border-primary bg-primary/5"
-                          : "border-transparent bg-muted/50 hover:bg-muted",
+                          : `bg-muted/50 hover:bg-muted border-transparent`,
                       )}
                       onClick={() => setSelectedOwnerId(index)}
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
+                          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                           style={{
                             background:
                               user.role === "Admin"
@@ -516,7 +516,7 @@ export function OverviewTab({
                         </div>
                         <div>
                           <p className="font-medium">{user.person.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {user.person.email}
                           </p>
                         </div>
@@ -526,7 +526,7 @@ export function OverviewTab({
                   ))}
                 </div>
                 {facility.usersList.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center text-sm">
                     No staff members available. Create a new owner instead.
                   </p>
                 )}
@@ -538,7 +538,7 @@ export function OverviewTab({
                     htmlFor="new-owner-name"
                     className="flex items-center gap-2"
                   >
-                    <User className="h-4 w-4" />
+                    <User className="size-4" />
                     Full Name
                   </Label>
                   <Input
@@ -555,7 +555,7 @@ export function OverviewTab({
                     htmlFor="new-owner-email"
                     className="flex items-center gap-2"
                   >
-                    <Mail className="h-4 w-4" />
+                    <Mail className="size-4" />
                     Email
                   </Label>
                   <Input
@@ -576,7 +576,7 @@ export function OverviewTab({
                     htmlFor="new-owner-phone"
                     className="flex items-center gap-2"
                   >
-                    <Phone className="h-4 w-4" />
+                    <Phone className="size-4" />
                     Phone
                   </Label>
                   <Input
@@ -595,10 +595,10 @@ export function OverviewTab({
               </div>
             )}
 
-            <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+            <div className="border-warning/20 bg-warning/10 rounded-lg border p-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
-                <p className="text-xs text-muted-foreground">
+                <AlertCircle className="text-warning mt-0.5 size-4" />
+                <p className="text-muted-foreground text-xs">
                   Changing the owner will transfer full administrative control
                   of this facility. The new owner will receive an email
                   notification.

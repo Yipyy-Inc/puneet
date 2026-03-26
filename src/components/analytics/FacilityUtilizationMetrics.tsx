@@ -38,11 +38,11 @@ export function FacilityUtilizationMetrics() {
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   System Average
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -50,12 +50,12 @@ export function FacilityUtilizationMetrics() {
                     {systemAvg.toFixed(1)}%
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Utilization rate
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -67,11 +67,11 @@ export function FacilityUtilizationMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Top Performer
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -79,12 +79,12 @@ export function FacilityUtilizationMetrics() {
                     {comparison.topPerformer}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {comparison.facilities[0].utilizationRate}% utilization
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -96,11 +96,11 @@ export function FacilityUtilizationMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total Facilities
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -108,12 +108,12 @@ export function FacilityUtilizationMetrics() {
                     {facilityUtilization.length}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Active locations
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -125,11 +125,11 @@ export function FacilityUtilizationMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Avg Efficiency
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -143,12 +143,12 @@ export function FacilityUtilizationMetrics() {
                     %
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Resource efficiency
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -164,12 +164,12 @@ export function FacilityUtilizationMetrics() {
       {/* Facility Comparison Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Utilization Rate Comparison */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Utilization Rate Comparison
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Compare facility utilization across locations
             </p>
           </CardHeader>
@@ -204,7 +204,10 @@ export function FacilityUtilizationMetrics() {
                       borderRadius: "12px",
                       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                     }}
-                    formatter={(value: number | undefined) => [`${value || 0}%`, ""]}
+                    formatter={(value: number | undefined) => [
+                      `${value || 0}%`,
+                      "",
+                    ]}
                   />
                   <Bar
                     dataKey="utilizationRate"
@@ -219,12 +222,12 @@ export function FacilityUtilizationMetrics() {
         </Card>
 
         {/* Multi-Metric Radar Chart */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Performance Radar
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Multi-dimensional performance comparison
             </p>
           </CardHeader>
@@ -280,12 +283,12 @@ export function FacilityUtilizationMetrics() {
       </div>
 
       {/* Detailed Facility Metrics */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Facility Utilization Details
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Comprehensive utilization metrics by facility
           </p>
         </CardHeader>
@@ -294,14 +297,14 @@ export function FacilityUtilizationMetrics() {
             {facilityUtilization.map((facility) => (
               <div
                 key={facility.id}
-                className="p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                className="bg-muted/30 hover:bg-muted/50 rounded-xl p-4 transition-colors"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="mb-3 flex items-start justify-between">
                   <div>
-                    <h4 className="font-semibold text-lg">
+                    <h4 className="text-lg font-semibold">
                       {facility.facilityName}
                     </h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Capacity: {facility.totalCapacity} units
                     </p>
                   </div>
@@ -316,27 +319,27 @@ export function FacilityUtilizationMetrics() {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Utilization</p>
+                    <p className="text-muted-foreground text-xs">Utilization</p>
                     <p className="text-xl font-bold">
                       {facility.utilizationRate}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Occupancy</p>
+                    <p className="text-muted-foreground text-xs">Occupancy</p>
                     <p className="text-xl font-bold">
                       {facility.occupancyRate}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Efficiency</p>
+                    <p className="text-muted-foreground text-xs">Efficiency</p>
                     <p className="text-xl font-bold">
                       {facility.resourceEfficiency}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Avg Occupancy
                     </p>
                     <p className="text-xl font-bold">
@@ -355,23 +358,23 @@ export function FacilityUtilizationMetrics() {
                       {facility.bookedHours} / {facility.availableHours} hours
                     </span>
                   </div>
-                  <div className="w-full bg-muted rounded-full h-3">
+                  <div className="bg-muted h-3 w-full rounded-full">
                     <div
-                      className={`rounded-full h-3 transition-all ${
+                      className={`h-3 rounded-full transition-all ${
                         facility.utilizationRate >= 80
                           ? "bg-success"
                           : facility.utilizationRate >= 60
                             ? "bg-warning"
                             : "bg-destructive"
-                      }`}
+                      } `}
                       style={{ width: `${facility.utilizationRate}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Weekly Trend Mini Chart */}
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-xs text-muted-foreground mb-2">
+                <div className="border-border mt-4 border-t pt-4">
+                  <p className="text-muted-foreground mb-2 text-xs">
                     Weekly Trend
                   </p>
                   <div className="h-16">
@@ -391,7 +394,10 @@ export function FacilityUtilizationMetrics() {
                             borderRadius: "8px",
                             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                           }}
-                          formatter={(value: number | undefined) => [`${value || 0}%`, "Rate"]}
+                          formatter={(value: number | undefined) => [
+                            `${value || 0}%`,
+                            "Rate",
+                          ]}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -405,7 +411,7 @@ export function FacilityUtilizationMetrics() {
 
       {/* Resource Allocation Summary */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Total Capacity
@@ -419,14 +425,14 @@ export function FacilityUtilizationMetrics() {
                   0,
                 )}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-2 text-sm">
                 Total system capacity (units)
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Total Hours</CardTitle>
           </CardHeader>
@@ -437,14 +443,14 @@ export function FacilityUtilizationMetrics() {
                   .reduce((sum, f) => sum + f.bookedHours, 0)
                   .toLocaleString()}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-2 text-sm">
                 Booked hours this month
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Peak Performance
@@ -455,7 +461,7 @@ export function FacilityUtilizationMetrics() {
               <p className="text-4xl font-bold">
                 {Math.max(...facilityUtilization.map((f) => f.peakOccupancy))}
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-muted-foreground mt-2 text-sm">
                 Highest occupancy reached
               </p>
             </div>

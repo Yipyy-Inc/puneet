@@ -185,11 +185,11 @@ export default function UserManagementPage() {
             variant="outline"
             onClick={() => exportUsersToCSV(adminUsers)}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             {"Export"}
           </Button>
           <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             {"Add User"}
           </Button>
         </div>
@@ -202,11 +202,11 @@ export default function UserManagementPage() {
             <CardTitle className="text-sm font-medium">
               {"Total Admin Users"}
             </CardTitle>
-            <UserCog className="h-4 w-4 text-muted-foreground" />
+            <UserCog className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{adminUsers.length}</div>
-            <p className="text-xs text-muted-foreground">Across all roles</p>
+            <p className="text-muted-foreground text-xs">Across all roles</p>
           </CardContent>
         </Card>
         <Card>
@@ -214,13 +214,13 @@ export default function UserManagementPage() {
             <CardTitle className="text-sm font-medium">
               {"Active Admin Users"}
             </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <UserCheck className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {activeUsers}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {Math.round((activeUsers / adminUsers.length) * 100)}% of total
             </p>
           </CardContent>
@@ -230,13 +230,13 @@ export default function UserManagementPage() {
             <CardTitle className="text-sm font-medium">
               {"Suspended Users"}
             </CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
+            <UserX className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               {suspendedUsers}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {inactiveUsers} inactive
             </p>
           </CardContent>
@@ -246,11 +246,11 @@ export default function UserManagementPage() {
             <CardTitle className="text-sm font-medium">
               {"Roles Configured"}
             </CardTitle>
-            <Key className="h-4 w-4 text-muted-foreground" />
+            <Key className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               With custom permissions
             </p>
           </CardContent>
@@ -270,13 +270,13 @@ export default function UserManagementPage() {
             size="sm"
             onClick={() => setSelectedUser(user as unknown as AdminUser)}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           </Button>
         )}
       />
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-0">
               <DialogTitle className="sr-only">
                 {selectedUser?.name} - {"User Details"}

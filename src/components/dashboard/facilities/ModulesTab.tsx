@@ -96,14 +96,14 @@ export function ModulesTab({
     setShowModulesDialog(false);
   };
   return (
-    <Card className="border-0 shadow-card">
+    <Card className="shadow-card border-0">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <Puzzle className="h-5 w-5" />
           Enabled Modules
         </CardTitle>
         <Button variant="outline" size="sm" onClick={handleOpenDialog}>
-          <Edit className="h-4 w-4 mr-2" />
+          <Edit className="mr-2 size-4" />
           Manage Modules
         </Button>
       </CardHeader>
@@ -118,11 +118,11 @@ export function ModulesTab({
                 return (
                   <div
                     key={module.id}
-                    className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+                    className="bg-muted/50 hover:bg-muted rounded-xl p-4 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       <div
-                        className="flex items-center justify-center w-10 h-10 rounded-xl"
+                        className="flex h-10 w-10 items-center justify-center rounded-xl"
                         style={{
                           background:
                             "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -130,56 +130,56 @@ export function ModulesTab({
                       >
                         <Icon className="h-5 w-5 text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-sm">{module.name}</h4>
-                          <span className="text-xs font-semibold text-primary">
+                          <h4 className="text-sm font-medium">{module.name}</h4>
+                          <span className="text-primary text-xs font-semibold">
                             ${getModulePrice(module.id).toFixed(2)}/mo
                           </span>
                           {hasCustomPrice(module.id) && (
                             <Badge
                               variant="secondary"
-                              className="text-[10px] px-1.5 py-0"
+                              className="px-1.5 py-0 text-[10px]"
                             >
                               Custom
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-muted-foreground mt-0.5 text-xs">
                           {module.description}
                         </p>
                       </div>
                     </div>
                     {usage && (
-                      <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-center">
+                      <div className="mt-3 grid grid-cols-3 gap-2 border-t pt-3 text-center">
                         <div>
-                          <p className="text-xs text-muted-foreground">Usage</p>
+                          <p className="text-muted-foreground text-xs">Usage</p>
                           <p className="text-sm font-semibold">
                             {usage.usage.split(" ")[0]}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-muted-foreground text-[10px]">
                             {usage.usage.split(" ").slice(1).join(" ")}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             Actions
                           </p>
                           <p className="text-sm font-semibold">
                             {usage.actions}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-muted-foreground text-[10px]">
                             this month
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             Last Used
                           </p>
                           <p className="text-sm font-semibold">
                             {usage.lastUsed.split(" ")[0]}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className="text-muted-foreground text-[10px]">
                             {usage.lastUsed.split(" ").slice(1).join(" ")}
                           </p>
                         </div>
@@ -190,8 +190,8 @@ export function ModulesTab({
               })}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <Puzzle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+          <div className="py-8 text-center">
+            <Puzzle className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
             <p className="text-muted-foreground">No modules enabled</p>
             <Button
               variant="outline"
@@ -207,7 +207,7 @@ export function ModulesTab({
 
       {/* Modules Edit Dialog */}
       <Dialog open={showModulesDialog} onOpenChange={setShowModulesDialog}>
-        <DialogContent className="min-w-5xl max-h-[85vh] flex flex-col">
+        <DialogContent className="flex max-h-[85vh] min-w-5xl flex-col">
           <DialogHeader>
             <DialogTitle>Manage Facility Modules</DialogTitle>
             <DialogDescription>
@@ -215,7 +215,7 @@ export function ModulesTab({
               immediately affect which features are available to this facility.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <div className="grid gap-3">
               {availableModules.map((module) => {
                 const Icon = getModuleIcon(module.icon);
@@ -223,47 +223,49 @@ export function ModulesTab({
                 return (
                   <div
                     key={module.id}
-                    className={`flex items-center justify-between p-4 rounded-xl transition-colors ${
+                    className={`flex items-center justify-between rounded-xl p-4 transition-colors ${
                       isEnabled
-                        ? "bg-primary/5 border border-primary/20"
+                        ? "border-primary/20 bg-primary/5 border"
                         : "bg-muted/50"
-                    }`}
+                    } `}
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-xl ${
-                          isEnabled ? "bg-primary/10" : "bg-muted"
-                        }`}
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl ${isEnabled ? "bg-primary/10" : "bg-muted"} `}
                       >
                         <Icon
                           className={`h-5 w-5 ${
                             isEnabled ? "text-primary" : "text-muted-foreground"
-                          }`}
+                          } `}
                         />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium">{module.name}</h4>
                           <span
-                            className={`text-xs font-semibold ${isEnabled ? "text-primary" : "text-muted-foreground"}`}
+                            className={`text-xs font-semibold ${
+                              isEnabled
+                                ? `text-primary`
+                                : `text-muted-foreground`
+                            } `}
                           >
                             ${getModulePrice(module.id).toFixed(2)}/mo
                           </span>
                           {hasCustomPrice(module.id) && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] px-1.5 py-0"
+                              className="px-1.5 py-0 text-[10px]"
                             >
                               Quoted
                             </Badge>
                           )}
                           {!hasCustomPrice(module.id) && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-muted-foreground text-[10px]">
                               (Base price)
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {module.description}
                         </p>
                       </div>
@@ -278,15 +280,15 @@ export function ModulesTab({
             </div>
           </div>
           <DialogFooter className="border-t pt-4">
-            <div className="flex flex-col gap-1 mr-auto text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle className="h-4 w-4 text-success" />
+            <div className="mr-auto flex flex-col gap-1 text-xs">
+              <div className="text-muted-foreground flex items-center gap-2">
+                <CheckCircle className="text-success size-4" />
                 {localEnabledModules.length} of {availableModules.length}{" "}
                 modules enabled
               </div>
               <div className="text-muted-foreground">
                 Modules cost:{" "}
-                <span className="font-semibold text-foreground">
+                <span className="text-foreground font-semibold">
                   $
                   {localEnabledModules
                     .reduce((sum, id) => sum + getModulePrice(id), 0)

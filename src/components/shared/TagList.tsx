@@ -78,8 +78,8 @@ export function TagList({
               type="button"
               aria-label={`Show ${overflow.length} more tags`}
               className={cn(
-                "inline-flex items-center rounded-full border border-border bg-muted text-muted-foreground font-medium hover:bg-accent transition-colors",
-                size === "sm" ? "text-[10px] px-1.5 h-5" : "text-xs px-2 h-6",
+                `border-border bg-muted text-muted-foreground hover:bg-accent inline-flex items-center rounded-full border font-medium transition-colors`,
+                size === "sm" ? "h-5 px-1.5 text-[10px]" : "h-6 px-2 text-xs",
               )}
             >
               +{overflow.length}
@@ -121,7 +121,7 @@ export function TagList({
           <button
             type="button"
             className={cn(
-              "inline-flex items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors",
+              `border-muted-foreground/40 text-muted-foreground hover:border-primary hover:bg-primary/5 hover:text-primary inline-flex items-center justify-center rounded-full border border-dashed transition-colors`,
               size === "sm" ? "h-5 w-5" : "h-6 w-6",
             )}
             aria-label="Add tag"

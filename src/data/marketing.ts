@@ -61,7 +61,15 @@ export interface SegmentFilterFieldDef {
   label: string;
   category: SegmentFilterCategory;
   operators: SegmentFilterOperator[];
-  valueType: "number" | "text" | "select" | "multi_select" | "date" | "date_range" | "boolean" | "pet_select";
+  valueType:
+    | "number"
+    | "text"
+    | "select"
+    | "multi_select"
+    | "date"
+    | "date_range"
+    | "boolean"
+    | "pet_select";
   options?: { value: string; label: string }[];
   placeholder?: string;
   unit?: string;
@@ -78,9 +86,14 @@ const CUSTOM_SERVICE_OPTIONS = defaultCustomServiceModules.map((m) => ({
   value: m.slug,
   label: m.name,
 }));
-export const ALL_SERVICE_OPTIONS = [...CORE_SERVICE_OPTIONS, ...CUSTOM_SERVICE_OPTIONS];
+export const ALL_SERVICE_OPTIONS = [
+  ...CORE_SERVICE_OPTIONS,
+  ...CUSTOM_SERVICE_OPTIONS,
+];
 
-export function getAlertStatusVariant(status: string): "default" | "secondary" | "destructive" {
+export function getAlertStatusVariant(
+  status: string,
+): "default" | "secondary" | "destructive" {
   if (status === "sent") return "default";
   if (status === "suppressed") return "secondary";
   return "destructive";
@@ -94,47 +107,268 @@ export function formatAlertChannel(channel: string): string {
 
 export const SEGMENT_FILTER_FIELDS: SegmentFilterFieldDef[] = [
   // Service filters (auto-includes custom services)
-  { field: "has_booked_service", label: "Has booked service", category: "service", operators: ["equals"], valueType: "select", options: ALL_SERVICE_OPTIONS },
-  { field: "booked_service_within_days", label: "Booked service within last X days", category: "service", operators: ["equals", "less_than", "greater_than"], valueType: "number", unit: "days" },
-  { field: "last_booking_for_service", label: "Last booking for service", category: "service", operators: ["equals", "greater_than", "less_than"], valueType: "select", options: ALL_SERVICE_OPTIONS },
-  { field: "upcoming_booking_for_service", label: "Has upcoming booking for", category: "service", operators: ["equals"], valueType: "select", options: ALL_SERVICE_OPTIONS },
-  { field: "overdue_for_service", label: "Overdue for service (weeks)", category: "service", operators: ["greater_than"], valueType: "number", unit: "weeks" },
-  { field: "recurring_customer", label: "Is recurring customer", category: "service", operators: ["is_true", "is_false"], valueType: "boolean" },
+  {
+    field: "has_booked_service",
+    label: "Has booked service",
+    category: "service",
+    operators: ["equals"],
+    valueType: "select",
+    options: ALL_SERVICE_OPTIONS,
+  },
+  {
+    field: "booked_service_within_days",
+    label: "Booked service within last X days",
+    category: "service",
+    operators: ["equals", "less_than", "greater_than"],
+    valueType: "number",
+    unit: "days",
+  },
+  {
+    field: "last_booking_for_service",
+    label: "Last booking for service",
+    category: "service",
+    operators: ["equals", "greater_than", "less_than"],
+    valueType: "select",
+    options: ALL_SERVICE_OPTIONS,
+  },
+  {
+    field: "upcoming_booking_for_service",
+    label: "Has upcoming booking for",
+    category: "service",
+    operators: ["equals"],
+    valueType: "select",
+    options: ALL_SERVICE_OPTIONS,
+  },
+  {
+    field: "overdue_for_service",
+    label: "Overdue for service (weeks)",
+    category: "service",
+    operators: ["greater_than"],
+    valueType: "number",
+    unit: "weeks",
+  },
+  {
+    field: "recurring_customer",
+    label: "Is recurring customer",
+    category: "service",
+    operators: ["is_true", "is_false"],
+    valueType: "boolean",
+  },
 
   // Pet filters
-  { field: "pet_size", label: "Pet size", category: "pet", operators: ["equals", "in"], valueType: "select", options: [{ value: "small", label: "Small (0-15 lbs)" }, { value: "medium", label: "Medium (16-50 lbs)" }, { value: "large", label: "Large (51-100 lbs)" }, { value: "extra_large", label: "Extra Large (101+ lbs)" }] },
-  { field: "pet_breed", label: "Pet breed", category: "pet", operators: ["equals", "in", "contains"], valueType: "multi_select", options: [{ value: "Golden Retriever", label: "Golden Retriever" }, { value: "Labrador", label: "Labrador" }, { value: "Beagle", label: "Beagle" }, { value: "Poodle", label: "Poodle" }, { value: "German Shepherd", label: "German Shepherd" }, { value: "Collie", label: "Collie" }, { value: "Border Collie", label: "Border Collie" }, { value: "Corgi", label: "Corgi" }, { value: "Husky", label: "Husky" }, { value: "Australian Shepherd", label: "Australian Shepherd" }, { value: "Mixed", label: "Mixed" }, { value: "Goldendoodle", label: "Goldendoodle" }, { value: "Labradoodle", label: "Labradoodle" }, { value: "French Bulldog", label: "French Bulldog" }, { value: "Bulldog", label: "Bulldog" }, { value: "Boxer", label: "Boxer" }, { value: "Rottweiler", label: "Rottweiler" }, { value: "Siamese", label: "Siamese" }, { value: "Persian", label: "Persian" }, { value: "Bengal", label: "Bengal" }, { value: "Maine Coon", label: "Maine Coon" }, { value: "Ragdoll", label: "Ragdoll" }] },
-  { field: "pet_age_range", label: "Pet age range", category: "pet", operators: ["equals"], valueType: "select", options: [{ value: "puppy", label: "Puppy (< 1 year)" }, { value: "adult", label: "Adult (1-7 years)" }, { value: "senior", label: "Senior (7+ years)" }] },
-  { field: "multi_pet_household", label: "Multi-pet household (2+ pets)", category: "pet", operators: ["is_true", "is_false"], valueType: "boolean" },
+  {
+    field: "pet_size",
+    label: "Pet size",
+    category: "pet",
+    operators: ["equals", "in"],
+    valueType: "select",
+    options: [
+      { value: "small", label: "Small (0-15 lbs)" },
+      { value: "medium", label: "Medium (16-50 lbs)" },
+      { value: "large", label: "Large (51-100 lbs)" },
+      { value: "extra_large", label: "Extra Large (101+ lbs)" },
+    ],
+  },
+  {
+    field: "pet_breed",
+    label: "Pet breed",
+    category: "pet",
+    operators: ["equals", "in", "contains"],
+    valueType: "multi_select",
+    options: [
+      { value: "Golden Retriever", label: "Golden Retriever" },
+      { value: "Labrador", label: "Labrador" },
+      { value: "Beagle", label: "Beagle" },
+      { value: "Poodle", label: "Poodle" },
+      { value: "German Shepherd", label: "German Shepherd" },
+      { value: "Collie", label: "Collie" },
+      { value: "Border Collie", label: "Border Collie" },
+      { value: "Corgi", label: "Corgi" },
+      { value: "Husky", label: "Husky" },
+      { value: "Australian Shepherd", label: "Australian Shepherd" },
+      { value: "Mixed", label: "Mixed" },
+      { value: "Goldendoodle", label: "Goldendoodle" },
+      { value: "Labradoodle", label: "Labradoodle" },
+      { value: "French Bulldog", label: "French Bulldog" },
+      { value: "Bulldog", label: "Bulldog" },
+      { value: "Boxer", label: "Boxer" },
+      { value: "Rottweiler", label: "Rottweiler" },
+      { value: "Siamese", label: "Siamese" },
+      { value: "Persian", label: "Persian" },
+      { value: "Bengal", label: "Bengal" },
+      { value: "Maine Coon", label: "Maine Coon" },
+      { value: "Ragdoll", label: "Ragdoll" },
+    ],
+  },
+  {
+    field: "pet_age_range",
+    label: "Pet age range",
+    category: "pet",
+    operators: ["equals"],
+    valueType: "select",
+    options: [
+      { value: "puppy", label: "Puppy (< 1 year)" },
+      { value: "adult", label: "Adult (1-7 years)" },
+      { value: "senior", label: "Senior (7+ years)" },
+    ],
+  },
+  {
+    field: "multi_pet_household",
+    label: "Multi-pet household (2+ pets)",
+    category: "pet",
+    operators: ["is_true", "is_false"],
+    valueType: "boolean",
+  },
 
   // Frequency / recency filters
-  { field: "visited_in_last_days", label: "Visited in last X days", category: "frequency", operators: ["equals", "less_than", "greater_than"], valueType: "number", unit: "days", placeholder: "e.g. 30" },
-  { field: "no_visit_in_days", label: "No visit in X days (inactive)", category: "frequency", operators: ["greater_than"], valueType: "number", unit: "days", placeholder: "e.g. 60" },
-  { field: "visit_count_in_days", label: "Number of visits in last X days", category: "frequency", operators: ["greater_than", "less_than", "equals", "between"], valueType: "number", placeholder: "e.g. 5" },
-  { field: "last_booking_date_range", label: "Last booking date", category: "frequency", operators: ["between", "greater_than", "less_than"], valueType: "date_range" },
+  {
+    field: "visited_in_last_days",
+    label: "Visited in last X days",
+    category: "frequency",
+    operators: ["equals", "less_than", "greater_than"],
+    valueType: "number",
+    unit: "days",
+    placeholder: "e.g. 30",
+  },
+  {
+    field: "no_visit_in_days",
+    label: "No visit in X days (inactive)",
+    category: "frequency",
+    operators: ["greater_than"],
+    valueType: "number",
+    unit: "days",
+    placeholder: "e.g. 60",
+  },
+  {
+    field: "visit_count_in_days",
+    label: "Number of visits in last X days",
+    category: "frequency",
+    operators: ["greater_than", "less_than", "equals", "between"],
+    valueType: "number",
+    placeholder: "e.g. 5",
+  },
+  {
+    field: "last_booking_date_range",
+    label: "Last booking date",
+    category: "frequency",
+    operators: ["between", "greater_than", "less_than"],
+    valueType: "date_range",
+  },
 
   // Booking filters
-  { field: "has_upcoming_in_days", label: "Has upcoming booking in next X days", category: "booking", operators: ["less_than", "equals"], valueType: "number", unit: "days" },
-  { field: "no_upcoming_booking", label: "Has no upcoming booking", category: "booking", operators: ["is_true"], valueType: "boolean" },
-  { field: "upcoming_booking_type", label: "Upcoming booking type", category: "booking", operators: ["equals", "in"], valueType: "select", options: ALL_SERVICE_OPTIONS },
-  { field: "upcoming_date_range", label: "Upcoming booking date range", category: "booking", operators: ["between"], valueType: "date_range" },
+  {
+    field: "has_upcoming_in_days",
+    label: "Has upcoming booking in next X days",
+    category: "booking",
+    operators: ["less_than", "equals"],
+    valueType: "number",
+    unit: "days",
+  },
+  {
+    field: "no_upcoming_booking",
+    label: "Has no upcoming booking",
+    category: "booking",
+    operators: ["is_true"],
+    valueType: "boolean",
+  },
+  {
+    field: "upcoming_booking_type",
+    label: "Upcoming booking type",
+    category: "booking",
+    operators: ["equals", "in"],
+    valueType: "select",
+    options: ALL_SERVICE_OPTIONS,
+  },
+  {
+    field: "upcoming_date_range",
+    label: "Upcoming booking date range",
+    category: "booking",
+    operators: ["between"],
+    valueType: "date_range",
+  },
 
   // Compliance filters
-  { field: "vaccination_expiring_in_days", label: "Vaccination expiring in X days", category: "compliance", operators: ["less_than"], valueType: "number", unit: "days" },
-  { field: "missing_vaccine_type", label: "Missing vaccine type", category: "compliance", operators: ["equals"], valueType: "select", options: [{ value: "Rabies", label: "Rabies" }, { value: "DHPP", label: "DHPP" }, { value: "Bordetella", label: "Bordetella" }, { value: "Leptospirosis", label: "Leptospirosis" }, { value: "FVRCP", label: "FVRCP" }] },
-  { field: "evaluation_required", label: "Evaluation required but not done", category: "compliance", operators: ["is_true"], valueType: "boolean" },
-  { field: "agreement_not_signed", label: "Agreement not signed / needs update", category: "compliance", operators: ["is_true"], valueType: "boolean" },
+  {
+    field: "vaccination_expiring_in_days",
+    label: "Vaccination expiring in X days",
+    category: "compliance",
+    operators: ["less_than"],
+    valueType: "number",
+    unit: "days",
+  },
+  {
+    field: "missing_vaccine_type",
+    label: "Missing vaccine type",
+    category: "compliance",
+    operators: ["equals"],
+    valueType: "select",
+    options: [
+      { value: "Rabies", label: "Rabies" },
+      { value: "DHPP", label: "DHPP" },
+      { value: "Bordetella", label: "Bordetella" },
+      { value: "Leptospirosis", label: "Leptospirosis" },
+      { value: "FVRCP", label: "FVRCP" },
+    ],
+  },
+  {
+    field: "evaluation_required",
+    label: "Evaluation required but not done",
+    category: "compliance",
+    operators: ["is_true"],
+    valueType: "boolean",
+  },
+  {
+    field: "agreement_not_signed",
+    label: "Agreement not signed / needs update",
+    category: "compliance",
+    operators: ["is_true"],
+    valueType: "boolean",
+  },
 
   // Frequency (additional)
-  { field: "average_visits_per_month", label: "Average visits per month", category: "frequency", operators: ["greater_than", "less_than", "equals"], valueType: "number", placeholder: "e.g. 4" },
+  {
+    field: "average_visits_per_month",
+    label: "Average visits per month",
+    category: "frequency",
+    operators: ["greater_than", "less_than", "equals"],
+    valueType: "number",
+    placeholder: "e.g. 4",
+  },
 
   // Spending filters
-  { field: "spent_over_in_days", label: "Spent over $X in last Y days", category: "spending", operators: ["greater_than"], valueType: "number", unit: "dollars", placeholder: "e.g. 500" },
-  { field: "top_spenders_percentage", label: "Top spenders (%)", category: "spending", operators: ["less_than", "equals"], valueType: "number", unit: "%" },
+  {
+    field: "spent_over_in_days",
+    label: "Spent over $X in last Y days",
+    category: "spending",
+    operators: ["greater_than"],
+    valueType: "number",
+    unit: "dollars",
+    placeholder: "e.g. 500",
+  },
+  {
+    field: "top_spenders_percentage",
+    label: "Top spenders (%)",
+    category: "spending",
+    operators: ["less_than", "equals"],
+    valueType: "number",
+    unit: "%",
+  },
 
   // Friends filters
-  { field: "friends_of_pet", label: "Friends of pet", category: "friends", operators: ["equals"], valueType: "pet_select" },
-  { field: "mutual_friends", label: "Mutual friends only", category: "friends", operators: ["is_true"], valueType: "boolean" },
+  {
+    field: "friends_of_pet",
+    label: "Friends of pet",
+    category: "friends",
+    operators: ["equals"],
+    valueType: "pet_select",
+  },
+  {
+    field: "mutual_friends",
+    label: "Mutual friends only",
+    category: "friends",
+    operators: ["is_true"],
+    valueType: "boolean",
+  },
 ];
 
 export const SEGMENT_CATEGORY_LABELS: Record<SegmentFilterCategory, string> = {
@@ -147,7 +381,9 @@ export const SEGMENT_CATEGORY_LABELS: Record<SegmentFilterCategory, string> = {
   friends: "Pet Friends",
 };
 
-export const FIELD_DEF_MAP = new Map(SEGMENT_FILTER_FIELDS.map((f) => [f.field, f]));
+export const FIELD_DEF_MAP = new Map(
+  SEGMENT_FILTER_FIELDS.map((f) => [f.field, f]),
+);
 
 // Migrated existing segments + 15 new built-in segments
 export const customerSegments: CustomerSegment[] = [
@@ -156,7 +392,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-001",
     name: "VIP Customers",
     description: "Customers who spent over $1000 in the last year",
-    filterGroups: [{ id: "fg-001", filters: [{ id: "f-001", category: "spending", field: "spent_over_in_days", operator: "greater_than", value: 1000 }] }],
+    filterGroups: [
+      {
+        id: "fg-001",
+        filters: [
+          {
+            id: "f-001",
+            category: "spending",
+            field: "spent_over_in_days",
+            operator: "greater_than",
+            value: 1000,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 23,
     isFavorite: true,
@@ -168,7 +417,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-002",
     name: "Inactive Customers",
     description: "Customers who haven't booked in 90+ days",
-    filterGroups: [{ id: "fg-002", filters: [{ id: "f-002", category: "frequency", field: "no_visit_in_days", operator: "greater_than", value: 90 }] }],
+    filterGroups: [
+      {
+        id: "fg-002",
+        filters: [
+          {
+            id: "f-002",
+            category: "frequency",
+            field: "no_visit_in_days",
+            operator: "greater_than",
+            value: 90,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 47,
     isFavorite: false,
@@ -180,7 +442,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-003",
     name: "First-Time Customers",
     description: "Customers with only 1 booking",
-    filterGroups: [{ id: "fg-003", filters: [{ id: "f-003", category: "frequency", field: "visit_count_in_days", operator: "equals", value: 1 }] }],
+    filterGroups: [
+      {
+        id: "fg-003",
+        filters: [
+          {
+            id: "f-003",
+            category: "frequency",
+            field: "visit_count_in_days",
+            operator: "equals",
+            value: 1,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 34,
     isFavorite: false,
@@ -192,7 +467,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-004",
     name: "Dog Owners",
     description: "Customers with at least one dog",
-    filterGroups: [{ id: "fg-004", filters: [{ id: "f-004", category: "pet", field: "pet_breed", operator: "contains", value: "dog" }] }],
+    filterGroups: [
+      {
+        id: "fg-004",
+        filters: [
+          {
+            id: "f-004",
+            category: "pet",
+            field: "pet_breed",
+            operator: "contains",
+            value: "dog",
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 156,
     isFavorite: false,
@@ -205,11 +493,29 @@ export const customerSegments: CustomerSegment[] = [
   {
     id: "seg-005",
     name: "Grooming Regulars",
-    description: "Customers who booked grooming at least once in the last 90 days",
-    filterGroups: [{ id: "fg-005", filters: [
-      { id: "f-005", category: "service", field: "has_booked_service", operator: "equals", value: "grooming" },
-      { id: "f-005b", category: "service", field: "booked_service_within_days", operator: "less_than", value: 90 },
-    ] }],
+    description:
+      "Customers who booked grooming at least once in the last 90 days",
+    filterGroups: [
+      {
+        id: "fg-005",
+        filters: [
+          {
+            id: "f-005",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "grooming",
+          },
+          {
+            id: "f-005b",
+            category: "service",
+            field: "booked_service_within_days",
+            operator: "less_than",
+            value: 90,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 42,
     isFavorite: true,
@@ -220,12 +526,36 @@ export const customerSegments: CustomerSegment[] = [
   {
     id: "seg-006",
     name: "Overdue for Grooming",
-    description: "Grooming clients whose last groom was 6+ weeks ago with no upcoming booking",
-    filterGroups: [{ id: "fg-006", filters: [
-      { id: "f-006a", category: "service", field: "has_booked_service", operator: "equals", value: "grooming" },
-      { id: "f-006b", category: "service", field: "overdue_for_service", operator: "greater_than", value: 6 },
-      { id: "f-006c", category: "booking", field: "no_upcoming_booking", operator: "is_true", value: true },
-    ] }],
+    description:
+      "Grooming clients whose last groom was 6+ weeks ago with no upcoming booking",
+    filterGroups: [
+      {
+        id: "fg-006",
+        filters: [
+          {
+            id: "f-006a",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "grooming",
+          },
+          {
+            id: "f-006b",
+            category: "service",
+            field: "overdue_for_service",
+            operator: "greater_than",
+            value: 6,
+          },
+          {
+            id: "f-006c",
+            category: "booking",
+            field: "no_upcoming_booking",
+            operator: "is_true",
+            value: true,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 28,
     isFavorite: true,
@@ -237,10 +567,27 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-007",
     name: "Daycare Frequent Visitors",
     description: "Daycare clients with 8+ visits in the last 30 days",
-    filterGroups: [{ id: "fg-007", filters: [
-      { id: "f-007a", category: "service", field: "has_booked_service", operator: "equals", value: "daycare" },
-      { id: "f-007b", category: "frequency", field: "visit_count_in_days", operator: "greater_than", value: 8 },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-007",
+        filters: [
+          {
+            id: "f-007a",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "daycare",
+          },
+          {
+            id: "f-007b",
+            category: "frequency",
+            field: "visit_count_in_days",
+            operator: "greater_than",
+            value: 8,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 15,
     isFavorite: false,
@@ -252,10 +599,27 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-008",
     name: "Daycare Inactive 30 Days",
     description: "Daycare clients who haven't visited in 30+ days",
-    filterGroups: [{ id: "fg-008", filters: [
-      { id: "f-008a", category: "service", field: "has_booked_service", operator: "equals", value: "daycare" },
-      { id: "f-008b", category: "frequency", field: "no_visit_in_days", operator: "greater_than", value: 30 },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-008",
+        filters: [
+          {
+            id: "f-008a",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "daycare",
+          },
+          {
+            id: "f-008b",
+            category: "frequency",
+            field: "no_visit_in_days",
+            operator: "greater_than",
+            value: 30,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 38,
     isFavorite: true,
@@ -266,11 +630,29 @@ export const customerSegments: CustomerSegment[] = [
   {
     id: "seg-009",
     name: "Boarding Seasonal Guests",
-    description: "Customers who boarded during summer or holiday season last year",
-    filterGroups: [{ id: "fg-009", filters: [
-      { id: "f-009a", category: "service", field: "has_booked_service", operator: "equals", value: "boarding" },
-      { id: "f-009b", category: "frequency", field: "last_booking_date_range", operator: "between", value: ["2025-06-01", "2025-09-01"] },
-    ] }],
+    description:
+      "Customers who boarded during summer or holiday season last year",
+    filterGroups: [
+      {
+        id: "fg-009",
+        filters: [
+          {
+            id: "f-009a",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "boarding",
+          },
+          {
+            id: "f-009b",
+            category: "frequency",
+            field: "last_booking_date_range",
+            operator: "between",
+            value: ["2025-06-01", "2025-09-01"],
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 19,
     isFavorite: false,
@@ -282,10 +664,27 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-010",
     name: "Upcoming Boarding This Week",
     description: "Customers with boarding check-ins in the next 7 days",
-    filterGroups: [{ id: "fg-010", filters: [
-      { id: "f-010a", category: "booking", field: "upcoming_booking_type", operator: "equals", value: "boarding" },
-      { id: "f-010b", category: "booking", field: "has_upcoming_in_days", operator: "less_than", value: 7 },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-010",
+        filters: [
+          {
+            id: "f-010a",
+            category: "booking",
+            field: "upcoming_booking_type",
+            operator: "equals",
+            value: "boarding",
+          },
+          {
+            id: "f-010b",
+            category: "booking",
+            field: "has_upcoming_in_days",
+            operator: "less_than",
+            value: 7,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 8,
     isFavorite: false,
@@ -299,9 +698,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-011",
     name: "Large Dog Owners",
     description: "Customers with large or extra-large dogs",
-    filterGroups: [{ id: "fg-011", filters: [
-      { id: "f-011", category: "pet", field: "pet_size", operator: "in", value: ["large", "extra_large"] },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-011",
+        filters: [
+          {
+            id: "f-011",
+            category: "pet",
+            field: "pet_size",
+            operator: "in",
+            value: ["large", "extra_large"],
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 52,
     isFavorite: false,
@@ -313,9 +723,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-012",
     name: "Puppy Owners",
     description: "Customers with puppies under 1 year old",
-    filterGroups: [{ id: "fg-012", filters: [
-      { id: "f-012", category: "pet", field: "pet_age_range", operator: "equals", value: "puppy" },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-012",
+        filters: [
+          {
+            id: "f-012",
+            category: "pet",
+            field: "pet_age_range",
+            operator: "equals",
+            value: "puppy",
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 18,
     isFavorite: false,
@@ -327,9 +748,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-013",
     name: "Senior Pet Owners",
     description: "Customers with senior pets (7+ years)",
-    filterGroups: [{ id: "fg-013", filters: [
-      { id: "f-013", category: "pet", field: "pet_age_range", operator: "equals", value: "senior" },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-013",
+        filters: [
+          {
+            id: "f-013",
+            category: "pet",
+            field: "pet_age_range",
+            operator: "equals",
+            value: "senior",
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 14,
     isFavorite: false,
@@ -341,9 +773,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-014",
     name: "Multi-Pet Households",
     description: "Customers with 2 or more pets",
-    filterGroups: [{ id: "fg-014", filters: [
-      { id: "f-014", category: "pet", field: "multi_pet_household", operator: "is_true", value: true },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-014",
+        filters: [
+          {
+            id: "f-014",
+            category: "pet",
+            field: "multi_pet_household",
+            operator: "is_true",
+            value: true,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 31,
     isFavorite: false,
@@ -355,9 +798,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-015",
     name: "Doodle Owners",
     description: "Customers with Goldendoodle or Labradoodle breeds",
-    filterGroups: [{ id: "fg-015", filters: [
-      { id: "f-015", category: "pet", field: "pet_breed", operator: "in", value: ["Goldendoodle", "Labradoodle"] },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-015",
+        filters: [
+          {
+            id: "f-015",
+            category: "pet",
+            field: "pet_breed",
+            operator: "in",
+            value: ["Goldendoodle", "Labradoodle"],
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 22,
     isFavorite: false,
@@ -371,13 +825,37 @@ export const customerSegments: CustomerSegment[] = [
     name: "Doodles Overdue for Grooming",
     description: "Doodle breeds whose last groom was 8+ weeks ago",
     filterGroups: [
-      { id: "fg-021a", filters: [
-        { id: "f-021a", category: "pet", field: "pet_breed", operator: "in", value: ["Goldendoodle", "Labradoodle"] },
-      ] },
-      { id: "fg-021b", filters: [
-        { id: "f-021b", category: "service", field: "overdue_for_service", operator: "greater_than", value: 8 },
-        { id: "f-021c", category: "booking", field: "no_upcoming_booking", operator: "is_true", value: true },
-      ] },
+      {
+        id: "fg-021a",
+        filters: [
+          {
+            id: "f-021a",
+            category: "pet",
+            field: "pet_breed",
+            operator: "in",
+            value: ["Goldendoodle", "Labradoodle"],
+          },
+        ],
+      },
+      {
+        id: "fg-021b",
+        filters: [
+          {
+            id: "f-021b",
+            category: "service",
+            field: "overdue_for_service",
+            operator: "greater_than",
+            value: 8,
+          },
+          {
+            id: "f-021c",
+            category: "booking",
+            field: "no_upcoming_booking",
+            operator: "is_true",
+            value: true,
+          },
+        ],
+      },
     ],
     groupLogicOperator: "AND",
     customerCount: 7,
@@ -392,9 +870,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-016",
     name: "Vaccination Due in 30 Days",
     description: "Customers with pets whose vaccinations expire within 30 days",
-    filterGroups: [{ id: "fg-016", filters: [
-      { id: "f-016", category: "compliance", field: "vaccination_expiring_in_days", operator: "less_than", value: 30 },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-016",
+        filters: [
+          {
+            id: "f-016",
+            category: "compliance",
+            field: "vaccination_expiring_in_days",
+            operator: "less_than",
+            value: 30,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 12,
     isFavorite: true,
@@ -408,9 +897,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-017",
     name: "Top 10% Spenders",
     description: "Your highest-spending customers",
-    filterGroups: [{ id: "fg-017", filters: [
-      { id: "f-017", category: "spending", field: "top_spenders_percentage", operator: "less_than", value: 10 },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-017",
+        filters: [
+          {
+            id: "f-017",
+            category: "spending",
+            field: "top_spenders_percentage",
+            operator: "less_than",
+            value: 10,
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 9,
     isFavorite: false,
@@ -424,9 +924,20 @@ export const customerSegments: CustomerSegment[] = [
     id: "seg-018",
     name: "Buddy's Friends",
     description: "Owners of pets that are friends with Buddy",
-    filterGroups: [{ id: "fg-018", filters: [
-      { id: "f-018", category: "friends", field: "friends_of_pet", operator: "equals", value: "1" },
-    ] }],
+    filterGroups: [
+      {
+        id: "fg-018",
+        filters: [
+          {
+            id: "f-018",
+            category: "friends",
+            field: "friends_of_pet",
+            operator: "equals",
+            value: "1",
+          },
+        ],
+      },
+    ],
     groupLogicOperator: "AND",
     customerCount: 3,
     isFavorite: false,
@@ -441,14 +952,44 @@ export const customerSegments: CustomerSegment[] = [
     name: "Grooming Rebook - Large Dogs",
     description: "Large dogs overdue for grooming with no upcoming booking",
     filterGroups: [
-      { id: "fg-019a", filters: [
-        { id: "f-019a", category: "service", field: "has_booked_service", operator: "equals", value: "grooming" },
-        { id: "f-019b", category: "service", field: "overdue_for_service", operator: "greater_than", value: 6 },
-      ] },
-      { id: "fg-019b", filters: [
-        { id: "f-019c", category: "pet", field: "pet_size", operator: "in", value: ["large", "extra_large"] },
-        { id: "f-019d", category: "booking", field: "no_upcoming_booking", operator: "is_true", value: true },
-      ] },
+      {
+        id: "fg-019a",
+        filters: [
+          {
+            id: "f-019a",
+            category: "service",
+            field: "has_booked_service",
+            operator: "equals",
+            value: "grooming",
+          },
+          {
+            id: "f-019b",
+            category: "service",
+            field: "overdue_for_service",
+            operator: "greater_than",
+            value: 6,
+          },
+        ],
+      },
+      {
+        id: "fg-019b",
+        filters: [
+          {
+            id: "f-019c",
+            category: "pet",
+            field: "pet_size",
+            operator: "in",
+            value: ["large", "extra_large"],
+          },
+          {
+            id: "f-019d",
+            category: "booking",
+            field: "no_upcoming_booking",
+            operator: "is_true",
+            value: true,
+          },
+        ],
+      },
     ],
     groupLogicOperator: "AND",
     customerCount: 11,
@@ -460,15 +1001,40 @@ export const customerSegments: CustomerSegment[] = [
   {
     id: "seg-020",
     name: "Boarding Upsell - Add Grooming",
-    description: "Customers with upcoming boarding who haven't booked grooming recently",
+    description:
+      "Customers with upcoming boarding who haven't booked grooming recently",
     filterGroups: [
-      { id: "fg-020a", filters: [
-        { id: "f-020a", category: "booking", field: "upcoming_booking_type", operator: "equals", value: "boarding" },
-        { id: "f-020b", category: "booking", field: "has_upcoming_in_days", operator: "less_than", value: 14 },
-      ] },
-      { id: "fg-020b", filters: [
-        { id: "f-020c", category: "service", field: "overdue_for_service", operator: "greater_than", value: 4 },
-      ] },
+      {
+        id: "fg-020a",
+        filters: [
+          {
+            id: "f-020a",
+            category: "booking",
+            field: "upcoming_booking_type",
+            operator: "equals",
+            value: "boarding",
+          },
+          {
+            id: "f-020b",
+            category: "booking",
+            field: "has_upcoming_in_days",
+            operator: "less_than",
+            value: 14,
+          },
+        ],
+      },
+      {
+        id: "fg-020b",
+        filters: [
+          {
+            id: "f-020c",
+            category: "service",
+            field: "overdue_for_service",
+            operator: "greater_than",
+            value: 4,
+          },
+        ],
+      },
     ],
     groupLogicOperator: "AND",
     customerCount: 6,
@@ -497,7 +1063,10 @@ export type EmailTemplateUseCase =
   | "new_service"
   | "playdate_alert";
 
-export const EMAIL_USE_CASE_LABELS: Record<EmailTemplateUseCase | "other", string> = {
+export const EMAIL_USE_CASE_LABELS: Record<
+  EmailTemplateUseCase | "other",
+  string
+> = {
   welcome: "Welcome",
   booking_reminder: "Booking Reminder",
   vaccination_expiry: "Vaccination",
@@ -513,10 +1082,12 @@ export const EMAIL_USE_CASE_LABELS: Record<EmailTemplateUseCase | "other", strin
   other: "Other",
 };
 
-export const EMAIL_USE_CASE_OPTIONS: { value: EmailTemplateUseCase; label: string }[] =
-  Object.entries(EMAIL_USE_CASE_LABELS)
-    .filter(([k]) => k !== "other")
-    .map(([value, label]) => ({ value: value as EmailTemplateUseCase, label }));
+export const EMAIL_USE_CASE_OPTIONS: {
+  value: EmailTemplateUseCase;
+  label: string;
+}[] = Object.entries(EMAIL_USE_CASE_LABELS)
+  .filter(([k]) => k !== "other")
+  .map(([value, label]) => ({ value: value as EmailTemplateUseCase, label }));
 
 export interface EmailTemplate {
   id: string;
@@ -549,7 +1120,11 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "welcome",
     variables: ["customer_full_name", "pet_name", "facility_name"],
-    offerSection: { headline: "Welcome Offer", description: "10% off your first booking", code: "WELCOME10" },
+    offerSection: {
+      headline: "Welcome Offer",
+      description: "10% off your first booking",
+      code: "WELCOME10",
+    },
     buttonText: "Book Now",
     buttonLink: "{{booking_link}}",
     createdAt: "2024-01-15T10:00:00Z",
@@ -563,7 +1138,13 @@ export const emailTemplates: EmailTemplate[] = [
     body: `Hi {{customer_full_name}},\n\nThis is a friendly reminder that {{pet_name}} has a {{service_name}} appointment tomorrow at {{booking_time}}.\n\nSee you soon!\n\nThe {{facility_name}} Team`,
     category: "reminder",
     useCase: "booking_reminder",
-    variables: ["customer_full_name", "pet_name", "service_name", "booking_time", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "service_name",
+      "booking_time",
+      "facility_name",
+    ],
     buttonText: "View Booking",
     buttonLink: "{{booking_link}}",
     createdAt: "2024-01-10T09:00:00Z",
@@ -577,7 +1158,13 @@ export const emailTemplates: EmailTemplate[] = [
     body: `Hi {{customer_full_name}},\n\nOur records show that {{pet_name}}'s {{vaccine_name}} vaccination expires on {{expiry_date}}.\n\nPlease update their vaccination records to continue using our services.\n\nThank you,\n{{facility_name}}`,
     category: "reminder",
     useCase: "vaccination_expiry",
-    variables: ["customer_full_name", "pet_name", "vaccine_name", "expiry_date", "facility_name"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "vaccine_name",
+      "expiry_date",
+      "facility_name",
+    ],
     buttonText: "Upload Records",
     buttonLink: "{{portal_link}}",
     createdAt: "2024-01-20T11:00:00Z",
@@ -606,7 +1193,12 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "birthday",
     variables: ["customer_full_name", "pet_name", "facility_name"],
-    offerSection: { headline: "Birthday Special", description: "20% off your next booking", code: "BIRTHDAY20", expiryDays: 30 },
+    offerSection: {
+      headline: "Birthday Special",
+      description: "20% off your next booking",
+      code: "BIRTHDAY20",
+      expiryDays: 30,
+    },
     buttonText: "Book with Discount",
     buttonLink: "{{booking_link}}",
     createdAt: "2024-01-25T10:00:00Z",
@@ -622,8 +1214,18 @@ export const emailTemplates: EmailTemplate[] = [
     body: `Hi {{customer_full_name}},\n\nIt's been a while since {{pet_name}}'s last grooming session. Keeping a regular grooming schedule helps maintain a healthy coat and skin.\n\nBook now and keep {{pet_name}} looking their best!\n\n{{facility_name}} Team`,
     category: "promotional",
     useCase: "grooming_rebook",
-    variables: ["customer_full_name", "pet_name", "facility_name", "last_groom_date"],
-    offerSection: { headline: "Rebook Savings", description: "15% off if you book within 7 days", code: "GROOM15", expiryDays: 7 },
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "facility_name",
+      "last_groom_date",
+    ],
+    offerSection: {
+      headline: "Rebook Savings",
+      description: "15% off if you book within 7 days",
+      code: "GROOM15",
+      expiryDays: 7,
+    },
     buttonText: "Book Grooming",
     buttonLink: "{{booking_link}}",
     createdAt: "2026-01-15T10:00:00Z",
@@ -638,7 +1240,11 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "daycare_promo",
     variables: ["customer_full_name", "pet_name", "facility_name"],
-    offerSection: { headline: "Come Back Offer", description: "Buy 5 daycare days, get 1 free", code: "DAYCARE5FOR6" },
+    offerSection: {
+      headline: "Come Back Offer",
+      description: "Buy 5 daycare days, get 1 free",
+      code: "DAYCARE5FOR6",
+    },
     buttonText: "Book Daycare",
     buttonLink: "{{booking_link}}",
     createdAt: "2026-01-20T10:00:00Z",
@@ -653,7 +1259,12 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "boarding_seasonal",
     variables: ["customer_full_name", "pet_name", "facility_name", "season"],
-    offerSection: { headline: "Early Bird Special", description: "10% off boarding when booked 30+ days ahead", code: "EARLYBIRD10", expiryDays: 30 },
+    offerSection: {
+      headline: "Early Bird Special",
+      description: "10% off boarding when booked 30+ days ahead",
+      code: "EARLYBIRD10",
+      expiryDays: 30,
+    },
     buttonText: "Reserve Boarding",
     buttonLink: "{{booking_link}}",
     createdAt: "2026-02-01T10:00:00Z",
@@ -668,7 +1279,12 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "win_back",
     variables: ["customer_full_name", "pet_name", "facility_name"],
-    offerSection: { headline: "Welcome Back", description: "25% off your next booking", code: "COMEBACK25", expiryDays: 14 },
+    offerSection: {
+      headline: "Welcome Back",
+      description: "25% off your next booking",
+      code: "COMEBACK25",
+      expiryDays: 14,
+    },
     buttonText: "Book Now",
     buttonLink: "{{booking_link}}",
     createdAt: "2026-02-10T10:00:00Z",
@@ -683,7 +1299,10 @@ export const emailTemplates: EmailTemplate[] = [
     category: "promotional",
     useCase: "referral_program",
     variables: ["customer_full_name", "facility_name", "referral_code"],
-    offerSection: { headline: "Refer & Earn", description: "$25 for you, $25 for them" },
+    offerSection: {
+      headline: "Refer & Earn",
+      description: "$25 for you, $25 for them",
+    },
     buttonText: "Share Your Code",
     buttonLink: "{{referral_link}}",
     createdAt: "2026-02-15T10:00:00Z",
@@ -697,8 +1316,19 @@ export const emailTemplates: EmailTemplate[] = [
     body: `Hi {{customer_full_name}},\n\nWe're excited to announce a brand new service at {{facility_name}}: {{service_name}}!\n\n{{service_description}}\n\n{{pet_name}} would love it. Book now to be among the first to try it!\n\n{{facility_name}} Team`,
     category: "promotional",
     useCase: "new_service",
-    variables: ["customer_full_name", "pet_name", "facility_name", "service_name", "service_description"],
-    offerSection: { headline: "Launch Offer", description: "20% off your first session", code: "NEWSERVICE20", expiryDays: 21 },
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "facility_name",
+      "service_name",
+      "service_description",
+    ],
+    offerSection: {
+      headline: "Launch Offer",
+      description: "20% off your first session",
+      code: "NEWSERVICE20",
+      expiryDays: 21,
+    },
     buttonText: "Learn More & Book",
     buttonLink: "{{booking_link}}",
     createdAt: "2026-03-01T10:00:00Z",
@@ -708,11 +1338,20 @@ export const emailTemplates: EmailTemplate[] = [
   {
     id: "tpl-012",
     name: "Playdate Alert",
-    subject: "{{friend_pet_name}} is coming to {{service_name}} on {{booking_date}}!",
+    subject:
+      "{{friend_pet_name}} is coming to {{service_name}} on {{booking_date}}!",
     body: `Hi {{customer_full_name}},\n\nJust a heads up -- {{friend_pet_name}} ({{pet_name}}'s friend) is coming to {{service_name}} on {{booking_date}} at {{facility_name}}!\n\nWant to bring {{pet_name}} too? They can have a blast together!\n\n{{facility_name}} Team`,
     category: "transactional",
     useCase: "playdate_alert",
-    variables: ["customer_full_name", "pet_name", "friend_pet_name", "service_name", "booking_date", "facility_name", "book_link"],
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "friend_pet_name",
+      "service_name",
+      "booking_date",
+      "facility_name",
+      "book_link",
+    ],
     buttonText: "Book a Playdate",
     buttonLink: "{{book_link}}",
     createdAt: "2026-03-10T10:00:00Z",
@@ -733,13 +1372,55 @@ export type CampaignGoal =
   | "new_service"
   | "general";
 
-export const CAMPAIGN_GOALS: { value: CampaignGoal; label: string; description: string; icon: string; suggestedSegments: string[] }[] = [
-  { value: "fill_slow_days", label: "Fill Slow Days", description: "Boost bookings on quiet days", icon: "CalendarPlus", suggestedSegments: ["seg-007", "seg-008", "seg-014"] },
-  { value: "rebook_grooming", label: "Rebook Grooming", description: "Get overdue clients back for grooming", icon: "Scissors", suggestedSegments: ["seg-006", "seg-019", "seg-015"] },
-  { value: "promote_packages", label: "Promote Packages", description: "Sell daycare or training packages", icon: "Package", suggestedSegments: ["seg-007", "seg-012", "seg-014"] },
-  { value: "holiday_promo", label: "Holiday Promo", description: "Seasonal offers and specials", icon: "Gift", suggestedSegments: ["seg-009", "seg-001", "seg-017"] },
-  { value: "new_service", label: "New Service", description: "Announce a new service offering", icon: "Sparkles", suggestedSegments: ["seg-004", "seg-001", "seg-007"] },
-  { value: "general", label: "General Campaign", description: "Custom campaign with any goal", icon: "Mail", suggestedSegments: [] },
+export const CAMPAIGN_GOALS: {
+  value: CampaignGoal;
+  label: string;
+  description: string;
+  icon: string;
+  suggestedSegments: string[];
+}[] = [
+  {
+    value: "fill_slow_days",
+    label: "Fill Slow Days",
+    description: "Boost bookings on quiet days",
+    icon: "CalendarPlus",
+    suggestedSegments: ["seg-007", "seg-008", "seg-014"],
+  },
+  {
+    value: "rebook_grooming",
+    label: "Rebook Grooming",
+    description: "Get overdue clients back for grooming",
+    icon: "Scissors",
+    suggestedSegments: ["seg-006", "seg-019", "seg-015"],
+  },
+  {
+    value: "promote_packages",
+    label: "Promote Packages",
+    description: "Sell daycare or training packages",
+    icon: "Package",
+    suggestedSegments: ["seg-007", "seg-012", "seg-014"],
+  },
+  {
+    value: "holiday_promo",
+    label: "Holiday Promo",
+    description: "Seasonal offers and specials",
+    icon: "Gift",
+    suggestedSegments: ["seg-009", "seg-001", "seg-017"],
+  },
+  {
+    value: "new_service",
+    label: "New Service",
+    description: "Announce a new service offering",
+    icon: "Sparkles",
+    suggestedSegments: ["seg-004", "seg-001", "seg-007"],
+  },
+  {
+    value: "general",
+    label: "General Campaign",
+    description: "Custom campaign with any goal",
+    icon: "Mail",
+    suggestedSegments: [],
+  },
 ];
 
 export interface Campaign {
@@ -788,7 +1469,14 @@ export const campaigns: Campaign[] = [
     goal: "general",
     scheduledAt: "2024-02-01T09:00:00Z",
     sentAt: "2024-02-01T09:05:00Z",
-    stats: { sent: 156, delivered: 154, opened: 89, clicked: 34, bounced: 2, unsubscribed: 1 },
+    stats: {
+      sent: 156,
+      delivered: 154,
+      opened: 89,
+      clicked: 34,
+      bounced: 2,
+      unsubscribed: 1,
+    },
     createdAt: "2024-01-28T14:00:00Z",
     createdBy: "Sarah Johnson",
   },
@@ -801,8 +1489,20 @@ export const campaigns: Campaign[] = [
     status: "scheduled",
     goal: "general",
     scheduledAt: "2024-03-01T10:00:00Z",
-    stats: { sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0 },
-    abTest: { enabled: true, variantA: "tpl-009", variantB: "tpl-005", splitPercentage: 50 },
+    stats: {
+      sent: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      bounced: 0,
+      unsubscribed: 0,
+    },
+    abTest: {
+      enabled: true,
+      variantA: "tpl-009",
+      variantB: "tpl-005",
+      splitPercentage: 50,
+    },
     createdAt: "2024-02-20T11:00:00Z",
     createdBy: "Mike Davis",
   },
@@ -816,7 +1516,14 @@ export const campaigns: Campaign[] = [
     goal: "promote_packages",
     scheduledAt: "2024-02-14T08:00:00Z",
     sentAt: "2024-02-14T08:02:00Z",
-    stats: { sent: 23, delivered: 23, opened: 21, clicked: 18, bounced: 0, unsubscribed: 0 },
+    stats: {
+      sent: 23,
+      delivered: 23,
+      opened: 21,
+      clicked: 18,
+      bounced: 0,
+      unsubscribed: 0,
+    },
     createdAt: "2024-02-12T13:00:00Z",
     createdBy: "Sarah Johnson",
   },
@@ -830,7 +1537,14 @@ export const campaigns: Campaign[] = [
     goal: "rebook_grooming",
     scheduledAt: "2026-03-01T09:00:00Z",
     sentAt: "2026-03-01T09:03:00Z",
-    stats: { sent: 28, delivered: 27, opened: 19, clicked: 12, bounced: 1, unsubscribed: 0 },
+    stats: {
+      sent: 28,
+      delivered: 27,
+      opened: 19,
+      clicked: 12,
+      bounced: 1,
+      unsubscribed: 0,
+    },
     createdAt: "2026-02-25T14:00:00Z",
     createdBy: "Sarah Johnson",
   },
@@ -844,7 +1558,14 @@ export const campaigns: Campaign[] = [
     goal: "fill_slow_days",
     scheduledAt: "2026-03-10T09:00:00Z",
     sentAt: "2026-03-10T09:02:00Z",
-    stats: { sent: 38, delivered: 37, opened: 22, clicked: 14, bounced: 1, unsubscribed: 2 },
+    stats: {
+      sent: 38,
+      delivered: 37,
+      opened: 22,
+      clicked: 14,
+      bounced: 1,
+      unsubscribed: 2,
+    },
     createdAt: "2026-03-05T10:00:00Z",
     createdBy: "Mike Davis",
   },
@@ -856,7 +1577,14 @@ export const campaigns: Campaign[] = [
     segmentId: "seg-009",
     status: "draft",
     goal: "holiday_promo",
-    stats: { sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0 },
+    stats: {
+      sent: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      bounced: 0,
+      unsubscribed: 0,
+    },
     createdAt: "2026-03-20T11:00:00Z",
     createdBy: "Sarah Johnson",
   },
@@ -883,7 +1611,8 @@ export const facilityBranding: FacilityBranding = {
   secondaryColor: "#1e40af",
   fromName: "Happy Paws Pet Care",
   replyToEmail: "hello@happypawspetcare.com",
-  footerText: "Happy Paws Pet Care | 123 Main Street, Springfield, IL 62701 | (555) 123-4567",
+  footerText:
+    "Happy Paws Pet Care | 123 Main Street, Springfield, IL 62701 | (555) 123-4567",
   socialLinks: [
     { platform: "facebook", url: "https://facebook.com/happypawspetcare" },
     { platform: "instagram", url: "https://instagram.com/happypawspetcare" },
@@ -1206,7 +1935,11 @@ export interface LoyaltyReward {
   name: string;
   description: string;
   requiredPoints: number;
-  rewardType: "discount_code" | "credit_balance" | "auto_apply" | "free_service";
+  rewardType:
+    | "discount_code"
+    | "credit_balance"
+    | "auto_apply"
+    | "free_service";
   rewardValue: number | string;
   applicableServices?: string[];
   expiryDays?: number;
@@ -1225,17 +1958,85 @@ export interface PointsEarningRule {
 
 export const pointsEarningRules: PointsEarningRule[] = [
   { type: "per_dollar", description: "Earn 1 point per $1 spent", points: 1 },
-  { type: "per_visit", description: "Earn 50 points per daycare visit", points: 50, applicableServices: ["daycare"] },
-  { type: "per_referral", description: "Earn 200 points for referrals", points: 200 },
-  { type: "bonus", description: "Earn bonus points during holidays", points: { base: 50, multiplier: 2 }, conditions: "Holiday periods only" },
+  {
+    type: "per_visit",
+    description: "Earn 50 points per daycare visit",
+    points: 50,
+    applicableServices: ["daycare"],
+  },
+  {
+    type: "per_referral",
+    description: "Earn 200 points for referrals",
+    points: 200,
+  },
+  {
+    type: "bonus",
+    description: "Earn bonus points during holidays",
+    points: { base: 50, multiplier: 2 },
+    conditions: "Holiday periods only",
+  },
 ];
 
 export const loyaltyRewards: LoyaltyReward[] = [
-  { id: "reward-001", name: "$10 Credit", description: "Redeem points for account credit", requiredPoints: 500, rewardType: "credit_balance", rewardValue: 10, expiryDays: 90, terms: "Credit expires 90 days after redemption. Applies to all services.", isActive: true },
-  { id: "reward-002", name: "Free Daycare Day", description: "One free full-day daycare visit", requiredPoints: 1000, rewardType: "free_service", rewardValue: "daycare", applicableServices: ["daycare"], expiryDays: 60, terms: "Valid for one full-day daycare visit. Must be used within 60 days.", isActive: true },
-  { id: "reward-003", name: "10 Visits = 1 Free", description: "After 10 daycare visits, get 1 free", requiredPoints: 0, rewardType: "auto_apply", rewardValue: "daycare", applicableServices: ["daycare"], terms: "Automatically applied after 10th visit. Cannot be combined with other offers.", isActive: true },
-  { id: "reward-004", name: "Free Nail Trim", description: "Complimentary nail trimming service", requiredPoints: 250, rewardType: "discount_code", rewardValue: "FREE_NAIL_TRIM", applicableServices: ["grooming"], expiryDays: 30, terms: "Valid for nail trim service only. Expires 30 days after redemption.", isActive: true },
-  { id: "reward-005", name: "$25 Discount Code", description: "Get a $25 discount code", requiredPoints: 1250, rewardType: "discount_code", rewardValue: 25, expiryDays: 60, terms: "Code valid for 60 days. Minimum purchase $50 required.", isActive: true },
+  {
+    id: "reward-001",
+    name: "$10 Credit",
+    description: "Redeem points for account credit",
+    requiredPoints: 500,
+    rewardType: "credit_balance",
+    rewardValue: 10,
+    expiryDays: 90,
+    terms: "Credit expires 90 days after redemption. Applies to all services.",
+    isActive: true,
+  },
+  {
+    id: "reward-002",
+    name: "Free Daycare Day",
+    description: "One free full-day daycare visit",
+    requiredPoints: 1000,
+    rewardType: "free_service",
+    rewardValue: "daycare",
+    applicableServices: ["daycare"],
+    expiryDays: 60,
+    terms: "Valid for one full-day daycare visit. Must be used within 60 days.",
+    isActive: true,
+  },
+  {
+    id: "reward-003",
+    name: "10 Visits = 1 Free",
+    description: "After 10 daycare visits, get 1 free",
+    requiredPoints: 0,
+    rewardType: "auto_apply",
+    rewardValue: "daycare",
+    applicableServices: ["daycare"],
+    terms:
+      "Automatically applied after 10th visit. Cannot be combined with other offers.",
+    isActive: true,
+  },
+  {
+    id: "reward-004",
+    name: "Free Nail Trim",
+    description: "Complimentary nail trimming service",
+    requiredPoints: 250,
+    rewardType: "discount_code",
+    rewardValue: "FREE_NAIL_TRIM",
+    applicableServices: ["grooming"],
+    expiryDays: 30,
+    terms:
+      "Valid for nail trim service only. Expires 30 days after redemption.",
+    isActive: true,
+  },
+  {
+    id: "reward-005",
+    name: "$25 Discount Code",
+    description: "Get a $25 discount code",
+    requiredPoints: 1250,
+    rewardType: "discount_code",
+    rewardValue: 25,
+    expiryDays: 60,
+    terms: "Code valid for 60 days. Minimum purchase $50 required.",
+    isActive: true,
+  },
 ];
 
 export const customerLoyaltyData: CustomerLoyalty[] = [
@@ -1245,9 +2046,24 @@ export const customerLoyaltyData: CustomerLoyalty[] = [
     tier: "tier-silver",
     lifetimePoints: 2100,
     pointsHistory: [
-      { date: "2024-02-20T10:00:00Z", points: 125, type: "earned", description: "Booking payment - $125.00" },
-      { date: "2024-02-10T14:00:00Z", points: -500, type: "redeemed", description: "Redeemed for $25 discount" },
-      { date: "2024-01-28T09:00:00Z", points: 200, type: "earned", description: "Booking payment - $200.00" },
+      {
+        date: "2024-02-20T10:00:00Z",
+        points: 125,
+        type: "earned",
+        description: "Booking payment - $125.00",
+      },
+      {
+        date: "2024-02-10T14:00:00Z",
+        points: -500,
+        type: "redeemed",
+        description: "Redeemed for $25 discount",
+      },
+      {
+        date: "2024-01-28T09:00:00Z",
+        points: 200,
+        type: "earned",
+        description: "Booking payment - $200.00",
+      },
     ],
   },
   {
@@ -1256,13 +2072,48 @@ export const customerLoyaltyData: CustomerLoyalty[] = [
     tier: "tier-silver",
     lifetimePoints: 450,
     pointsHistory: [
-      { date: "2026-02-26T10:00:00Z", points: 85, type: "earned", description: "Grooming payment - $85.00" },
-      { date: "2026-02-20T10:00:00Z", points: 50, type: "earned", description: "Daycare booking" },
-      { date: "2026-02-15T10:00:00Z", points: -500, type: "redeemed", description: "Redeemed Free Daycare" },
-      { date: "2026-02-10T10:00:00Z", points: 300, type: "earned", description: "Boarding stay" },
-      { date: "2026-01-28T10:00:00Z", points: 50, type: "earned", description: "Daycare booking" },
-      { date: "2026-01-25T10:00:00Z", points: 300, type: "earned", description: "Boarding stay" },
-      { date: "2026-01-12T10:00:00Z", points: 50, type: "earned", description: "Daycare booking" },
+      {
+        date: "2026-02-26T10:00:00Z",
+        points: 85,
+        type: "earned",
+        description: "Grooming payment - $85.00",
+      },
+      {
+        date: "2026-02-20T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare booking",
+      },
+      {
+        date: "2026-02-15T10:00:00Z",
+        points: -500,
+        type: "redeemed",
+        description: "Redeemed Free Daycare",
+      },
+      {
+        date: "2026-02-10T10:00:00Z",
+        points: 300,
+        type: "earned",
+        description: "Boarding stay",
+      },
+      {
+        date: "2026-01-28T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare booking",
+      },
+      {
+        date: "2026-01-25T10:00:00Z",
+        points: 300,
+        type: "earned",
+        description: "Boarding stay",
+      },
+      {
+        date: "2026-01-12T10:00:00Z",
+        points: 50,
+        type: "earned",
+        description: "Daycare booking",
+      },
     ],
   },
 ];
@@ -1281,9 +2132,39 @@ export interface ReferralCode {
 }
 
 export const referralCodes: ReferralCode[] = [
-  { id: "ref-001", code: "SARAH-REFER", referrerId: 1, referrerReward: 25, refereeReward: 25, timesUsed: 3, maxUses: 10, createdAt: "2024-01-15T10:00:00Z", isActive: true },
-  { id: "ref-002", code: "MIKE-FRIEND", referrerId: 2, referrerReward: 25, refereeReward: 25, timesUsed: 1, maxUses: 10, createdAt: "2024-01-20T11:00:00Z", isActive: true },
-  { id: "ref-003", code: "ALICE-PET", referrerId: 15, referrerReward: 25, refereeReward: 25, timesUsed: 2, maxUses: 10, createdAt: "2026-01-15T10:00:00Z", isActive: true },
+  {
+    id: "ref-001",
+    code: "SARAH-REFER",
+    referrerId: 1,
+    referrerReward: 25,
+    refereeReward: 25,
+    timesUsed: 3,
+    maxUses: 10,
+    createdAt: "2024-01-15T10:00:00Z",
+    isActive: true,
+  },
+  {
+    id: "ref-002",
+    code: "MIKE-FRIEND",
+    referrerId: 2,
+    referrerReward: 25,
+    refereeReward: 25,
+    timesUsed: 1,
+    maxUses: 10,
+    createdAt: "2024-01-20T11:00:00Z",
+    isActive: true,
+  },
+  {
+    id: "ref-003",
+    code: "ALICE-PET",
+    referrerId: 15,
+    referrerReward: 25,
+    refereeReward: 25,
+    timesUsed: 2,
+    maxUses: 10,
+    createdAt: "2026-01-15T10:00:00Z",
+    isActive: true,
+  },
 ];
 
 export interface Badge {
@@ -1292,7 +2173,12 @@ export interface Badge {
   description: string;
   icon: string;
   criteria: {
-    type: "bookings_count" | "total_spent" | "consecutive_months" | "referrals" | "reviews";
+    type:
+      | "bookings_count"
+      | "total_spent"
+      | "consecutive_months"
+      | "referrals"
+      | "reviews";
     threshold: number;
   };
   reward?: {
@@ -1302,10 +2188,38 @@ export interface Badge {
 }
 
 export const badges: Badge[] = [
-  { id: "badge-001", name: "Frequent Visitor", description: "Completed 10 bookings", icon: "star", criteria: { type: "bookings_count", threshold: 10 }, reward: { type: "discount", value: 10 } },
-  { id: "badge-002", name: "Big Spender", description: "Spent $1000+ total", icon: "gem", criteria: { type: "total_spent", threshold: 1000 }, reward: { type: "points", value: 500 } },
-  { id: "badge-003", name: "Loyal Friend", description: "Booked for 6 consecutive months", icon: "trophy", criteria: { type: "consecutive_months", threshold: 6 }, reward: { type: "freebie", value: "Free nail trim" } },
-  { id: "badge-004", name: "Super Referrer", description: "Referred 5 friends", icon: "target", criteria: { type: "referrals", threshold: 5 }, reward: { type: "discount", value: 20 } },
+  {
+    id: "badge-001",
+    name: "Frequent Visitor",
+    description: "Completed 10 bookings",
+    icon: "star",
+    criteria: { type: "bookings_count", threshold: 10 },
+    reward: { type: "discount", value: 10 },
+  },
+  {
+    id: "badge-002",
+    name: "Big Spender",
+    description: "Spent $1000+ total",
+    icon: "gem",
+    criteria: { type: "total_spent", threshold: 1000 },
+    reward: { type: "points", value: 500 },
+  },
+  {
+    id: "badge-003",
+    name: "Loyal Friend",
+    description: "Booked for 6 consecutive months",
+    icon: "trophy",
+    criteria: { type: "consecutive_months", threshold: 6 },
+    reward: { type: "freebie", value: "Free nail trim" },
+  },
+  {
+    id: "badge-004",
+    name: "Super Referrer",
+    description: "Referred 5 friends",
+    icon: "target",
+    criteria: { type: "referrals", threshold: 5 },
+    reward: { type: "discount", value: 20 },
+  },
 ];
 
 // ========================================
@@ -1437,7 +2351,8 @@ export const referralNotificationTemplates: ReferralNotificationTemplate[] = [
     type: "referrer_reward_earned",
     channel: "in_app",
     titleTemplate: "Reward Earned!",
-    bodyTemplate: "You earned {{reward_amount}} {{reward_type}} for referring {{friend_name}}!",
+    bodyTemplate:
+      "You earned {{reward_amount}} {{reward_type}} for referring {{friend_name}}!",
     variables: ["reward_amount", "reward_type", "friend_name"],
   },
   {
@@ -1455,7 +2370,8 @@ export const referralNotificationTemplates: ReferralNotificationTemplate[] = [
     type: "referee_welcome",
     channel: "in_app",
     titleTemplate: "Welcome Reward!",
-    bodyTemplate: "Welcome! You received {{reward_amount}} {{reward_type}} from {{referrer_name}}'s referral!",
+    bodyTemplate:
+      "Welcome! You received {{reward_amount}} {{reward_type}} from {{referrer_name}}'s referral!",
     variables: ["reward_amount", "reward_type", "referrer_name"],
   },
   {
@@ -1463,7 +2379,8 @@ export const referralNotificationTemplates: ReferralNotificationTemplate[] = [
     type: "referral_milestone",
     channel: "in_app",
     titleTemplate: "Referral Milestone!",
-    bodyTemplate: "You've referred {{referral_count}} friends! Keep sharing to earn more rewards.",
+    bodyTemplate:
+      "You've referred {{referral_count}} friends! Keep sharing to earn more rewards.",
     variables: ["referral_count"],
   },
 ];

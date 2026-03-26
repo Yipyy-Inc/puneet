@@ -1,14 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useMemo, useEffect } from "react";
 import { useGroomingValidation } from "@/hooks/use-grooming-validation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
-import { stylists, type Stylist } from "@/data/grooming";
+import { stylists } from "@/data/grooming";
 import { locations } from "@/data/settings";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,13 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Dog, 
-  Plus, 
-  Calendar, 
-  AlertCircle, 
-  CheckCircle2, 
-  Upload, 
+import {
+  Dog,
+  Plus,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  Upload,
   ArrowRight,
   Scissors,
   Sparkles,
@@ -39,22 +40,20 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   X,
-  User,
   Star,
   MapPin,
   Truck,
   Building2,
-  Navigation,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
-import { 
-  handleImmediatePostBookingActions, 
+import {
+  handleImmediatePostBookingActions,
   schedule24HourReminder,
-  type GroomingBookingData 
+  type GroomingBookingData,
 } from "@/lib/grooming-post-booking";
 import { toast } from "sonner";
 
@@ -205,7 +204,7 @@ const SERVICE_CATEGORIES: ServiceCategoryOption[] = [
 
 // Service variants by category
 const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
-  "haircut": [
+  haircut: [
     {
       id: "breed-standard",
       name: "Breed Standard",
@@ -266,7 +265,7 @@ const SERVICE_VARIANTS: Record<string, ServiceVariant[]> = {
       enabled: true,
     },
   ],
-  "spa": [
+  spa: [
     {
       id: "deluxe",
       name: "Spa Day Deluxe",
@@ -421,59 +420,95 @@ const MOBILE_SERVICE_ZONES: ServiceZone[] = [
   },
 ];
 
-export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowProps) {
+export function GroomingBookingFlow({
+  open,
+  onOpenChange,
+}: GroomingBookingFlowProps) {
   const router = useRouter();
-  const { validation, isAvailable, config } = useGroomingValidation();
+  const {
+    validation: _validation,
+    isAvailable,
+    config,
+  } = useGroomingValidation();
   const { selectedFacility } = useCustomerFacility();
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10>(1);
+  const [currentStep, setCurrentStep] = useState<
+    1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  >(1);
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
-  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<
+    string | null
+  >(null);
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
-  const [selectedGroomerId, setSelectedGroomerId] = useState<string | null>(null);
-  const [selectedGroomerTier, setSelectedGroomerTier] = useState<string | null>(null);
+  const [selectedGroomerId, setSelectedGroomerId] = useState<string | null>(
+    null,
+  );
+  const [selectedGroomerTier, setSelectedGroomerTier] = useState<string | null>(
+    null,
+  );
   const [sameGroomerGuarantee, setSameGroomerGuarantee] = useState(false);
-  const [serviceLocation, setServiceLocation] = useState<"salon" | "mobile" | null>(null);
+  const [serviceLocation, setServiceLocation] = useState<
+    "salon" | "mobile" | null
+  >(null);
   const [mobileAddress, setMobileAddress] = useState("");
   const [mobileGateCode, setMobileGateCode] = useState("");
-  const [mobileParking, setMobileParking] = useState<"street" | "driveway" | "">("");
+  const [mobileParking, setMobileParking] = useState<
+    "street" | "driveway" | ""
+  >("");
   const [mobileStayInVan, setMobileStayInVan] = useState(false);
   const [salonLocationId, setSalonLocationId] = useState<string | null>(null);
-  const [dropOffPreference, setDropOffPreference] = useState<"wait" | "drop-off" | "curbside" | "">("");
+  const [dropOffPreference, setDropOffPreference] = useState<
+    "wait" | "drop-off" | "curbside" | ""
+  >("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [mobileDateRange, setMobileDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [mobileDateRange, setMobileDateRange] = useState<{
+    start: Date;
+    end: Date;
+  } | null>(null);
   const [customNotes, setCustomNotes] = useState("");
   const [customPhotos, setCustomPhotos] = useState<File[]>([]);
-  const [showAddPet, setShowAddPet] = useState(false);
+  const [_showAddPet, _setShowAddPet] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  
+
   // Edge case handling states
   const [timeSlotConflict, setTimeSlotConflict] = useState<{
     hasConflict: boolean;
     message: string;
-    alternatives: Array<{ type: "reduce-addons" | "alternative-day"; message: string; action?: () => void }>;
+    alternatives: Array<{
+      type: "reduce-addons" | "alternative-day";
+      message: string;
+      action?: () => void;
+    }>;
   } | null>(null);
   const [mobileZoneConflict, setMobileZoneConflict] = useState<{
     hasConflict: boolean;
     message: string;
     nextAvailableDate: Date | null;
   } | null>(null);
-  
+
   // Step 8: Recurring & Packages
   const [recurringEnabled, setRecurringEnabled] = useState(false);
-  const [recurringFrequency, setRecurringFrequency] = useState<4 | 6 | 8 | "custom">(4);
+  const [recurringFrequency, setRecurringFrequency] = useState<
+    4 | 6 | 8 | "custom"
+  >(4);
   const [customFrequency, setCustomFrequency] = useState<number>(4);
-  const [recurringEndAfter, setRecurringEndAfter] = useState<"occurrences" | "date" | "never">("never");
+  const [recurringEndAfter, setRecurringEndAfter] = useState<
+    "occurrences" | "date" | "never"
+  >("never");
   const [recurringOccurrences, setRecurringOccurrences] = useState<number>(6);
   const [recurringEndDate, setRecurringEndDate] = useState<Date | null>(null);
   const [keepSameGroomer, setKeepSameGroomer] = useState(true);
   const [useExistingPackage, setUseExistingPackage] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+    null,
+  );
   const [upsellPackage, setUpsellPackage] = useState(false);
-  const [selectedUpsellPackageId, setSelectedUpsellPackageId] = useState<string | null>(null);
+  const [selectedUpsellPackageId, setSelectedUpsellPackageId] = useState<
+    string | null
+  >(null);
   const [upgradeToVIP, setUpgradeToVIP] = useState(false);
-  
+
   // Step 9: Client Details & Pet Profile Updates
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
@@ -487,10 +522,12 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  
+
   // Step 10: Review & Deposit
   const [policyAccepted, setPolicyAccepted] = useState(false);
-  const [depositPaymentMethod, setDepositPaymentMethod] = useState<"full" | "deposit" | "hold" | "venue" | null>(null);
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<
+    "full" | "deposit" | "hold" | "venue" | null
+  >(null);
   const [isBooking, setIsBooking] = useState(false);
 
   // Prevent hydration mismatch by only rendering date-dependent content on client
@@ -501,7 +538,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Get customer and their pets
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
 
   // Check if this is a new client (no previous bookings)
@@ -523,27 +560,35 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             b.clientId === customer.id &&
             b.petId === pet.id &&
             b.service.toLowerCase() === "grooming" &&
-            b.status === "completed"
+            b.status === "completed",
         )
-        .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0];
+        .sort(
+          (a, b) =>
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+        )[0];
 
       // Determine pet size based on weight
       const size: PetSize =
-        pet.weight <= 15 ? "S" : pet.weight <= 50 ? "M" : pet.weight <= 100 ? "L" : "XL";
+        pet.weight <= 15
+          ? "S"
+          : pet.weight <= 50
+            ? "M"
+            : pet.weight <= 100
+              ? "L"
+              : "XL";
 
       // Check vaccination status
-      const petVaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
-      const requiredVaccines = config.bookingRules.vaccination?.requiredVaccines ?? [
-        "Rabies",
-        "DHPP",
-        "Bordetella",
-      ];
+      const petVaccinations = vaccinationRecords.filter(
+        (v) => v.petId === pet.id,
+      );
+      const requiredVaccines = config.bookingRules.vaccination
+        ?.requiredVaccines ?? ["Rabies", "DHPP", "Bordetella"];
       const missingRecords: string[] = [];
       const expiredRecords: string[] = [];
 
       requiredVaccines.forEach((vaccine) => {
         const record = petVaccinations.find((v) =>
-          v.vaccineName.toLowerCase().includes(vaccine.toLowerCase())
+          v.vaccineName.toLowerCase().includes(vaccine.toLowerCase()),
         );
         if (!record) {
           missingRecords.push(vaccine);
@@ -551,15 +596,24 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
           const expiryDate = new Date(record.expiryDate);
           const now = new Date();
           // Compare dates without time to avoid hydration issues
-          const expiryDateOnly = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
-          const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const expiryDateOnly = new Date(
+            expiryDate.getFullYear(),
+            expiryDate.getMonth(),
+            expiryDate.getDate(),
+          );
+          const nowDateOnly = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+          );
           if (expiryDateOnly < nowDateOnly) {
             expiredRecords.push(vaccine);
           }
         }
       });
 
-      const isCompliant = missingRecords.length === 0 && expiredRecords.length === 0;
+      const isCompliant =
+        missingRecords.length === 0 && expiredRecords.length === 0;
 
       return {
         id: pet.id,
@@ -615,16 +669,18 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Check if pet has matting flag from last visit
   const hasMattingFlag = useMemo(() => {
     if (!selectedPetId || !customer) return false;
-    
+
     const lastGroomingBooking = bookings
       .filter(
         (b) =>
           b.clientId === customer.id &&
           b.petId === selectedPetId &&
           b.service.toLowerCase() === "grooming" &&
-          b.status === "completed"
+          b.status === "completed",
       )
-      .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0];
+      .sort(
+        (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+      )[0];
 
     if (!lastGroomingBooking) return false;
 
@@ -634,7 +690,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
     // Check if de-matting was an add-on
     const hasDeMattingAddOn = lastGroomingBooking.groomingAddOns?.some(
-      (addon) => /de.?matting|matting/i.test(addon)
+      (addon) => /de.?matting|matting/i.test(addon),
     );
 
     return hasMattingInNotes || hasDeMattingAddOn;
@@ -653,16 +709,20 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (category.id === "bath-brush") configCategoryId = "bath-only";
       if (category.id === "spa") configCategoryId = "full-groom"; // Spa is like full groom
       if (category.id === "ala-carte") configCategoryId = "nail-trim"; // À la carte includes nail trim
-      
-      const configCategory = config.bookingRules.serviceVisibility.categories.find(
-        (c) => c.id === configCategoryId
-      );
+
+      const configCategory =
+        config.bookingRules.serviceVisibility.categories.find(
+          (c) => c.id === configCategoryId,
+        );
       return configCategory?.enabled !== false;
     });
   }, [config]);
 
   // Get price for selected service based on pet size
-  const getServicePrice = (category: ServiceCategoryOption, petSize: PetSize): number => {
+  const getServicePrice = (
+    category: ServiceCategoryOption,
+    petSize: PetSize,
+  ): number => {
     if (category.sizePricing && category.sizePricing[petSize]) {
       return category.sizePricing[petSize];
     }
@@ -686,9 +746,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Get variants for selected service category
   const availableVariants = useMemo(() => {
     if (!selectedServiceCategory) return [];
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     if (!category?.hasVariants) return [];
-    
+
     const variants = SERVICE_VARIANTS[selectedServiceCategory] || [];
     // Filter out disabled variants (in production, this would check facility config)
     return variants.filter((v) => v.enabled !== false);
@@ -697,19 +759,23 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Check if selected category has variants
   const selectedCategoryHasVariants = useMemo(() => {
     if (!selectedServiceCategory) return false;
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     return category?.hasVariants === true;
   }, [selectedServiceCategory]);
 
   // Calculate total duration and price based on pet size and variant
   const calculatedDuration = useMemo(() => {
     if (!selectedServiceCategory || !selectedPet) return 0;
-    
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     if (!category) return 0;
-    
+
     let baseDuration = category.estimatedDuration;
-    
+
     // Add variant modifier if variant is selected
     if (selectedVariant) {
       const variant = availableVariants.find((v) => v.id === selectedVariant);
@@ -717,18 +783,25 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         baseDuration += variant.durationModifier;
       }
     }
-    
+
     return baseDuration;
-  }, [selectedServiceCategory, selectedPet, selectedVariant, availableVariants]);
+  }, [
+    selectedServiceCategory,
+    selectedPet,
+    selectedVariant,
+    availableVariants,
+  ]);
 
   const calculatedPrice = useMemo(() => {
     if (!selectedServiceCategory || !selectedPet) return 0;
-    
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     if (!category) return 0;
-    
+
     let basePrice = getServicePrice(category, selectedPet.size);
-    
+
     // Add variant modifier if variant is selected
     if (selectedVariant) {
       const variant = availableVariants.find((v) => v.id === selectedVariant);
@@ -736,9 +809,14 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         basePrice += variant.priceModifier;
       }
     }
-    
+
     return basePrice;
-  }, [selectedServiceCategory, selectedPet, selectedVariant, availableVariants]);
+  }, [
+    selectedServiceCategory,
+    selectedPet,
+    selectedVariant,
+    availableVariants,
+  ]);
 
   // Check if photos are required for selected variant
   const requiresPhotos = useMemo(() => {
@@ -749,7 +827,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   const handleContinueFromStep2 = () => {
     if (!selectedServiceCategory) return;
-    
+
     // If category has variants, go to Step 3
     if (selectedCategoryHasVariants) {
       setCurrentStep(3);
@@ -788,14 +866,14 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Check if pet is anxious/aggressive or senior
   const petFlags = useMemo(() => {
     if (!selectedPet) return { isAnxious: false, isSenior: false };
-    
+
     // Check pet age for senior (typically 7+ years for dogs, 10+ for cats)
     const isSenior = selectedPet.age >= (selectedPet.type === "Dog" ? 7 : 10);
-    
+
     // Check specialNeeds or behavior flags (in production, this would come from pet profile)
     const specialNeeds = (selectedPet as any).specialNeeds || "";
     const isAnxious = /anxious|aggressive|nervous|fearful/i.test(specialNeeds);
-    
+
     return { isAnxious, isSenior };
   }, [selectedPet]);
 
@@ -804,10 +882,10 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     return GROOMING_ADD_ONS.filter((addon) => {
       // Hide if disabled
       if (addon.enabled === false) return false;
-      
+
       // Hide nail polish for anxious pets
       if (addon.hiddenForAnxious && petFlags.isAnxious) return false;
-      
+
       return true;
     });
   }, [petFlags]);
@@ -823,28 +901,28 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Calculate total duration with add-ons
   const totalDurationWithAddOns = useMemo(() => {
     let total = calculatedDuration;
-    
+
     selectedAddOns.forEach((addOnId) => {
       const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
       if (addOn) {
         total += addOn.durationMinutes;
       }
     });
-    
+
     return total;
   }, [calculatedDuration, selectedAddOns]);
 
   // Calculate total price with add-ons
   const totalPriceWithAddOns = useMemo(() => {
     let total = calculatedPrice;
-    
+
     selectedAddOns.forEach((addOnId) => {
       const addOn = GROOMING_ADD_ONS.find((a) => a.id === addOnId);
       if (addOn) {
         total += addOn.price;
       }
     });
-    
+
     return total;
   }, [calculatedPrice, selectedAddOns]);
 
@@ -901,7 +979,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Calculate final price with discounts and groomer surcharge
   const finalPrice = useMemo(() => {
-    let price = totalPriceWithAddOns + groomerSurcharge;
+    const price = totalPriceWithAddOns + groomerSurcharge;
     let discount = 0;
     let discountReason = "";
 
@@ -938,22 +1016,31 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       discountReason,
       savings: discount,
     };
-  }, [totalPriceWithAddOns, groomerSurcharge, recurringEnabled, upgradeToVIP, useExistingPackage, selectedPackageId]);
+  }, [
+    totalPriceWithAddOns,
+    groomerSurcharge,
+    recurringEnabled,
+    upgradeToVIP,
+    useExistingPackage,
+    selectedPackageId,
+  ]);
 
   // Check for duration conflicts
   const durationConflict = useMemo(() => {
     if (!selectedServiceCategory) return null;
-    
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     if (!category) return null;
-    
+
     // If add-ons add significant time to a short service, show warning
     const baseDuration = category.estimatedDuration;
     const addOnDuration = selectedAddOns.reduce((sum, id) => {
       const addOn = GROOMING_ADD_ONS.find((a) => a.id === id);
       return sum + (addOn?.durationMinutes || 0);
     }, 0);
-    
+
     // If add-ons add more than 50% of base duration, show warning
     if (addOnDuration > baseDuration * 0.5 && totalDurationWithAddOns > 60) {
       return {
@@ -961,7 +1048,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         severity: "warning" as const,
       };
     }
-    
+
     return null;
   }, [selectedServiceCategory, selectedAddOns, totalDurationWithAddOns]);
 
@@ -977,13 +1064,13 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   const handleContinueFromStep3 = () => {
     if (!selectedVariant) return;
-    
+
     // If custom variant requires photos, check if photos are uploaded
     if (requiresPhotos && customPhotos.length === 0) {
       // Show error or prevent proceeding
       return;
     }
-    
+
     // Navigate to Step 4 (Add-ons)
     setCurrentStep(4);
   };
@@ -1005,16 +1092,16 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Get pet's booking history with groomers
   const petGroomerHistory = useMemo(() => {
     if (!selectedPetId || !customer) return [];
-    
+
     const petBookings = bookings.filter(
       (b) =>
         b.clientId === customer.id &&
         b.petId === selectedPetId &&
         b.service.toLowerCase() === "grooming" &&
         b.status === "completed" &&
-        b.groomingStyle // Has groomer info
+        b.groomingStyle, // Has groomer info
     );
-    
+
     // Count bookings per groomer
     const groomerCounts = new Map<string, number>();
     petBookings.forEach((booking) => {
@@ -1025,7 +1112,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         groomerCounts.set(groomerId, (groomerCounts.get(groomerId) || 0) + 1);
       }
     });
-    
+
     return Array.from(groomerCounts.entries()).map(([groomerId, count]) => ({
       groomerId,
       count,
@@ -1034,20 +1121,23 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Get available groomers based on mode and pet needs
   const availableGroomers = useMemo(() => {
-    if (groomerSelectionMode === "stealth" || groomerSelectionMode === "tier-only") {
+    if (
+      groomerSelectionMode === "stealth" ||
+      groomerSelectionMode === "tier-only"
+    ) {
       return []; // No specific groomers shown
     }
-    
+
     // For "optional" and "full-choice" modes, show groomers
     let groomers = stylists.filter((s) => s.status === "active");
-    
+
     // Filter out non-Fear-Free groomers if pet requires it
     if (requiresFearFree) {
       groomers = groomers.filter((g) =>
-        g.certifications.some((c) => /fear.?free/i.test(c))
+        g.certifications.some((c) => /fear.?free/i.test(c)),
       );
     }
-    
+
     return groomers;
   }, [groomerSelectionMode, requiresFearFree]);
 
@@ -1068,7 +1158,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       onOpenChange(false);
       return;
     }
-    
+
     // Navigate to Step 5 (Groomer Selection)
     setCurrentStep(5);
   };
@@ -1108,18 +1198,22 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Validate mobile address and find service zone
   const mobileAddressValidation = useMemo(() => {
     if (!mobileAddress || serviceLocation !== "mobile") return null;
-    
+
     // Simple validation - in production, use geocoding API
     const addressLower = mobileAddress.toLowerCase();
     let matchedZone: ServiceZone | null = null;
-    
+
     for (const zone of MOBILE_SERVICE_ZONES) {
-      if (zone.neighborhoods.some((neighborhood) => addressLower.includes(neighborhood.toLowerCase()))) {
+      if (
+        zone.neighborhoods.some((neighborhood) =>
+          addressLower.includes(neighborhood.toLowerCase()),
+        )
+      ) {
         matchedZone = zone;
         break;
       }
     }
-    
+
     if (!matchedZone) {
       // Try to extract neighborhood from address
       const possibleNeighborhood = addressLower.split(",")[0]?.trim();
@@ -1129,7 +1223,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         message: `We don't service this area yet. Join our waitlist for ${possibleNeighborhood || "this neighborhood"}`,
       };
     }
-    
+
     return {
       isValid: true,
       zone: matchedZone,
@@ -1152,7 +1246,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Auto-set salon location if only one option
   useEffect(() => {
-    if (serviceLocation === "salon" && defaultSalonLocation && !salonLocationId) {
+    if (
+      serviceLocation === "salon" &&
+      defaultSalonLocation &&
+      !salonLocationId
+    ) {
       setSalonLocationId(defaultSalonLocation);
     }
   }, [serviceLocation, defaultSalonLocation, salonLocationId]);
@@ -1162,13 +1260,17 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     if (groomerSelectionMode === "tier-only" && !selectedGroomerTier) {
       // "No preference" is allowed, so this is optional
     }
-    if (groomerSelectionMode === "full-choice" && !selectedGroomerId && !selectedGroomerTier) {
+    if (
+      groomerSelectionMode === "full-choice" &&
+      !selectedGroomerId &&
+      !selectedGroomerTier
+    ) {
       // "No preference" might be allowed, check config
     }
-    
+
     // Save booking progress for abandoned booking recovery
     saveBookingProgress();
-    
+
     // Navigate to Step 6 (Location & Logistics)
     setCurrentStep(6);
   };
@@ -1176,50 +1278,73 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Save booking progress to localStorage for abandoned booking recovery
   const saveBookingProgress = () => {
     if (!selectedPetId) return;
-    
+
     const progress = {
       petId: selectedPetId,
       serviceCategory: selectedServiceCategory,
       variant: selectedVariant,
       addOns: selectedAddOns,
       groomerId: selectedGroomerId,
-      groomerName: selectedGroomerId ? stylists.find(s => s.id === selectedGroomerId)?.name : undefined,
+      groomerName: selectedGroomerId
+        ? stylists.find((s) => s.id === selectedGroomerId)?.name
+        : undefined,
       groomerTier: selectedGroomerTier,
       step: currentStep,
       timestamp: new Date().toISOString(),
     };
-    
-    localStorage.setItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`, JSON.stringify(progress));
-  };
 
-  // Load booking progress from localStorage (only on client)
-  const loadBookingProgress = () => {
-    if (!isMounted || typeof window === "undefined") return null;
-    const stored = localStorage.getItem(`grooming_booking_progress_${MOCK_CUSTOMER_ID}`);
-    if (!stored) return null;
-    
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return null;
-    }
+    localStorage.setItem(
+      `grooming_booking_progress_${MOCK_CUSTOMER_ID}`,
+      JSON.stringify(progress),
+    );
   };
 
   // Check if booking was abandoned (progress saved but not completed)
   useEffect(() => {
     if (!isMounted) return;
     if (open && currentStep === 1) {
-      const progress = loadBookingProgress();
+      // Load booking progress from localStorage (only on client)
+      const stored =
+        typeof window !== "undefined"
+          ? localStorage.getItem(
+              `grooming_booking_progress_${MOCK_CUSTOMER_ID}`,
+            )
+          : null;
+
+      interface BookingProgress {
+        petId: number;
+        serviceCategory?: string;
+        variant?: string;
+        addOns?: string[];
+        groomerId?: string;
+        groomerName?: string;
+        groomerTier?: string;
+        step: number;
+        timestamp: string;
+      }
+
+      let progress: BookingProgress | null = null;
+      if (stored) {
+        try {
+          progress = JSON.parse(stored) as BookingProgress;
+        } catch {
+          progress = null;
+        }
+      }
+
       if (progress && progress.step >= 5) {
         const progressDate = new Date(progress.timestamp);
-        const hoursSinceProgress = (Date.now() - progressDate.getTime()) / (1000 * 60 * 60);
-        
+        const hoursSinceProgress =
+          (Date.now() - progressDate.getTime()) / (1000 * 60 * 60);
+
         // If progress is older than 2 hours, trigger abandoned booking recovery
         if (hoursSinceProgress >= 2) {
           // Schedule reminder email (in production, this would be handled by backend)
-          import("@/lib/grooming-post-booking").then(({ scheduleAbandonedBookingReminder }) => {
-            scheduleAbandonedBookingReminder(progress);
-          });
+          import("@/lib/grooming-post-booking").then(
+            ({ scheduleAbandonedBookingReminder }) => {
+              scheduleAbandonedBookingReminder(progress!);
+            },
+          );
         }
       }
     }
@@ -1242,30 +1367,33 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Generate time slots for salon
   const generateSalonTimeSlots = useMemo(() => {
     if (!selectedDate || serviceLocation !== "salon") return [];
-    
+
     const slots: TimeSlot[] = [];
     const startHour = 9; // 9 AM
     const endHour = 17; // 5 PM
     const slotDuration = totalDurationWithAddOns; // Total duration needed
-    
+
     // Generate 30-minute interval slots
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-        
+
         // Check if slot fits (basic logic - in production, check groomer/station availability)
         const slotEnd = hour * 60 + minute + slotDuration;
         const endHourCheck = Math.floor(slotEnd / 60);
         const endMinuteCheck = slotEnd % 60;
-        
-        if (endHourCheck < endHour || (endHourCheck === endHour && endMinuteCheck === 0)) {
+
+        if (
+          endHourCheck < endHour ||
+          (endHourCheck === endHour && endMinuteCheck === 0)
+        ) {
           // Determine slot status
           let status: TimeSlot["status"] = "optimal";
           if (hour === startHour || (hour === endHour - 1 && minute >= 30)) {
             status = "off-peak"; // Early morning or late afternoon
           }
           // In production, check if groomer has back-to-back appointments
-          
+
           slots.push({
             time: timeString,
             status,
@@ -1274,48 +1402,52 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         }
       }
     }
-    
+
     return slots;
   }, [selectedDate, serviceLocation, totalDurationWithAddOns]);
 
   // Generate time slots for mobile (with routing algorithm)
   const generateMobileTimeSlots = useMemo(() => {
-    if (!mobileDateRange || !mobileAddressValidation?.isValid || serviceLocation !== "mobile") {
+    if (
+      !mobileDateRange ||
+      !mobileAddressValidation?.isValid ||
+      serviceLocation !== "mobile"
+    ) {
       return [];
     }
-    
+
     const slots: TimeSlot[] = [];
     const zone = mobileAddressValidation.zone;
     if (!zone) return [];
-    
+
     // Mock route data - in production, this would come from van scheduling
     const mockRoute = [
       { time: "08:00", address: "123 Main St, Downtown", driveTime: 0 },
       { time: "10:15", address: "456 Oak Ave, Downtown", driveTime: 15 },
       { time: "13:00", address: "789 Pine St, Downtown", driveTime: 20 },
     ];
-    
+
     // Generate slots for each day in range that matches zone days
     const startDate = new Date(mobileDateRange.start);
     const endDate = new Date(mobileDateRange.end);
     const currentDate = new Date(startDate);
     currentDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
-    
+
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
-      
+
       // Check if this day is in the zone's service days
       if (zone.daysOfWeek.includes(dayOfWeek)) {
         // Generate time slots for this day
         const daySlots: TimeSlot[] = [];
         const slotDuration = totalDurationWithAddOns;
-        
+
         // Check each potential slot against route
         for (let hour = 8; hour < 17; hour++) {
           for (let minute = 0; minute < 60; minute += 30) {
             const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-            
+
             // Find previous appointment in route
             const previousAppt = mockRoute.find((apt) => {
               const [aptHour, aptMin] = apt.time.split(":").map(Number);
@@ -1323,22 +1455,26 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               const slotTime = hour * 60 + minute;
               return aptTime < slotTime;
             });
-            
+
             if (previousAppt) {
-              const [prevHour, prevMin] = previousAppt.time.split(":").map(Number);
+              const [prevHour, prevMin] = previousAppt.time
+                .split(":")
+                .map(Number);
               const prevTime = prevHour * 60 + prevMin;
               const slotTime = hour * 60 + minute;
               const driveTime = previousAppt.driveTime || 15;
               const bufferTime = 15; // Cleanup time
               const prevEndTime = prevTime + 90 + bufferTime; // Assume 90 min appointment + buffer
-              
+
               // Check if slot fits with drive time
               if (slotTime >= prevEndTime + driveTime) {
                 const slotEndTime = slotTime + slotDuration;
                 // Check if slot doesn't exceed end of day
                 if (slotEndTime <= 17 * 60) {
                   const routePosition = mockRoute.indexOf(previousAppt) + 2; // +1 for index, +1 for this being next
-                  const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
+                  const weekday = currentDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                  });
                   daySlots.push({
                     time: timeString,
                     status: driveTime < 15 ? "optimal" : "tight",
@@ -1350,9 +1486,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
               }
             } else {
               // First appointment of the day - check if slot fits
-              const slotEndTime = (hour * 60 + minute) + slotDuration;
+              const slotEndTime = hour * 60 + minute + slotDuration;
               if (slotEndTime <= 17 * 60) {
-                const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
+                const weekday = currentDate.toLocaleDateString("en-US", {
+                  weekday: "long",
+                });
                 daySlots.push({
                   time: timeString,
                   status: hour < 10 ? "off-peak" : "optimal",
@@ -1363,7 +1501,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             }
           }
         }
-        
+
         // Add date info to slots
         daySlots.forEach((slot) => {
           slots.push({
@@ -1372,12 +1510,17 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
           });
         });
       }
-      
+
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return slots;
-  }, [mobileDateRange, mobileAddressValidation, serviceLocation, totalDurationWithAddOns]);
+  }, [
+    mobileDateRange,
+    mobileAddressValidation,
+    serviceLocation,
+    totalDurationWithAddOns,
+  ]);
 
   // Get available time slots based on service location
   const availableTimeSlots = useMemo(() => {
@@ -1414,16 +1557,16 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     // For now, disable past dates and dates before minimum lead time
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     for (let i = 0; i < 14; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
-      
+
       // Disable if before minimum lead time
       if (date < minBookingDate) {
         disabled.push(date);
       }
-      
+
       // For mobile: disable days not in zone's service days
       if (serviceLocation === "mobile" && mobileAddressValidation?.zone) {
         const dayOfWeek = date.getDay();
@@ -1432,7 +1575,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         }
       }
     }
-    
+
     return disabled;
   }, [minBookingDate, serviceLocation, mobileAddressValidation, isMounted]);
 
@@ -1450,7 +1593,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       // No service location selected
       return;
     }
-    
+
     // Navigate to Step 7 (Date & Time Selection)
     setCurrentStep(7);
   };
@@ -1464,9 +1607,12 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (!selectedDate || !selectedTimeSlot) {
         return; // Cannot proceed without date and time
       }
-      
+
       // Check for time slot duration conflict
-      const conflict = checkTimeSlotConflict(selectedTimeSlot, totalDurationWithAddOns);
+      const conflict = checkTimeSlotConflict(
+        selectedTimeSlot,
+        totalDurationWithAddOns,
+      );
       if (conflict.hasConflict) {
         setTimeSlotConflict(conflict);
         return; // Don't proceed, show conflict message
@@ -1475,13 +1621,13 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (!selectedTimeSlot) {
         return; // Cannot proceed without time slot (date is included in slot for mobile)
       }
-      
+
       // Extract date from slot time (format: "YYYY-MM-DD HH:mm")
       const [datePart] = selectedTimeSlot.split(" ");
       if (datePart) {
         const slotDate = new Date(datePart);
         setSelectedDate(slotDate);
-        
+
         // Check for mobile zone conflict
         const zoneConflict = checkMobileZoneConflict(slotDate);
         if (zoneConflict.hasConflict) {
@@ -1490,56 +1636,71 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         }
       }
     }
-    
+
     // Clear any conflicts if validation passes
     setTimeSlotConflict(null);
     setMobileZoneConflict(null);
-    
+
     // Navigate to Step 8 (Recurring & Packages)
     setCurrentStep(8);
   };
 
   // Check if selected time slot can accommodate the total duration
-  const checkTimeSlotConflict = (timeSlot: string, requiredDuration: number) => {
+  const checkTimeSlotConflict = (
+    timeSlot: string,
+    requiredDuration: number,
+  ) => {
     // Parse time slot (format: "HH:mm")
     const [hours, minutes] = timeSlot.split(":").map(Number);
     const slotStart = hours * 60 + minutes;
     const slotEnd = slotStart + requiredDuration;
-    
+
     // Check if slot would exceed business hours (5 PM = 17:00 = 1020 minutes)
     const businessEnd = 17 * 60; // 5 PM
-    
+
     if (slotEnd > businessEnd) {
       // Find alternative days with 2-hour slots available
       const alternativeDays = findAlternativeDaysWithSlots(requiredDuration);
-      
+
       // Find add-ons that could be removed to fit in 90-minute slot
       const removableAddOns = findRemovableAddOns(requiredDuration, 90);
-      
+
       return {
         hasConflict: true,
-        message: `We can do this service in 90 minutes if you skip the ${removableAddOns.map(a => a.name).join(" and ")} add-on${removableAddOns.length > 1 ? "s" : ""}, or we have ${Math.floor(requiredDuration / 60)}-hour slots available ${alternativeDays.length > 0 ? alternativeDays[0].date : "Thursday"}.`,
+        message: `We can do this service in 90 minutes if you skip the ${removableAddOns.map((a) => a.name).join(" and ")} add-on${removableAddOns.length > 1 ? "s" : ""}, or we have ${Math.floor(requiredDuration / 60)}-hour slots available ${alternativeDays.length > 0 ? alternativeDays[0].date : "Thursday"}.`,
         alternatives: [
-          ...(removableAddOns.length > 0 ? [{
-            type: "reduce-addons" as const,
-            message: `Remove ${removableAddOns.map(a => a.name).join(" and ")} to fit in 90-minute slot`,
-            action: () => {
-              setSelectedAddOns(selectedAddOns.filter(id => !removableAddOns.some(a => a.id === id)));
-              setTimeSlotConflict(null);
-            },
-          }] : []),
-          ...(alternativeDays.length > 0 ? [{
-            type: "alternative-day" as const,
-            message: `Book on ${alternativeDays[0].date} instead`,
-            action: () => {
-              setSelectedDate(alternativeDays[0].dateObj);
-              setTimeSlotConflict(null);
-            },
-          }] : []),
+          ...(removableAddOns.length > 0
+            ? [
+                {
+                  type: "reduce-addons" as const,
+                  message: `Remove ${removableAddOns.map((a) => a.name).join(" and ")} to fit in 90-minute slot`,
+                  action: () => {
+                    setSelectedAddOns(
+                      selectedAddOns.filter(
+                        (id) => !removableAddOns.some((a) => a.id === id),
+                      ),
+                    );
+                    setTimeSlotConflict(null);
+                  },
+                },
+              ]
+            : []),
+          ...(alternativeDays.length > 0
+            ? [
+                {
+                  type: "alternative-day" as const,
+                  message: `Book on ${alternativeDays[0].date} instead`,
+                  action: () => {
+                    setSelectedDate(alternativeDays[0].dateObj);
+                    setTimeSlotConflict(null);
+                  },
+                },
+              ]
+            : []),
         ],
       };
     }
-    
+
     return { hasConflict: false, message: "", alternatives: [] };
   };
 
@@ -1547,55 +1708,64 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const findAlternativeDaysWithSlots = (requiredDuration: number) => {
     const alternatives: Array<{ date: string; dateObj: Date }> = [];
     const today = new Date();
-    
+
     for (let i = 1; i <= 14; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() + i);
-      
+
       // Check if this day has slots that can accommodate the duration
       // In production, this would check actual availability
-      if (checkDate.getDay() !== 0 && checkDate.getDay() !== 6) { // Not Sunday or Saturday
+      if (checkDate.getDay() !== 0 && checkDate.getDay() !== 6) {
+        // Not Sunday or Saturday
         const slotEnd = 17 * 60; // 5 PM
         const latestStart = slotEnd - requiredDuration;
-        
-        if (latestStart >= 9 * 60) { // At least 9 AM start time
+
+        if (latestStart >= 9 * 60) {
+          // At least 9 AM start time
           alternatives.push({
             date: checkDate.toLocaleDateString("en-US", { weekday: "long" }),
             dateObj: checkDate,
           });
         }
       }
-      
+
       if (alternatives.length >= 3) break; // Limit to 3 alternatives
     }
-    
+
     return alternatives;
   };
 
   // Find add-ons that can be removed to fit in a shorter slot
-  const findRemovableAddOns = (currentDuration: number, targetDuration: number) => {
+  const findRemovableAddOns = (
+    currentDuration: number,
+    targetDuration: number,
+  ) => {
     const durationToRemove = currentDuration - targetDuration;
     if (durationToRemove <= 0) return [];
-    
+
     // Get add-ons sorted by duration (largest first)
     const addOnsWithDuration = selectedAddOns
-      .map(id => {
-        const addOn = GROOMING_ADD_ONS.find(a => a.id === id);
-        return addOn ? { id, name: addOn.name, duration: addOn.durationMinutes } : null;
+      .map((id) => {
+        const addOn = GROOMING_ADD_ONS.find((a) => a.id === id);
+        return addOn
+          ? { id, name: addOn.name, duration: addOn.durationMinutes }
+          : null;
       })
-      .filter((a): a is { id: string; name: string; duration: number } => a !== null)
+      .filter(
+        (a): a is { id: string; name: string; duration: number } => a !== null,
+      )
       .sort((a, b) => b.duration - a.duration);
-    
+
     const removable: Array<{ id: string; name: string }> = [];
     let totalRemoved = 0;
-    
+
     for (const addOn of addOnsWithDuration) {
       if (totalRemoved + addOn.duration <= durationToRemove) {
         removable.push({ id: addOn.id, name: addOn.name });
         totalRemoved += addOn.duration;
       }
     }
-    
+
     return removable;
   };
 
@@ -1604,22 +1774,22 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     if (!mobileAddressValidation?.zone) {
       return { hasConflict: false, message: "", nextAvailableDate: null };
     }
-    
+
     const dayOfWeek = date.getDay();
     const zone = mobileAddressValidation.zone;
-    
+
     // Check if this day is in the zone's service days
     if (!zone.daysOfWeek.includes(dayOfWeek)) {
       // Find next available date in this zone
       const nextAvailable = findNextAvailableZoneDate(zone, date);
-      
+
       return {
         hasConflict: true,
         message: `We don't service your area on ${date.toLocaleDateString("en-US", { weekday: "long" })}s. Next available in your zone is ${nextAvailable ? nextAvailable.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "next week"}.`,
         nextAvailableDate: nextAvailable,
       };
     }
-    
+
     return { hasConflict: false, message: "", nextAvailableDate: null };
   };
 
@@ -1627,7 +1797,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   const findNextAvailableZoneDate = (zone: ServiceZone, fromDate: Date) => {
     const checkDate = new Date(fromDate);
     checkDate.setDate(checkDate.getDate() + 1);
-    
+
     // Look up to 14 days ahead
     for (let i = 0; i < 14; i++) {
       const dayOfWeek = checkDate.getDay();
@@ -1636,7 +1806,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       }
       checkDate.setDate(checkDate.getDate() + 1);
     }
-    
+
     return null;
   };
 
@@ -1654,10 +1824,10 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         setClientEmail(customer.email || "");
         setPhoneVerified(true); // Existing clients have verified phone
       }
-      
+
       // Navigate directly to Step 10 (Review & Deposit)
       setCurrentStep(10);
-      
+
       // Auto-select deposit method based on config
       const depositType = config.bookingRules.deposit.type;
       if (depositType === "none") {
@@ -1707,12 +1877,12 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setPhoneVerificationSent(true);
       setFormErrors((prev) => {
-        const { phone, ...rest } = prev;
+        const { phone: _phone, ...rest } = prev;
         return rest;
       });
       // Mock: In production, this would come from the API
       // For demo purposes, we'll use a fixed code
-    } catch (error) {
+    } catch {
       setFormErrors((prev) => ({
         ...prev,
         phone: "Failed to send verification code. Please try again.",
@@ -1740,7 +1910,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       if (phoneVerificationCode.length === 6) {
         setPhoneVerified(true);
         setFormErrors((prev) => {
-          const { verificationCode, ...rest } = prev;
+          const { verificationCode: _verificationCode, ...rest } = prev;
           return rest;
         });
       } else {
@@ -1749,7 +1919,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
           verificationCode: "Invalid code. Please try again.",
         }));
       }
-    } catch (error) {
+    } catch {
       setFormErrors((prev) => ({
         ...prev,
         verificationCode: "Verification failed. Please try again.",
@@ -1785,7 +1955,8 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     }
 
     if (specialInstructions.length > 500) {
-      errors.specialInstructions = "Special instructions must be 500 characters or less";
+      errors.specialInstructions =
+        "Special instructions must be 500 characters or less";
     }
 
     setFormErrors(errors);
@@ -1799,7 +1970,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
     // Navigate to Step 10 (Review & Deposit)
     setCurrentStep(10);
-    
+
     // Auto-select deposit method based on config
     const depositType = config.bookingRules.deposit.type;
     if (depositType === "none") {
@@ -1819,49 +1990,61 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Calculate deposit amount
   const depositAmount = useMemo(() => {
-    if (!depositPaymentMethod || depositPaymentMethod === "venue" || depositPaymentMethod === "hold") {
+    if (
+      !depositPaymentMethod ||
+      depositPaymentMethod === "venue" ||
+      depositPaymentMethod === "hold"
+    ) {
       return 0;
     }
-    
+
     const depositConfig = config.bookingRules.deposit;
     if (depositPaymentMethod === "full") {
       return finalPrice.finalPrice;
     } else if (depositPaymentMethod === "deposit") {
       if (depositConfig.type === "fixed" && depositConfig.amount) {
         return depositConfig.amount;
-      } else if (depositConfig.type === "percentage" && depositConfig.percentage) {
+      } else if (
+        depositConfig.type === "percentage" &&
+        depositConfig.percentage
+      ) {
         return finalPrice.finalPrice * (depositConfig.percentage / 100);
       }
     }
-    
+
     return 0;
   }, [depositPaymentMethod, finalPrice, config]);
 
   // Get available deposit payment methods
   const availableDepositMethods = useMemo(() => {
-    const methods: Array<{ id: "full" | "deposit" | "hold" | "venue"; label: string; description: string }> = [];
+    const methods: Array<{
+      id: "full" | "deposit" | "hold" | "venue";
+      label: string;
+      description: string;
+    }> = [];
     const depositConfig = config.bookingRules.deposit;
-    
+
     // Full prepayment
     methods.push({
       id: "full",
       label: "Pay in full now",
       description: `$${finalPrice.finalPrice.toFixed(2)} will be charged immediately`,
     });
-    
+
     // Deposit (if configured)
     if (depositConfig.type === "fixed" || depositConfig.type === "percentage") {
-      const depositAmount = depositConfig.type === "fixed" 
-        ? depositConfig.amount || 0
-        : finalPrice.finalPrice * ((depositConfig.percentage || 0) / 100);
-      
+      const depositAmount =
+        depositConfig.type === "fixed"
+          ? depositConfig.amount || 0
+          : finalPrice.finalPrice * ((depositConfig.percentage || 0) / 100);
+
       methods.push({
         id: "deposit",
         label: `Pay ${depositConfig.type === "fixed" ? `$${depositAmount.toFixed(2)}` : `${depositConfig.percentage}%`} deposit`,
         description: `$${depositAmount.toFixed(2)} now, remaining $${(finalPrice.finalPrice - depositAmount).toFixed(2)} at service`,
       });
     }
-    
+
     // Card hold (if deposit not required at booking)
     if (!depositConfig.requiredAtBooking) {
       methods.push({
@@ -1870,14 +2053,14 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         description: "We'll hold your card but won't charge until service",
       });
     }
-    
+
     // Pay at venue
     methods.push({
       id: "venue",
       label: "Pay at venue",
       description: "Pay when you arrive for your appointment",
     });
-    
+
     return methods;
   }, [config, finalPrice]);
 
@@ -1897,16 +2080,17 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Format date and time for display (only on client to avoid hydration issues)
   const formattedDateTime = useMemo(() => {
     if (!isMounted || !selectedDate || !selectedTimeSlot) return "Not selected";
-    
+
     const date = new Date(selectedDate);
-    const time = serviceLocation === "mobile" 
-      ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
-      : selectedTimeSlot;
-    
-    return `${date.toLocaleDateString("en-US", { 
-      weekday: "long", 
-      month: "short", 
-      day: "numeric" 
+    const time =
+      serviceLocation === "mobile"
+        ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
+        : selectedTimeSlot;
+
+    return `${date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
     })} at ${time}`;
   }, [selectedDate, selectedTimeSlot, serviceLocation, isMounted]);
 
@@ -1921,10 +2105,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     return "System assigned";
   }, [selectedGroomerId, selectedGroomerTier]);
 
-
   // Get selected service category name
   const selectedServiceCategoryName = useMemo(() => {
-    const category = SERVICE_CATEGORIES.find((c) => c.id === selectedServiceCategory);
+    const category = SERVICE_CATEGORIES.find(
+      (c) => c.id === selectedServiceCategory,
+    );
     return category?.name || "Not selected";
   }, [selectedServiceCategory]);
 
@@ -1937,10 +2122,12 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   // Get selected add-ons
   const selectedAddOnsList = useMemo(() => {
-    return selectedAddOns.map((id) => {
-      const addon = GROOMING_ADD_ONS.find((a) => a.id === id);
-      return addon;
-    }).filter(Boolean);
+    return selectedAddOns
+      .map((id) => {
+        const addon = GROOMING_ADD_ONS.find((a) => a.id === id);
+        return addon;
+      })
+      .filter(Boolean);
   }, [selectedAddOns]);
 
   // Get location display
@@ -1957,11 +2144,18 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
   // Handle booking confirmation
   const handleBookAppointment = async () => {
     if (!policyAccepted) {
-      setFormErrors({ policy: "You must accept the cancellation policy to continue" });
+      setFormErrors({
+        policy: "You must accept the cancellation policy to continue",
+      });
       return;
     }
 
-    if (!selectedDate || !selectedTimeSlot || !selectedPet || !selectedServiceCategory) {
+    if (
+      !selectedDate ||
+      !selectedTimeSlot ||
+      !selectedPet ||
+      !selectedServiceCategory
+    ) {
       setFormErrors({ booking: "Please complete all required fields" });
       return;
     }
@@ -1969,7 +2163,11 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
     setIsBooking(true);
     try {
       // Process payment if required
-      if (depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold") {
+      if (
+        depositPaymentMethod &&
+        depositPaymentMethod !== "venue" &&
+        depositPaymentMethod !== "hold"
+      ) {
         // TODO: Process payment
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
@@ -1977,9 +2175,13 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       // Create booking data
       const bookingId = `grooming-${Date.now()}`;
       const appointmentDateTime = new Date(selectedDate);
-      const [hours, minutes] = (serviceLocation === "mobile" 
-        ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
-        : selectedTimeSlot).split(":").map(Number);
+      const [hours, minutes] = (
+        serviceLocation === "mobile"
+          ? selectedTimeSlot.split(" ")[1] || selectedTimeSlot
+          : selectedTimeSlot
+      )
+        .split(":")
+        .map(Number);
       appointmentDateTime.setHours(hours, minutes, 0, 0);
 
       // Get last visit date
@@ -1989,9 +2191,12 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
             b.clientId === customer?.id &&
             b.petId === selectedPet.id &&
             b.service.toLowerCase() === "grooming" &&
-            b.status === "completed"
+            b.status === "completed",
         )
-        .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0];
+        .sort(
+          (a, b) =>
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+        )[0];
 
       const bookingData: GroomingBookingData = {
         id: bookingId,
@@ -2005,11 +2210,17 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         serviceVariant: selectedVariantName || undefined,
         addOns: selectedAddOnsList.map((a) => a?.name || "").filter(Boolean),
         groomerId: selectedGroomerId || undefined,
-        groomerName: selectedGroomerName !== "System assigned" ? selectedGroomerName : undefined,
+        groomerName:
+          selectedGroomerName !== "System assigned"
+            ? selectedGroomerName
+            : undefined,
         groomerTier: selectedGroomerTier || undefined,
         serviceLocation: serviceLocation || "salon",
         address: serviceLocation === "mobile" ? mobileAddress : undefined,
-        salonLocationId: serviceLocation === "salon" ? salonLocationId || undefined : undefined,
+        salonLocationId:
+          serviceLocation === "salon"
+            ? salonLocationId || undefined
+            : undefined,
         appointmentDate: appointmentDateTime,
         appointmentTime: selectedTimeSlot,
         duration: totalDurationWithAddOns,
@@ -2017,26 +2228,31 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
         depositAmount: depositAmount,
         depositMethod: depositPaymentMethod || "venue",
         recurringEnabled: recurringEnabled,
-        recurringFrequency: recurringFrequency === "custom" ? customFrequency : recurringFrequency,
+        recurringFrequency:
+          recurringFrequency === "custom"
+            ? customFrequency
+            : recurringFrequency,
         recurringEndAfter: recurringEndAfter,
         recurringOccurrences: recurringOccurrences,
         recurringEndDate: recurringEndDate || undefined,
         keepSameGroomer: keepSameGroomer,
         petBehaviorNotes: petBehaviorUpdate || undefined,
         specialInstructions: specialInstructions || undefined,
-        lastVisitDate: lastGroomingBooking ? new Date(lastGroomingBooking.endDate) : undefined,
+        lastVisitDate: lastGroomingBooking
+          ? new Date(lastGroomingBooking.endDate)
+          : undefined,
         petNotes: petBehaviorUpdate || undefined,
       };
 
       // Execute immediate post-booking actions
-      const postBookingResult = await handleImmediatePostBookingActions(bookingData);
+      await handleImmediatePostBookingActions(bookingData);
 
       // Schedule 24-hour reminder
       await schedule24HourReminder(bookingData);
 
       // Success - close modal and show success message
       onOpenChange(false);
-      
+
       toast.success("Booking confirmed!", {
         description: `Your appointment for ${selectedPet.name} has been scheduled. Check your email for confirmation details.`,
         action: {
@@ -2046,16 +2262,21 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       });
     } catch (error) {
       console.error("Booking error:", error);
-      setFormErrors({ booking: "Failed to book appointment. Please try again." });
+      setFormErrors({
+        booking: "Failed to book appointment. Please try again.",
+      });
       toast.error("Booking failed", {
-        description: "There was an error processing your booking. Please try again.",
+        description:
+          "There was an error processing your booking. Please try again.",
       });
     } finally {
       setIsBooking(false);
     }
   };
 
-  const handleCoatPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoatPhotoUpload = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type
@@ -2076,7 +2297,7 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
       }
       setPetCoatPhoto(file);
       setFormErrors((prev) => {
-        const { coatPhoto, ...rest } = prev;
+        const { coatPhoto: _coatPhoto, ...rest } = prev;
         return rest;
       });
     }
@@ -2093,1864 +2314,2745 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl sm:max-w-6xl lg:max-w-7xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-[90vw]">
+      <DialogContent className="max-h-[90vh] w-[95vw] max-w-6xl overflow-y-auto sm:w-[90vw] sm:max-w-6xl lg:max-w-7xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Book a Grooming Appointment</DialogTitle>
+          <DialogTitle className="text-2xl">
+            Book a Grooming Appointment
+          </DialogTitle>
           <DialogDescription>
-            {currentStep === 1 
+            {currentStep === 1
               ? "Step 1: Who are we pampering today?"
               : currentStep === 2
-              ? `Step 2: What does ${selectedPet?.name ?? "your pet"} need today?`
-              : currentStep === 3
-              ? "Step 3: Choose the specific service style"
-              : currentStep === 4
-              ? `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
-              : currentStep === 5
-              ? "Step 5: Who would you like to work with?"
-              : currentStep === 6
-              ? "Step 6: Location & Logistics"
-              : currentStep === 7
-              ? "Step 7: When works for you?"
-              : currentStep === 8
-              ? "Step 8: Make this hassle-free"
-              : currentStep === 9
-              ? "Step 9: Confirm your details"
-              : "Step 10: Booking Summary"
-            }
+                ? `Step 2: What does ${selectedPet?.name ?? "your pet"} need today?`
+                : currentStep === 3
+                  ? "Step 3: Choose the specific service style"
+                  : currentStep === 4
+                    ? `Step 4: Enhance ${selectedPet?.name ?? "your pet"}'s spa day`
+                    : currentStep === 5
+                      ? "Step 5: Who would you like to work with?"
+                      : currentStep === 6
+                        ? "Step 6: Location & Logistics"
+                        : currentStep === 7
+                          ? "Step 7: When works for you?"
+                          : currentStep === 8
+                            ? "Step 8: Make this hassle-free"
+                            : currentStep === 9
+                              ? "Step 9: Confirm your details"
+                              : "Step 10: Booking Summary"}
           </DialogDescription>
         </DialogHeader>
 
         {currentStep === 1 ? (
-        <div className="space-y-6">
-          {/* Returning Client: Pet List */}
-          {petsWithInfo.length > 0 ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Select a Pet</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                {petsWithInfo.map((pet) => {
-                  const isSelected = selectedPetId === pet.id;
-                  const hasVaccinationIssues =
-                    requireVaccinationApproval && !pet.vaccinationStatus.isCompliant;
+          <div className="space-y-6">
+            {/* Returning Client: Pet List */}
+            {petsWithInfo.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Select a Pet</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {petsWithInfo.map((pet) => {
+                    const isSelected = selectedPetId === pet.id;
+                    const hasVaccinationIssues =
+                      requireVaccinationApproval &&
+                      !pet.vaccinationStatus.isCompliant;
 
-                  return (
-                    <Card
-                      key={pet.id}
-                      className={`cursor-pointer transition-all ${
-                        isSelected
-                          ? "ring-2 ring-primary border-primary"
-                          : "hover:border-primary/50"
-                      } ${hasVaccinationIssues ? "border-destructive/50" : ""}`}
-                      onClick={() => handlePetSelect(pet.id)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          {/* Pet Image */}
-                          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-border">
-                            {pet.imageUrl ? (
-                              <img
-                                src={pet.imageUrl}
-                                alt={pet.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Dog className="h-10 w-10 text-muted-foreground" />
-                            )}
-                          </div>
-
-                          {/* Pet Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold text-lg">{pet.name}</h4>
-                              <Badge variant="outline" className="text-xs">
-                                {pet.size}
-                              </Badge>
+                    return (
+                      <Card
+                        key={pet.id}
+                        className={`cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-primary ring-primary ring-2"
+                            : "hover:border-primary/50"
+                        } ${hasVaccinationIssues ? "border-destructive/50" : ""} `}
+                        onClick={() => handlePetSelect(pet.id)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            {/* Pet Image */}
+                            <div className="border-border bg-muted flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2">
+                              {pet.imageUrl ? (
+                                <Image
+                                  src={pet.imageUrl}
+                                  alt={pet.name}
+                                  width={80}
+                                  height={80}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Dog className="text-muted-foreground h-10 w-10" />
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {pet.breed} • {pet.age} {pet.age === 1 ? "year" : "years"} • {pet.weight} lbs
-                            </p>
 
-                            {/* Last Grooming Info */}
-                            {pet.lastGroomingDate && isMounted && (
-                              <div className="mt-3 flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  Last: {new Date(pet.lastGroomingDate).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })}
-                                </span>
-                                {pet.lastGroomingService && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 text-xs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRebookLastTime(pet.id);
-                                    }}
-                                  >
-                                    Rebook same
-                                  </Button>
-                                )}
+                            {/* Pet Info */}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-2 flex items-center gap-2">
+                                <h4 className="text-lg font-semibold">
+                                  {pet.name}
+                                </h4>
+                                <Badge variant="outline" className="text-xs">
+                                  {pet.size}
+                                </Badge>
                               </div>
-                            )}
+                              <p className="text-muted-foreground text-sm">
+                                {pet.breed} • {pet.age}{" "}
+                                {pet.age === 1 ? "year" : "years"} •{" "}
+                                {pet.weight} lbs
+                              </p>
 
-                            {/* Vaccination Status */}
-                            {requireVaccinationApproval && (
-                              <div className="mt-2">
-                                {pet.vaccinationStatus.isCompliant ? (
-                                  <div className="flex items-center gap-1 text-xs text-green-600">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    <span>Vaccinations up to date</span>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-1 text-xs text-destructive">
-                                      <AlertCircle className="h-3 w-3" />
-                                      <span>Vaccination records required</span>
+                              {/* Last Grooming Info */}
+                              {pet.lastGroomingDate && isMounted && (
+                                <div className="mt-3 flex items-center gap-2">
+                                  <Calendar className="text-muted-foreground size-4" />
+                                  <span className="text-muted-foreground text-xs">
+                                    Last:{" "}
+                                    {new Date(
+                                      pet.lastGroomingDate,
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    })}
+                                  </span>
+                                  {pet.lastGroomingService && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 text-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRebookLastTime(pet.id);
+                                      }}
+                                    >
+                                      Rebook same
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Vaccination Status */}
+                              {requireVaccinationApproval && (
+                                <div className="mt-2">
+                                  {pet.vaccinationStatus.isCompliant ? (
+                                    <div className="flex items-center gap-1 text-xs text-green-600">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span>Vaccinations up to date</span>
                                     </div>
-                                    {pet.vaccinationStatus.missingRecords.length > 0 && (
-                                      <p className="text-xs text-muted-foreground pl-4">
-                                        Missing: {pet.vaccinationStatus.missingRecords.join(", ")}
-                                      </p>
-                                    )}
-                                    {pet.vaccinationStatus.expiredRecords.length > 0 && (
-                                      <p className="text-xs text-muted-foreground pl-4">
-                                        Expired: {pet.vaccinationStatus.expiredRecords.join(", ")}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
+                                  ) : (
+                                    <div className="space-y-1">
+                                      <div className="text-destructive flex items-center gap-1 text-xs">
+                                        <AlertCircle className="h-3 w-3" />
+                                        <span>
+                                          Vaccination records required
+                                        </span>
+                                      </div>
+                                      {pet.vaccinationStatus.missingRecords
+                                        .length > 0 && (
+                                        <p className="text-muted-foreground pl-4 text-xs">
+                                          Missing:{" "}
+                                          {pet.vaccinationStatus.missingRecords.join(
+                                            ", ",
+                                          )}
+                                        </p>
+                                      )}
+                                      {pet.vaccinationStatus.expiredRecords
+                                        .length > 0 && (
+                                        <p className="text-muted-foreground pl-4 text-xs">
+                                          Expired:{" "}
+                                          {pet.vaccinationStatus.expiredRecords.join(
+                                            ", ",
+                                          )}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Selection Indicator */}
+                            {isSelected && (
+                              <div className="shrink-0">
+                                <CheckCircle2 className="text-primary h-6 w-6" />
                               </div>
                             )}
                           </div>
-
-                          {/* Selection Indicator */}
-                          {isSelected && (
-                            <div className="shrink-0">
-                              <CheckCircle2 className="h-6 w-6 text-primary" />
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Dog className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-xl font-semibold mb-2">No pets yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Add your first pet to get started with grooming appointments
-                </p>
-                <Button asChild>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Dog className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
+                  <h3 className="mb-2 text-xl font-semibold">No pets yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Add your first pet to get started with grooming appointments
+                  </p>
+                  <Button asChild>
+                    <Link href="/customer/pets/add">
+                      <Plus className="mr-2 size-4" />
+                      Add New Pet
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Add New Pet Button */}
+            {petsWithInfo.length > 0 && (
+              <div className="flex justify-center">
+                <Button variant="outline" asChild>
                   <Link href="/customer/pets/add">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Add New Pet
                   </Link>
                 </Button>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Add New Pet Button */}
-          {petsWithInfo.length > 0 && (
-            <div className="flex justify-center">
-              <Button variant="outline" asChild>
-                <Link href="/customer/pets/add">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Pet
-                </Link>
-              </Button>
-            </div>
-          )}
+            {/* Vaccination Upload Warning */}
+            {selectedPetId &&
+              requireVaccinationApproval &&
+              (() => {
+                const selectedPet = petsWithInfo.find(
+                  (p) => p.id === selectedPetId,
+                );
+                if (!selectedPet || selectedPet.vaccinationStatus.isCompliant)
+                  return null;
 
-          {/* Vaccination Upload Warning */}
-          {selectedPetId && requireVaccinationApproval && (
-            (() => {
-              const selectedPet = petsWithInfo.find((p) => p.id === selectedPetId);
-              if (!selectedPet || selectedPet.vaccinationStatus.isCompliant) return null;
-
-              return (
-                <Card className="border-destructive/50 bg-destructive/5">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2 text-destructive">
-                      <AlertCircle className="h-5 w-5" />
-                      Vaccination Records Required
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Before booking, please upload vaccination records for {selectedPet.name}.
-                    </p>
-                    {selectedPet.vaccinationStatus.missingRecords.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">Missing Records:</p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground">
-                          {selectedPet.vaccinationStatus.missingRecords.map((vaccine) => (
-                            <li key={vaccine}>{vaccine}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {selectedPet.vaccinationStatus.expiredRecords.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">Expired Records:</p>
-                        <ul className="list-disc list-inside text-sm text-muted-foreground">
-                          {selectedPet.vaccinationStatus.expiredRecords.map((vaccine) => (
-                            <li key={vaccine}>{vaccine}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/customer/pets/${selectedPet.id}`}>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Records
-                        </Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          // Allow proceeding with warning (facility can block in config)
-                          // In production, this might be blocked if facility requires approval
-                        }}
-                      >
-                        Continue Anyway (Requires Staff Approval)
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()
-          )}
-
-          {/* Continue Button */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleContinue}
-              disabled={!selectedPetId}
-            >
-              Continue
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-        ) : currentStep === 2 ? (
-        /* Step 2: Service Category Selection */
-        <div className="space-y-6">
-          {/* Matting Warning for Haircut */}
-          {selectedServiceCategory === "haircut" && hasMattingFlag && (
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-amber-900 mb-1">
-                      Additional De-matting Fees May Apply
-                    </h4>
-                    <p className="text-sm text-amber-800">
-                      {selectedPet?.name} had matting noted during their last visit. 
-                      Additional de-matting fees may apply depending on the severity. 
-                      Our staff will assess upon arrival.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Service Category Cards */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {availableServiceCategories.map((category) => {
-              const Icon = category.icon;
-              const isSelected = selectedServiceCategory === category.id;
-              const price = selectedPet 
-                ? getServicePrice(category, selectedPet.size)
-                : category.basePrice;
-
-              return (
-                <Card
-                  key={category.id}
-                  className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    isSelected ? "ring-2 ring-primary border-primary" : ""
-                  }`}
-                  onClick={() => handleServiceSelect(category.id)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      {/* Icon */}
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Icon className="h-6 w-6 text-primary" />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-lg mb-1">{category.name}</h4>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {category.description}
-                        </p>
-
-                        {/* Price and Duration */}
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>~{category.estimatedDuration} mins</span>
-                          </div>
-                          <div className="flex items-center gap-1 font-semibold text-primary">
-                            <DollarSign className="h-4 w-4" />
-                            <span>~${price}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Selection Indicator */}
-                      {isSelected && (
-                        <div className="shrink-0">
-                          <CheckCircle2 className="h-6 w-6 text-primary" />
+                return (
+                  <Card className="border-destructive/50 bg-destructive/5">
+                    <CardHeader>
+                      <CardTitle className="text-destructive flex items-center gap-2 text-base">
+                        <AlertCircle className="h-5 w-5" />
+                        Vaccination Records Required
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-muted-foreground text-sm">
+                        Before booking, please upload vaccination records for{" "}
+                        {selectedPet.name}.
+                      </p>
+                      {selectedPet.vaccinationStatus.missingRecords.length >
+                        0 && (
+                        <div>
+                          <p className="mb-2 text-sm font-medium">
+                            Missing Records:
+                          </p>
+                          <ul className="text-muted-foreground list-inside list-disc text-sm">
+                            {selectedPet.vaccinationStatus.missingRecords.map(
+                              (vaccine) => (
+                                <li key={vaccine}>{vaccine}</li>
+                              ),
+                            )}
+                          </ul>
                         </div>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep1}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContinueFromStep2}
-                disabled={!selectedServiceCategory}
-              >
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        ) : currentStep === 3 ? (
-        /* Step 3: Service Specification & Variants */
-        <div className="space-y-6">
-          {/* Live Price and Duration Display */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Estimated Duration</p>
-                  <p className="text-2xl font-bold flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    {calculatedDuration} mins
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Total Price</p>
-                  <p className="text-2xl font-bold flex items-center gap-2 justify-end">
-                    <DollarSign className="h-5 w-5" />
-                    ${calculatedPrice}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Service Variants */}
-          {availableVariants.length > 0 ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Choose Service Style</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                {availableVariants.map((variant) => {
-                  const isSelected = selectedVariant === variant.id;
-                  const isCustom = variant.id === "custom";
-
-                  return (
-                    <Card
-                      key={variant.id}
-                      className={`cursor-pointer transition-all hover:border-primary/50 ${
-                        isSelected ? "ring-2 ring-primary border-primary" : ""
-                      }`}
-                      onClick={() => handleVariantSelect(variant.id)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-lg mb-1">{variant.name}</h4>
-                            <p className="text-sm text-muted-foreground mb-3">
-                              {variant.description}
-                            </p>
-                            
-                            {/* Duration and Price Modifiers */}
-                            {(variant.durationModifier > 0 || variant.priceModifier > 0) && (
-                              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                {variant.durationModifier > 0 && (
-                                  <span>+{variant.durationModifier} mins</span>
-                                )}
-                                {variant.priceModifier > 0 && (
-                                  <span>+${variant.priceModifier}</span>
-                                )}
-                              </div>
+                      {selectedPet.vaccinationStatus.expiredRecords.length >
+                        0 && (
+                        <div>
+                          <p className="mb-2 text-sm font-medium">
+                            Expired Records:
+                          </p>
+                          <ul className="text-muted-foreground list-inside list-disc text-sm">
+                            {selectedPet.vaccinationStatus.expiredRecords.map(
+                              (vaccine) => (
+                                <li key={vaccine}>{vaccine}</li>
+                              ),
                             )}
-
-                            {/* Custom Notes Field */}
-                            {isSelected && isCustom && (
-                              <div className="mt-4 space-y-2">
-                                <Label htmlFor="custom-notes">Describe your preferred style</Label>
-                                <Textarea
-                                  id="custom-notes"
-                                  placeholder="E.g., Short on body, longer on legs, round face..."
-                                  value={customNotes}
-                                  onChange={(e) => setCustomNotes(e.target.value)}
-                                  rows={3}
-                                />
-                              </div>
-                            )}
-
-                            {/* Photo Upload for Custom */}
-                            {isSelected && isCustom && requiresPhotos && (
-                              <div className="mt-4 space-y-2">
-                                <Label>Reference Photos (Required)</Label>
-                                <div className="space-y-2">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handlePhotoUpload}
-                                    className="hidden"
-                                    id="photo-upload"
-                                  />
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    type="button"
-                                    onClick={() => document.getElementById("photo-upload")?.click()}
-                                  >
-                                    <ImageIcon className="h-4 w-4 mr-2" />
-                                    Upload Photos
-                                  </Button>
-                                  
-                                  {/* Display uploaded photos */}
-                                  {customPhotos.length > 0 && (
-                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                      {customPhotos.map((photo, index) => (
-                                        <div
-                                          key={index}
-                                          className="relative aspect-square rounded-lg overflow-hidden border"
-                                        >
-                                          <img
-                                            src={URL.createObjectURL(photo)}
-                                            alt={`Reference ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                          />
-                                          <Button
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-1 right-1 h-6 w-6"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleRemovePhoto(index);
-                                            }}
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </Button>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  
-                                  {customPhotos.length === 0 && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Please upload reference photos to help our groomers understand your desired style.
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Selection Indicator */}
-                          {isSelected && (
-                            <div className="shrink-0">
-                              <CheckCircle2 className="h-6 w-6 text-primary" />
-                            </div>
-                          )}
+                          </ul>
                         </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  No variants available for this service.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep2}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContinueFromStep3}
-                disabled={!selectedVariant || (requiresPhotos && customPhotos.length === 0)}
-              >
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        ) : currentStep === 4 ? (
-        /* Step 4: Add-On Selection */
-        <div className="space-y-6">
-          {/* Total Duration and Price Display */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Duration</p>
-                  <p className="text-2xl font-bold flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    {totalDurationWithAddOns} mins
-                    {totalDurationWithAddOns > 60 && (
-                      <Badge variant="outline" className="ml-2">
-                        {Math.ceil(totalDurationWithAddOns / 30) * 30} min slot
-                      </Badge>
-                    )}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Total Price</p>
-                  <p className="text-2xl font-bold flex items-center gap-2 justify-end">
-                    <DollarSign className="h-5 w-5" />
-                    ${totalPriceWithAddOns}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Duration Conflict Warning */}
-          {durationConflict && (
-            <Card className="border-amber-200 bg-amber-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-amber-900 mb-1">
-                      Extended Appointment Required
-                    </h4>
-                    <p className="text-sm text-amber-800">
-                      {durationConflict.message}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Suggested Add-Ons for Senior Dogs */}
-          {suggestedAddOns.length > 0 && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <h4 className="font-semibold mb-1">Recommended for {selectedPet?.name}</h4>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Based on {selectedPet?.name}'s profile, we recommend:
-                    </p>
-                    <div className="space-y-2">
-                      {suggestedAddOns.map((addon) => (
-                        <div
-                          key={addon.id}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-background border border-primary/20 cursor-pointer hover:bg-primary/5"
-                          onClick={() => handleAddOnToggle(addon.id)}
+                      )}
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/customer/pets/${selectedPet.id}`}>
+                            <Upload className="mr-2 size-4" />
+                            Upload Records
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            // Allow proceeding with warning (facility can block in config)
+                            // In production, this might be blocked if facility requires approval
+                          }}
                         >
-                          <Checkbox
-                            checked={selectedAddOns.includes(addon.id)}
-                            onCheckedChange={() => handleAddOnToggle(addon.id)}
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{addon.name}</p>
-                            <p className="text-xs text-muted-foreground">{addon.description}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-primary">
-                              +${addon.price}
-                            </p>
-                            {addon.durationMinutes > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                +{addon.durationMinutes} mins
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                          Continue Anyway (Requires Staff Approval)
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+            {/* Continue Button */}
+            <div className="flex justify-end gap-2 border-t pt-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleContinue} disabled={!selectedPetId}>
+                Continue
+                <ArrowRight className="ml-2 size-4" />
+              </Button>
+            </div>
+          </div>
+        ) : currentStep === 2 ? (
+          /* Step 2: Service Category Selection */
+          <div className="space-y-6">
+            {/* Matting Warning for Haircut */}
+            {selectedServiceCategory === "haircut" && hasMattingFlag && (
+              <Card className="border-amber-200 bg-amber-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                    <div className="flex-1">
+                      <h4 className="mb-1 font-semibold text-amber-900">
+                        Additional De-matting Fees May Apply
+                      </h4>
+                      <p className="text-sm text-amber-800">
+                        {selectedPet?.name} had matting noted during their last
+                        visit. Additional de-matting fees may apply depending on
+                        the severity. Our staff will assess upon arrival.
+                      </p>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Available Add-Ons */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Add-On Services</h3>
-            <div className="grid gap-3">
-              {availableAddOns.map((addon) => {
-                const isSelected = selectedAddOns.includes(addon.id);
-                const isSuggested = suggestedAddOns.some((a) => a.id === addon.id);
+            {/* Service Category Cards */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {availableServiceCategories.map((category) => {
+                const Icon = category.icon;
+                const isSelected = selectedServiceCategory === category.id;
+                const price = selectedPet
+                  ? getServicePrice(category, selectedPet.size)
+                  : category.basePrice;
 
                 return (
                   <Card
-                    key={addon.id}
-                    className={`cursor-pointer transition-all hover:border-primary/50 ${
-                      isSelected ? "ring-2 ring-primary border-primary" : ""
-                    } ${isSuggested ? "border-primary/20 bg-primary/5" : ""}`}
-                    onClick={() => handleAddOnToggle(addon.id)}
+                    key={category.id}
+                    className={`hover:border-primary/50 cursor-pointer transition-all ${isSelected ? "border-primary ring-primary ring-2" : ""} `}
+                    onClick={() => handleServiceSelect(category.id)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleAddOnToggle(addon.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold">{addon.name}</h4>
-                            {isSuggested && (
-                              <Badge variant="outline" className="text-xs">
-                                Recommended
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {addon.description}
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        {/* Icon */}
+                        <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                          <Icon className="text-primary h-6 w-6" />
+                        </div>
+
+                        {/* Content */}
+                        <div className="min-w-0 flex-1">
+                          <h4 className="mb-1 text-lg font-semibold">
+                            {category.name}
+                          </h4>
+                          <p className="text-muted-foreground mb-3 text-sm">
+                            {category.description}
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            {addon.durationMinutes > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                +{addon.durationMinutes} mins
-                              </span>
-                            )}
-                            <span className="flex items-center gap-1 font-semibold text-primary">
-                              <DollarSign className="h-3 w-3" />
-                              +${addon.price}
-                            </span>
+
+                          {/* Price and Duration */}
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="size-4" />
+                              <span>~{category.estimatedDuration} mins</span>
+                            </div>
+                            <div className="text-primary flex items-center gap-1 font-semibold">
+                              <DollarSign className="size-4" />
+                              <span>~${price}</span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Selection Indicator */}
+                        {isSelected && (
+                          <div className="shrink-0">
+                            <CheckCircle2 className="text-primary h-6 w-6" />
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 );
               })}
             </div>
-          </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep3}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep1}>
+                Back
               </Button>
-              <Button onClick={handleContinueFromStep4}>
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleContinueFromStep2}
+                  disabled={!selectedServiceCategory}
+                >
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-        ) : currentStep === 5 ? (
-        /* Step 5: Groomer Preference */
-        <div className="space-y-6">
-          {/* Mode A: No Choice (Stealth) - Should be skipped, but show message if somehow reached */}
-          {groomerSelectionMode === "stealth" ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Our team will assign the best available groomer for {selectedPet?.name || "your pet"}'s needs.
-                </p>
+        ) : currentStep === 3 ? (
+          /* Step 3: Service Specification & Variants */
+          <div className="space-y-6">
+            {/* Live Price and Duration Display */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-sm">
+                      Estimated Duration
+                    </p>
+                    <p className="flex items-center gap-2 text-2xl font-bold">
+                      <Clock className="h-5 w-5" />
+                      {calculatedDuration} mins
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-muted-foreground mb-1 text-sm">
+                      Total Price
+                    </p>
+                    <p className="flex items-center justify-end gap-2 text-2xl font-bold">
+                      <DollarSign className="h-5 w-5" />${calculatedPrice}
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          ) : groomerSelectionMode === "tier-only" ? (
-            /* Mode B: Tier-Based */
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Select Your Stylist Preference</h3>
-              <div className="space-y-3">
-                {groomerTiers.map((tier) => {
-                  const isSelected = selectedGroomerTier === tier.id;
-                  // Calculate pricing based on tier
-                  let priceModifier = 0;
-                  if (tier.id === "senior") priceModifier = 20;
-                  if (tier.id === "junior") priceModifier = -Math.round(calculatedPrice * 0.1);
-                  
-                  return (
-                    <Card
-                      key={tier.id}
-                      className={`cursor-pointer transition-all hover:border-primary/50 ${
-                        isSelected ? "ring-2 ring-primary border-primary" : ""
-                      }`}
-                      onClick={() => handleTierSelect(tier.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{tier.name}</h4>
-                            {tier.description && (
-                              <p className="text-sm text-muted-foreground">{tier.description}</p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            {priceModifier !== 0 && (
-                              <p className={`text-sm font-semibold ${priceModifier > 0 ? "text-primary" : "text-green-600"}`}>
-                                {priceModifier > 0 ? `+$${priceModifier}` : `$${priceModifier}`}
+
+            {/* Service Variants */}
+            {availableVariants.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Choose Service Style</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {availableVariants.map((variant) => {
+                    const isSelected = selectedVariant === variant.id;
+                    const isCustom = variant.id === "custom";
+
+                    return (
+                      <Card
+                        key={variant.id}
+                        className={`hover:border-primary/50 cursor-pointer transition-all ${
+                          isSelected ? "border-primary ring-primary ring-2" : ""
+                        } `}
+                        onClick={() => handleVariantSelect(variant.id)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="mb-1 text-lg font-semibold">
+                                {variant.name}
+                              </h4>
+                              <p className="text-muted-foreground mb-3 text-sm">
+                                {variant.description}
                               </p>
-                            )}
+
+                              {/* Duration and Price Modifiers */}
+                              {(variant.durationModifier > 0 ||
+                                variant.priceModifier > 0) && (
+                                <div className="text-muted-foreground flex items-center gap-4 text-xs">
+                                  {variant.durationModifier > 0 && (
+                                    <span>
+                                      +{variant.durationModifier} mins
+                                    </span>
+                                  )}
+                                  {variant.priceModifier > 0 && (
+                                    <span>+${variant.priceModifier}</span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Custom Notes Field */}
+                              {isSelected && isCustom && (
+                                <div className="mt-4 space-y-2">
+                                  <Label htmlFor="custom-notes">
+                                    Describe your preferred style
+                                  </Label>
+                                  <Textarea
+                                    id="custom-notes"
+                                    placeholder="E.g., Short on body, longer on legs, round face..."
+                                    value={customNotes}
+                                    onChange={(e) =>
+                                      setCustomNotes(e.target.value)
+                                    }
+                                    rows={3}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Photo Upload for Custom */}
+                              {isSelected && isCustom && requiresPhotos && (
+                                <div className="mt-4 space-y-2">
+                                  <Label>Reference Photos (Required)</Label>
+                                  <div className="space-y-2">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      onChange={handlePhotoUpload}
+                                      className="hidden"
+                                      id="photo-upload"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      type="button"
+                                      onClick={() =>
+                                        document
+                                          .getElementById("photo-upload")
+                                          ?.click()
+                                      }
+                                    >
+                                      <ImageIcon className="mr-2 size-4" />
+                                      Upload Photos
+                                    </Button>
+
+                                    {/* Display uploaded photos */}
+                                    {customPhotos.length > 0 && (
+                                      <div className="mt-2 grid grid-cols-3 gap-2">
+                                        {customPhotos.map((photo, index) => (
+                                          <div
+                                            key={index}
+                                            className="relative aspect-square overflow-hidden rounded-lg border"
+                                          >
+                                            <Image
+                                              src={URL.createObjectURL(photo)}
+                                              alt={`Reference ${index + 1}`}
+                                              fill
+                                              className="object-cover"
+                                              unoptimized
+                                            />
+                                            <Button
+                                              variant="destructive"
+                                              size="icon"
+                                              className="absolute top-1 right-1 h-6 w-6"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleRemovePhoto(index);
+                                              }}
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {customPhotos.length === 0 && (
+                                      <p className="text-muted-foreground text-xs">
+                                        Please upload reference photos to help
+                                        our groomers understand your desired
+                                        style.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Selection Indicator */}
                             {isSelected && (
-                              <CheckCircle2 className="h-5 w-5 text-primary ml-2" />
+                              <div className="shrink-0">
+                                <CheckCircle2 className="text-primary h-6 w-6" />
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    !selectedGroomerTier ? "ring-2 ring-primary border-primary" : ""
-                  }`}
-                  onClick={() => handleTierSelect("no-preference")}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold">No preference</h4>
-                        <p className="text-sm text-muted-foreground">First available</p>
-                      </div>
-                      {!selectedGroomerTier && (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ) : (groomerSelectionMode === "full-choice" || groomerSelectionMode === "optional") ? (
-            /* Mode C: Specific Groomer with Bios */
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Select Your Stylist</h3>
-              
-              {/* Fear-Free Requirement Notice */}
-              {requiresFearFree && (
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm text-blue-900">
-                          {selectedPet?.name} requires a Fear-Free Certified groomer. Only qualified stylists are shown below.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                {availableGroomers.map((groomer) => {
-                  const isSelected = selectedGroomerId === groomer.id;
-                  const history = petGroomerHistory.find((h) => h.groomerId === groomer.id);
-                  const isFearFree = groomer.certifications.some((c) => /fear.?free/i.test(c));
-                  const isQualified = !requiresFearFree || isFearFree;
-                  
-                  return (
-                    <Card
-                      key={groomer.id}
-                      className={`cursor-pointer transition-all ${
-                        isSelected ? "ring-2 ring-primary border-primary" : ""
-                      } ${!isQualified ? "opacity-50 cursor-not-allowed" : "hover:border-primary/50"}`}
-                      onClick={() => isQualified && handleGroomerSelect(groomer.id)}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          {/* Groomer Photo */}
-                          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-border">
-                            {groomer.photoUrl ? (
-                              <img
-                                src={groomer.photoUrl}
-                                alt={groomer.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <Scissors className="h-8 w-8 text-muted-foreground" />
-                            )}
-                          </div>
-                          
-                          {/* Groomer Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-lg">{groomer.name}</h4>
-                              {history && (
-                                <Badge variant="default" className="text-xs">
-                                  Booked {history.count} {history.count === 1 ? "time" : "times"}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Specializations */}
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {groomer.specializations.slice(0, 3).map((spec) => (
-                                <Badge key={spec} variant="outline" className="text-xs">
-                                  {spec}
-                                </Badge>
-                              ))}
-                              {groomer.certifications.some((c) => /fear.?free/i.test(c)) && (
-                                <Badge variant="default" className="text-xs bg-green-600">
-                                  Fear-Free Certified
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {/* Bio */}
-                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                              {groomer.bio}
-                            </p>
-                            
-                            {/* Rating and Experience */}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                {groomer.rating}
-                              </span>
-                              <span>{groomer.yearsExperience} years experience</span>
-                            </div>
-                            
-                            {/* Not Qualified Warning */}
-                            {!isQualified && (
-                              <p className="text-xs text-destructive mt-2">
-                                Not qualified for {selectedPet?.name}'s care needs
-                              </p>
-                            )}
-                          </div>
-                          
-                          {/* Selection Indicator */}
-                          {isSelected && (
-                            <div className="shrink-0">
-                              <CheckCircle2 className="h-6 w-6 text-primary" />
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-                
-                {/* No Preference Option */}
-                <Card
-                  className={`cursor-pointer transition-all hover:border-primary/50 ${
-                    !selectedGroomerId && !selectedGroomerTier ? "ring-2 ring-primary border-primary" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedGroomerId(null);
-                    setSelectedGroomerTier("no-preference");
-                  }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <h4 className="font-semibold mb-1">No preference</h4>
-                        <p className="text-sm text-muted-foreground">First available stylist</p>
-                        {!selectedGroomerId && !selectedGroomerTier && (
-                          <CheckCircle2 className="h-6 w-6 text-primary mx-auto mt-2" />
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          ) : (
-            /* Mode D: Same-Groomer Guarantee (Optional - for recurring bookings) */
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Groomer Preference</h3>
+            ) : (
               <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    No variants available for this service.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep2}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleContinueFromStep3}
+                  disabled={
+                    !selectedVariant ||
+                    (requiresPhotos && customPhotos.length === 0)
+                  }
+                >
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : currentStep === 4 ? (
+          /* Step 4: Add-On Selection */
+          <div className="space-y-6">
+            {/* Total Duration and Price Display */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-sm">
+                      Total Duration
+                    </p>
+                    <p className="flex items-center gap-2 text-2xl font-bold">
+                      <Clock className="h-5 w-5" />
+                      {totalDurationWithAddOns} mins
+                      {totalDurationWithAddOns > 60 && (
+                        <Badge variant="outline" className="ml-2">
+                          {Math.ceil(totalDurationWithAddOns / 30) * 30} min
+                          slot
+                        </Badge>
+                      )}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-muted-foreground mb-1 text-sm">
+                      Total Price
+                    </p>
+                    <p className="flex items-center justify-end gap-2 text-2xl font-bold">
+                      <DollarSign className="h-5 w-5" />${totalPriceWithAddOns}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Duration Conflict Warning */}
+            {durationConflict && (
+              <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                     <div className="flex-1">
-                      <h4 className="font-semibold mb-1">Keep the same groomer for all future appointments?</h4>
-                      <p className="text-sm text-muted-foreground">
-                        We'll assign {selectedPet?.name || "your pet"} to the same groomer for consistency.
+                      <h4 className="mb-1 font-semibold text-amber-900">
+                        Extended Appointment Required
+                      </h4>
+                      <p className="text-sm text-amber-800">
+                        {durationConflict.message}
                       </p>
                     </div>
-                    <Checkbox
-                      checked={sameGroomerGuarantee}
-                      onCheckedChange={(checked) => setSameGroomerGuarantee(checked === true)}
-                    />
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          )}
+            )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep4}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+            {/* Suggested Add-Ons for Senior Dogs */}
+            {suggestedAddOns.length > 0 && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="mb-1 font-semibold">
+                        Recommended for {selectedPet?.name}
+                      </h4>
+                      <p className="text-muted-foreground mb-3 text-sm">
+                        Based on {selectedPet?.name}&apos;s profile, we
+                        recommend:
+                      </p>
+                      <div className="space-y-2">
+                        {suggestedAddOns.map((addon) => (
+                          <div
+                            key={addon.id}
+                            className="border-primary/20 bg-background hover:bg-primary/5 flex cursor-pointer items-center gap-2 rounded-lg border p-2"
+                            onClick={() => handleAddOnToggle(addon.id)}
+                          >
+                            <Checkbox
+                              checked={selectedAddOns.includes(addon.id)}
+                              onCheckedChange={() =>
+                                handleAddOnToggle(addon.id)
+                              }
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {addon.name}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                {addon.description}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-primary text-sm font-semibold">
+                                +${addon.price}
+                              </p>
+                              {addon.durationMinutes > 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                  +{addon.durationMinutes} mins
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Available Add-Ons */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Add-On Services</h3>
+              <div className="grid gap-3">
+                {availableAddOns.map((addon) => {
+                  const isSelected = selectedAddOns.includes(addon.id);
+                  const isSuggested = suggestedAddOns.some(
+                    (a) => a.id === addon.id,
+                  );
+
+                  return (
+                    <Card
+                      key={addon.id}
+                      className={`hover:border-primary/50 cursor-pointer transition-all ${
+                        isSelected ? "border-primary ring-primary ring-2" : ""
+                      } ${isSuggested ? "border-primary/20 bg-primary/5" : ""} `}
+                      onClick={() => handleAddOnToggle(addon.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleAddOnToggle(addon.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <h4 className="font-semibold">{addon.name}</h4>
+                              {isSuggested && (
+                                <Badge variant="outline" className="text-xs">
+                                  Recommended
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground mb-2 text-sm">
+                              {addon.description}
+                            </p>
+                            <div className="text-muted-foreground flex items-center gap-4 text-xs">
+                              {addon.durationMinutes > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />+
+                                  {addon.durationMinutes} mins
+                                </span>
+                              )}
+                              <span className="text-primary flex items-center gap-1 font-semibold">
+                                <DollarSign className="h-3 w-3" />
+                                +${addon.price}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep3}>
+                Back
               </Button>
-              <Button onClick={handleContinueFromStep5}>
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContinueFromStep4}>
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-        ) : (
-        /* Step 6: Location & Logistics */
-        <div className="space-y-6">
-          {/* Service Type Selection (if both available) */}
-          {salonAvailable && mobileAvailable && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Choose Service Location</h3>
-              <RadioGroup
-                value={serviceLocation || ""}
-                onValueChange={(value) => setServiceLocation(value as "salon" | "mobile")}
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Card
-                    className={`cursor-pointer transition-all ${
-                      serviceLocation === "salon" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                    }`}
-                    onClick={() => setServiceLocation("salon")}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Building2 className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <RadioGroupItem value="salon" id="salon" />
-                            <Label htmlFor="salon" className="font-semibold text-lg cursor-pointer">
-                              Physical Salon
-                            </Label>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Visit our facility for your pet's grooming appointment
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+        ) : currentStep === 5 ? (
+          /* Step 5: Groomer Preference */
+          <div className="space-y-6">
+            {/* Mode A: No Choice (Stealth) - Should be skipped, but show message if somehow reached */}
+            {groomerSelectionMode === "stealth" ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Our team will assign the best available groomer for{" "}
+                    {selectedPet?.name || "your pet"}&apos;s needs.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : groomerSelectionMode === "tier-only" ? (
+              /* Mode B: Tier-Based */
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Select Your Stylist Preference
+                </h3>
+                <div className="space-y-3">
+                  {groomerTiers.map((tier) => {
+                    const isSelected = selectedGroomerTier === tier.id;
+                    // Calculate pricing based on tier
+                    let priceModifier = 0;
+                    if (tier.id === "senior") priceModifier = 20;
+                    if (tier.id === "junior")
+                      priceModifier = -Math.round(calculatedPrice * 0.1);
 
-                  <Card
-                    className={`cursor-pointer transition-all ${
-                      serviceLocation === "mobile" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                    }`}
-                    onClick={() => setServiceLocation("mobile")}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Truck className="h-6 w-6 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <RadioGroupItem value="mobile" id="mobile" />
-                            <Label htmlFor="mobile" className="font-semibold text-lg cursor-pointer">
-                              Mobile Van
-                            </Label>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            We come to you! Grooming service at your location
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-
-          {/* Mobile Service Form */}
-          {serviceLocation === "mobile" && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Service Address</h3>
-              
-              {/* Address Input */}
-              <div className="space-y-2">
-                <Label htmlFor="mobile-address">Service Address *</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="mobile-address"
-                    placeholder="Enter your address (e.g., 123 Main St, Downtown, San Francisco)"
-                    value={mobileAddress}
-                    onChange={(e) => setMobileAddress(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                {mobileAddress && mobileAddressValidation && (
-                  <div className="mt-2">
-                    {mobileAddressValidation.isValid ? (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Service available in {mobileAddressValidation.zone?.name}</span>
-                      </div>
-                    ) : (
-                      <Card className="border-amber-200 bg-amber-50">
-                        <CardContent className="pt-4">
-                          <div className="flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    return (
+                      <Card
+                        key={tier.id}
+                        className={`hover:border-primary/50 cursor-pointer transition-all ${
+                          isSelected ? "border-primary ring-primary ring-2" : ""
+                        } `}
+                        onClick={() => handleTierSelect(tier.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <p className="text-sm text-amber-900">{mobileAddressValidation.message}</p>
-                              <Button variant="outline" size="sm" className="mt-2">
-                                Join Waitlist
-                              </Button>
+                              <h4 className="font-semibold">{tier.name}</h4>
+                              {tier.description && (
+                                <p className="text-muted-foreground text-sm">
+                                  {tier.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              {priceModifier !== 0 && (
+                                <p
+                                  className={`text-sm font-semibold ${
+                                    priceModifier > 0
+                                      ? `text-primary`
+                                      : `text-green-600`
+                                  } `}
+                                >
+                                  {priceModifier > 0
+                                    ? `+$${priceModifier}`
+                                    : `$${priceModifier}`}
+                                </p>
+                              )}
+                              {isSelected && (
+                                <CheckCircle2 className="text-primary ml-2 h-5 w-5" />
+                              )}
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Location Details */}
-              {mobileAddressValidation?.isValid && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h4 className="font-semibold">Location Details</h4>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="gate-code">Gate Code (if applicable)</Label>
-                    <Input
-                      id="gate-code"
-                      placeholder="Enter gate code"
-                      value={mobileGateCode}
-                      onChange={(e) => setMobileGateCode(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Parking Instructions</Label>
-                    <RadioGroup
-                      value={mobileParking}
-                      onValueChange={(value) => setMobileParking(value as "street" | "driveway")}
-                    >
-                      <div className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="street" id="street" />
-                          <Label htmlFor="street" className="cursor-pointer">Park on street</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="driveway" id="driveway" />
-                          <Label htmlFor="driveway" className="cursor-pointer">Driveway available</Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {petFlags.isAnxious && (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="stay-in-van"
-                          checked={mobileStayInVan}
-                          onCheckedChange={(checked) => setMobileStayInVan(checked === true)}
-                        />
-                        <Label htmlFor="stay-in-van" className="cursor-pointer">
-                          Aggressive dog—remain in van
-                        </Label>
-                      </div>
-                      <p className="text-xs text-muted-foreground pl-6">
-                        Our groomer will work with {selectedPet?.name} inside the mobile van for safety.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Salon Service Form */}
-          {serviceLocation === "salon" && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Salon Location</h3>
-              
-              {/* Multi-location Selection */}
-              {availableSalonLocations.length > 1 ? (
-                <div className="space-y-2">
-                  <Label htmlFor="salon-location">Select Location *</Label>
-                  <select
-                    id="salon-location"
-                    value={salonLocationId || ""}
-                    onChange={(e) => setSalonLocationId(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    );
+                  })}
+                  <Card
+                    className={`hover:border-primary/50 cursor-pointer transition-all ${
+                      !selectedGroomerTier
+                        ? "border-primary ring-primary ring-2"
+                        : ""
+                    } `}
+                    onClick={() => handleTierSelect("no-preference")}
                   >
-                    <option value="">Select a location</option>
-                    {availableSalonLocations.map((location) => (
-                      <option key={location.id} value={location.id}>
-                        {location.name} - {location.address}
-                      </option>
-                    ))}
-                  </select>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold">No preference</h4>
+                          <p className="text-muted-foreground text-sm">
+                            First available
+                          </p>
+                        </div>
+                        {!selectedGroomerTier && (
+                          <CheckCircle2 className="text-primary h-5 w-5" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              ) : availableSalonLocations.length === 1 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold mb-1">
-                          Checking in at {availableSalonLocations[0].name}?
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {availableSalonLocations[0].address}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold mb-1">
-                          {selectedFacility?.name || "Facility"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {availableSalonLocations.length > 0 
-                            ? availableSalonLocations[0].address 
-                            : "Main location"}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              </div>
+            ) : groomerSelectionMode === "full-choice" ||
+              groomerSelectionMode === "optional" ? (
+              /* Mode C: Specific Groomer with Bios */
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Select Your Stylist</h3>
 
-              {/* Drop-off Preference */}
-              <div className="space-y-4 pt-4 border-t">
-                <h4 className="font-semibold">Drop-off Preference *</h4>
+                {/* Fear-Free Requirement Notice */}
+                {requiresFearFree && (
+                  <Card className="border-blue-200 bg-blue-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-sm text-blue-900">
+                            {selectedPet?.name} requires a Fear-Free Certified
+                            groomer. Only qualified stylists are shown below.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {availableGroomers.map((groomer) => {
+                    const isSelected = selectedGroomerId === groomer.id;
+                    const history = petGroomerHistory.find(
+                      (h) => h.groomerId === groomer.id,
+                    );
+                    const isFearFree = groomer.certifications.some((c) =>
+                      /fear.?free/i.test(c),
+                    );
+                    const isQualified = !requiresFearFree || isFearFree;
+
+                    return (
+                      <Card
+                        key={groomer.id}
+                        className={`cursor-pointer transition-all ${
+                          isSelected ? "border-primary ring-primary ring-2" : ""
+                        } ${
+                          !isQualified
+                            ? "cursor-not-allowed opacity-50"
+                            : `hover:border-primary/50`
+                        } `}
+                        onClick={() =>
+                          isQualified && handleGroomerSelect(groomer.id)
+                        }
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4">
+                            {/* Groomer Photo */}
+                            <div className="border-border bg-muted flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2">
+                              {groomer.photoUrl ? (
+                                <Image
+                                  src={groomer.photoUrl}
+                                  alt={groomer.name}
+                                  width={64}
+                                  height={64}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Scissors className="text-muted-foreground h-8 w-8" />
+                              )}
+                            </div>
+
+                            {/* Groomer Info */}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-center gap-2">
+                                <h4 className="text-lg font-semibold">
+                                  {groomer.name}
+                                </h4>
+                                {history && (
+                                  <Badge variant="default" className="text-xs">
+                                    Booked {history.count}{" "}
+                                    {history.count === 1 ? "time" : "times"}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Specializations */}
+                              <div className="mb-2 flex flex-wrap gap-1">
+                                {groomer.specializations
+                                  .slice(0, 3)
+                                  .map((spec) => (
+                                    <Badge
+                                      key={spec}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {spec}
+                                    </Badge>
+                                  ))}
+                                {groomer.certifications.some((c) =>
+                                  /fear.?free/i.test(c),
+                                ) && (
+                                  <Badge
+                                    variant="default"
+                                    className="bg-green-600 text-xs"
+                                  >
+                                    Fear-Free Certified
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Bio */}
+                              <p className="text-muted-foreground mb-2 line-clamp-2 text-sm">
+                                {groomer.bio}
+                              </p>
+
+                              {/* Rating and Experience */}
+                              <div className="text-muted-foreground flex items-center gap-4 text-xs">
+                                <span className="flex items-center gap-1">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  {groomer.rating}
+                                </span>
+                                <span>
+                                  {groomer.yearsExperience} years experience
+                                </span>
+                              </div>
+
+                              {/* Not Qualified Warning */}
+                              {!isQualified && (
+                                <p className="text-destructive mt-2 text-xs">
+                                  Not qualified for {selectedPet?.name}&apos;s
+                                  care needs
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Selection Indicator */}
+                            {isSelected && (
+                              <div className="shrink-0">
+                                <CheckCircle2 className="text-primary h-6 w-6" />
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {/* No Preference Option */}
+                  <Card
+                    className={`hover:border-primary/50 cursor-pointer transition-all ${
+                      !selectedGroomerId && !selectedGroomerTier
+                        ? "border-primary ring-primary ring-2"
+                        : ""
+                    } `}
+                    onClick={() => {
+                      setSelectedGroomerId(null);
+                      setSelectedGroomerTier("no-preference");
+                    }}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex h-full items-center justify-center">
+                        <div className="text-center">
+                          <h4 className="mb-1 font-semibold">No preference</h4>
+                          <p className="text-muted-foreground text-sm">
+                            First available stylist
+                          </p>
+                          {!selectedGroomerId && !selectedGroomerTier && (
+                            <CheckCircle2 className="text-primary mx-auto mt-2 h-6 w-6" />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              /* Mode D: Same-Groomer Guarantee (Optional - for recurring bookings) */
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Groomer Preference</h3>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="mb-1 font-semibold">
+                          Keep the same groomer for all future appointments?
+                        </h4>
+                        <p className="text-muted-foreground text-sm">
+                          We&apos;ll assign {selectedPet?.name || "your pet"} to
+                          the same groomer for consistency.
+                        </p>
+                      </div>
+                      <Checkbox
+                        checked={sameGroomerGuarantee}
+                        onCheckedChange={(checked) =>
+                          setSameGroomerGuarantee(checked === true)
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep4}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContinueFromStep5}>
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Step 6: Location & Logistics */
+          <div className="space-y-6">
+            {/* Service Type Selection (if both available) */}
+            {salonAvailable && mobileAvailable && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">
+                  Choose Service Location
+                </h3>
                 <RadioGroup
-                  value={dropOffPreference}
-                  onValueChange={(value) => setDropOffPreference(value as "wait" | "drop-off" | "curbside")}
+                  value={serviceLocation || ""}
+                  onValueChange={(value) =>
+                    setServiceLocation(value as "salon" | "mobile")
+                  }
                 >
-                  <div className="space-y-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <Card
                       className={`cursor-pointer transition-all ${
-                        dropOffPreference === "wait" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                      }`}
-                      onClick={() => setDropOffPreference("wait")}
+                        serviceLocation === "salon"
+                          ? "border-primary ring-primary ring-2"
+                          : "hover:border-primary/50"
+                      } `}
+                      onClick={() => setServiceLocation("salon")}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="wait" id="wait" />
-                          <Label htmlFor="wait" className="cursor-pointer flex-1">
-                            <div>
-                              <p className="font-medium">I'll wait in lobby</p>
-                              <p className="text-xs text-muted-foreground">
-                                You'll receive a 15-minute early notification when ready
-                              </p>
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                            <Building2 className="text-primary h-6 w-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <RadioGroupItem value="salon" id="salon" />
+                              <Label
+                                htmlFor="salon"
+                                className="cursor-pointer text-lg font-semibold"
+                              >
+                                Physical Salon
+                              </Label>
                             </div>
-                          </Label>
+                            <p className="text-muted-foreground text-sm">
+                              Visit our facility for your pet&apos;s grooming
+                              appointment
+                            </p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
 
                     <Card
                       className={`cursor-pointer transition-all ${
-                        dropOffPreference === "drop-off" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                      }`}
-                      onClick={() => setDropOffPreference("drop-off")}
+                        serviceLocation === "mobile"
+                          ? "border-primary ring-primary ring-2"
+                          : "hover:border-primary/50"
+                      } `}
+                      onClick={() => setServiceLocation("mobile")}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="drop-off" id="drop-off" />
-                          <Label htmlFor="drop-off" className="cursor-pointer flex-1">
-                            <div>
-                              <p className="font-medium">Drop off and return</p>
-                              <p className="text-xs text-muted-foreground">Standard drop-off process</p>
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                            <Truck className="text-primary h-6 w-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <RadioGroupItem value="mobile" id="mobile" />
+                              <Label
+                                htmlFor="mobile"
+                                className="cursor-pointer text-lg font-semibold"
+                              >
+                                Mobile Van
+                              </Label>
                             </div>
-                          </Label>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card
-                      className={`cursor-pointer transition-all ${
-                        dropOffPreference === "curbside" ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                      }`}
-                      onClick={() => setDropOffPreference("curbside")}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="curbside" id="curbside" />
-                          <Label htmlFor="curbside" className="cursor-pointer flex-1">
-                            <div>
-                              <p className="font-medium">Curbside pickup</p>
-                              <p className="text-xs text-muted-foreground">
-                                We'll bring your pet to your vehicle when ready
-                              </p>
-                            </div>
-                          </Label>
+                            <p className="text-muted-foreground text-sm">
+                              We come to you! Grooming service at your location
+                            </p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
                 </RadioGroup>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep5}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContinueFromStep6}
-                disabled={
-                  (serviceLocation === "mobile" && (!mobileAddress || !mobileAddressValidation?.isValid)) ||
-                  (serviceLocation === "salon" && (!salonLocationId || !dropOffPreference))
-                }
-              >
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Step 7: Date & Time Selection */}
-        {currentStep === 7 && (
-        <div className="space-y-6">
-          {/* Time Slot Conflict Alert (Salon) */}
-          {timeSlotConflict?.hasConflict && serviceLocation === "salon" && (
-            <Card className="border-yellow-500 bg-yellow-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                  <div className="flex-1 space-y-3">
-                    <p className="text-sm font-medium text-yellow-900">
-                      {timeSlotConflict.message}
-                    </p>
-                    {timeSlotConflict.alternatives.length > 0 && (
-                      <div className="space-y-2">
-                        {timeSlotConflict.alternatives.map((alt, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            onClick={alt.action}
-                            className="w-full justify-start text-left"
-                          >
-                            {alt.message}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Mobile Zone Conflict Alert */}
-          {mobileZoneConflict?.hasConflict && serviceLocation === "mobile" && (
-            <Card className="border-orange-500 bg-orange-50">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-                  <div className="flex-1 space-y-3">
-                    <p className="text-sm font-medium text-orange-900">
-                      {mobileZoneConflict.message}
-                    </p>
-                    {mobileZoneConflict.nextAvailableDate && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedDate(mobileZoneConflict.nextAvailableDate!);
-                          setMobileZoneConflict(null);
-                          // Regenerate slots for new date
-                          setMobileDateRange({
-                            start: mobileZoneConflict.nextAvailableDate!,
-                            end: new Date(mobileZoneConflict.nextAvailableDate!.getTime() + 7 * 24 * 60 * 60 * 1000),
-                          });
-                        }}
-                        className="w-full justify-start text-left"
-                      >
-                        Book on {isMounted ? mobileZoneConflict.nextAvailableDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : "Next available date"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {serviceLocation === "salon" ? (
-            <>
-              {/* Physical Salon Calendar */}
+            {/* Mobile Service Form */}
+            {serviceLocation === "mobile" && (
               <div className="space-y-4">
-                <h4 className="font-semibold">Select Date</h4>
-                <p className="text-sm text-muted-foreground">
-                  Choose a date for your appointment. Available dates are shown in the calendar.
-                </p>
-                <DateSelectionCalendar
-                  mode="single"
-                  selectedDates={selectedDate ? [selectedDate] : []}
-                  onSelectionChange={(dates) => {
-                    if (dates.length > 0) {
-                      setSelectedDate(dates[0]);
-                      setSelectedTimeSlot(null); // Reset time when date changes
-                    } else {
-                      setSelectedDate(null);
-                    }
-                  }}
-                  minDate={minBookingDate}
-                  disabledDates={disabledDates}
-                  bookingRules={{
-                    minimumAdvanceBooking: config.bookingRules.leadTime.minimumHours,
-                    maximumAdvanceBooking: 14, // 2 weeks
-                  }}
-                />
-              </div>
+                <h3 className="text-lg font-semibold">Service Address</h3>
 
-              {/* Time Slot Selection */}
-              {selectedDate && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Select Time</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Choose an available time slot. Total appointment duration: {totalDurationWithAddOns} minutes.
-                  </p>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {availableTimeSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={selectedTimeSlot === slot.time ? "default" : "outline"}
-                        className={cn(
-                          "h-auto py-3 flex flex-col items-center gap-1",
-                          slot.status === "optimal" && "border-green-500 hover:border-green-600",
-                          slot.status === "tight" && "border-yellow-500 hover:border-yellow-600",
-                          slot.status === "off-peak" && "border-blue-500 hover:border-blue-600",
-                          !slot.available && "opacity-50 cursor-not-allowed"
-                        )}
-                        disabled={!slot.available}
-                        onClick={() => slot.available && setSelectedTimeSlot(slot.time)}
-                      >
-                        <span className="font-medium">{slot.time}</span>
-                        {slot.status === "optimal" && (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
-                            Optimal
-                          </Badge>
-                        )}
-                        {slot.status === "tight" && (
-                          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-300">
-                            Tight
-                          </Badge>
-                        )}
-                        {slot.status === "off-peak" && (
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
-                            Off-peak
-                          </Badge>
-                        )}
-                      </Button>
-                    ))}
+                {/* Address Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="mobile-address">Service Address *</Label>
+                  <div className="relative">
+                    <MapPin className="text-muted-foreground absolute top-3 left-3 size-4" />
+                    <Input
+                      id="mobile-address"
+                      placeholder="Enter your address (e.g., 123 Main St, Downtown, San Francisco)"
+                      value={mobileAddress}
+                      onChange={(e) => setMobileAddress(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
-                  {availableTimeSlots.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No available time slots for this date. Please select another date.
-                    </p>
-                  )}
-                </div>
-              )}
-            </>
-          ) : serviceLocation === "mobile" ? (
-            <>
-              {/* Mobile Date Range Selection */}
-              <div className="space-y-4">
-                <h4 className="font-semibold">Select Preferred Date Range</h4>
-                <p className="text-sm text-muted-foreground">
-                  Choose your preferred dates. We'll find the best available slot based on our route optimization.
-                </p>
-                <DateSelectionCalendar
-                  mode="range"
-                  rangeStart={mobileDateRange?.start || null}
-                  rangeEnd={mobileDateRange?.end || null}
-                  onRangeChange={(start, end) => {
-                    if (start && end) {
-                      // Ensure dates are at start of day
-                      const startDate = new Date(start);
-                      startDate.setHours(0, 0, 0, 0);
-                      const endDate = new Date(end);
-                      endDate.setHours(23, 59, 59, 999);
-                      setMobileDateRange({ start: startDate, end: endDate });
-                      setSelectedDate(null);
-                      setSelectedTimeSlot(null);
-                    } else {
-                      setMobileDateRange(null);
-                    }
-                  }}
-                  minDate={minBookingDate}
-                  disabledDates={disabledDates}
-                  bookingRules={{
-                    minimumAdvanceBooking: config.bookingRules.leadTime.minimumHours,
-                    maximumAdvanceBooking: 14,
-                  }}
-                />
-              </div>
-
-              {/* Mobile Time Slot Results */}
-              {mobileDateRange && availableTimeSlots.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Available Time Slots</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Based on route optimization, here are the best available slots:
-                  </p>
-                  <div className="space-y-3">
-                    {availableTimeSlots.map((slot, index) => {
-                      // Extract date and time from slot.time (format: "YYYY-MM-DD HH:mm" for mobile)
-                      const [datePart, timePart] = slot.time.split(" ");
-                      const displayTime = timePart || slot.time;
-                      const displayDate = datePart && isMounted ? new Date(datePart).toLocaleDateString("en-US", { 
-                        weekday: "short", 
-                        month: "short", 
-                        day: "numeric" 
-                      }) : null;
-                      
-                      return (
-                        <Card
-                          key={`${slot.time}-${index}`}
-                          className={cn(
-                            "cursor-pointer transition-all",
-                            selectedTimeSlot === slot.time ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
-                          )}
-                          onClick={() => slot.available && setSelectedTimeSlot(slot.time)}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={cn(
-                                  "w-3 h-3 rounded-full flex-shrink-0",
-                                  slot.status === "optimal" && "bg-green-500",
-                                  slot.status === "tight" && "bg-yellow-500",
-                                  slot.status === "off-peak" && "bg-blue-500"
-                                )} />
-                                <div>
-                                  {displayDate && (
-                                    <p className="text-xs text-muted-foreground mb-1">{displayDate}</p>
-                                  )}
-                                  <p className="font-medium">{displayTime}</p>
-                                  {slot.routePosition && (
-                                    <p className="text-xs text-muted-foreground mt-1">{slot.routePosition}</p>
-                                  )}
-                                  {slot.driveTimeFromPrevious && (
-                                    <p className="text-xs text-muted-foreground">
-                                      {slot.driveTimeFromPrevious} min drive from previous appointment
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {slot.status === "optimal" && (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                                    Optimal
-                                  </Badge>
-                                )}
-                                {slot.status === "tight" && (
-                                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                                    Tight
-                                  </Badge>
-                                )}
-                                {slot.status === "off-peak" && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                                    Off-peak
-                                  </Badge>
-                                )}
+                  {mobileAddress && mobileAddressValidation && (
+                    <div className="mt-2">
+                      {mobileAddressValidation.isValid ? (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle2 className="size-4" />
+                          <span>
+                            Service available in{" "}
+                            {mobileAddressValidation.zone?.name}
+                          </span>
+                        </div>
+                      ) : (
+                        <Card className="border-amber-200 bg-amber-50">
+                          <CardContent className="pt-4">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                              <div className="flex-1">
+                                <p className="text-sm text-amber-900">
+                                  {mobileAddressValidation.message}
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2"
+                                >
+                                  Join Waitlist
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
                         </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              {mobileDateRange && availableTimeSlots.length === 0 && (
-                <Card>
-                  <CardContent className="p-6 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      No available slots found for the selected date range. Please try a different range.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          ) : null}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep6}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleContinueFromStep7}
-                disabled={
-                  (serviceLocation === "salon" && (!selectedDate || !selectedTimeSlot)) ||
-                  (serviceLocation === "mobile" && !selectedTimeSlot)
-                }
-              >
-                Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Step 8: Recurring & Packages (Upsell Layer) */}
-        {currentStep === 8 && (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h4 className="font-semibold">Make this hassle-free</h4>
-            <p className="text-sm text-muted-foreground">
-              Set up recurring appointments, use package credits, or upgrade to save more.
-            </p>
-          </div>
-
-          {/* Recurring Setup */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Recurring Appointments</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="recurring-enabled"
-                    checked={recurringEnabled}
-                    onCheckedChange={(checked) => setRecurringEnabled(checked === true)}
-                  />
-                  <Label htmlFor="recurring-enabled" className="cursor-pointer">
-                    Enable recurring
-                  </Label>
-                </div>
-              </div>
-            </CardHeader>
-            {recurringEnabled && (
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Book this every:</Label>
-                  <div className="flex gap-2 flex-wrap">
-                    {[4, 6, 8].map((weeks) => (
-                      <Button
-                        key={weeks}
-                        variant={recurringFrequency === weeks ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setRecurringFrequency(weeks as 4 | 6 | 8)}
-                      >
-                        {weeks} weeks
-                      </Button>
-                    ))}
-                    <Button
-                      variant={recurringFrequency === "custom" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setRecurringFrequency("custom")}
-                    >
-                      Custom
-                    </Button>
-                  </div>
-                  {recurringFrequency === "custom" && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={customFrequency}
-                        onChange={(e) => setCustomFrequency(Number(e.target.value))}
-                        className="w-24"
-                      />
-                      <Label>weeks</Label>
+                      )}
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label>End after:</Label>
-                  <RadioGroup
-                    value={recurringEndAfter}
-                    onValueChange={(value) => setRecurringEndAfter(value as "occurrences" | "date" | "never")}
-                  >
+                {/* Location Details */}
+                {mobileAddressValidation?.isValid && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="font-semibold">Location Details</h4>
+
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="occurrences" id="end-occurrences" />
-                        <Label htmlFor="end-occurrences" className="cursor-pointer flex-1">
-                          <div className="flex items-center gap-2">
-                            <span>After</span>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={recurringOccurrences}
-                              onChange={(e) => setRecurringOccurrences(Number(e.target.value))}
-                              className="w-20"
-                              disabled={recurringEndAfter !== "occurrences"}
-                            />
-                            <span>occurrences</span>
+                      <Label htmlFor="gate-code">
+                        Gate Code (if applicable)
+                      </Label>
+                      <Input
+                        id="gate-code"
+                        placeholder="Enter gate code"
+                        value={mobileGateCode}
+                        onChange={(e) => setMobileGateCode(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Parking Instructions</Label>
+                      <RadioGroup
+                        value={mobileParking}
+                        onValueChange={(value) =>
+                          setMobileParking(value as "street" | "driveway")
+                        }
+                      >
+                        <div className="flex gap-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="street" id="street" />
+                            <Label htmlFor="street" className="cursor-pointer">
+                              Park on street
+                            </Label>
                           </div>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="date" id="end-date" />
-                        <Label htmlFor="end-date" className="cursor-pointer flex-1">
-                          <div className="flex items-center gap-2">
-                            <span>Specific date:</span>
-                            <Input
-                              type="date"
-                              value={recurringEndDate ? recurringEndDate.toISOString().split("T")[0] : ""}
-                              onChange={(e) => setRecurringEndDate(e.target.value ? new Date(e.target.value) : null)}
-                              disabled={recurringEndAfter !== "date"}
-                            />
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="driveway" id="driveway" />
+                            <Label
+                              htmlFor="driveway"
+                              className="cursor-pointer"
+                            >
+                              Driveway available
+                            </Label>
                           </div>
-                        </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    {petFlags.isAnxious && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="stay-in-van"
+                            checked={mobileStayInVan}
+                            onCheckedChange={(checked) =>
+                              setMobileStayInVan(checked === true)
+                            }
+                          />
+                          <Label
+                            htmlFor="stay-in-van"
+                            className="cursor-pointer"
+                          >
+                            Aggressive dog—remain in van
+                          </Label>
+                        </div>
+                        <p className="text-muted-foreground pl-6 text-xs">
+                          Our groomer will work with {selectedPet?.name} inside
+                          the mobile van for safety.
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="never" id="end-never" />
-                        <Label htmlFor="end-never" className="cursor-pointer">Never (ongoing)</Label>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Salon Service Form */}
+            {serviceLocation === "salon" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Salon Location</h3>
+
+                {/* Multi-location Selection */}
+                {availableSalonLocations.length > 1 ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="salon-location">Select Location *</Label>
+                    <select
+                      id="salon-location"
+                      value={salonLocationId || ""}
+                      onChange={(e) => setSalonLocationId(e.target.value)}
+                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      <option value="">Select a location</option>
+                      {availableSalonLocations.map((location) => (
+                        <option key={location.id} value={location.id}>
+                          {location.name} - {location.address}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : availableSalonLocations.length === 1 ? (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="mb-1 font-semibold">
+                            Checking in at {availableSalonLocations[0].name}?
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {availableSalonLocations[0].address}
+                          </p>
+                        </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="mb-1 font-semibold">
+                            {selectedFacility?.name || "Facility"}
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            {availableSalonLocations.length > 0
+                              ? availableSalonLocations[0].address
+                              : "Main location"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Drop-off Preference */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="font-semibold">Drop-off Preference *</h4>
+                  <RadioGroup
+                    value={dropOffPreference}
+                    onValueChange={(value) =>
+                      setDropOffPreference(
+                        value as "wait" | "drop-off" | "curbside",
+                      )
+                    }
+                  >
+                    <div className="space-y-3">
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          dropOffPreference === "wait"
+                            ? "border-primary ring-primary ring-2"
+                            : "hover:border-primary/50"
+                        } `}
+                        onClick={() => setDropOffPreference("wait")}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="wait" id="wait" />
+                            <Label
+                              htmlFor="wait"
+                              className="flex-1 cursor-pointer"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  I&apos;ll wait in lobby
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  You&apos;ll receive a 15-minute early
+                                  notification when ready
+                                </p>
+                              </div>
+                            </Label>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          dropOffPreference === "drop-off"
+                            ? "border-primary ring-primary ring-2"
+                            : "hover:border-primary/50"
+                        } `}
+                        onClick={() => setDropOffPreference("drop-off")}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="drop-off" id="drop-off" />
+                            <Label
+                              htmlFor="drop-off"
+                              className="flex-1 cursor-pointer"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  Drop off and return
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  Standard drop-off process
+                                </p>
+                              </div>
+                            </Label>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card
+                        className={`cursor-pointer transition-all ${
+                          dropOffPreference === "curbside"
+                            ? "border-primary ring-primary ring-2"
+                            : "hover:border-primary/50"
+                        } `}
+                        onClick={() => setDropOffPreference("curbside")}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="curbside" id="curbside" />
+                            <Label
+                              htmlFor="curbside"
+                              className="flex-1 cursor-pointer"
+                            >
+                              <div>
+                                <p className="font-medium">Curbside pickup</p>
+                                <p className="text-muted-foreground text-xs">
+                                  We&apos;ll bring your pet to your vehicle when
+                                  ready
+                                </p>
+                              </div>
+                            </Label>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </RadioGroup>
                 </div>
+              </div>
+            )}
 
-                <div className="flex items-center space-x-2 pt-2 border-t">
-                  <Checkbox
-                    id="keep-same-groomer"
-                    checked={keepSameGroomer}
-                    onCheckedChange={(checked) => setKeepSameGroomer(checked === true)}
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep5}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleContinueFromStep6}
+                  disabled={
+                    (serviceLocation === "mobile" &&
+                      (!mobileAddress || !mobileAddressValidation?.isValid)) ||
+                    (serviceLocation === "salon" &&
+                      (!salonLocationId || !dropOffPreference))
+                  }
+                >
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 7: Date & Time Selection */}
+        {currentStep === 7 && (
+          <div className="space-y-6">
+            {/* Time Slot Conflict Alert (Salon) */}
+            {timeSlotConflict?.hasConflict && serviceLocation === "salon" && (
+              <Card className="border-yellow-500 bg-yellow-50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 text-yellow-600" />
+                    <div className="flex-1 space-y-3">
+                      <p className="text-sm font-medium text-yellow-900">
+                        {timeSlotConflict.message}
+                      </p>
+                      {timeSlotConflict.alternatives.length > 0 && (
+                        <div className="space-y-2">
+                          {timeSlotConflict.alternatives.map((alt, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              onClick={alt.action}
+                              className="w-full justify-start text-left"
+                            >
+                              {alt.message}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Mobile Zone Conflict Alert */}
+            {mobileZoneConflict?.hasConflict &&
+              serviceLocation === "mobile" && (
+                <Card className="border-orange-500 bg-orange-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 text-orange-600" />
+                      <div className="flex-1 space-y-3">
+                        <p className="text-sm font-medium text-orange-900">
+                          {mobileZoneConflict.message}
+                        </p>
+                        {mobileZoneConflict.nextAvailableDate && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedDate(
+                                mobileZoneConflict.nextAvailableDate!,
+                              );
+                              setMobileZoneConflict(null);
+                              // Regenerate slots for new date
+                              setMobileDateRange({
+                                start: mobileZoneConflict.nextAvailableDate!,
+                                end: new Date(
+                                  mobileZoneConflict.nextAvailableDate!.getTime() +
+                                    7 * 24 * 60 * 60 * 1000,
+                                ),
+                              });
+                            }}
+                            className="w-full justify-start text-left"
+                          >
+                            Book on{" "}
+                            {isMounted
+                              ? mobileZoneConflict.nextAvailableDate.toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "long",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )
+                              : "Next available date"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+            {serviceLocation === "salon" ? (
+              <>
+                {/* Physical Salon Calendar */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Select Date</h4>
+                  <p className="text-muted-foreground text-sm">
+                    Choose a date for your appointment. Available dates are
+                    shown in the calendar.
+                  </p>
+                  <DateSelectionCalendar
+                    mode="single"
+                    selectedDates={selectedDate ? [selectedDate] : []}
+                    onSelectionChange={(dates) => {
+                      if (dates.length > 0) {
+                        setSelectedDate(dates[0]);
+                        setSelectedTimeSlot(null); // Reset time when date changes
+                      } else {
+                        setSelectedDate(null);
+                      }
+                    }}
+                    minDate={minBookingDate}
+                    disabledDates={disabledDates}
+                    bookingRules={{
+                      minimumAdvanceBooking:
+                        config.bookingRules.leadTime.minimumHours,
+                      maximumAdvanceBooking: 14, // 2 weeks
+                    }}
                   />
-                  <Label htmlFor="keep-same-groomer" className="cursor-pointer">
-                    Keep same groomer for all appointments
-                  </Label>
                 </div>
 
-                {recurringEnabled && (
-                  <div className="bg-green-50 border border-green-200 rounded-md p-3 mt-2">
-                    <p className="text-sm text-green-800">
-                      <strong>Save 10% with recurring</strong> — ${finalPrice.finalPrice.toFixed(2)} instead of ${finalPrice.originalPrice.toFixed(2)}
+                {/* Time Slot Selection */}
+                {selectedDate && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Select Time</h4>
+                    <p className="text-muted-foreground text-sm">
+                      Choose an available time slot. Total appointment duration:{" "}
+                      {totalDurationWithAddOns} minutes.
                     </p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {availableTimeSlots.map((slot) => (
+                        <Button
+                          key={slot.time}
+                          variant={
+                            selectedTimeSlot === slot.time
+                              ? "default"
+                              : "outline"
+                          }
+                          className={cn(
+                            "flex h-auto flex-col items-center gap-1 py-3",
+                            slot.status === "optimal" &&
+                              `border-green-500 hover:border-green-600`,
+                            slot.status === "tight" &&
+                              `border-yellow-500 hover:border-yellow-600`,
+                            slot.status === "off-peak" &&
+                              `border-blue-500 hover:border-blue-600`,
+                            !slot.available && "cursor-not-allowed opacity-50",
+                          )}
+                          disabled={!slot.available}
+                          onClick={() =>
+                            slot.available && setSelectedTimeSlot(slot.time)
+                          }
+                        >
+                          <span className="font-medium">{slot.time}</span>
+                          {slot.status === "optimal" && (
+                            <Badge
+                              variant="outline"
+                              className="border-green-300 bg-green-50 text-xs text-green-700"
+                            >
+                              Optimal
+                            </Badge>
+                          )}
+                          {slot.status === "tight" && (
+                            <Badge
+                              variant="outline"
+                              className="border-yellow-300 bg-yellow-50 text-xs text-yellow-700"
+                            >
+                              Tight
+                            </Badge>
+                          )}
+                          {slot.status === "off-peak" && (
+                            <Badge
+                              variant="outline"
+                              className="border-blue-300 bg-blue-50 text-xs text-blue-700"
+                            >
+                              Off-peak
+                            </Badge>
+                          )}
+                        </Button>
+                      ))}
+                    </div>
+                    {availableTimeSlots.length === 0 && (
+                      <p className="text-muted-foreground py-4 text-center text-sm">
+                        No available time slots for this date. Please select
+                        another date.
+                      </p>
+                    )}
                   </div>
                 )}
-              </CardContent>
-            )}
-          </Card>
+              </>
+            ) : serviceLocation === "mobile" ? (
+              <>
+                {/* Mobile Date Range Selection */}
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Select Preferred Date Range</h4>
+                  <p className="text-muted-foreground text-sm">
+                    Choose your preferred dates. We&apos;ll find the best
+                    available slot based on our route optimization.
+                  </p>
+                  <DateSelectionCalendar
+                    mode="range"
+                    rangeStart={mobileDateRange?.start || null}
+                    rangeEnd={mobileDateRange?.end || null}
+                    onRangeChange={(start, end) => {
+                      if (start && end) {
+                        // Ensure dates are at start of day
+                        const startDate = new Date(start);
+                        startDate.setHours(0, 0, 0, 0);
+                        const endDate = new Date(end);
+                        endDate.setHours(23, 59, 59, 999);
+                        setMobileDateRange({ start: startDate, end: endDate });
+                        setSelectedDate(null);
+                        setSelectedTimeSlot(null);
+                      } else {
+                        setMobileDateRange(null);
+                      }
+                    }}
+                    minDate={minBookingDate}
+                    disabledDates={disabledDates}
+                    bookingRules={{
+                      minimumAdvanceBooking:
+                        config.bookingRules.leadTime.minimumHours,
+                      maximumAdvanceBooking: 14,
+                    }}
+                  />
+                </div>
 
-          {/* Package Redemption */}
-          {customerPackages.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Use Package Credit</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {customerPackages.map((pkg) => (
-                  <div key={pkg.id} className="flex items-center justify-between p-3 bg-muted rounded-md">
-                    <div>
-                      <p className="font-medium">{pkg.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {pkg.creditsRemaining} of {pkg.creditsTotal} credits remaining
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Valid until {isMounted ? pkg.validUntil.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`use-package-${pkg.id}`}
-                        checked={useExistingPackage && selectedPackageId === pkg.id}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setUseExistingPackage(true);
-                            setSelectedPackageId(pkg.id);
-                            setUpgradeToVIP(false); // Can't use both
-                          } else {
-                            setUseExistingPackage(false);
-                            setSelectedPackageId(null);
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`use-package-${pkg.id}`} className="cursor-pointer">
-                        Use 1 credit
-                      </Label>
+                {/* Mobile Time Slot Results */}
+                {mobileDateRange && availableTimeSlots.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Available Time Slots</h4>
+                    <p className="text-muted-foreground text-sm">
+                      Based on route optimization, here are the best available
+                      slots:
+                    </p>
+                    <div className="space-y-3">
+                      {availableTimeSlots.map((slot, index) => {
+                        // Extract date and time from slot.time (format: "YYYY-MM-DD HH:mm" for mobile)
+                        const [datePart, timePart] = slot.time.split(" ");
+                        const displayTime = timePart || slot.time;
+                        const displayDate =
+                          datePart && isMounted
+                            ? new Date(datePart).toLocaleDateString("en-US", {
+                                weekday: "short",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : null;
+
+                        return (
+                          <Card
+                            key={`${slot.time}-${index}`}
+                            className={cn(
+                              "cursor-pointer transition-all",
+                              selectedTimeSlot === slot.time
+                                ? "border-primary ring-primary ring-2"
+                                : "hover:border-primary/50",
+                            )}
+                            onClick={() =>
+                              slot.available && setSelectedTimeSlot(slot.time)
+                            }
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={cn(
+                                      "h-3 w-3 shrink-0 rounded-full",
+                                      slot.status === "optimal" &&
+                                        "bg-green-500",
+                                      slot.status === "tight" &&
+                                        "bg-yellow-500",
+                                      slot.status === "off-peak" &&
+                                        "bg-blue-500",
+                                    )}
+                                  />
+                                  <div>
+                                    {displayDate && (
+                                      <p className="text-muted-foreground mb-1 text-xs">
+                                        {displayDate}
+                                      </p>
+                                    )}
+                                    <p className="font-medium">{displayTime}</p>
+                                    {slot.routePosition && (
+                                      <p className="text-muted-foreground mt-1 text-xs">
+                                        {slot.routePosition}
+                                      </p>
+                                    )}
+                                    {slot.driveTimeFromPrevious && (
+                                      <p className="text-muted-foreground text-xs">
+                                        {slot.driveTimeFromPrevious} min drive
+                                        from previous appointment
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {slot.status === "optimal" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-green-300 bg-green-50 text-green-700"
+                                    >
+                                      Optimal
+                                    </Badge>
+                                  )}
+                                  {slot.status === "tight" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-yellow-300 bg-yellow-50 text-yellow-700"
+                                    >
+                                      Tight
+                                    </Badge>
+                                  )}
+                                  {slot.status === "off-peak" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-blue-300 bg-blue-50 text-blue-700"
+                                    >
+                                      Off-peak
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                )}
+                {mobileDateRange && availableTimeSlots.length === 0 && (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <p className="text-muted-foreground text-sm">
+                        No available slots found for the selected date range.
+                        Please try a different range.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : null}
 
-          {/* Package Upsell */}
-          {!useExistingPackage && availablePackages.length > 0 && (
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep6}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleContinueFromStep7}
+                  disabled={
+                    (serviceLocation === "salon" &&
+                      (!selectedDate || !selectedTimeSlot)) ||
+                    (serviceLocation === "mobile" && !selectedTimeSlot)
+                  }
+                >
+                  Continue
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 8: Recurring & Packages (Upsell Layer) */}
+        {currentStep === 8 && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h4 className="font-semibold">Make this hassle-free</h4>
+              <p className="text-muted-foreground text-sm">
+                Set up recurring appointments, use package credits, or upgrade
+                to save more.
+              </p>
+            </div>
+
+            {/* Recurring Setup */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    Recurring Appointments
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="recurring-enabled"
+                      checked={recurringEnabled}
+                      onCheckedChange={(checked) =>
+                        setRecurringEnabled(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="recurring-enabled"
+                      className="cursor-pointer"
+                    >
+                      Enable recurring
+                    </Label>
+                  </div>
+                </div>
+              </CardHeader>
+              {recurringEnabled && (
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Book this every:</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {[4, 6, 8].map((weeks) => (
+                        <Button
+                          key={weeks}
+                          variant={
+                            recurringFrequency === weeks ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() =>
+                            setRecurringFrequency(weeks as 4 | 6 | 8)
+                          }
+                        >
+                          {weeks} weeks
+                        </Button>
+                      ))}
+                      <Button
+                        variant={
+                          recurringFrequency === "custom"
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setRecurringFrequency("custom")}
+                      >
+                        Custom
+                      </Button>
+                    </div>
+                    {recurringFrequency === "custom" && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          value={customFrequency}
+                          onChange={(e) =>
+                            setCustomFrequency(Number(e.target.value))
+                          }
+                          className="w-24"
+                        />
+                        <Label>weeks</Label>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>End after:</Label>
+                    <RadioGroup
+                      value={recurringEndAfter}
+                      onValueChange={(value) =>
+                        setRecurringEndAfter(
+                          value as "occurrences" | "date" | "never",
+                        )
+                      }
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value="occurrences"
+                            id="end-occurrences"
+                          />
+                          <Label
+                            htmlFor="end-occurrences"
+                            className="flex-1 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>After</span>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={recurringOccurrences}
+                                onChange={(e) =>
+                                  setRecurringOccurrences(
+                                    Number(e.target.value),
+                                  )
+                                }
+                                className="w-20"
+                                disabled={recurringEndAfter !== "occurrences"}
+                              />
+                              <span>occurrences</span>
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="date" id="end-date" />
+                          <Label
+                            htmlFor="end-date"
+                            className="flex-1 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>Specific date:</span>
+                              <Input
+                                type="date"
+                                value={
+                                  recurringEndDate
+                                    ? recurringEndDate
+                                        .toISOString()
+                                        .split("T")[0]
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  setRecurringEndDate(
+                                    e.target.value
+                                      ? new Date(e.target.value)
+                                      : null,
+                                  )
+                                }
+                                disabled={recurringEndAfter !== "date"}
+                              />
+                            </div>
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="never" id="end-never" />
+                          <Label htmlFor="end-never" className="cursor-pointer">
+                            Never (ongoing)
+                          </Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="flex items-center space-x-2 border-t pt-2">
+                    <Checkbox
+                      id="keep-same-groomer"
+                      checked={keepSameGroomer}
+                      onCheckedChange={(checked) =>
+                        setKeepSameGroomer(checked === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="keep-same-groomer"
+                      className="cursor-pointer"
+                    >
+                      Keep same groomer for all appointments
+                    </Label>
+                  </div>
+
+                  {recurringEnabled && (
+                    <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-3">
+                      <p className="text-sm text-green-800">
+                        <strong>Save 10% with recurring</strong> — $
+                        {finalPrice.finalPrice.toFixed(2)} instead of $
+                        {finalPrice.originalPrice.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
+            {/* Package Redemption */}
+            {customerPackages.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Use Package Credit
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {customerPackages.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      className="bg-muted flex items-center justify-between rounded-md p-3"
+                    >
+                      <div>
+                        <p className="font-medium">{pkg.name}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {pkg.creditsRemaining} of {pkg.creditsTotal} credits
+                          remaining
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Valid until{" "}
+                          {isMounted
+                            ? pkg.validUntil.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`use-package-${pkg.id}`}
+                          checked={
+                            useExistingPackage && selectedPackageId === pkg.id
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setUseExistingPackage(true);
+                              setSelectedPackageId(pkg.id);
+                              setUpgradeToVIP(false); // Can't use both
+                            } else {
+                              setUseExistingPackage(false);
+                              setSelectedPackageId(null);
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`use-package-${pkg.id}`}
+                          className="cursor-pointer"
+                        >
+                          Use 1 credit
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Package Upsell */}
+            {!useExistingPackage && availablePackages.length > 0 && (
+              <Card className="border-primary/50 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="text-primary size-4" />
+                    Save More with a Package
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {availablePackages.map((pkg) => (
+                    <div key={pkg.id} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{pkg.name}</p>
+                          <p className="text-muted-foreground text-sm">
+                            {pkg.description}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-primary text-lg font-bold">
+                            ${pkg.packagePrice}
+                          </p>
+                          <p className="text-muted-foreground text-xs line-through">
+                            ${pkg.totalValue}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-green-200 bg-green-50 p-2">
+                        <p className="text-sm text-green-800">
+                          <strong>
+                            Save ${pkg.savings} ({pkg.savingsPercentage}% off)
+                          </strong>{" "}
+                          — ${pkg.savings} off today&apos;s booking
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`upsell-package-${pkg.id}`}
+                          checked={
+                            upsellPackage && selectedUpsellPackageId === pkg.id
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setUpsellPackage(true);
+                              setSelectedUpsellPackageId(pkg.id);
+                              setUpgradeToVIP(false); // Can't use both
+                            } else {
+                              setUpsellPackage(false);
+                              setSelectedUpsellPackageId(null);
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`upsell-package-${pkg.id}`}
+                          className="cursor-pointer"
+                        >
+                          Add {pkg.name} and save ${pkg.savings} today
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Membership Upsell */}
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Save More with a Package
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Star className="text-primary size-4" />
+                  Upgrade to VIP Membership
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {availablePackages.map((pkg) => (
-                  <div key={pkg.id} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{pkg.name}</p>
-                        <p className="text-sm text-muted-foreground">{pkg.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-primary">${pkg.packagePrice}</p>
-                        <p className="text-xs text-muted-foreground line-through">${pkg.totalValue}</p>
-                      </div>
-                    </div>
-                    <div className="bg-green-50 border border-green-200 rounded-md p-2">
-                      <p className="text-sm text-green-800">
-                        <strong>Save ${pkg.savings} ({pkg.savingsPercentage}% off)</strong> — ${pkg.savings} off today's booking
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`upsell-package-${pkg.id}`}
-                        checked={upsellPackage && selectedUpsellPackageId === pkg.id}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setUpsellPackage(true);
-                            setSelectedUpsellPackageId(pkg.id);
-                            setUpgradeToVIP(false); // Can't use both
-                          } else {
-                            setUpsellPackage(false);
-                            setSelectedUpsellPackageId(null);
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`upsell-package-${pkg.id}`} className="cursor-pointer">
-                        Add {pkg.name} and save ${pkg.savings} today
-                      </Label>
-                    </div>
-                  </div>
-                ))}
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <strong>${membershipPlan.monthlyPrice}/month</strong> — Get{" "}
+                    {membershipPlan.discountPercentage}% off all grooming
+                    services
+                  </p>
+                  <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+                    {membershipPlan.perks.map((perk, index) => (
+                      <li key={index}>{perk}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-green-200 bg-green-50 p-2">
+                  <p className="text-sm text-green-800">
+                    <strong>
+                      Save {membershipPlan.discountPercentage}% on this booking
+                    </strong>{" "}
+                    — $
+                    {finalPrice.originalPrice *
+                      (membershipPlan.discountPercentage / 100)}{" "}
+                    off today
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="upgrade-vip"
+                    checked={upgradeToVIP}
+                    onCheckedChange={(checked) => {
+                      setUpgradeToVIP(checked === true);
+                      if (checked) {
+                        setUseExistingPackage(false); // Can't use both
+                        setSelectedPackageId(null);
+                        setUpsellPackage(false);
+                        setSelectedUpsellPackageId(null);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="upgrade-vip" className="cursor-pointer">
+                    Upgrade to VIP for ${membershipPlan.monthlyPrice}/month and
+                    get {membershipPlan.discountPercentage}% off this booking
+                  </Label>
+                </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Membership Upsell */}
-          <Card className="border-primary/50 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Star className="h-4 w-4 text-primary" />
-                Upgrade to VIP Membership
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm">
-                  <strong>${membershipPlan.monthlyPrice}/month</strong> — Get {membershipPlan.discountPercentage}% off all grooming services
-                </p>
-                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                  {membershipPlan.perks.map((perk, index) => (
-                    <li key={index}>{perk}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-md p-2">
-                <p className="text-sm text-green-800">
-                  <strong>Save {membershipPlan.discountPercentage}% on this booking</strong> — ${finalPrice.originalPrice * (membershipPlan.discountPercentage / 100)} off today
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="upgrade-vip"
-                  checked={upgradeToVIP}
-                  onCheckedChange={(checked) => {
-                    setUpgradeToVIP(checked === true);
-                    if (checked) {
-                      setUseExistingPackage(false); // Can't use both
-                      setSelectedPackageId(null);
-                      setUpsellPackage(false);
-                      setSelectedUpsellPackageId(null);
-                    }
-                  }}
-                />
-                <Label htmlFor="upgrade-vip" className="cursor-pointer">
-                  Upgrade to VIP for ${membershipPlan.monthlyPrice}/month and get {membershipPlan.discountPercentage}% off this booking
-                </Label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Price Summary */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Subtotal</p>
-                  <p className="text-sm font-medium">${finalPrice.originalPrice.toFixed(2)}</p>
+            {/* Price Summary */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-sm">Subtotal</p>
+                    <p className="text-sm font-medium">
+                      ${finalPrice.originalPrice.toFixed(2)}
+                    </p>
+                  </div>
+                  {finalPrice.discount > 0 && (
+                    <div className="flex items-center justify-between text-green-600">
+                      <p className="text-sm">
+                        Discount ({finalPrice.discountReason})
+                      </p>
+                      <p className="text-sm font-medium">
+                        -${finalPrice.discount.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                  {useExistingPackage && (
+                    <div className="flex items-center justify-between text-green-600">
+                      <p className="text-sm">Package Credit</p>
+                      <p className="text-sm font-medium">
+                        -${finalPrice.originalPrice.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t pt-2">
+                    <p className="text-base font-semibold">Total</p>
+                    <p className="flex items-center gap-2 text-2xl font-bold">
+                      <DollarSign className="h-5 w-5" />
+                      {useExistingPackage ? (
+                        <span className="text-green-600">$0.00</span>
+                      ) : (
+                        <span>${finalPrice.finalPrice.toFixed(2)}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                {finalPrice.discount > 0 && (
-                  <div className="flex items-center justify-between text-green-600">
-                    <p className="text-sm">Discount ({finalPrice.discountReason})</p>
-                    <p className="text-sm font-medium">-${finalPrice.discount.toFixed(2)}</p>
+              </CardContent>
+            </Card>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep7}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContinueFromStep8}>
+                  Continue to Review
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 9: Client Details & Pet Profile Updates */}
+        {currentStep === 9 && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h4 className="font-semibold">Confirm your details</h4>
+              <p className="text-muted-foreground text-sm">
+                Please review and update your contact information and pet
+                details.
+              </p>
+            </div>
+
+            {/* Client Contact Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-name">
+                    Full Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="client-name"
+                    value={clientName}
+                    onChange={(e) => {
+                      setClientName(e.target.value);
+                      setFormErrors((prev) => {
+                        const { name: _name, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
+                    className={formErrors.name ? "border-destructive" : ""}
+                  />
+                  {formErrors.name && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-email">
+                    Email <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="client-email"
+                    type="email"
+                    value={clientEmail}
+                    onChange={(e) => {
+                      setClientEmail(e.target.value);
+                      setFormErrors((prev) => {
+                        const { email: _email, ...rest } = prev;
+                        return rest;
+                      });
+                    }}
+                    className={formErrors.email ? "border-destructive" : ""}
+                  />
+                  {formErrors.email && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.email}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    We&apos;ll send booking confirmations to this email
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-phone">
+                    Phone Number <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="client-phone"
+                      type="tel"
+                      value={clientPhone}
+                      onChange={(e) => {
+                        setClientPhone(e.target.value);
+                        setFormErrors((prev) => {
+                          const { phone: _phone, ...rest } = prev;
+                          return rest;
+                        });
+                        // Reset verification if phone changes
+                        if (phoneVerified) {
+                          setPhoneVerified(false);
+                          setPhoneVerificationSent(false);
+                          setPhoneVerificationCode("");
+                        }
+                      }}
+                      className={formErrors.phone ? "border-destructive" : ""}
+                      placeholder="(555) 123-4567"
+                    />
+                    {!phoneVerified && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendVerificationCode}
+                        disabled={
+                          !clientPhone ||
+                          !validatePhone(clientPhone) ||
+                          isSendingCode
+                        }
+                      >
+                        {isSendingCode ? (
+                          <>
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Send Code"
+                        )}
+                      </Button>
+                    )}
+                    {phoneVerified && (
+                      <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3">
+                        <CheckCircle2 className="size-4 text-green-600" />
+                        <span className="text-sm text-green-700">Verified</span>
+                      </div>
+                    )}
+                  </div>
+                  {formErrors.phone && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.phone}
+                    </p>
+                  )}
+                  {isNewClient && !phoneVerified && (
+                    <p className="text-muted-foreground text-xs">
+                      Phone verification required for new clients to prevent
+                      fake bookings
+                    </p>
+                  )}
+
+                  {/* Phone Verification Code Input */}
+                  {phoneVerificationSent && !phoneVerified && (
+                    <div className="bg-muted mt-2 space-y-2 rounded-md p-3">
+                      <Label htmlFor="verification-code">
+                        Enter verification code
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="verification-code"
+                          type="text"
+                          value={phoneVerificationCode}
+                          onChange={(e) => {
+                            const value = e.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 6);
+                            setPhoneVerificationCode(value);
+                            setFormErrors((prev) => {
+                              const {
+                                verificationCode: _verificationCode,
+                                ...rest
+                              } = prev;
+                              return rest;
+                            });
+                          }}
+                          placeholder="000000"
+                          maxLength={6}
+                          className={
+                            formErrors.verificationCode
+                              ? "border-destructive"
+                              : ""
+                          }
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleVerifyCode}
+                          disabled={
+                            !phoneVerificationCode ||
+                            phoneVerificationCode.length !== 6 ||
+                            isVerifyingPhone
+                          }
+                        >
+                          {isVerifyingPhone ? (
+                            <>
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            "Verify"
+                          )}
+                        </Button>
+                      </div>
+                      {formErrors.verificationCode && (
+                        <p className="text-destructive text-sm">
+                          {formErrors.verificationCode}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-xs">
+                        Enter the 6-digit code sent to {clientPhone}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pet Behavior Update */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Pet Behavior Update - {selectedPet?.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pet-behavior">
+                    Any changes since last visit?
+                  </Label>
+                  <p className="text-muted-foreground mb-2 text-xs">
+                    Please let us know about any new allergies, injuries, or
+                    aggression triggers
+                  </p>
+                  <Textarea
+                    id="pet-behavior"
+                    value={petBehaviorUpdate}
+                    onChange={(e) => setPetBehaviorUpdate(e.target.value)}
+                    placeholder="e.g., New allergy to lavender, recent leg injury, gets anxious around loud noises..."
+                    rows={4}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pet Coat Photo Upload */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Current Coat Condition Photo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="coat-photo">
+                    Upload current photo of {selectedPet?.name}&apos;s coat
+                    condition
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    <strong className="text-primary">Helps us prepare!</strong>{" "}
+                    This helps our groomers understand the current condition of
+                    your pet&apos;s coat.
+                  </p>
+                  {!petCoatPhoto ? (
+                    <div className="border-muted-foreground/25 rounded-lg border-2 border-dashed p-6 text-center">
+                      <input
+                        type="file"
+                        id="coat-photo"
+                        accept="image/*"
+                        onChange={handleCoatPhotoUpload}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="coat-photo"
+                        className="flex cursor-pointer flex-col items-center gap-2"
+                      >
+                        <ImageIcon className="text-muted-foreground h-8 w-8" />
+                        <span className="text-muted-foreground text-sm">
+                          Click to upload or drag and drop
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          PNG, JPG up to 5MB
+                        </span>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="relative h-48 w-full overflow-hidden rounded-lg border">
+                        <Image
+                          src={URL.createObjectURL(petCoatPhoto)}
+                          alt="Pet coat condition"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={handleRemoveCoatPhoto}
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </div>
+                      <p className="text-muted-foreground text-xs">
+                        {petCoatPhoto.name} (
+                        {(petCoatPhoto.size / 1024).toFixed(1)} KB)
+                      </p>
+                    </div>
+                  )}
+                  {formErrors.coatPhoto && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.coatPhoto}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Special Instructions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Special Instructions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="special-instructions">
+                    Additional notes or special requests
+                  </Label>
+                  <Textarea
+                    id="special-instructions"
+                    value={specialInstructions}
+                    onChange={(e) => {
+                      setSpecialInstructions(e.target.value);
+                      setFormErrors((prev) => {
+                        const {
+                          specialInstructions: _specialInstructions,
+                          ...rest
+                        } = prev;
+                        return rest;
+                      });
+                    }}
+                    placeholder="Any additional information you'd like our groomers to know..."
+                    rows={4}
+                    maxLength={500}
+                    className={
+                      formErrors.specialInstructions ? "border-destructive" : ""
+                    }
+                  />
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-xs">
+                      {formErrors.specialInstructions && (
+                        <span className="text-destructive">
+                          {formErrors.specialInstructions}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {specialInstructions.length}/500 characters
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep8}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleContinueFromStep9}>
+                  Continue to Review
+                  <ArrowRight className="ml-2 size-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 10: Review & Deposit */}
+        {currentStep === 10 && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h4 className="font-semibold">Booking Summary</h4>
+              <p className="text-muted-foreground text-sm">
+                Please review your booking details and complete payment.
+              </p>
+            </div>
+
+            {/* Booking Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Booking Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Service */}
+                <div className="flex items-center justify-between border-b py-2">
+                  <div>
+                    <p className="font-medium">
+                      {selectedServiceCategoryName}
+                      {selectedVariantName && ` (${selectedVariantName})`}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedPet?.name} • {formatDuration(calculatedDuration)}
+                    </p>
+                  </div>
+                  <p className="font-semibold">${calculatedPrice.toFixed(2)}</p>
+                </div>
+
+                {/* Add-ons */}
+                {selectedAddOnsList.length > 0 && (
+                  <div className="space-y-2 border-b py-2">
+                    {selectedAddOnsList.map((addon) => (
+                      <div
+                        key={addon?.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-sm">
+                            +
+                          </span>
+                          <p className="text-sm">{addon?.name}</p>
+                          <span className="text-muted-foreground text-xs">
+                            (+{addon?.durationMinutes} mins)
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium">
+                          +${addon?.price.toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
-                {useExistingPackage && (
-                  <div className="flex items-center justify-between text-green-600">
-                    <p className="text-sm">Package Credit</p>
-                    <p className="text-sm font-medium">-${finalPrice.originalPrice.toFixed(2)}</p>
+
+                {/* Groomer */}
+                <div className="flex items-center justify-between border-b py-2">
+                  <div>
+                    <p className="font-medium">Groomer</p>
+                    <p className="text-muted-foreground text-sm">
+                      {selectedGroomerName}
+                    </p>
                   </div>
-                )}
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <p className="text-base font-semibold">Total</p>
-                  <p className="text-2xl font-bold flex items-center gap-2">
+                  {groomerSurcharge !== 0 && (
+                    <p
+                      className={`text-sm font-medium ${groomerSurcharge > 0 ? "" : `text-green-600`} `}
+                    >
+                      {groomerSurcharge > 0 ? "+" : ""}$
+                      {groomerSurcharge.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Location */}
+                <div className="flex items-center justify-between border-b py-2">
+                  <div>
+                    <p className="font-medium">Location</p>
+                    <p className="text-muted-foreground text-sm">
+                      {serviceLocation === "mobile"
+                        ? "Mobile van at"
+                        : "Salon at"}{" "}
+                      {locationDisplay}
+                    </p>
+                  </div>
+                  {serviceLocation === "mobile" && (
+                    <MapPin className="text-muted-foreground size-4" />
+                  )}
+                </div>
+
+                {/* Date & Time */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <p className="font-medium">Date & Time</p>
+                    <p className="text-muted-foreground text-sm">
+                      {formattedDateTime}
+                    </p>
+                  </div>
+                  <Calendar className="text-muted-foreground size-4" />
+                </div>
+
+                {/* Duration */}
+                <div className="flex items-center justify-between border-t py-2">
+                  <div>
+                    <p className="font-medium">Total Duration</p>
+                  </div>
+                  <p className="font-semibold">
+                    {formatDuration(totalDurationWithAddOns)}
+                  </p>
+                </div>
+
+                {/* Total Price */}
+                <div className="flex items-center justify-between border-t pt-4">
+                  <p className="text-lg font-semibold">Total</p>
+                  <p className="flex items-center gap-2 text-2xl font-bold">
                     <DollarSign className="h-5 w-5" />
                     {useExistingPackage ? (
                       <span className="text-green-600">$0.00</span>
@@ -3959,579 +5061,161 @@ export function GroomingBookingFlow({ open, onOpenChange }: GroomingBookingFlowP
                     )}
                   </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep7}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleContinueFromStep8}>
-                Continue to Review
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Step 9: Client Details & Pet Profile Updates */}
-        {currentStep === 9 && (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h4 className="font-semibold">Confirm your details</h4>
-            <p className="text-sm text-muted-foreground">
-              Please review and update your contact information and pet details.
-            </p>
-          </div>
-
-          {/* Client Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="client-name">
-                  Full Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="client-name"
-                  value={clientName}
-                  onChange={(e) => {
-                    setClientName(e.target.value);
-                    setFormErrors((prev) => {
-                      const { name, ...rest } = prev;
-                      return rest;
-                    });
-                  }}
-                  className={formErrors.name ? "border-destructive" : ""}
-                />
-                {formErrors.name && (
-                  <p className="text-sm text-destructive">{formErrors.name}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-email">
-                  Email <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="client-email"
-                  type="email"
-                  value={clientEmail}
-                  onChange={(e) => {
-                    setClientEmail(e.target.value);
-                    setFormErrors((prev) => {
-                      const { email, ...rest } = prev;
-                      return rest;
-                    });
-                  }}
-                  className={formErrors.email ? "border-destructive" : ""}
-                />
-                {formErrors.email && (
-                  <p className="text-sm text-destructive">{formErrors.email}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  We'll send booking confirmations to this email
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="client-phone">
-                  Phone Number <span className="text-destructive">*</span>
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="client-phone"
-                    type="tel"
-                    value={clientPhone}
-                    onChange={(e) => {
-                      setClientPhone(e.target.value);
-                      setFormErrors((prev) => {
-                        const { phone, ...rest } = prev;
-                        return rest;
-                      });
-                      // Reset verification if phone changes
-                      if (phoneVerified) {
-                        setPhoneVerified(false);
-                        setPhoneVerificationSent(false);
-                        setPhoneVerificationCode("");
-                      }
-                    }}
-                    className={formErrors.phone ? "border-destructive" : ""}
-                    placeholder="(555) 123-4567"
-                  />
-                  {!phoneVerified && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleSendVerificationCode}
-                      disabled={!clientPhone || !validatePhone(clientPhone) || isSendingCode}
-                    >
-                      {isSendingCode ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        "Send Code"
-                      )}
-                    </Button>
-                  )}
-                  {phoneVerified && (
-                    <div className="flex items-center gap-2 px-3 bg-green-50 border border-green-200 rounded-md">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-green-700">Verified</span>
-                    </div>
-                  )}
-                </div>
-                {formErrors.phone && (
-                  <p className="text-sm text-destructive">{formErrors.phone}</p>
-                )}
-                {isNewClient && !phoneVerified && (
-                  <p className="text-xs text-muted-foreground">
-                    Phone verification required for new clients to prevent fake bookings
+                {finalPrice.discount > 0 && (
+                  <p className="text-right text-sm text-green-600">
+                    You saved ${finalPrice.savings.toFixed(2)}!
                   </p>
-                )}
-
-                {/* Phone Verification Code Input */}
-                {phoneVerificationSent && !phoneVerified && (
-                  <div className="space-y-2 mt-2 p-3 bg-muted rounded-md">
-                    <Label htmlFor="verification-code">Enter verification code</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="verification-code"
-                        type="text"
-                        value={phoneVerificationCode}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                          setPhoneVerificationCode(value);
-                          setFormErrors((prev) => {
-                            const { verificationCode, ...rest } = prev;
-                            return rest;
-                          });
-                        }}
-                        placeholder="000000"
-                        maxLength={6}
-                        className={formErrors.verificationCode ? "border-destructive" : ""}
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleVerifyCode}
-                        disabled={!phoneVerificationCode || phoneVerificationCode.length !== 6 || isVerifyingPhone}
-                      >
-                        {isVerifyingPhone ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Verifying...
-                          </>
-                        ) : (
-                          "Verify"
-                        )}
-                      </Button>
-                    </div>
-                    {formErrors.verificationCode && (
-                      <p className="text-sm text-destructive">{formErrors.verificationCode}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Enter the 6-digit code sent to {clientPhone}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pet Behavior Update */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Pet Behavior Update - {selectedPet?.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pet-behavior">
-                  Any changes since last visit?
-                </Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Please let us know about any new allergies, injuries, or aggression triggers
-                </p>
-                <Textarea
-                  id="pet-behavior"
-                  value={petBehaviorUpdate}
-                  onChange={(e) => setPetBehaviorUpdate(e.target.value)}
-                  placeholder="e.g., New allergy to lavender, recent leg injury, gets anxious around loud noises..."
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pet Coat Photo Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Current Coat Condition Photo
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="coat-photo">
-                  Upload current photo of {selectedPet?.name}'s coat condition
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-primary">Helps us prepare!</strong> This helps our groomers understand the current condition of your pet's coat.
-                </p>
-                {!petCoatPhoto ? (
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                    <input
-                      type="file"
-                      id="coat-photo"
-                      accept="image/*"
-                      onChange={handleCoatPhotoUpload}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="coat-photo"
-                      className="cursor-pointer flex flex-col items-center gap-2"
-                    >
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Click to upload or drag and drop
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        PNG, JPG up to 5MB
-                      </span>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border">
-                      <img
-                        src={URL.createObjectURL(petCoatPhoto)}
-                        alt="Pet coat condition"
-                        className="w-full h-full object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={handleRemoveCoatPhoto}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {petCoatPhoto.name} ({(petCoatPhoto.size / 1024).toFixed(1)} KB)
-                    </p>
-                  </div>
-                )}
-                {formErrors.coatPhoto && (
-                  <p className="text-sm text-destructive">{formErrors.coatPhoto}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Special Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Special Instructions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="special-instructions">
-                  Additional notes or special requests
-                </Label>
-                <Textarea
-                  id="special-instructions"
-                  value={specialInstructions}
-                  onChange={(e) => {
-                    setSpecialInstructions(e.target.value);
-                    setFormErrors((prev) => {
-                      const { specialInstructions, ...rest } = prev;
-                      return rest;
-                    });
-                  }}
-                  placeholder="Any additional information you'd like our groomers to know..."
-                  rows={4}
-                  maxLength={500}
-                  className={formErrors.specialInstructions ? "border-destructive" : ""}
-                />
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {formErrors.specialInstructions && (
-                      <span className="text-destructive">{formErrors.specialInstructions}</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {specialInstructions.length}/500 characters
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep8}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleContinueFromStep9}>
-                Continue to Review
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* Step 10: Review & Deposit */}
-        {currentStep === 10 && (
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <h4 className="font-semibold">Booking Summary</h4>
-            <p className="text-sm text-muted-foreground">
-              Please review your booking details and complete payment.
-            </p>
-          </div>
-
-          {/* Booking Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Booking Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Service */}
-              <div className="flex items-center justify-between py-2 border-b">
-                <div>
-                  <p className="font-medium">
-                    {selectedServiceCategoryName}
-                    {selectedVariantName && ` (${selectedVariantName})`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedPet?.name} • {formatDuration(calculatedDuration)}
-                  </p>
-                </div>
-                <p className="font-semibold">${calculatedPrice.toFixed(2)}</p>
-              </div>
-
-              {/* Add-ons */}
-              {selectedAddOnsList.length > 0 && (
-                <div className="space-y-2 py-2 border-b">
-                  {selectedAddOnsList.map((addon) => (
-                    <div key={addon?.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">+</span>
-                        <p className="text-sm">{addon?.name}</p>
-                        <span className="text-xs text-muted-foreground">
-                          (+{addon?.durationMinutes} mins)
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium">+${addon?.price.toFixed(2)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Groomer */}
-              <div className="flex items-center justify-between py-2 border-b">
-                <div>
-                  <p className="font-medium">Groomer</p>
-                  <p className="text-sm text-muted-foreground">{selectedGroomerName}</p>
-                </div>
-                {groomerSurcharge !== 0 && (
-                  <p className={`text-sm font-medium ${groomerSurcharge > 0 ? "" : "text-green-600"}`}>
-                    {groomerSurcharge > 0 ? "+" : ""}${groomerSurcharge.toFixed(2)}
-                  </p>
-                )}
-              </div>
-
-              {/* Location */}
-              <div className="flex items-center justify-between py-2 border-b">
-                <div>
-                  <p className="font-medium">Location</p>
-                  <p className="text-sm text-muted-foreground">
-                    {serviceLocation === "mobile" ? "Mobile van at" : "Salon at"} {locationDisplay}
-                  </p>
-                </div>
-                {serviceLocation === "mobile" && (
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-
-              {/* Date & Time */}
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="font-medium">Date & Time</p>
-                  <p className="text-sm text-muted-foreground">{formattedDateTime}</p>
-                </div>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </div>
-
-              {/* Duration */}
-              <div className="flex items-center justify-between py-2 border-t">
-                <div>
-                  <p className="font-medium">Total Duration</p>
-                </div>
-                <p className="font-semibold">{formatDuration(totalDurationWithAddOns)}</p>
-              </div>
-
-              {/* Total Price */}
-              <div className="flex items-center justify-between pt-4 border-t">
-                <p className="text-lg font-semibold">Total</p>
-                <p className="text-2xl font-bold flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  {useExistingPackage ? (
-                    <span className="text-green-600">$0.00</span>
-                  ) : (
-                    <span>${finalPrice.finalPrice.toFixed(2)}</span>
-                  )}
-                </p>
-              </div>
-              {finalPrice.discount > 0 && (
-                <p className="text-sm text-green-600 text-right">
-                  You saved ${finalPrice.savings.toFixed(2)}!
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Deposit Collection */}
-          {config.bookingRules.deposit.type !== "none" && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Payment Method</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <RadioGroup
-                  value={depositPaymentMethod || ""}
-                  onValueChange={(value) => setDepositPaymentMethod(value as "full" | "deposit" | "hold" | "venue")}
-                >
-                  {availableDepositMethods.map((method) => (
-                    <Card
-                      key={method.id}
-                      className={`cursor-pointer transition-all ${
-                        depositPaymentMethod === method.id
-                          ? "ring-2 ring-primary border-primary"
-                          : "hover:border-primary/50"
-                      }`}
-                      onClick={() => setDepositPaymentMethod(method.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value={method.id} id={method.id} />
-                          <Label htmlFor={method.id} className="cursor-pointer flex-1">
-                            <div>
-                              <p className="font-medium">{method.label}</p>
-                              <p className="text-xs text-muted-foreground">{method.description}</p>
-                            </div>
-                          </Label>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </RadioGroup>
-                {depositPaymentMethod && depositPaymentMethod !== "venue" && depositPaymentMethod !== "hold" && (
-                  <div className="bg-muted rounded-md p-3 mt-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">
-                        {depositPaymentMethod === "full" ? "Total amount" : "Deposit amount"}
-                      </p>
-                      <p className="text-lg font-bold">${depositAmount.toFixed(2)}</p>
-                    </div>
-                    {depositPaymentMethod === "deposit" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Remaining ${(finalPrice.finalPrice - depositAmount).toFixed(2)} due at service
-                      </p>
-                    )}
-                  </div>
                 )}
               </CardContent>
             </Card>
-          )}
 
-          {/* Policy Acceptance */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="policy-accept"
-                    checked={policyAccepted}
-                    onCheckedChange={(checked) => {
-                      setPolicyAccepted(checked === true);
-                      setFormErrors((prev) => {
-                        const { policy, ...rest } = prev;
-                        return rest;
-                      });
-                    }}
-                    className={formErrors.policy ? "border-destructive" : ""}
-                  />
-                  <Label htmlFor="policy-accept" className="cursor-pointer flex-1">
-                    <span>
-                      I agree to the{" "}
-                      <Link
-                        href="/terms"
-                        target="_blank"
-                        className="text-primary hover:underline"
-                        onClick={(e) => e.stopPropagation()}
+            {/* Deposit Collection */}
+            {config.bookingRules.deposit.type !== "none" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Payment Method</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <RadioGroup
+                    value={depositPaymentMethod || ""}
+                    onValueChange={(value) =>
+                      setDepositPaymentMethod(
+                        value as "full" | "deposit" | "hold" | "venue",
+                      )
+                    }
+                  >
+                    {availableDepositMethods.map((method) => (
+                      <Card
+                        key={method.id}
+                        className={`cursor-pointer transition-all ${
+                          depositPaymentMethod === method.id
+                            ? "border-primary ring-primary ring-2"
+                            : "hover:border-primary/50"
+                        } `}
+                        onClick={() => setDepositPaymentMethod(method.id)}
                       >
-                        24-hour cancellation policy
-                      </Link>
-                      {" "}({selectedFacility?.name || "facility"}'s specific terms)
-                    </span>
-                  </Label>
-                </div>
-                {formErrors.policy && (
-                  <p className="text-sm text-destructive">{formErrors.policy}</p>
-                )}
-                {formErrors.booking && (
-                  <p className="text-sm text-destructive">{formErrors.booking}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value={method.id} id={method.id} />
+                            <Label
+                              htmlFor={method.id}
+                              className="flex-1 cursor-pointer"
+                            >
+                              <div>
+                                <p className="font-medium">{method.label}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  {method.description}
+                                </p>
+                              </div>
+                            </Label>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </RadioGroup>
+                  {depositPaymentMethod &&
+                    depositPaymentMethod !== "venue" &&
+                    depositPaymentMethod !== "hold" && (
+                      <div className="bg-muted mt-2 rounded-md p-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">
+                            {depositPaymentMethod === "full"
+                              ? "Total amount"
+                              : "Deposit amount"}
+                          </p>
+                          <p className="text-lg font-bold">
+                            ${depositAmount.toFixed(2)}
+                          </p>
+                        </div>
+                        {depositPaymentMethod === "deposit" && (
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Remaining $
+                            {(finalPrice.finalPrice - depositAmount).toFixed(2)}{" "}
+                            due at service
+                          </p>
+                        )}
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={handleBackToStep9}>
-              Back
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+            {/* Policy Acceptance */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="policy-accept"
+                      checked={policyAccepted}
+                      onCheckedChange={(checked) => {
+                        setPolicyAccepted(checked === true);
+                        setFormErrors((prev) => {
+                          const { policy: _policy, ...rest } = prev;
+                          return rest;
+                        });
+                      }}
+                      className={formErrors.policy ? "border-destructive" : ""}
+                    />
+                    <Label
+                      htmlFor="policy-accept"
+                      className="flex-1 cursor-pointer"
+                    >
+                      <span>
+                        I agree to the{" "}
+                        <Link
+                          href="/terms"
+                          target="_blank"
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          24-hour cancellation policy
+                        </Link>{" "}
+                        ({selectedFacility?.name || "facility"}&apos;s specific
+                        terms)
+                      </span>
+                    </Label>
+                  </div>
+                  {formErrors.policy && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.policy}
+                    </p>
+                  )}
+                  {formErrors.booking && (
+                    <p className="text-destructive text-sm">
+                      {formErrors.booking}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between gap-2 border-t pt-4">
+              <Button variant="outline" onClick={handleBackToStep9}>
+                Back
               </Button>
-              <Button
-                onClick={handleBookAppointment}
-                disabled={!policyAccepted || isBooking}
-                className="min-w-[150px]"
-              >
-                {isBooking ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Booking...
-                  </>
-                ) : (
-                  "Book Appointment"
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBookAppointment}
+                  disabled={!policyAccepted || isBooking}
+                  className="min-w-[150px]"
+                >
+                  {isBooking ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : (
+                    "Book Appointment"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
         )}
       </DialogContent>
     </Dialog>

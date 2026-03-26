@@ -75,12 +75,12 @@ export function DigitalWaiversManager() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Total Waivers
                 </p>
                 <p className="text-2xl font-bold">{stats.totalWaivers}</p>
               </div>
-              <FileText className="h-8 w-8 text-muted-foreground" />
+              <FileText className="text-muted-foreground h-8 w-8" />
             </div>
           </CardContent>
         </Card>
@@ -89,7 +89,7 @@ export function DigitalWaiversManager() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Active
                 </p>
                 <p className="text-2xl font-bold text-green-600">
@@ -105,12 +105,12 @@ export function DigitalWaiversManager() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Total Signatures
                 </p>
                 <p className="text-2xl font-bold">{stats.totalSignatures}</p>
               </div>
-              <Edit className="h-8 w-8 text-muted-foreground" />
+              <Edit className="text-muted-foreground h-8 w-8" />
             </div>
           </CardContent>
         </Card>
@@ -119,7 +119,7 @@ export function DigitalWaiversManager() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Valid
                 </p>
                 <p className="text-2xl font-bold text-green-600">
@@ -135,7 +135,7 @@ export function DigitalWaiversManager() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Expired
                 </p>
                 <p className="text-2xl font-bold text-red-600">
@@ -162,7 +162,7 @@ export function DigitalWaiversManager() {
               <div className="flex items-center justify-between">
                 <CardTitle>Waiver Templates</CardTitle>
                 <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Waiver
                 </Button>
               </div>
@@ -208,9 +208,9 @@ export function DigitalWaiversManager() {
                       </TableCell>
                       <TableCell>
                         {waiver.requiresSignature ? (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="size-4 text-green-600" />
                         ) : (
-                          <XCircle className="h-4 w-4 text-gray-400" />
+                          <XCircle className="size-4 text-gray-400" />
                         )}
                       </TableCell>
                       <TableCell>
@@ -218,7 +218,7 @@ export function DigitalWaiversManager() {
                           ? `${waiver.expiryDays} days`
                           : "Never"}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-sm">
                         {new Date(waiver.updatedAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
@@ -247,16 +247,16 @@ export function DigitalWaiversManager() {
                 <CardTitle>E-Signatures</CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
                     <Input
                       placeholder="Search client, pet, waiver..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8 w-64"
+                      className="w-64 pl-8"
                     />
                   </div>
                   <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="mr-2 size-4" />
                     Export
                   </Button>
                 </div>
@@ -287,7 +287,7 @@ export function DigitalWaiversManager() {
                       <TableCell className="text-sm">
                         {new Date(signature.signedAt).toLocaleString()}
                       </TableCell>
-                      <TableCell className="text-xs font-mono text-muted-foreground">
+                      <TableCell className="text-muted-foreground font-mono text-xs">
                         {signature.ipAddress}
                       </TableCell>
                       <TableCell>
@@ -295,7 +295,7 @@ export function DigitalWaiversManager() {
                           {signature.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-muted-foreground text-sm">
                         {signature.expiresAt
                           ? new Date(signature.expiresAt).toLocaleDateString()
                           : "Never"}

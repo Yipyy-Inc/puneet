@@ -2,19 +2,26 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Loader2, ArrowLeft } from "lucide-react";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -31,19 +38,20 @@ function ResetPasswordForm() {
       setIsValidToken(false);
       return;
     }
+
+    const validateToken = async (t: string) => {
+      try {
+        // TODO: Replace with actual API call to validate token
+        await checkResetToken(t);
+        setIsValidToken(true);
+      } catch {
+        setIsValidToken(false);
+        toast.error("Invalid or expired reset link");
+      }
+    };
+
     validateToken(token);
   }, [token]);
-
-  const validateToken = async (token: string) => {
-    try {
-      // TODO: Replace with actual API call to validate token
-      await checkResetToken(token);
-      setIsValidToken(true);
-    } catch (error) {
-      setIsValidToken(false);
-      toast.error("Invalid or expired reset link");
-    }
-  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -79,30 +87,32 @@ function ResetPasswordForm() {
       toast.success("Password reset successfully!");
       router.push("/customer/auth/login");
     } catch (error: any) {
-      toast.error(error.message || "Failed to reset password. Please try again.");
+      toast.error(
+        error.message || "Failed to reset password. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   // Placeholder functions - replace with actual API calls
-  const checkResetToken = async (token: string) => {
+  const checkResetToken = async (_token: string) => {
     // TODO: API call to validate reset token
     await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
-  const resetPassword = async (token: string, password: string) => {
+  const resetPassword = async (_token: string, _password: string) => {
     // TODO: API call to reset password
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
   if (isValidToken === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+      <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             </div>
           </CardContent>
         </Card>
@@ -112,19 +122,27 @@ function ResetPasswordForm() {
 
   if (isValidToken === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+      <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
-            <div className="flex justify-center mb-4">
-              <img src="/yipyy-transparent.png" alt="Yipyy" className="h-12" />
+            <div className="mb-4 flex justify-center">
+              <Image
+                src="/yipyy-transparent.png"
+                alt="Yipyy"
+                width={120}
+                height={48}
+                className="h-12 w-auto"
+              />
             </div>
-            <CardTitle className="text-2xl font-bold">Invalid reset link</CardTitle>
+            <CardTitle className="text-2xl font-bold">
+              Invalid reset link
+            </CardTitle>
             <CardDescription>
               This password reset link is invalid or has expired
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="bg-destructive/10 text-destructive rounded-lg p-4 text-sm">
               Please request a new password reset link.
             </div>
             <div className="flex flex-col gap-2">
@@ -139,7 +157,7 @@ function ResetPasswordForm() {
                 onClick={() => router.push("/customer/auth/login")}
                 className="w-full"
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
+                <ArrowLeft className="mr-2 size-4" />
                 Back to login
               </Button>
             </div>
@@ -150,23 +168,29 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+    <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <img src="/yipyy-transparent.png" alt="Yipyy" className="h-12" />
+          <div className="mb-4 flex justify-center">
+            <Image
+              src="/yipyy-transparent.png"
+              alt="Yipyy"
+              width={120}
+              height={48}
+              className="h-12 w-auto"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
-          <CardDescription>
-            Enter your new password below
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold">
+            Reset your password
+          </CardTitle>
+          <CardDescription>Enter your new password below</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -175,55 +199,58 @@ function ResetPasswordForm() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="pl-9 pr-9"
+                  className="px-9"
                   aria-invalid={errors.password ? "true" : "false"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
+                <p className="text-destructive text-sm">{errors.password}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
-                  className="pl-9 pr-9"
+                  className="px-9"
                   aria-invalid={errors.confirmPassword ? "true" : "false"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   )}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-sm text-destructive">
+                <p className="text-destructive text-sm">
                   {errors.confirmPassword}
                 </p>
               )}
@@ -232,7 +259,7 @@ function ResetPasswordForm() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Resetting password...
                 </>
               ) : (
@@ -244,9 +271,9 @@ function ResetPasswordForm() {
           <div className="text-center">
             <Link
               href="/customer/auth/login"
-              className="text-sm text-primary hover:underline inline-flex items-center"
+              className="text-primary inline-flex items-center text-sm hover:underline"
             >
-              <ArrowLeft className="mr-1 h-3 w-3" />
+              <ArrowLeft className="mr-1 size-3" />
               Back to login
             </Link>
           </div>
@@ -260,11 +287,11 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+        <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
               <div className="flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
               </div>
             </CardContent>
           </Card>

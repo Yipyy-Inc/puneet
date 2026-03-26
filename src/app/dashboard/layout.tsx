@@ -32,10 +32,10 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset className="flex flex-col min-h-screen w-full overflow-x-hidden">
-        <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/50 bg-background/80 backdrop-blur-md px-6">
+      <SidebarInset className="flex min-h-screen w-full flex-col overflow-x-hidden">
+        <header className="border-border/50 bg-background/80 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-6 backdrop-blur-md">
           <div className="flex items-center gap-4">
-            <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted transition-colors" />
+            <SidebarTrigger className="hover:bg-muted h-9 w-9 rounded-xl transition-colors" />
           </div>
 
           <GlobalSearchNext className="max-w-[520px]" />
@@ -50,7 +50,7 @@ export default async function DashboardLayout({
           </div>
         </header>
         <main className="flex-1">{children}</main>
-        <footer className="border-t px-4 py-3 text-xs text-muted-foreground flex items-center justify-center">
+        <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs">
           © 2026 Yipyy. All rights reserved.
         </footer>
       </SidebarInset>

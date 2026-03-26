@@ -60,20 +60,20 @@ export function MobileAppSettings() {
             <div className="space-y-2">
               <Label>App Icon</Label>
               <div className="flex items-center gap-3">
-                <div className="h-16 w-16 bg-slate-100 rounded-lg border-2 flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
                   <ImageIcon className="h-8 w-8 text-slate-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-muted-foreground mb-2 text-sm">
                     {settings.appIcon}
                   </p>
                   <Button size="sm" variant="outline">
-                    <Upload className="h-3 w-3 mr-2" />
+                    <Upload className="mr-2 h-3 w-3" />
                     Upload Icon
                   </Button>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Recommended: 1024x1024px PNG
               </p>
             </div>
@@ -81,20 +81,20 @@ export function MobileAppSettings() {
             <div className="space-y-2">
               <Label>Splash Screen</Label>
               <div className="flex items-center gap-3">
-                <div className="h-16 w-16 bg-slate-100 rounded-lg border-2 flex items-center justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 bg-slate-100">
                   <ImageIcon className="h-8 w-8 text-slate-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-muted-foreground mb-2 text-sm">
                     {settings.splashScreen}
                   </p>
                   <Button size="sm" variant="outline">
-                    <Upload className="h-3 w-3 mr-2" />
+                    <Upload className="mr-2 h-3 w-3" />
                     Upload Image
                   </Button>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Recommended: 2048x2732px PNG
               </p>
             </div>
@@ -122,7 +122,7 @@ export function MobileAppSettings() {
                   onChange={(e) =>
                     setSettings({ ...settings, primaryColor: e.target.value })
                   }
-                  className="w-20 h-10"
+                  className="h-10 w-20"
                 />
                 <Input
                   value={settings.primaryColor}
@@ -144,7 +144,7 @@ export function MobileAppSettings() {
                   onChange={(e) =>
                     setSettings({ ...settings, secondaryColor: e.target.value })
                   }
-                  className="w-20 h-10"
+                  className="h-10 w-20"
                 />
                 <Input
                   value={settings.secondaryColor}
@@ -166,7 +166,7 @@ export function MobileAppSettings() {
                   onChange={(e) =>
                     setSettings({ ...settings, accentColor: e.target.value })
                   }
-                  className="w-20 h-10"
+                  className="h-10 w-20"
                 />
                 <Input
                   value={settings.accentColor}
@@ -180,19 +180,19 @@ export function MobileAppSettings() {
           </div>
 
           {/* Color Preview */}
-          <div className="p-4 border rounded-lg bg-slate-50">
-            <p className="text-sm font-medium mb-3">Preview</p>
+          <div className="rounded-lg border bg-slate-50 p-4">
+            <p className="mb-3 text-sm font-medium">Preview</p>
             <div className="flex gap-3">
               <div
-                className="h-16 w-16 rounded-lg shadow-sm border-2"
+                className="h-16 w-16 rounded-lg border-2 shadow-sm"
                 style={{ backgroundColor: settings.primaryColor }}
               />
               <div
-                className="h-16 w-16 rounded-lg shadow-sm border-2"
+                className="h-16 w-16 rounded-lg border-2 shadow-sm"
                 style={{ backgroundColor: settings.secondaryColor }}
               />
               <div
-                className="h-16 w-16 rounded-lg shadow-sm border-2"
+                className="h-16 w-16 rounded-lg border-2 shadow-sm"
                 style={{ backgroundColor: settings.accentColor }}
               />
             </div>
@@ -293,16 +293,16 @@ export function MobileAppSettings() {
       <Card>
         <CardHeader>
           <CardTitle>Feature Toggles</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             Control which features are available in the mobile app
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
                 <p className="font-medium">Push Notifications</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enable push notifications for bookings, updates, etc.
                 </p>
               </div>
@@ -314,10 +314,10 @@ export function MobileAppSettings() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
                 <p className="font-medium">In-App Messaging</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Chat with customers directly in the app
                 </p>
               </div>
@@ -329,10 +329,10 @@ export function MobileAppSettings() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
                 <p className="font-medium">Live Camera Access</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Let customers view live pet cameras
                 </p>
               </div>
@@ -344,10 +344,10 @@ export function MobileAppSettings() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
                 <p className="font-medium">Booking Flow</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to book services via app
                 </p>
               </div>
@@ -359,10 +359,10 @@ export function MobileAppSettings() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="flex-1">
                 <p className="font-medium">Loyalty Program</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Show loyalty points and rewards
                 </p>
               </div>
@@ -420,7 +420,7 @@ export function MobileAppSettings() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="mr-2 size-4" />
             Export Config
           </Button>
           <Button>Save Changes</Button>

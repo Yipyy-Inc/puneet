@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   Home,
   Dog,
@@ -33,13 +34,8 @@ const MOCK_CUSTOMER_ID = 15;
 
 export function CustomerSidebar() {
   const { selectedFacility } = useCustomerFacility();
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const { activeModules } = useCustomServices();
-
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Check if customer has an active stay at the selected facility
   const hasActiveStay = useMemo(() => {
@@ -73,9 +69,8 @@ export function CustomerSidebar() {
     return customerAccessibleCameras.length > 0;
   }, [isMounted, hasActiveStay, hasCameraMembership]);
 
-  const menuSections: MenuSection[] = useMemo(
-    () => {
-      const sections: MenuSection[] = [
+  const menuSections: MenuSection[] = useMemo(() => {
+    const sections: MenuSection[] = [
       {
         label: "Overview",
         items: [
@@ -136,96 +131,88 @@ export function CustomerSidebar() {
           },
         ],
       },
-      ];
+    ];
 
-      // Add customer-visible custom service modules (only after mount to avoid hydration issues)
-      if (isMounted) {
-        const customModuleItems = activeModules
-          .filter((m) => m.onlineBooking.enabled && m.showInSidebar)
-          .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
-          .map((m) => ({
-            title: m.name,
-            url: `/customer/services/${m.slug}`,
-            icon: resolveIcon(m.icon),
-          }));
+    // Add customer-visible custom service modules (only after mount to avoid hydration issues)
+    if (isMounted) {
+      const customModuleItems = activeModules
+        .filter((m) => m.onlineBooking.enabled && m.showInSidebar)
+        .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
+        .map((m) => ({
+          title: m.name,
+          url: `/customer/services/${m.slug}`,
+          icon: resolveIcon(m.icon),
+        }));
 
-        if (customModuleItems.length > 0) {
-          sections.push({
-            label: "Additional Services",
-            items: customModuleItems,
-          });
-        }
-      }
-
-      // Only add cameras section if enabled (only after mount to avoid hydration issues)
-      if (isMounted && camerasEnabled) {
+      if (customModuleItems.length > 0) {
         sections.push({
-          label: "Live View",
-          items: [
-            {
-              title: "Live Cameras",
-              url: "/customer/cameras",
-              icon: Camera,
-            },
-          ],
+          label: "Additional Services",
+          items: customModuleItems,
         });
       }
+    }
 
+    // Only add cameras section if enabled (only after mount to avoid hydration issues)
+    if (isMounted && camerasEnabled) {
       sections.push({
-        label: "Account",
+        label: "Live View",
         items: [
           {
-            title: "Billing & Payments",
-            url: "/customer/billing",
-            icon: CreditCard,
-          },
-          {
-            title: "Loyalty & Rewards",
-            url: "/customer/rewards",
-            icon: Gift,
-          },
-          {
-            title: "Refer a Friend",
-            url: "/customer/refer",
-            icon: UserPlus,
-          },
-          {
-            title: "Documents & Agreements",
-            url: "/customer/documents",
-            icon: FileText,
-          },
-          {
-            title: "Household & Contacts",
-            url: "/customer/household",
-            icon: Users,
-          },
-          {
-            title: "Settings",
-            url: "/customer/settings",
-            icon: Settings,
+            title: "Live Cameras",
+            url: "/customer/cameras",
+            icon: Camera,
           },
         ],
       });
+    }
 
-      return sections;
-      },
-    [camerasEnabled, isMounted, activeModules],
-  );
+    sections.push({
+      label: "Account",
+      items: [
+        {
+          title: "Billing & Payments",
+          url: "/customer/billing",
+          icon: CreditCard,
+        },
+        {
+          title: "Loyalty & Rewards",
+          url: "/customer/rewards",
+          icon: Gift,
+        },
+        {
+          title: "Refer a Friend",
+          url: "/customer/refer",
+          icon: UserPlus,
+        },
+        {
+          title: "Documents & Agreements",
+          url: "/customer/documents",
+          icon: FileText,
+        },
+        {
+          title: "Household & Contacts",
+          url: "/customer/household",
+          icon: Users,
+        },
+        {
+          title: "Settings",
+          url: "/customer/settings",
+          icon: Settings,
+        },
+      ],
+    });
+
+    return sections;
+  }, [camerasEnabled, isMounted, activeModules]);
 
   const header = (
     <div className="flex flex-col gap-0.5">
-      <Link href="/customer/dashboard" className="font-semibold text-sm">
+      <Link href="/customer/dashboard" className="text-sm font-semibold">
         {isMounted && selectedFacility ? selectedFacility.name : "Yipyy"}
       </Link>
-      <span className="text-xs text-muted-foreground">Customer Portal</span>
+      <span className="text-muted-foreground text-xs">Customer Portal</span>
     </div>
   );
 
-  return (
-    <GenericSidebar
-      header={header}
-      menuSections={menuSections}
-    />
-  );
+  return <GenericSidebar header={header} menuSections={menuSections} />;
 }
-

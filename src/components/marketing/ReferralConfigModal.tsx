@@ -103,14 +103,14 @@ function RewardConfigCard({
 }) {
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
+          <Icon className="text-primary size-4" />
           <Label className="text-base">{title}</Label>
         </div>
-        <p className="text-sm text-muted-foreground -mt-2">{description}</p>
+        <p className="text-muted-foreground -mt-2 text-sm">{description}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Reward Type</Label>
             <Select value={rewardType} onValueChange={onRewardTypeChange}>
@@ -134,7 +134,9 @@ function RewardConfigCard({
               value={rewardValue}
               onChange={(e) => onRewardValueChange(e.target.value)}
               placeholder={
-                getValueType(rewardType) === "text" ? valuePlaceholder : "e.g., 25"
+                getValueType(rewardType) === "text"
+                  ? valuePlaceholder
+                  : "e.g., 25"
               }
             />
           </div>
@@ -208,12 +210,12 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-6 py-4 max-h-[65vh] overflow-y-auto pr-2">
+      <div className="max-h-[65vh] space-y-6 overflow-y-auto py-4 pr-2">
         {/* Enable/Disable */}
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
             <Label className="text-base">Enable Referral Program</Label>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Allow customers to refer friends and earn rewards
             </p>
           </div>
@@ -234,9 +236,15 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
               rewardType={formData.referrerRewardType}
               rewardValue={formData.referrerRewardValue}
               rewardDescription={formData.referrerRewardDescription}
-              onRewardTypeChange={(value) => setFormData({ ...formData, referrerRewardType: value })}
-              onRewardValueChange={(value) => setFormData({ ...formData, referrerRewardValue: value })}
-              onRewardDescriptionChange={(value) => setFormData({ ...formData, referrerRewardDescription: value })}
+              onRewardTypeChange={(value) =>
+                setFormData({ ...formData, referrerRewardType: value })
+              }
+              onRewardValueChange={(value) =>
+                setFormData({ ...formData, referrerRewardValue: value })
+              }
+              onRewardDescriptionChange={(value) =>
+                setFormData({ ...formData, referrerRewardDescription: value })
+              }
               valuePlaceholder="e.g., Free Grooming"
               descriptionPlaceholder="e.g., $25 credit for referring a friend"
             />
@@ -248,21 +256,27 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
               rewardType={formData.refereeRewardType}
               rewardValue={formData.refereeRewardValue}
               rewardDescription={formData.refereeRewardDescription}
-              onRewardTypeChange={(value) => setFormData({ ...formData, refereeRewardType: value })}
-              onRewardValueChange={(value) => setFormData({ ...formData, refereeRewardValue: value })}
-              onRewardDescriptionChange={(value) => setFormData({ ...formData, refereeRewardDescription: value })}
+              onRewardTypeChange={(value) =>
+                setFormData({ ...formData, refereeRewardType: value })
+              }
+              onRewardValueChange={(value) =>
+                setFormData({ ...formData, refereeRewardValue: value })
+              }
+              onRewardDescriptionChange={(value) =>
+                setFormData({ ...formData, refereeRewardDescription: value })
+              }
               valuePlaceholder="e.g., Free Bath"
               descriptionPlaceholder="e.g., 10% off first booking"
             />
 
             {/* Trigger Conditions */}
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-primary" />
+                  <Target className="text-primary size-4" />
                   <Label className="text-base">Trigger Conditions</Label>
                 </div>
-                <p className="text-sm text-muted-foreground -mt-2">
+                <p className="text-muted-foreground -mt-2 text-sm">
                   When should the referral reward be issued?
                 </p>
 
@@ -294,7 +308,10 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                       type="number"
                       value={formData.triggerThreshold}
                       onChange={(e) =>
-                        setFormData({ ...formData, triggerThreshold: e.target.value })
+                        setFormData({
+                          ...formData,
+                          triggerThreshold: e.target.value,
+                        })
                       }
                       placeholder="e.g., 100"
                     />
@@ -309,7 +326,10 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                         type="number"
                         value={formData.triggerThreshold}
                         onChange={(e) =>
-                          setFormData({ ...formData, triggerThreshold: e.target.value })
+                          setFormData({
+                            ...formData,
+                            triggerThreshold: e.target.value,
+                          })
                         }
                         placeholder="e.g., 3"
                       />
@@ -329,8 +349,18 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                             className="cursor-pointer capitalize"
                             role="button"
                             tabIndex={0}
-                            onClick={() => toggleServiceType("triggerServiceTypes", service)}
-                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleServiceType("triggerServiceTypes", service); } }}
+                            onClick={() =>
+                              toggleServiceType("triggerServiceTypes", service)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleServiceType(
+                                  "triggerServiceTypes",
+                                  service,
+                                );
+                              }
+                            }}
                           >
                             {service}
                           </Badge>
@@ -344,7 +374,7 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
 
             {/* Requirements */}
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <Label className="text-base">Requirements</Label>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -354,7 +384,10 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                       type="number"
                       value={formData.minimumPurchase}
                       onChange={(e) =>
-                        setFormData({ ...formData, minimumPurchase: e.target.value })
+                        setFormData({
+                          ...formData,
+                          minimumPurchase: e.target.value,
+                        })
                       }
                       placeholder="Optional"
                     />
@@ -386,14 +419,24 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                         className="cursor-pointer capitalize"
                         role="button"
                         tabIndex={0}
-                        onClick={() => toggleServiceType("requirementServiceTypes", service)}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleServiceType("requirementServiceTypes", service); } }}
+                        onClick={() =>
+                          toggleServiceType("requirementServiceTypes", service)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            toggleServiceType(
+                              "requirementServiceTypes",
+                              service,
+                            );
+                          }
+                        }}
                       >
                         {service}
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Leave empty to allow all service types
                   </p>
                 </div>
@@ -402,20 +445,23 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
 
             {/* Tracking Settings */}
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="flex items-center gap-2">
-                  <Link2 className="h-4 w-4 text-primary" />
+                  <Link2 className="text-primary size-4" />
                   <Label className="text-base">Tracking Settings</Label>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label>Code Length</Label>
                     <Input
                       type="number"
                       value={formData.referralCodeLength}
                       onChange={(e) =>
-                        setFormData({ ...formData, referralCodeLength: e.target.value })
+                        setFormData({
+                          ...formData,
+                          referralCodeLength: e.target.value,
+                        })
                       }
                       min={4}
                       max={12}
@@ -442,7 +488,10 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
                       type="number"
                       value={formData.expirationDays}
                       onChange={(e) =>
-                        setFormData({ ...formData, expirationDays: e.target.value })
+                        setFormData({
+                          ...formData,
+                          expirationDays: e.target.value,
+                        })
                       }
                       placeholder="e.g., 90"
                     />
@@ -459,7 +508,7 @@ export function ReferralConfigModal({ onClose }: ReferralConfigModalProps) {
           Cancel
         </Button>
         <Button onClick={handleSave}>
-          <Settings className="h-4 w-4 mr-2" />
+          <Settings className="mr-2 size-4" />
           Save Settings
         </Button>
       </DialogFooter>

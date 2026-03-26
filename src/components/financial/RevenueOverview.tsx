@@ -57,13 +57,13 @@ export function RevenueOverview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${currentMonth.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {monthOverMonthChange > 0 ? (
                 <span className="flex items-center text-green-600">
                   <TrendingUp className="mr-1 h-3 w-3" />+
@@ -84,13 +84,13 @@ export function RevenueOverview() {
             <CardTitle className="text-sm font-medium">
               Monthly Recurring Revenue
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${totalMRR.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               ARR: ${totalARR.toLocaleString()}
             </p>
           </CardContent>
@@ -101,13 +101,13 @@ export function RevenueOverview() {
             <CardTitle className="text-sm font-medium">
               Avg Revenue/Facility
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${averageRevenuePerFacility.toFixed(0)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Across {revenueData.length} facilities
             </p>
           </CardContent>
@@ -118,11 +118,11 @@ export function RevenueOverview() {
             <CardTitle className="text-sm font-medium">
               Active Facilities
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{revenueData.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Revenue-generating locations
             </p>
           </CardContent>
@@ -206,15 +206,15 @@ export function RevenueOverview() {
               const percentage = (item.value / currentMonth) * 100;
               return (
                 <div key={item.label}>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm font-medium">{item.label}</span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       ${item.value.toLocaleString()} ({percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="bg-muted h-2 overflow-hidden rounded-full">
                     <div
-                      className={`h-full ${item.color}`}
+                      className={`h-full ${item.color} `}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>

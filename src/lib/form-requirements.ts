@@ -13,7 +13,10 @@ import {
 } from "@/data/settings";
 import { getSubmissionsByFacility } from "@/data/form-submissions";
 
-export type RequirementStage = "before_booking" | "before_approval" | "before_checkin";
+export type RequirementStage =
+  | "before_booking"
+  | "before_approval"
+  | "before_checkin";
 
 export interface MissingFormResult {
   formId: string;
@@ -38,7 +41,9 @@ export interface FormRequirementsCheck {
 }
 
 /** Get the form requirements config for a given service type */
-export function getServiceFormRequirements(serviceType: string): ServiceFormRequirementsConfig | undefined {
+export function getServiceFormRequirements(
+  serviceType: string,
+): ServiceFormRequirementsConfig | undefined {
   return formRequirements.find((r) => r.serviceType === serviceType);
 }
 
@@ -50,7 +55,10 @@ export function getRequirementsAtStage(
   const config = getServiceFormRequirements(serviceType);
   if (!config) return [];
 
-  const results: { requirement: ServiceFormRequirement; gate: FormRequirementGate }[] = [];
+  const results: {
+    requirement: ServiceFormRequirement;
+    gate: FormRequirementGate;
+  }[] = [];
   for (const req of config.requirements) {
     if (!req.enabled) continue;
     for (const gate of req.gates) {
@@ -72,11 +80,18 @@ export function checkFormRequirements(
   serviceType: string,
   stage: RequirementStage,
   customerId?: number,
-  petId?: number,
+  _petId?: number,
 ): FormRequirementsCheck {
   const stageReqs = getRequirementsAtStage(serviceType, stage);
   if (stageReqs.length === 0) {
-    return { complete: true, missing: [], hasBlocker: false, hasWarning: false, totalRequired: 0, totalCompleted: 0 };
+    return {
+      complete: true,
+      missing: [],
+      hasBlocker: false,
+      hasWarning: false,
+      totalRequired: 0,
+      totalCompleted: 0,
+    };
   }
 
   // Get all submissions for this facility to check completion
@@ -124,20 +139,30 @@ export function shouldBlockAtStage(
   stage: RequirementStage,
   customerId?: number,
 ): boolean {
-  const check = checkFormRequirements(facilityId, serviceType, stage, customerId);
+  const check = checkFormRequirements(
+    facilityId,
+    serviceType,
+    stage,
+    customerId,
+  );
   return check.hasBlocker;
 }
 
 /** Get human-readable stage label */
 export function getStageLabel(stage: RequirementStage): string {
   switch (stage) {
-    case "before_booking": return "Before booking";
-    case "before_approval": return "Before approval";
-    case "before_checkin": return "Before check-in";
+    case "before_booking":
+      return "Before booking";
+    case "before_approval":
+      return "Before approval";
+    case "before_checkin":
+      return "Before check-in";
   }
 }
 
 /** Get all service types that have form requirements configured */
 export function getServicesWithFormRequirements(): ServiceFormRequirementsConfig[] {
-  return formRequirements.filter((r) => r.requirements.some((req) => req.enabled));
+  return formRequirements.filter((r) =>
+    r.requirements.some((req) => req.enabled),
+  );
 }

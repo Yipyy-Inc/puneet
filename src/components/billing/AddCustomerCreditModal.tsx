@@ -227,7 +227,7 @@ export function AddCustomerCreditModal({
               <Label htmlFor="never-expires">Never Expires</Label>
             </div>
             {!neverExpires && (
-              <div className="space-y-2 mt-2">
+              <div className="mt-2 space-y-2">
                 <Label htmlFor="expiry-date">Expiry Date</Label>
                 <Input
                   id="expiry-date"
@@ -243,7 +243,7 @@ export function AddCustomerCreditModal({
           <Card className="border-2 bg-green-50">
             <CardContent className="p-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm">
                   Credit Amount
                 </p>
                 <p className="text-3xl font-bold text-green-600">
@@ -259,7 +259,7 @@ export function AddCustomerCreditModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            <DollarSign className="h-4 w-4 mr-2" />
+            <DollarSign className="mr-2 size-4" />
             Add Credit
           </Button>
         </DialogFooter>

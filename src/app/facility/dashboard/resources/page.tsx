@@ -30,7 +30,10 @@ import {
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type { FacilityResource } from "@/lib/types";
 
-const RESOURCE_TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const RESOURCE_TYPE_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   room: DoorOpen,
   pool: Droplets,
   van: Car,
@@ -119,19 +122,19 @@ export default function ResourcesPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             Facility Resources
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage rooms, pools, vans, equipment, and other resources used by
             services
           </p>
         </div>
         <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 size-4" />
           Add Resource
         </Button>
       </div>
@@ -139,45 +142,46 @@ export default function ResourcesPage() {
       {resources.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              <Box className="h-7 w-7 text-primary" />
+            <div className="bg-primary/10 mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">
+              <Box className="text-primary h-7 w-7" />
             </div>
             <h3 className="text-lg font-semibold">No resources yet</h3>
-            <p className="text-sm text-muted-foreground mt-1 max-w-sm leading-relaxed">
-              Resources are rooms, pools, vans, or equipment that get assigned to custom services. When a service is booked, its resource is automatically blocked.
+            <p className="text-muted-foreground mt-1 max-w-sm text-sm/relaxed">
+              Resources are rooms, pools, vans, or equipment that get assigned
+              to custom services. When a service is booked, its resource is
+              automatically blocked.
             </p>
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 <Droplets className="h-3 w-3" /> Pool
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 <Car className="h-3 w-3" /> Van
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 <DoorOpen className="h-3 w-3" /> Room
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
                 <Wrench className="h-3 w-3" /> Equipment
               </span>
             </div>
             <Button onClick={openCreateModal} className="mt-5">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add First Resource
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {resources.map((resource) => {
-            const Icon =
-              RESOURCE_TYPE_ICONS[resource.type] ?? Box;
+            const Icon = RESOURCE_TYPE_ICONS[resource.type] ?? Box;
             return (
               <Card key={resource.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+                        <Icon className="text-primary h-5 w-5" />
                       </div>
                       <div>
                         <CardTitle className="text-base">
@@ -194,7 +198,7 @@ export default function ResourcesPage() {
                         size="icon"
                         onClick={() => openEditModal(resource)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -204,7 +208,7 @@ export default function ResourcesPage() {
                           setDeleteModalOpen(true);
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -226,7 +230,7 @@ export default function ResourcesPage() {
                       </Badge>
                     </div>
                     {resource.description && (
-                      <p className="text-muted-foreground pt-2 border-t">
+                      <p className="text-muted-foreground border-t pt-2">
                         {resource.description}
                       </p>
                     )}
@@ -275,9 +279,7 @@ export default function ResourcesPage() {
             <Label>Type</Label>
             <Select
               value={formType}
-              onValueChange={(v) =>
-                setFormType(v as FacilityResource["type"])
-              }
+              onValueChange={(v) => setFormType(v as FacilityResource["type"])}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -339,7 +341,7 @@ export default function ResourcesPage() {
           },
         }}
       >
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Any services assigned to this resource will need to be updated.
         </p>
       </Modal>

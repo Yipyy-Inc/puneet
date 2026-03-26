@@ -167,10 +167,10 @@ export function ComplianceTools() {
       render: (item: GDPRCompliance) => (
         <div className="min-w-0">
           <div className="font-medium">{item.complianceArea}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.requirement}
           </div>
-          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+          <div className="text-muted-foreground mt-1 line-clamp-2 text-xs">
             {item.description}
           </div>
         </div>
@@ -192,7 +192,7 @@ export function ComplianceTools() {
       render: (item: GDPRCompliance) => (
         <div className="text-sm">
           <div>{new Date(item.nextAuditDue).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.responsiblePerson}
           </div>
         </div>
@@ -203,11 +203,11 @@ export function ComplianceTools() {
   const gdprActions = (item: GDPRCompliance) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
       {item.documentationUrl && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
         </Button>
       )}
     </div>
@@ -220,11 +220,11 @@ export function ComplianceTools() {
       label: "Setting",
       render: (item: DataProtectionSetting) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.settingName}</div>
-          <div className="text-xs text-muted-foreground line-clamp-1">
+          <div className="truncate font-medium">{item.settingName}</div>
+          <div className="text-muted-foreground line-clamp-1 text-xs">
             {item.description}
           </div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.category}
           </Badge>
         </div>
@@ -238,7 +238,7 @@ export function ComplianceTools() {
           {typeof item.currentValue === "boolean" ? (
             <Switch checked={item.currentValue} disabled />
           ) : (
-            <code className="px-2 py-1 bg-muted rounded text-xs">
+            <code className="bg-muted rounded-sm px-2 py-1 text-xs">
               {String(item.currentValue).substring(0, 15)}
             </code>
           )}
@@ -270,11 +270,11 @@ export function ComplianceTools() {
   const dataProtectionActions = (item: DataProtectionSetting) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
       {!item.isCompliant && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="size-4" />
         </Button>
       )}
     </div>
@@ -287,8 +287,8 @@ export function ComplianceTools() {
       label: "Policy",
       render: (item: PrivacyPolicy) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.policyName}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="truncate font-medium">{item.policyName}</div>
+          <div className="text-muted-foreground text-xs">
             v{item.version} ·{" "}
             {new Date(item.effectiveDate).toLocaleDateString()}
           </div>
@@ -330,11 +330,11 @@ export function ComplianceTools() {
   const privacyPolicyActions = (item: PrivacyPolicy) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
       {item.status === "Active" && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
         </Button>
       )}
     </div>
@@ -347,8 +347,8 @@ export function ComplianceTools() {
       label: "User",
       render: (item: UserConsent) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.userName}</div>
-          <div className="text-xs text-muted-foreground truncate">
+          <div className="truncate font-medium">{item.userName}</div>
+          <div className="text-muted-foreground truncate text-xs">
             {item.userEmail}
           </div>
         </div>
@@ -392,7 +392,7 @@ export function ComplianceTools() {
       render: (item: UserConsent) => (
         <div className="space-y-1">
           {getConsentStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.consentedAt
               ? new Date(item.consentedAt).toLocaleDateString()
               : item.revokedAt
@@ -411,11 +411,11 @@ export function ComplianceTools() {
       label: "Framework",
       render: (item: ComplianceFramework) => (
         <div>
-          <div className="font-medium flex items-center gap-2">
-            <Award className="h-4 w-4" />
+          <div className="flex items-center gap-2 font-medium">
+            <Award className="size-4" />
             {item.frameworkName}
           </div>
-          <div className="text-xs text-muted-foreground">{item.industry}</div>
+          <div className="text-muted-foreground text-xs">{item.industry}</div>
         </div>
       ),
     },
@@ -449,7 +449,7 @@ export function ComplianceTools() {
             {new Date(item.certificationDate).toLocaleDateString()}
           </div>
         ) : (
-          <span className="text-sm text-muted-foreground">Not Certified</span>
+          <span className="text-muted-foreground text-sm">Not Certified</span>
         ),
     },
     {
@@ -466,12 +466,12 @@ export function ComplianceTools() {
   const frameworkActions = (item: ComplianceFramework) => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-1">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
         Details
       </Button>
       {item.documentationUrl && (
         <Button variant="ghost" size="sm" className="gap-1">
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
           Cert
         </Button>
       )}
@@ -486,7 +486,7 @@ export function ComplianceTools() {
       render: (item: ComplianceReport) => (
         <div>
           <div className="font-medium">{item.reportName}</div>
-          <div className="text-xs text-muted-foreground">{item.reportType}</div>
+          <div className="text-muted-foreground text-xs">{item.reportType}</div>
         </div>
       ),
     },
@@ -541,12 +541,12 @@ export function ComplianceTools() {
   const reportActions = (item: ComplianceReport) => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-1">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
         View
       </Button>
       {item.status === "Final" && (
         <Button variant="ghost" size="sm" className="gap-1">
-          <Download className="h-4 w-4" />
+          <Download className="size-4" />
           Export
         </Button>
       )}
@@ -561,7 +561,7 @@ export function ComplianceTools() {
       render: (item: Certificate) => (
         <div>
           <div className="font-medium">{item.certificateName}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.certificateType}
           </div>
         </div>
@@ -582,7 +582,7 @@ export function ComplianceTools() {
           <div className="text-sm">
             {new Date(item.expiresAt).toLocaleDateString()}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.daysUntilExpiry > 0
               ? `${item.daysUntilExpiry} days remaining`
               : `Expired ${Math.abs(item.daysUntilExpiry)} days ago`}
@@ -607,12 +607,12 @@ export function ComplianceTools() {
   const certificateActions = (item: Certificate) => (
     <div className="flex gap-2">
       <Button variant="ghost" size="sm" className="gap-1">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
         Details
       </Button>
       {item.status === "Expiring Soon" && (
         <Button variant="ghost" size="sm" className="gap-1">
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="size-4" />
           Renew
         </Button>
       )}
@@ -649,7 +649,7 @@ export function ComplianceTools() {
     return (
       <Badge
         variant={variants[status] || "secondary"}
-        className={`gap-1 ${colors[status] || ""}`}
+        className={`gap-1 ${colors[status] || ""} `}
       >
         <Icon className="h-3 w-3" />
         {status}
@@ -674,7 +674,7 @@ export function ComplianceTools() {
     };
     const Icon = icons[type] || FileText;
     return (
-      <Badge variant="secondary" className={`gap-1 ${colors[type] || ""}`}>
+      <Badge variant="secondary" className={`gap-1 ${colors[type] || ""} `}>
         <Icon className="h-3 w-3" />
         {type}
       </Badge>
@@ -712,11 +712,11 @@ export function ComplianceTools() {
       render: (item: DataSubjectRequest) => (
         <div className="min-w-0">
           <div className="font-medium">{item.requesterName}</div>
-          <div className="text-xs text-muted-foreground truncate">
+          <div className="text-muted-foreground truncate text-xs">
             {item.requesterEmail}
           </div>
           {item.facilityName && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {item.facilityName}
             </div>
           )}
@@ -734,7 +734,7 @@ export function ComplianceTools() {
       render: (item: DataSubjectRequest) => (
         <div className="space-y-1">
           {getDSRStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {getVerificationBadge(item.verificationStatus)}
           </div>
         </div>
@@ -744,7 +744,7 @@ export function ComplianceTools() {
       key: "dataCategories",
       label: "Data Categories",
       render: (item: DataSubjectRequest) => (
-        <div className="flex flex-wrap gap-1 max-w-[200px]">
+        <div className="flex max-w-[200px] flex-wrap gap-1">
           {item.dataCategories.slice(0, 2).map((cat) => (
             <Badge key={cat} variant="outline" className="text-xs">
               {cat}
@@ -764,7 +764,7 @@ export function ComplianceTools() {
       render: (item: DataSubjectRequest) => (
         <div className="text-sm">
           <div>{new Date(item.submittedAt).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Due: {new Date(item.deadline).toLocaleDateString()}
           </div>
         </div>
@@ -791,7 +791,7 @@ export function ComplianceTools() {
         className="h-8 w-8"
         title="View Details"
       >
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
       {item.status === "Pending" && (
         <Button
@@ -800,7 +800,7 @@ export function ComplianceTools() {
           className="h-8 w-8"
           title="Process Request"
         >
-          <Play className="h-4 w-4" />
+          <Play className="size-4" />
         </Button>
       )}
       {item.status === "Completed" &&
@@ -812,7 +812,7 @@ export function ComplianceTools() {
             className="h-8 w-8"
             title="Download Export"
           >
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
           </Button>
         )}
       <Button
@@ -821,7 +821,7 @@ export function ComplianceTools() {
         className="h-8 w-8"
         title="Send Notification"
       >
-        <Mail className="h-4 w-4" />
+        <Mail className="size-4" />
       </Button>
     </div>
   );
@@ -834,7 +834,7 @@ export function ComplianceTools() {
       render: (item: AuditTrail) => (
         <div>
           <Badge variant="outline">{item.eventType}</Badge>
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="text-muted-foreground mt-1 text-xs">
             {item.description}
           </div>
         </div>
@@ -846,7 +846,7 @@ export function ComplianceTools() {
       render: (item: AuditTrail) => (
         <div>
           <div className="font-medium">{item.userName}</div>
-          <div className="text-xs text-muted-foreground">{item.userRole}</div>
+          <div className="text-muted-foreground text-xs">{item.userRole}</div>
         </div>
       ),
     },
@@ -856,7 +856,7 @@ export function ComplianceTools() {
       render: (item: AuditTrail) => (
         <div>
           <div className="text-sm">{item.resource}</div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.action}
           </Badge>
         </div>
@@ -928,7 +928,7 @@ export function ComplianceTools() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Compliance Tools</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage data privacy and regulatory compliance requirements
           </p>
         </div>
@@ -936,84 +936,84 @@ export function ComplianceTools() {
 
       {/* Compliance Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Compliance Score
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {Math.round(avgComplianceScore)}%
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Average across all frameworks
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
                 <Award className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   GDPR Compliant
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {totalCompliantAreas}/{gdprCompliance.length}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Compliance areas
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
                 <Shield className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Non-Compliant
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {totalNonCompliantSettings}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Settings need attention
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
                 <AlertTriangle className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Expiring Certificates
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {expiringCerts}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Within 30 days
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
                 <FileCheck className="h-6 w-6 text-red-600" />
               </div>
             </div>
@@ -1035,85 +1035,85 @@ export function ComplianceTools() {
         <TabsContent value="data-subject-requests" className="space-y-6">
           {/* DSR Stats */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Total Requests
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight">
                       {dataSubjectRequestStats.totalRequests}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {dataSubjectRequestStats.thisMonthRequests} this month
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
                     <FileText className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Pending
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight text-yellow-600">
                       {dataSubjectRequestStats.pendingRequests}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {dataSubjectRequestStats.inProgressRequests} in progress
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-yellow-500/20 to-yellow-600/20 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-yellow-500/20 to-yellow-600/20">
                     <Clock className="h-6 w-6 text-yellow-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Compliance Rate
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight text-green-600">
                       {dataSubjectRequestStats.complianceRate}%
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       Avg {dataSubjectRequestStats.avgCompletionDays} days to
                       complete
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
                     <CheckCircle2 className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Overdue
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight text-red-600">
                       {dataSubjectRequestStats.overdueRequests}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       30-day GDPR deadline
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-linear-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
                     <AlertTriangle className="h-6 w-6 text-red-600" />
                   </div>
                 </div>
@@ -1123,14 +1123,14 @@ export function ComplianceTools() {
 
           {/* Request Type Breakdown */}
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
                     <FileOutput className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Data Export Requests
                     </p>
                     <p className="text-xl font-bold">
@@ -1138,20 +1138,20 @@ export function ComplianceTools() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-xs">
                   Right to Data Portability (Article 20)
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
                     <UserX className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Data Deletion Requests
                     </p>
                     <p className="text-xl font-bold">
@@ -1159,20 +1159,20 @@ export function ComplianceTools() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-xs">
                   Right to Erasure (Article 17)
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
                     <Settings className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Rectification Requests
                     </p>
                     <p className="text-xl font-bold">
@@ -1180,7 +1180,7 @@ export function ComplianceTools() {
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-2 text-xs">
                   Right to Rectification (Article 16)
                 </p>
               </CardContent>
@@ -1188,13 +1188,13 @@ export function ComplianceTools() {
           </div>
 
           {/* Data Subject Requests Table */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Shield className="h-5 w-5" />
                 Data Subject Requests (GDPR Export/Delete)
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Manage user data export and deletion requests per GDPR
                 requirements
               </p>
@@ -1212,15 +1212,15 @@ export function ComplianceTools() {
 
           {/* GDPR Articles Reference */}
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="border-0 shadow-card bg-blue-50/50">
+            <Card className="shadow-card border-0 bg-blue-50/50">
               <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <FileOutput className="h-4 w-4 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <FileOutput className="size-4 text-blue-600" />
                   Article 20 - Right to Data Portability
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Users have the right to receive their personal data in a
                   structured, commonly used, machine-readable format and
                   transmit it to another controller. Requests must be fulfilled
@@ -1240,15 +1240,15 @@ export function ComplianceTools() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card bg-red-50/50">
+            <Card className="shadow-card border-0 bg-red-50/50">
               <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Trash2 className="h-4 w-4 text-red-600" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Trash2 className="size-4 text-red-600" />
                   Article 17 - Right to Erasure
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Users have the right to request deletion of their personal
                   data when it is no longer necessary, consent is withdrawn, or
                   data was unlawfully processed. Requests must be fulfilled
@@ -1276,13 +1276,13 @@ export function ComplianceTools() {
           className="space-y-6 overflow-x-hidden"
         >
           {/* GDPR Compliance */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Shield className="h-5 w-5" />
                 GDPR Compliance
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Track compliance with GDPR requirements
               </p>
             </CardHeader>
@@ -1296,13 +1296,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Data Protection Settings */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Lock className="h-5 w-5" />
                 Data Protection Settings
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Configure data protection and security settings
               </p>
             </CardHeader>
@@ -1316,13 +1316,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Privacy Policies */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <FileText className="h-5 w-5" />
                 Privacy Policy Management
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Manage privacy policies and user agreements
               </p>
             </CardHeader>
@@ -1336,13 +1336,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* User Consent Tracking */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Users className="h-5 w-5" />
                 User Consent Tracking
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Monitor user consent for data processing and communications
               </p>
             </CardHeader>
@@ -1355,7 +1355,7 @@ export function ComplianceTools() {
         {/* Regulatory Compliance Tab */}
         <TabsContent value="regulatory-compliance" className="space-y-6">
           {/* Compliance Frameworks Chart */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Compliance Framework Scores
@@ -1382,13 +1382,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Compliance Frameworks */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Award className="h-5 w-5" />
                 Compliance Frameworks
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Industry-specific compliance standards and certifications
               </p>
             </CardHeader>
@@ -1402,13 +1402,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Compliance Reports */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <FileText className="h-5 w-5" />
                 Compliance Reports
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Audit reports and compliance assessments
               </p>
             </CardHeader>
@@ -1422,13 +1422,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Certificates */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <FileCheck className="h-5 w-5" />
                 Certificate Management
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 SSL/TLS and other security certificates
               </p>
             </CardHeader>
@@ -1442,13 +1442,13 @@ export function ComplianceTools() {
           </Card>
 
           {/* Audit Trail */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Database className="h-5 w-5" />
                 Audit Trail Maintenance
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Compliance-relevant audit logs and activity tracking
               </p>
             </CardHeader>

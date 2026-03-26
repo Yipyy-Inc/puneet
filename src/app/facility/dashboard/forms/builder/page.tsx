@@ -25,13 +25,14 @@ export default function FormBuilderPage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/facility/dashboard/forms">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
           </Link>
         </Button>
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Form Builder</h2>
           <p className="text-muted-foreground">
-            Create and edit forms. Add questions, set conditions, and map fields to profiles.
+            Create and edit forms. Add questions, set conditions, and map fields
+            to profiles.
           </p>
         </div>
       </div>

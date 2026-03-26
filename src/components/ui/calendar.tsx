@@ -16,7 +16,7 @@ export interface CalendarProps {
 }
 
 export function Calendar({
-  mode = "single",
+  mode: _mode = "single",
   selected,
   onSelect,
   className,
@@ -24,7 +24,7 @@ export function Calendar({
   const [currentMonth, setCurrentMonth] = React.useState(
     selected instanceof Date
       ? new Date(selected.getFullYear(), selected.getMonth(), 1)
-      : new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
 
   const today = new Date();
@@ -50,19 +50,19 @@ export function Calendar({
   // Add all days of the month
   for (let day = 1; day <= daysInMonth; day++) {
     days.push(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day),
     );
   }
 
   const handlePreviousMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
     );
   };
 
   const handleNextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
     );
   };
 
@@ -108,14 +108,14 @@ export function Calendar({
 
   return (
     <div className={cn("p-3", className)}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Button
           variant="outline"
           size="icon"
           onClick={handlePreviousMonth}
           className="h-7 w-7"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
         </Button>
         <div className="font-semibold">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
@@ -126,12 +126,15 @@ export function Calendar({
           onClick={handleNextMonth}
           className="h-7 w-7"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
       </div>
       <div className="grid grid-cols-7 gap-1">
         {dayNames.map((day) => (
-          <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
+          <div
+            key={day}
+            className="text-muted-foreground p-2 text-center text-sm font-medium"
+          >
             {day}
           </div>
         ))}
@@ -144,12 +147,12 @@ export function Calendar({
               key={date.toISOString()}
               onClick={() => handleDateClick(date)}
               className={cn(
-                "p-2 rounded-md text-sm transition-colors",
+                "rounded-md p-2 text-sm transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
                 isToday(date) && "font-bold",
                 isSelected(date) &&
-                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                !isSelected(date) && "text-foreground"
+                  `bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground`,
+                !isSelected(date) && "text-foreground",
               )}
             >
               {date.getDate()}

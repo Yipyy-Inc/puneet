@@ -57,11 +57,11 @@ export function StatCard({
   const styles = variantStyles[variant];
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-muted-foreground text-sm font-medium">{title}</p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
               {change && (
@@ -74,22 +74,22 @@ export function StatCard({
                   )}
                 >
                   {changeType === "up" && (
-                    <TrendingUp className="h-3 w-3 mr-0.5" />
+                    <TrendingUp className="mr-0.5 h-3 w-3" />
                   )}
                   {changeType === "down" && (
-                    <TrendingDown className="h-3 w-3 mr-0.5" />
+                    <TrendingDown className="mr-0.5 h-3 w-3" />
                   )}
                   {change}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
+              <p className="text-muted-foreground text-xs">{subtitle}</p>
             )}
           </div>
           <div
             className={cn(
-              "flex items-center justify-center w-11 h-11 rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110",
+              `flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-transform duration-300 group-hover:scale-110`,
               styles.iconBg,
             )}
           >
@@ -100,7 +100,7 @@ export function StatCard({
 
       {/* Decorative gradient overlay */}
       <div
-        className="absolute top-0 right-0 w-24 h-24 opacity-5 pointer-events-none"
+        className="pointer-events-none absolute top-0 right-0 h-24 w-24 opacity-5"
         style={{
           background: `radial-gradient(circle at top right, currentColor 0%, transparent 70%)`,
         }}

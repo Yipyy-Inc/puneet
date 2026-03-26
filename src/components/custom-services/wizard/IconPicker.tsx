@@ -5,6 +5,7 @@ import { Search, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolveIcon, AVAILABLE_ICONS } from "@/lib/service-registry";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { getGradientStyle } from "@/data/custom-services";
 import { cn } from "@/lib/utils";
 
@@ -42,21 +43,20 @@ export function IconPicker({
   );
 
   const selectedGradient = getGradientStyle(selectedColorFrom, selectedColorTo);
-  const SelectedIcon = resolveIcon(selectedIcon);
 
   return (
     <div className="space-y-4">
       {/* Preview */}
       <div className="flex items-center gap-4">
         <div
-          className="flex h-14 w-14 items-center justify-center rounded-xl text-white shadow-md shrink-0"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-white shadow-md"
           style={selectedGradient}
         >
-          <SelectedIcon className="h-7 w-7" />
+          <DynamicIcon name={selectedIcon} className="h-7 w-7" />
         </div>
         <div>
           <p className="text-sm font-medium">{selectedIcon}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {COLOR_GRADIENT_OPTIONS.find(
               (c) => c.from === selectedColorFrom && c.to === selectedColorTo,
             )?.label ?? "Custom"}{" "}
@@ -67,7 +67,7 @@ export function IconPicker({
 
       {/* Color selector */}
       <div>
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+        <Label className="text-muted-foreground mb-2 block text-xs font-medium tracking-wider uppercase">
           Gradient Color
         </Label>
         <div className="flex flex-wrap gap-2">
@@ -82,13 +82,13 @@ export function IconPicker({
                 title={opt.label}
                 aria-label={opt.label}
                 className={cn(
-                  "h-11 w-11 rounded-lg shadow-sm transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 relative",
-                  isSelected && "ring-2 ring-ring ring-offset-1",
+                  `focus:ring-ring relative h-11 w-11 rounded-lg shadow-sm transition-transform hover:scale-110 focus:ring-2 focus:ring-offset-1 focus:outline-none`,
+                  isSelected && "ring-ring ring-2 ring-offset-1",
                 )}
                 style={getGradientStyle(opt.from, opt.to)}
               >
                 {isSelected && (
-                  <Check className="h-3.5 w-3.5 text-white absolute inset-0 m-auto" />
+                  <Check className="absolute inset-0 m-auto h-3.5 w-3.5 text-white" />
                 )}
                 <span className="sr-only">{opt.label}</span>
               </button>
@@ -99,20 +99,20 @@ export function IconPicker({
 
       {/* Icon search */}
       <div>
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+        <Label className="text-muted-foreground mb-2 block text-xs font-medium tracking-wider uppercase">
           Icon
         </Label>
         <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
             placeholder="Search icons..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm"
+            className="h-8 pl-8 text-sm"
           />
         </div>
 
-        <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-52 overflow-y-auto">
+        <div className="grid max-h-52 grid-cols-6 gap-1.5 overflow-y-auto sm:grid-cols-8">
           {filteredIcons.map((name) => {
             const Icon = resolveIcon(name);
             const isSelected = name === selectedIcon;
@@ -124,19 +124,19 @@ export function IconPicker({
                 title={name}
                 aria-label={name}
                 className={cn(
-                  "flex h-11 w-11 items-center justify-center rounded-lg border transition-all hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring",
+                  `hover:bg-accent focus:ring-ring flex h-11 w-11 items-center justify-center rounded-lg border transition-all focus:ring-2 focus:outline-none`,
                   isSelected
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-border bg-background text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 <span className="sr-only">{name}</span>
               </button>
             );
           })}
           {filteredIcons.length === 0 && (
-            <div className="col-span-6 sm:col-span-8 py-6 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground col-span-6 py-6 text-center text-sm sm:col-span-8">
               No icons match &quot;{search}&quot;
             </div>
           )}

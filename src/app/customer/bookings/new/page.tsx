@@ -10,23 +10,23 @@ export default function NewBookingPage() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b bg-card">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+    <div className="bg-background min-h-screen">
+      <div className="bg-card border-b">
+        <div className="mx-auto max-w-5xl p-4">
           <Link
             href="/customer/bookings"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
             Back to bookings
           </Link>
-          <h1 className="text-xl font-semibold mt-1">New booking</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="mt-1 text-xl font-semibold">New booking</h1>
+          <p className="text-muted-foreground text-sm">
             Select a service and book for your pets
           </p>
         </div>
       </div>
-      <div className="max-w-5xl mx-auto">
+      <div className="mx-auto max-w-5xl">
         <CustomerBookingModal
           asPage
           open={true}

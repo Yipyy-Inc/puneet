@@ -15,11 +15,11 @@
 // ─── Conditional rules: extended context ─────────────────────────────────────
 /** Source for a condition: question answer, or context (pet/service/eval/tags). */
 export type ConditionSourceType =
-  | "question"       // existing: questionId + operator + value
-  | "petAttribute"   // pet.* e.g. breed, age, weight, hasTag
-  | "serviceType"    // existing as contextField
+  | "question" // existing: questionId + operator + value
+  | "petAttribute" // pet.* e.g. breed, age, weight, hasTag
+  | "serviceType" // existing as contextField
   | "evaluationStatus"
-  | "tag";           // pet or customer has tag (tagId or tag slug)
+  | "tag"; // pet or customer has tag (tagId or tag slug)
 
 /** Pet attribute usable in conditions (Phase 2). */
 export type PetAttributeCondition =
@@ -27,7 +27,7 @@ export type PetAttributeCondition =
   | "pet.type"
   | "pet.age"
   | "pet.weight"
-  | "pet.hasTag"     // value = tag id or slug
+  | "pet.hasTag" // value = tag id or slug
   | "pet.gender";
 
 /**
@@ -90,7 +90,7 @@ export interface FormQuestionI18n {
 
 // ─── E-sign agreements + timestamps + IP/device metadata ─────────────────────
 export interface SignatureMetadata {
-  signedAt: string;       // ISO
+  signedAt: string; // ISO
   ipAddress?: string;
   userAgent?: string;
   deviceId?: string;
@@ -115,17 +115,22 @@ export interface FormPaymentBlockConfig {
 /** Stored value for payment field: token or reference from payments module (Phase 2). */
 export interface PaymentAnswerValue {
   paymentIntentId?: string;
-  token?: string;         // PCI: never store raw card; token only
+  token?: string; // PCI: never store raw card; token only
   last4?: string;
   brand?: string;
-  capturedAt?: string;   // ISO
+  capturedAt?: string; // ISO
 }
 
 // ─── Logic rules: trigger from context (Phase 2) ─────────────────────────────
 /** When implementing Phase 2, LogicRuleRecord can support triggerSource + petAttribute/tagId. */
 export interface LogicRuleTriggerPhase2 {
   /** Default "field" = triggerFieldId; Phase 2: "petAttribute" | "tag" | "serviceType" | "evaluationStatus" */
-  triggerSource?: "field" | "petAttribute" | "tag" | "serviceType" | "evaluationStatus";
+  triggerSource?:
+    | "field"
+    | "petAttribute"
+    | "tag"
+    | "serviceType"
+    | "evaluationStatus";
   petAttribute?: PetAttributeCondition;
   tagId?: string;
 }

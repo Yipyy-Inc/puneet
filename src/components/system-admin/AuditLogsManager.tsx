@@ -300,7 +300,10 @@ export function AuditLogsManager() {
     };
     const config = variants[severity] || variants.Low;
     return (
-      <Badge variant={config.variant} className={`text-xs ${config.className}`}>
+      <Badge
+        variant={config.variant}
+        className={`text-xs ${config.className} `}
+      >
         {severity}
       </Badge>
     );
@@ -331,7 +334,7 @@ export function AuditLogsManager() {
     return (
       <Badge
         variant="secondary"
-        className={`text-xs ${colors[category] || ""}`}
+        className={`text-xs ${colors[category] || ""} `}
       >
         {category}
       </Badge>
@@ -345,7 +348,7 @@ export function AuditLogsManager() {
       render: (item: AuditLog) => (
         <div className="text-sm">
           <div>{new Date(item.timestamp).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.timestamp).toLocaleTimeString()}
           </div>
         </div>
@@ -357,7 +360,7 @@ export function AuditLogsManager() {
       render: (item: AuditLog) => (
         <div>
           <div className="font-medium">{item.userName}</div>
-          <div className="text-xs text-muted-foreground">{item.userRole}</div>
+          <div className="text-muted-foreground text-xs">{item.userRole}</div>
         </div>
       ),
     },
@@ -379,7 +382,7 @@ export function AuditLogsManager() {
       render: (item: AuditLog) => (
         <div>
           <div className="text-sm">{item.entityName}</div>
-          <div className="text-xs text-muted-foreground">{item.entityType}</div>
+          <div className="text-muted-foreground text-xs">{item.entityType}</div>
         </div>
       ),
     },
@@ -405,7 +408,7 @@ export function AuditLogsManager() {
         setShowDetailsDialog(true);
       }}
     >
-      <Eye className="h-4 w-4" />
+      <Eye className="size-4" />
       Details
     </Button>
   );
@@ -437,11 +440,11 @@ export function AuditLogsManager() {
             className="gap-2"
             onClick={() => setShowFilterDialog(true)}
           >
-            <Filter className="h-4 w-4" />
+            <Filter className="size-4" />
             Advanced Filters
           </Button>
           <Button className="gap-2" onClick={exportToCSV}>
-            <Download className="h-4 w-4" />
+            <Download className="size-4" />
             Export Report
           </Button>
         </div>
@@ -449,8 +452,8 @@ export function AuditLogsManager() {
 
       {/* Active Resource Filter Banner */}
       {(selectedResourceType || selectedResourceId) && (
-        <div className="flex items-center gap-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <Filter className="h-4 w-4 text-primary" />
+        <div className="border-primary/20 bg-primary/5 flex items-center gap-2 rounded-lg border p-3">
+          <Filter className="text-primary size-4" />
           <span className="text-sm">
             Filtering by:
             {selectedResourceType && (
@@ -460,7 +463,7 @@ export function AuditLogsManager() {
             )}
             {selectedResourceId && (
               <>
-                <ChevronRight className="inline h-4 w-4 mx-1" />
+                <ChevronRight className="mx-1 inline size-4" />
                 <Badge variant="outline">
                   {resourceIndex[selectedResourceType!]?.resources[
                     selectedResourceId
@@ -469,7 +472,7 @@ export function AuditLogsManager() {
               </>
             )}
           </span>
-          <span className="text-sm text-muted-foreground ml-2">
+          <span className="text-muted-foreground ml-2 text-sm">
             ({filteredLogs.length} logs)
           </span>
           <Button
@@ -478,7 +481,7 @@ export function AuditLogsManager() {
             className="ml-auto"
             onClick={clearResourceFilter}
           >
-            <X className="h-4 w-4 mr-1" />
+            <X className="mr-1 size-4" />
             Clear Filter
           </Button>
         </div>
@@ -486,17 +489,17 @@ export function AuditLogsManager() {
 
       {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12 max-w-lg">
+        <TabsList className="grid h-12 w-full max-w-lg grid-cols-3">
           <TabsTrigger value="overview" className="gap-2">
-            <Activity className="h-4 w-4" />
+            <Activity className="size-4" />
             Overview
           </TabsTrigger>
           <TabsTrigger value="resources" className="gap-2">
-            <Database className="h-4 w-4" />
+            <Database className="size-4" />
             Resource Index
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             All Logs
           </TabsTrigger>
         </TabsList>
@@ -505,22 +508,22 @@ export function AuditLogsManager() {
         <TabsContent value="overview" className="mt-4 space-y-6">
           {/* Statistics Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Total Logs
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight">
                       {auditStatistics.totalLogs.toLocaleString()}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {auditStatistics.todayLogs} today
                     </p>
                   </div>
                   <div
-                    className="flex items-center justify-center w-11 h-11 rounded-xl"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
                       background:
                         "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -532,22 +535,22 @@ export function AuditLogsManager() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Security Events
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight">
                       {auditStatistics.securityEvents}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       {auditStatistics.criticalEvents} critical
                     </p>
                   </div>
                   <div
-                    className="flex items-center justify-center w-11 h-11 rounded-xl"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
                       background:
                         "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
@@ -559,22 +562,22 @@ export function AuditLogsManager() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Failed Actions
                     </p>
-                    <h3 className="text-2xl font-bold tracking-tight text-destructive">
+                    <h3 className="text-destructive text-2xl font-bold tracking-tight">
                       {auditStatistics.failedActions}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       Requires attention
                     </p>
                   </div>
                   <div
-                    className="flex items-center justify-center w-11 h-11 rounded-xl"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
                       background:
                         "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -586,22 +589,22 @@ export function AuditLogsManager() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-sm font-medium">
                       Resource Types
                     </p>
                     <h3 className="text-2xl font-bold tracking-tight">
                       {resourceTypeSummary.length}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                       Indexed resources
                     </p>
                   </div>
                   <div
-                    className="flex items-center justify-center w-11 h-11 rounded-xl"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
                       background:
                         "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -617,12 +620,12 @@ export function AuditLogsManager() {
           {/* Charts */}
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Activity Trend */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
                   Activity Trend (7 Days)
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Daily audit log volume over the past week
                 </p>
               </CardHeader>
@@ -669,12 +672,12 @@ export function AuditLogsManager() {
             </Card>
 
             {/* Category Breakdown */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
                   Category Breakdown
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Distribution of audit logs by category
                 </p>
               </CardHeader>
@@ -719,12 +722,12 @@ export function AuditLogsManager() {
           </div>
 
           {/* Top Users Activity */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Top Active Users
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Users with the most logged actions
               </p>
             </CardHeader>
@@ -732,21 +735,21 @@ export function AuditLogsManager() {
               <div className="space-y-4">
                 {auditStatistics.topUsers.map((user, index) => (
                   <div key={user.userId} className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                    <div className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
                       {index + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">
                         {user.userName}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {user.actionCount.toLocaleString()} actions
                       </div>
                     </div>
-                    <div className="w-32 sm:w-40 md:w-48 shrink-0">
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div className="w-32 shrink-0 sm:w-40 md:w-48">
+                      <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
                         <div
-                          className="bg-primary rounded-full h-2"
+                          className="bg-primary h-2 rounded-full"
                           style={{
                             width: `${(user.actionCount / auditStatistics.topUsers[0].actionCount) * 100}%`,
                           }}
@@ -760,12 +763,12 @@ export function AuditLogsManager() {
           </Card>
 
           {/* Resource Type Summary */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Resource Type Summary
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Log distribution by resource type
               </p>
             </CardHeader>
@@ -820,14 +823,14 @@ export function AuditLogsManager() {
           </Card>
 
           {/* Recent Audit Logs Preview */}
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-semibold">
                     Recent Audit Logs
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Latest admin actions and system changes
                   </p>
                 </div>
@@ -837,7 +840,7 @@ export function AuditLogsManager() {
                   onClick={() => setActiveTab("logs")}
                 >
                   View All
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  <ChevronRight className="ml-1 size-4" />
                 </Button>
               </div>
             </CardHeader>
@@ -846,37 +849,43 @@ export function AuditLogsManager() {
                 {auditLogs.slice(0, 5).map((log: AuditLog) => (
                   <div
                     key={log.id}
-                    className="flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="hover:bg-muted/50 flex cursor-pointer items-center gap-4 rounded-lg border p-3 transition-colors"
                     onClick={() => {
                       setSelectedLog(log);
                       setShowDetailsDialog(true);
                     }}
                   >
                     <div
-                      className={`p-2 rounded-lg ${resourceTypeConfig[log.entityType]?.bgColor || "bg-muted"}`}
+                      className={`rounded-lg p-2 ${
+                        resourceTypeConfig[log.entityType]?.bgColor ||
+                        `bg-muted`
+                      } `}
                     >
                       {(() => {
                         const Icon =
                           resourceTypeConfig[log.entityType]?.icon || FileText;
                         return (
                           <Icon
-                            className={`h-4 w-4 ${resourceTypeConfig[log.entityType]?.color || "text-muted-foreground"}`}
+                            className={`size-4 ${
+                              resourceTypeConfig[log.entityType]?.color ||
+                              `text-muted-foreground`
+                            } `}
                           />
                         );
                       })()}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{log.action}</span>
                         {getCategoryBadge(log.category)}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-muted-foreground truncate text-sm">
                         {log.userName} • {log.entityName}
                       </p>
                     </div>
                     <div className="text-right">
                       {getSeverityBadge(log.severity)}
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-muted-foreground mt-1 text-xs">
                         {new Date(log.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
@@ -891,7 +900,7 @@ export function AuditLogsManager() {
         <TabsContent value="resources" className="mt-4 space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Resource Types List */}
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
                 <CardTitle className="text-lg font-semibold">
                   Resource Types
@@ -912,23 +921,23 @@ export function AuditLogsManager() {
                   return (
                     <div
                       key={type.type}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors ${
                         isSelected
-                          ? "bg-primary/10 border border-primary/30"
-                          : "hover:bg-muted/50 border border-transparent"
-                      }`}
+                          ? "border-primary/30 bg-primary/10 border"
+                          : `hover:bg-muted/50 border border-transparent`
+                      } `}
                       onClick={() => {
                         setSelectedResourceType(type.type);
                         setSelectedResourceId(null);
                         setResourceSearch("");
                       }}
                     >
-                      <div className={`p-2 rounded-lg ${config.bgColor}`}>
-                        <Icon className={`h-4 w-4 ${config.color}`} />
+                      <div className={`rounded-lg p-2 ${config.bgColor} `}>
+                        <Icon className={`size-4 ${config.color} `} />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium">{type.type}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {type.resourceCount} resources • {type.totalLogs} logs
                         </p>
                       </div>
@@ -937,7 +946,7 @@ export function AuditLogsManager() {
                           {type.criticalLogs}
                         </Badge>
                       )}
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="text-muted-foreground size-4" />
                     </div>
                   );
                 })}
@@ -945,7 +954,7 @@ export function AuditLogsManager() {
             </Card>
 
             {/* Resources List */}
-            <Card className="border-0 shadow-card lg:col-span-2">
+            <Card className="shadow-card border-0 lg:col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -962,10 +971,10 @@ export function AuditLogsManager() {
                   </div>
                   {selectedResourceType && (
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                       <Input
                         placeholder="Search resources..."
-                        className="pl-9 w-64"
+                        className="w-64 pl-9"
                         value={resourceSearch}
                         onChange={(e) => setResourceSearch(e.target.value)}
                       />
@@ -975,32 +984,32 @@ export function AuditLogsManager() {
               </CardHeader>
               <CardContent>
                 {selectedResourceType ? (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  <div className="max-h-[500px] space-y-2 overflow-y-auto">
                     {filteredResources.map((resource) => {
                       const isSelected = selectedResourceId === resource.id;
                       return (
                         <div
                           key={resource.id}
-                          className={`flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors ${
+                          className={`flex cursor-pointer items-center gap-4 rounded-lg p-4 transition-colors ${
                             isSelected
-                              ? "bg-primary/10 border border-primary/30"
-                              : "hover:bg-muted/50 border border-transparent"
-                          }`}
+                              ? "border-primary/30 bg-primary/10 border"
+                              : `hover:bg-muted/50 border border-transparent`
+                          } `}
                           onClick={() => {
                             setSelectedResourceId(resource.id);
                             setActiveTab("logs");
                           }}
                         >
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="font-medium">{resource.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono">
+                            <p className="text-muted-foreground font-mono text-xs">
                               {resource.id}
                             </p>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
                             <div className="text-center">
                               <p className="font-bold">{resource.logCount}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 Logs
                               </p>
                             </div>
@@ -1014,13 +1023,13 @@ export function AuditLogsManager() {
                                 </Badge>
                               )}
                               {resource.severityCounts.High > 0 && (
-                                <Badge className="bg-orange-100 text-orange-700 text-xs">
+                                <Badge className="bg-orange-100 text-xs text-orange-700">
                                   {resource.severityCounts.High} High
                                 </Badge>
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 Last activity
                               </p>
                               <p className="text-xs">
@@ -1031,25 +1040,25 @@ export function AuditLogsManager() {
                             </div>
                           </div>
                           <Button variant="ghost" size="sm">
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="size-4" />
                           </Button>
                         </div>
                       );
                     })}
                     {filteredResources.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <div className="text-muted-foreground py-8 text-center">
+                        <Database className="mx-auto mb-3 h-12 w-12 opacity-50" />
                         <p>No resources found</p>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Layers className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-12 text-center">
+                    <Layers className="mx-auto mb-4 h-16 w-16 opacity-50" />
                     <p className="text-lg font-medium">
                       No Resource Type Selected
                     </p>
-                    <p className="text-sm mt-1">
+                    <p className="mt-1 text-sm">
                       Select a resource type from the left panel to browse
                       resources
                     </p>
@@ -1062,7 +1071,7 @@ export function AuditLogsManager() {
 
         {/* All Logs Tab */}
         <TabsContent value="logs" className="mt-4">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 {selectedResourceId
@@ -1071,7 +1080,7 @@ export function AuditLogsManager() {
                     ? `All ${selectedResourceType} Logs`
                     : "All Audit Logs"}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {filteredLogs.length} logs found
               </p>
             </CardHeader>
@@ -1090,7 +1099,7 @@ export function AuditLogsManager() {
 
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="min-w-5xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Audit Log Details</DialogTitle>
             <DialogDescription>
@@ -1102,25 +1111,25 @@ export function AuditLogsManager() {
               {/* Header Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Action
                   </p>
                   <p className="text-lg font-semibold">{selectedLog.action}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Status
                   </p>
                   {getStatusBadge(selectedLog.status)}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Timestamp
                   </p>
                   <p>{new Date(selectedLog.timestamp).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Severity
                   </p>
                   {getSeverityBadge(selectedLog.severity)}
@@ -1130,33 +1139,33 @@ export function AuditLogsManager() {
               {/* User Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <User className="h-4 w-4" />
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <User className="size-4" />
                     User Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       User Name
                     </p>
                     <p className="font-medium">{selectedLog.userName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Role</p>
+                    <p className="text-muted-foreground mb-1 text-xs">Role</p>
                     <p className="font-medium">{selectedLog.userRole}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       IP Address
                     </p>
                     <p className="font-mono text-sm">{selectedLog.ipAddress}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       User Agent
                     </p>
-                    <p className="text-sm truncate">{selectedLog.userAgent}</p>
+                    <p className="truncate text-sm">{selectedLog.userAgent}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1164,33 +1173,33 @@ export function AuditLogsManager() {
               {/* Entity Information */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <FileText className="size-4" />
                     Entity Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       Entity Type
                     </p>
                     <p className="font-medium">{selectedLog.entityType}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       Entity Name
                     </p>
                     <p className="font-medium">{selectedLog.entityName}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">
+                    <p className="text-muted-foreground mb-1 text-xs">
                       Category
                     </p>
                     {getCategoryBadge(selectedLog.category)}
                   </div>
                   {selectedLog.facilityName && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">
+                      <p className="text-muted-foreground mb-1 text-xs">
                         Facility
                       </p>
                       <p className="font-medium">{selectedLog.facilityName}</p>
@@ -1203,8 +1212,8 @@ export function AuditLogsManager() {
               {selectedLog.changes && selectedLog.changes.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Activity className="size-4" />
                       Changes Made
                     </CardTitle>
                   </CardHeader>
@@ -1221,19 +1230,19 @@ export function AuditLogsManager() {
                         ) => (
                           <div
                             key={index}
-                            className="border-l-2 border-primary pl-4"
+                            className="border-primary border-l-2 pl-4"
                           >
-                            <p className="font-medium text-sm">
+                            <p className="text-sm font-medium">
                               {change.field}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="rounded-sm bg-red-100 px-2 py-1 text-xs text-red-700">
                                 {change.oldValue}
                               </span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground text-xs">
                                 →
                               </span>
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              <span className="rounded-sm bg-green-100 px-2 py-1 text-xs text-green-700">
                                 {change.newValue}
                               </span>
                             </div>
@@ -1251,7 +1260,7 @@ export function AuditLogsManager() {
                   <CardTitle className="text-sm">Description</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {selectedLog.description}
                   </p>
                 </CardContent>
@@ -1277,17 +1286,17 @@ export function AuditLogsManager() {
                 <div className="flex gap-2">
                   <input
                     type="date"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
                   />
                   <input
                     type="date"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Severity</label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <select className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm">
                   <option value="all">All Severities</option>
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
@@ -1297,7 +1306,7 @@ export function AuditLogsManager() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Status</label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <select className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm">
                   <option value="all">All Statuses</option>
                   <option value="Success">Success</option>
                   <option value="Failed">Failed</option>
@@ -1306,7 +1315,7 @@ export function AuditLogsManager() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category</label>
-                <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <select className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm">
                   <option value="all">All Categories</option>
                   <option value="Financial">Financial</option>
                   <option value="User Access">User Access</option>
@@ -1326,7 +1335,7 @@ export function AuditLogsManager() {
               Cancel
             </Button>
             <Button onClick={() => setShowFilterDialog(false)}>
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="mr-2 size-4" />
               Apply Filters
             </Button>
           </div>

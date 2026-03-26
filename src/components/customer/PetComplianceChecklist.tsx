@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { vaccinationRecords } from "@/data/pet-data";
 import { clientDocuments } from "@/data/documents";
 import { invoices } from "@/data/payments";
@@ -24,10 +24,13 @@ export function PetComplianceChecklist({
 }: PetComplianceChecklistProps) {
   // Check vaccination compliance
   const vaccinationStatus = useMemo(() => {
-    const petVaccinations = vaccinationRecords.filter((v) => v.petId === pet.id);
-    const requiredVaccines = facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
-      (v) => v.required
+    const petVaccinations = vaccinationRecords.filter(
+      (v) => v.petId === pet.id,
     );
+    const requiredVaccines =
+      facilityConfig.vaccinationRequirements.requiredVaccinations.filter(
+        (v) => v.required,
+      );
 
     let allValid = true;
     const missing: string[] = [];
@@ -38,7 +41,7 @@ export function PetComplianceChecklist({
       const vaccination = petVaccinations.find(
         (v) =>
           v.vaccineName.toLowerCase().includes(req.name.toLowerCase()) ||
-          req.name.toLowerCase().includes(v.vaccineName.toLowerCase())
+          req.name.toLowerCase().includes(v.vaccineName.toLowerCase()),
       );
 
       if (!vaccination) {
@@ -48,7 +51,7 @@ export function PetComplianceChecklist({
         const expiryDate = new Date(vaccination.expiryDate);
         const now = new Date();
         const daysUntilExpiry = Math.floor(
-          (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
         );
 
         if (daysUntilExpiry < 0) {
@@ -77,7 +80,7 @@ export function PetComplianceChecklist({
     ].filter((a) => a.required);
 
     const clientDocs = clientDocuments.filter(
-      (doc) => doc.clientId === clientId && doc.facilityId === facilityId
+      (doc) => doc.clientId === clientId && doc.facilityId === facilityId,
     );
 
     const signedAgreements = clientDocs.filter(
@@ -85,8 +88,8 @@ export function PetComplianceChecklist({
         (doc.type === "agreement" || doc.type === "waiver") &&
         doc.signedAt &&
         requiredAgreements.some((req) =>
-          doc.name.toLowerCase().includes(req.name.toLowerCase())
-        )
+          doc.name.toLowerCase().includes(req.name.toLowerCase()),
+        ),
     );
 
     return {
@@ -100,7 +103,7 @@ export function PetComplianceChecklist({
   const evaluationStatus = useMemo(() => {
     // Check if pet has valid evaluation
     const hasValidEvaluation = pet.evaluations?.some(
-      (e) => e.status === "passed" && e.isExpired !== true
+      (e) => e.status === "passed" && e.isExpired !== true,
     );
 
     // For now, we'll assume evaluation is required for daycare/boarding
@@ -117,10 +120,12 @@ export function PetComplianceChecklist({
   // Check overdue invoices
   const invoicesStatus = useMemo(() => {
     const clientInvoices = invoices.filter(
-      (inv) => inv.clientId === clientId && inv.facilityId === facilityId
+      (inv) => inv.clientId === clientId && inv.facilityId === facilityId,
     );
 
-    const overdueInvoices = clientInvoices.filter((inv) => inv.status === "overdue");
+    const overdueInvoices = clientInvoices.filter(
+      (inv) => inv.status === "overdue",
+    );
 
     return {
       valid: overdueInvoices.length === 0,
@@ -137,15 +142,15 @@ export function PetComplianceChecklist({
   if (compact) {
     // Compact version for pet cards
     return (
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge
           variant={vaccinationStatus.valid ? "default" : "destructive"}
           className="text-xs"
         >
           {vaccinationStatus.valid ? (
-            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <CheckCircle2 className="mr-1 h-3 w-3" />
           ) : (
-            <XCircle className="h-3 w-3 mr-1" />
+            <XCircle className="mr-1 h-3 w-3" />
           )}
           Vaccines
         </Badge>
@@ -154,9 +159,9 @@ export function PetComplianceChecklist({
           className="text-xs"
         >
           {agreementsStatus.valid ? (
-            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <CheckCircle2 className="mr-1 h-3 w-3" />
           ) : (
-            <XCircle className="h-3 w-3 mr-1" />
+            <XCircle className="mr-1 h-3 w-3" />
           )}
           Agreements
         </Badge>
@@ -166,9 +171,9 @@ export function PetComplianceChecklist({
             className="text-xs"
           >
             {evaluationStatus.valid ? (
-              <CheckCircle2 className="h-3 w-3 mr-1" />
+              <CheckCircle2 className="mr-1 h-3 w-3" />
             ) : (
-              <XCircle className="h-3 w-3 mr-1" />
+              <XCircle className="mr-1 h-3 w-3" />
             )}
             Evaluation
           </Badge>
@@ -178,9 +183,9 @@ export function PetComplianceChecklist({
           className="text-xs"
         >
           {invoicesStatus.valid ? (
-            <CheckCircle2 className="h-3 w-3 mr-1" />
+            <CheckCircle2 className="mr-1 h-3 w-3" />
           ) : (
-            <XCircle className="h-3 w-3 mr-1" />
+            <XCircle className="mr-1 h-3 w-3" />
           )}
           Invoices
         </Badge>
@@ -192,7 +197,7 @@ export function PetComplianceChecklist({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm">Compliance Checklist</h3>
+        <h3 className="text-sm font-semibold">Compliance Checklist</h3>
         <Badge variant={allCompliant ? "default" : "destructive"}>
           {allCompliant ? "Eligible to Book" : "Action Required"}
         </Badge>
@@ -200,17 +205,17 @@ export function PetComplianceChecklist({
 
       <div className="space-y-2">
         {/* Vaccines */}
-        <div className="flex items-center justify-between p-2 rounded-lg border bg-card">
+        <div className="bg-card flex items-center justify-between rounded-lg border p-2">
           <div className="flex items-center gap-2">
             {vaccinationStatus.valid ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="size-4 text-green-600" />
             ) : (
-              <XCircle className="h-4 w-4 text-destructive" />
+              <XCircle className="text-destructive size-4" />
             )}
             <span className="text-sm font-medium">Vaccines Valid</span>
           </div>
           {!vaccinationStatus.valid && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {vaccinationStatus.expired.length > 0 && (
                 <span className="text-destructive">
                   {vaccinationStatus.expired.length} expired
@@ -226,17 +231,17 @@ export function PetComplianceChecklist({
         </div>
 
         {/* Signed Agreements */}
-        <div className="flex items-center justify-between p-2 rounded-lg border bg-card">
+        <div className="bg-card flex items-center justify-between rounded-lg border p-2">
           <div className="flex items-center gap-2">
             {agreementsStatus.valid ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="size-4 text-green-600" />
             ) : (
-              <XCircle className="h-4 w-4 text-destructive" />
+              <XCircle className="text-destructive size-4" />
             )}
             <span className="text-sm font-medium">Signed Agreements</span>
           </div>
           {!agreementsStatus.valid && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {agreementsStatus.count}/{agreementsStatus.required} signed
             </div>
           )}
@@ -244,33 +249,33 @@ export function PetComplianceChecklist({
 
         {/* Evaluation */}
         {evaluationStatus.required && (
-          <div className="flex items-center justify-between p-2 rounded-lg border bg-card">
+          <div className="bg-card flex items-center justify-between rounded-lg border p-2">
             <div className="flex items-center gap-2">
               {evaluationStatus.valid ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="size-4 text-green-600" />
               ) : (
-                <XCircle className="h-4 w-4 text-destructive" />
+                <XCircle className="text-destructive size-4" />
               )}
               <span className="text-sm font-medium">Evaluation Completed</span>
             </div>
             {!evaluationStatus.valid && (
-              <div className="text-xs text-muted-foreground">Required</div>
+              <div className="text-muted-foreground text-xs">Required</div>
             )}
           </div>
         )}
 
         {/* No Overdue Invoice */}
-        <div className="flex items-center justify-between p-2 rounded-lg border bg-card">
+        <div className="bg-card flex items-center justify-between rounded-lg border p-2">
           <div className="flex items-center gap-2">
             {invoicesStatus.valid ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="size-4 text-green-600" />
             ) : (
-              <XCircle className="h-4 w-4 text-destructive" />
+              <XCircle className="text-destructive size-4" />
             )}
             <span className="text-sm font-medium">No Overdue Invoice</span>
           </div>
           {!invoicesStatus.valid && (
-            <div className="text-xs text-destructive">
+            <div className="text-destructive text-xs">
               {invoicesStatus.count} overdue
             </div>
           )}

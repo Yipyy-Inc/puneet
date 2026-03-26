@@ -562,7 +562,7 @@ export default function NewFacilityPage() {
                 className={errors.name ? "border-destructive" : ""}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
+                <p className="text-destructive text-sm">{errors.name}</p>
               )}
             </div>
 
@@ -581,7 +581,7 @@ export default function NewFacilityPage() {
                 className={errors.email ? "border-destructive" : ""}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
+                <p className="text-destructive text-sm">{errors.email}</p>
               )}
             </div>
 
@@ -631,7 +631,7 @@ export default function NewFacilityPage() {
               <Label>
                 Business Type <span className="text-destructive">*</span>
               </Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Select all that apply to your facility
               </p>
               <div className="grid grid-cols-2 gap-4">
@@ -640,25 +640,25 @@ export default function NewFacilityPage() {
                     key={type.id}
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       formData.businessTypes.includes(type.id)
-                        ? "ring-2 ring-primary border-primary"
+                        ? "border-primary ring-primary ring-2"
                         : ""
-                    }`}
+                    } `}
                     onClick={() => toggleBusinessType(type.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
                         <div
-                          className={`p-2 rounded-lg ${
+                          className={`rounded-lg p-2 ${
                             formData.businessTypes.includes(type.id)
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted"
-                          }`}
+                          } `}
                         >
                           <type.icon className="h-5 w-5" />
                         </div>
                         <div>
                           <h4 className="font-medium">{type.label}</h4>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {type.description}
                           </p>
                         </div>
@@ -668,7 +668,7 @@ export default function NewFacilityPage() {
                 ))}
               </div>
               {errors.businessTypes && (
-                <p className="text-sm text-destructive">
+                <p className="text-destructive text-sm">
                   {errors.businessTypes}
                 </p>
               )}
@@ -676,7 +676,7 @@ export default function NewFacilityPage() {
 
             <div className="space-y-4">
               <Label>Capacity Limits</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Set maximum limits for facility resources (leave empty for plan
                 defaults)
               </p>
@@ -684,9 +684,9 @@ export default function NewFacilityPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="limitLocations"
-                    className="text-sm flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm"
                   >
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <MapPin className="text-muted-foreground size-4" />
                     Locations
                   </Label>
                   <Input
@@ -706,9 +706,9 @@ export default function NewFacilityPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="limitStaff"
-                    className="text-sm flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm"
                   >
-                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <Users className="text-muted-foreground size-4" />
                     Staff Members
                   </Label>
                   <Input
@@ -725,9 +725,9 @@ export default function NewFacilityPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="limitClients"
-                    className="text-sm flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm"
                   >
-                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    <UserCheck className="text-muted-foreground size-4" />
                     Clients
                   </Label>
                   <Input
@@ -744,9 +744,9 @@ export default function NewFacilityPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="limitPets"
-                    className="text-sm flex items-center gap-2"
+                    className="flex items-center gap-2 text-sm"
                   >
-                    <PawPrint className="h-4 w-4 text-muted-foreground" />
+                    <PawPrint className="text-muted-foreground size-4" />
                     Pets
                   </Label>
                   <Input
@@ -773,24 +773,24 @@ export default function NewFacilityPage() {
                 <Label>
                   Locations <span className="text-destructive">*</span>
                 </Label>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Add locations and specify which services are available at each
                 </p>
               </div>
               <Button onClick={addLocation} variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Add Location
               </Button>
             </div>
 
             {errors.locations && (
-              <p className="text-sm text-destructive">{errors.locations}</p>
+              <p className="text-destructive text-sm">{errors.locations}</p>
             )}
 
             {formData.locations.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center">
-                  <MapPin className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <MapPin className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
                   <p className="text-muted-foreground">
                     No locations added yet
                   </p>
@@ -800,7 +800,7 @@ export default function NewFacilityPage() {
                     size="sm"
                     className="mt-4"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Add Your First Location
                   </Button>
                 </CardContent>
@@ -808,11 +808,11 @@ export default function NewFacilityPage() {
             ) : (
               <div className="space-y-4">
                 {formData.locations.map((location, index) => (
-                  <Card key={location.id} className="border-0 shadow-card">
+                  <Card key={location.id} className="shadow-card border-0">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Building2 className="h-4 w-4" />
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Building2 className="size-4" />
                           Location {index + 1}
                           {location.name && ` - ${location.name}`}
                         </CardTitle>
@@ -822,7 +822,7 @@ export default function NewFacilityPage() {
                           onClick={() => removeLocation(location.id)}
                           className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </CardHeader>
@@ -846,7 +846,7 @@ export default function NewFacilityPage() {
                           }
                         />
                         {errors[`loc_${index}_name`] && (
-                          <p className="text-sm text-destructive">
+                          <p className="text-destructive text-sm">
                             {errors[`loc_${index}_name`]}
                           </p>
                         )}
@@ -875,7 +875,7 @@ export default function NewFacilityPage() {
                           }
                         />
                         {errors[`loc_${index}_address`] && (
-                          <p className="text-sm text-destructive">
+                          <p className="text-destructive text-sm">
                             {errors[`loc_${index}_address`]}
                           </p>
                         )}
@@ -903,7 +903,7 @@ export default function NewFacilityPage() {
                             }
                           />
                           {errors[`loc_${index}_city`] && (
-                            <p className="text-sm text-destructive">
+                            <p className="text-destructive text-sm">
                               {errors[`loc_${index}_city`]}
                             </p>
                           )}
@@ -929,7 +929,7 @@ export default function NewFacilityPage() {
                             }
                           />
                           {errors[`loc_${index}_state`] && (
-                            <p className="text-sm text-destructive">
+                            <p className="text-destructive text-sm">
                               {errors[`loc_${index}_state`]}
                             </p>
                           )}
@@ -984,12 +984,12 @@ export default function NewFacilityPage() {
                       </div>
 
                       {/* Services at this location */}
-                      <div className="space-y-3 pt-2 border-t">
+                      <div className="space-y-3 border-t pt-2">
                         <Label className="text-sm">
                           Services at this Location{" "}
                           <span className="text-destructive">*</span>
                         </Label>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           Select which services are offered at this location
                         </p>
                         <div className="grid grid-cols-2 gap-2">
@@ -1002,11 +1002,15 @@ export default function NewFacilityPage() {
                             return (
                               <div
                                 key={type.id}
-                                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                                className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-all ${
                                   isSelected
                                     ? "border-primary bg-primary/5"
-                                    : "border-muted hover:border-muted-foreground/30"
-                                } ${!isBusinessTypeEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                                    : `border-muted hover:border-muted-foreground/30`
+                                } ${
+                                  !isBusinessTypeEnabled
+                                    ? `cursor-not-allowed opacity-50`
+                                    : ""
+                                } `}
                                 onClick={() => {
                                   if (isBusinessTypeEnabled) {
                                     toggleLocationService(location.id, type.id);
@@ -1018,14 +1022,14 @@ export default function NewFacilityPage() {
                                   disabled={!isBusinessTypeEnabled}
                                   className="pointer-events-none"
                                 />
-                                <type.icon className="h-4 w-4 text-muted-foreground" />
+                                <type.icon className="text-muted-foreground size-4" />
                                 <span className="text-sm">{type.label}</span>
                               </div>
                             );
                           })}
                         </div>
                         {errors[`loc_${index}_services`] && (
-                          <p className="text-sm text-destructive">
+                          <p className="text-destructive text-sm">
                             {errors[`loc_${index}_services`]}
                           </p>
                         )}
@@ -1038,18 +1042,18 @@ export default function NewFacilityPage() {
                       </div>
 
                       {/* Operating Hours */}
-                      <div className="space-y-3 pt-2 border-t">
+                      <div className="space-y-3 border-t pt-2">
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <Clock className="text-muted-foreground size-4" />
                           <Label className="text-sm">Operating Hours</Label>
                         </div>
                         <div className="space-y-2">
                           {daysOfWeek.map((day) => (
                             <div
                               key={day}
-                              className="flex items-center gap-4 p-2 rounded-lg bg-muted/50"
+                              className="bg-muted/50 flex items-center gap-4 rounded-lg p-2"
                             >
-                              <div className="flex items-center gap-2 w-28">
+                              <div className="flex w-28 items-center gap-2">
                                 <Checkbox
                                   id={`${location.id}-day-${day}`}
                                   checked={location.operatingHours[day].enabled}
@@ -1059,7 +1063,7 @@ export default function NewFacilityPage() {
                                 />
                                 <Label
                                   htmlFor={`${location.id}-day-${day}`}
-                                  className="text-xs font-medium cursor-pointer"
+                                  className="cursor-pointer text-xs font-medium"
                                 >
                                   {day.slice(0, 3)}
                                 </Label>
@@ -1077,9 +1081,9 @@ export default function NewFacilityPage() {
                                         e.target.value,
                                       )
                                     }
-                                    className="w-28 h-8 text-xs"
+                                    className="h-8 w-28 text-xs"
                                   />
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground text-xs">
                                     to
                                   </span>
                                   <Input
@@ -1093,11 +1097,11 @@ export default function NewFacilityPage() {
                                         e.target.value,
                                       )
                                     }
-                                    className="w-28 h-8 text-xs"
+                                    className="h-8 w-28 text-xs"
                                   />
                                 </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   Closed
                                 </span>
                               )}
@@ -1130,7 +1134,7 @@ export default function NewFacilityPage() {
                 className={errors.ownerName ? "border-destructive" : ""}
               />
               {errors.ownerName && (
-                <p className="text-sm text-destructive">{errors.ownerName}</p>
+                <p className="text-destructive text-sm">{errors.ownerName}</p>
               )}
             </div>
 
@@ -1149,9 +1153,9 @@ export default function NewFacilityPage() {
                 className={errors.ownerEmail ? "border-destructive" : ""}
               />
               {errors.ownerEmail && (
-                <p className="text-sm text-destructive">{errors.ownerEmail}</p>
+                <p className="text-destructive text-sm">{errors.ownerEmail}</p>
               )}
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 This will be used as the admin login email
               </p>
             </div>
@@ -1168,11 +1172,11 @@ export default function NewFacilityPage() {
               />
             </div>
 
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-base">Auto-generate Password</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Generate a secure password and send it via email
                   </p>
                 </div>
@@ -1209,7 +1213,7 @@ export default function NewFacilityPage() {
                       }
                     />
                     {errors.adminPassword && (
-                      <p className="text-sm text-destructive">
+                      <p className="text-destructive text-sm">
                         {errors.adminPassword}
                       </p>
                     )}
@@ -1235,7 +1239,7 @@ export default function NewFacilityPage() {
                       }
                     />
                     {errors.adminConfirmPassword && (
-                      <p className="text-sm text-destructive">
+                      <p className="text-destructive text-sm">
                         {errors.adminConfirmPassword}
                       </p>
                     )}
@@ -1252,12 +1256,12 @@ export default function NewFacilityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-base">Staff Members</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Add team members who will use the system
                 </p>
               </div>
               <Button onClick={addStaffMember} variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Add Staff
               </Button>
             </div>
@@ -1265,14 +1269,14 @@ export default function NewFacilityPage() {
             {formData.staffMembers.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="p-8 text-center">
-                  <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="font-medium mb-1">No staff members added</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <Users className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                  <h3 className="mb-1 font-medium">No staff members added</h3>
+                  <p className="text-muted-foreground mb-4 text-sm">
                     You can add staff members now or later from the facility
                     settings
                   </p>
                   <Button onClick={addStaffMember} variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Add First Staff Member
                   </Button>
                 </CardContent>
@@ -1281,10 +1285,10 @@ export default function NewFacilityPage() {
               <div className="space-y-4">
                 {formData.staffMembers.map((staff, index) => (
                   <Card key={staff.id} className="overflow-hidden">
-                    <CardHeader className="pb-3 bg-muted/30">
+                    <CardHeader className="bg-muted/30 pb-3">
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <User className="h-4 w-4" />
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <User className="size-4" />
                           Staff Member {index + 1}
                         </CardTitle>
                         <Button
@@ -1293,11 +1297,11 @@ export default function NewFacilityPage() {
                           onClick={() => removeStaffMember(staff.id)}
                           className="text-destructive hover:text-destructive"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 space-y-4">
+                    <CardContent className="space-y-4 p-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>
@@ -1392,9 +1396,9 @@ export default function NewFacilityPage() {
                       </div>
 
                       {staff.role && (
-                        <div className="space-y-3 pt-3 border-t">
+                        <div className="space-y-3 border-t pt-3">
                           <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-muted-foreground" />
+                            <Shield className="text-muted-foreground size-4" />
                             <Label className="text-sm">Permissions</Label>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
@@ -1417,7 +1421,7 @@ export default function NewFacilityPage() {
                                 />
                                 <Label
                                   htmlFor={`${staff.id}-${permission.id}`}
-                                  className="text-xs cursor-pointer"
+                                  className="cursor-pointer text-xs"
                                 >
                                   {permission.label}
                                 </Label>
@@ -1441,7 +1445,7 @@ export default function NewFacilityPage() {
                         />
                         <Label
                           htmlFor={`${staff.id}-auto-password`}
-                          className="text-sm cursor-pointer"
+                          className="cursor-pointer text-sm"
                         >
                           Auto-generate password and send via email
                         </Label>
@@ -1461,13 +1465,13 @@ export default function NewFacilityPage() {
               <Label className="text-base">
                 Enable Modules <span className="text-destructive">*</span>
               </Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Select the features and tools this facility will have access to
               </p>
             </div>
 
             {errors.modules && (
-              <p className="text-sm text-destructive">{errors.modules}</p>
+              <p className="text-destructive text-sm">{errors.modules}</p>
             )}
 
             <div className="grid gap-3">
@@ -1478,26 +1482,24 @@ export default function NewFacilityPage() {
                 return (
                   <Card
                     key={module.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      isEnabled ? "ring-2 ring-primary border-primary" : ""
-                    }`}
+                    className={`cursor-pointer transition-all hover:shadow-md ${isEnabled ? "border-primary ring-primary ring-2" : ""} `}
                     onClick={() => toggleModule(module.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`p-2 rounded-lg ${
+                            className={`rounded-lg p-2 ${
                               isEnabled
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted"
-                            }`}
+                            } `}
                           >
                             <Icon className="h-5 w-5" />
                           </div>
                           <div>
                             <h4 className="font-medium">{module.name}</h4>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {module.description}
                             </p>
                           </div>
@@ -1533,10 +1535,10 @@ export default function NewFacilityPage() {
                         }, 0)
                         .toFixed(2)}
                     </span>
-                    <span className="text-sm text-muted-foreground">/mo</span>
+                    <span className="text-muted-foreground text-sm">/mo</span>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="mt-2 flex flex-wrap gap-1">
                   {formData.enabledModules.map((id) => {
                     const mod = availableModules.find((m) => m.id === id);
                     return (
@@ -1566,28 +1568,28 @@ export default function NewFacilityPage() {
                     key={plan.id}
                     className={`cursor-pointer transition-all hover:shadow-md ${
                       formData.selectedPlan === plan.id
-                        ? "ring-2 ring-primary border-primary"
+                        ? "border-primary ring-primary ring-2"
                         : ""
-                    }`}
+                    } `}
                     onClick={() =>
                       setFormData({ ...formData, selectedPlan: plan.id })
                     }
                   >
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`p-2 rounded-lg ${
+                            className={`rounded-lg p-2 ${
                               formData.selectedPlan === plan.id
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted"
-                            }`}
+                            } `}
                           >
                             <CreditCard className="h-5 w-5" />
                           </div>
                           <div>
                             <h3 className="font-semibold">{plan.name}</h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {plan.description}
                             </p>
                           </div>
@@ -1600,30 +1602,30 @@ export default function NewFacilityPage() {
                                 )}`
                               : "$0"}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-muted-foreground text-sm">
                             /month
                           </div>
                         </div>
                       </div>
                       {/* Plan Limits */}
-                      <div className="grid grid-cols-4 gap-2 pt-3 border-t">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="grid grid-cols-4 gap-2 border-t pt-3">
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <Building2 className="h-3.5 w-3.5" />
                           <span>
                             {formatLimit(plan.limits.locations)} locations
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <Users className="h-3.5 w-3.5" />
                           <span>{formatLimit(plan.limits.staff)} staff</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <UserCheck className="h-3.5 w-3.5" />
                           <span>
                             {formatLimit(plan.limits.clients)} clients
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <PawPrint className="h-3.5 w-3.5" />
                           <span>{formatLimit(plan.limits.pets)} pets</span>
                         </div>
@@ -1634,7 +1636,7 @@ export default function NewFacilityPage() {
               })}
             </div>
             {errors.selectedPlan && (
-              <p className="text-sm text-destructive">{errors.selectedPlan}</p>
+              <p className="text-destructive text-sm">{errors.selectedPlan}</p>
             )}
           </div>
         );
@@ -1642,34 +1644,34 @@ export default function NewFacilityPage() {
       case 7:
         return (
           <div className="space-y-6">
-            <div className="rounded-lg bg-success/10 border border-success/20 p-4">
-              <div className="flex items-center gap-2 text-success mb-2">
+            <div className="border-success/20 bg-success/10 rounded-lg border p-4">
+              <div className="text-success mb-2 flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
                 <span className="font-medium">Ready to Create</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Please review all the details below before creating the
                 facility.
               </p>
             </div>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Building className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Building className="size-4" />
                   Facility Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Name</span>
                   <span className="font-medium">{formData.name}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Email</span>
                   <span className="font-medium">{formData.email}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Business Type</span>
                   <div className="flex gap-1">
                     {formData.businessTypes.map((type) => (
@@ -1681,7 +1683,7 @@ export default function NewFacilityPage() {
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-muted-foreground">Limits</span>
-                  <span className="font-medium text-right text-xs">
+                  <span className="text-right text-xs font-medium">
                     {formData.limitLocations || "Default"} locations,{" "}
                     {formData.limitStaff || "Default"} staff,{" "}
                     {formData.limitClients || "Default"} clients,{" "}
@@ -1691,10 +1693,10 @@ export default function NewFacilityPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MapPin className="size-4" />
                   Locations ({formData.locations.length})
                 </CardTitle>
               </CardHeader>
@@ -1702,13 +1704,13 @@ export default function NewFacilityPage() {
                 {formData.locations.map((location, index) => (
                   <div
                     key={location.id}
-                    className={index > 0 ? "pt-3 border-t" : ""}
+                    className={index > 0 ? "border-t pt-3" : ""}
                   >
                     <div className="flex justify-between py-1">
                       <span className="text-muted-foreground">
                         {location.name || `Location ${index + 1}`}
                       </span>
-                      <span className="font-medium text-right text-xs">
+                      <span className="text-right text-xs font-medium">
                         {location.address}, {location.city}, {location.state}{" "}
                         {location.zipCode}
                       </span>
@@ -1717,7 +1719,7 @@ export default function NewFacilityPage() {
                       <span className="text-muted-foreground text-xs">
                         Services
                       </span>
-                      <div className="flex gap-1 flex-wrap justify-end">
+                      <div className="flex flex-wrap justify-end gap-1">
                         {location.services.map((serviceId) => (
                           <Badge
                             key={serviceId}
@@ -1736,7 +1738,7 @@ export default function NewFacilityPage() {
                       <span className="text-muted-foreground text-xs">
                         Operating Days
                       </span>
-                      <span className="font-medium text-xs">
+                      <span className="text-xs font-medium">
                         {
                           Object.values(location.operatingHours).filter(
                             (h) => h.enabled,
@@ -1750,19 +1752,19 @@ export default function NewFacilityPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <User className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="size-4" />
                   Owner Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Name</span>
                   <span className="font-medium">{formData.ownerName}</span>
                 </div>
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Email</span>
                   <span className="font-medium">{formData.ownerEmail}</span>
                 </div>
@@ -1777,15 +1779,15 @@ export default function NewFacilityPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="size-4" />
                   Staff Members
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Total Staff</span>
                   <span className="font-medium">
                     {formData.staffMembers.length} member
@@ -1797,7 +1799,7 @@ export default function NewFacilityPage() {
                     {formData.staffMembers.map((staff) => (
                       <div
                         key={staff.id}
-                        className="flex justify-between text-xs py-1"
+                        className="flex justify-between py-1 text-xs"
                       >
                         <span>{staff.name || "Unnamed"}</span>
                         <Badge variant="outline" className="text-xs">
@@ -1811,15 +1813,15 @@ export default function NewFacilityPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Layers className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Layers className="size-4" />
                   Enabled Modules
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between py-1 border-b">
+                <div className="flex justify-between border-b py-1">
                   <span className="text-muted-foreground">Modules</span>
                   <span className="font-medium">
                     {formData.enabledModules.length} enabled
@@ -1835,7 +1837,7 @@ export default function NewFacilityPage() {
                     );
                   })}
                 </div>
-                <div className="flex justify-between py-1 pt-2 border-t">
+                <div className="flex justify-between border-t py-1 pt-2">
                   <span className="text-muted-foreground">Module Cost</span>
                   <span className="font-medium">
                     $
@@ -1851,10 +1853,10 @@ export default function NewFacilityPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CreditCard className="size-4" />
                   Subscription
                 </CardTitle>
               </CardHeader>
@@ -1921,9 +1923,9 @@ export default function NewFacilityPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid lg:grid-cols-4 gap-6">
+      <div className="grid gap-6 lg:grid-cols-4">
         {/* Sidebar - Step Navigation */}
-        <Card className="border-0 shadow-card lg:col-span-1 h-fit">
+        <Card className="shadow-card h-fit border-0 lg:col-span-1">
           <CardContent className="p-4">
             <div className="space-y-1">
               {steps.map((step, index) => {
@@ -1940,33 +1942,37 @@ export default function NewFacilityPage() {
                       }
                     }}
                     disabled={index > currentStep}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                    className={`flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : isCompleted
-                          ? "bg-muted hover:bg-muted/80 cursor-pointer"
+                          ? `bg-muted hover:bg-muted/80 cursor-pointer`
                           : "text-muted-foreground cursor-not-allowed"
-                    }`}
+                    } `}
                   >
                     <div
-                      className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
                         isActive
                           ? "bg-primary-foreground/20"
                           : isCompleted
                             ? "bg-success/20 text-success"
                             : "bg-muted"
-                      }`}
+                      } `}
                     >
                       {isCompleted ? (
-                        <CheckCircle className="h-4 w-4" />
+                        <CheckCircle className="size-4" />
                       ) : (
-                        <Icon className="h-4 w-4" />
+                        <Icon className="size-4" />
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{step.title}</p>
+                      <p className="text-sm font-medium">{step.title}</p>
                       <p
-                        className={`text-xs ${isActive ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                        className={`text-xs ${
+                          isActive
+                            ? `text-primary-foreground/70`
+                            : `text-muted-foreground`
+                        } `}
                       >
                         {step.description}
                       </p>
@@ -1979,12 +1985,12 @@ export default function NewFacilityPage() {
         </Card>
 
         {/* Main Form */}
-        <Card className="border-0 shadow-card lg:col-span-3">
+        <Card className="shadow-card border-0 lg:col-span-3">
           <CardHeader>
             <CardTitle>{steps[currentStep].title}</CardTitle>
           </CardHeader>
           <CardContent>{renderStepContent()}</CardContent>
-          <div className="p-6 pt-0 flex justify-between">
+          <div className="flex justify-between p-6 pt-0">
             <Button
               variant="outline"
               onClick={handlePrevious}

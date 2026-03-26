@@ -145,20 +145,20 @@ export default function CreateUserPage() {
 
   if (showSuccess) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
+      <div className="flex flex-1 items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
           <CardContent className="pt-6">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">
+            <h3 className="mb-2 text-xl font-semibold">
               User Created Successfully
             </h3>
             <p className="text-muted-foreground mb-4">
               {formData.name} has been added as a{" "}
               {formData.role && roleDisplayNames[formData.role]}.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Redirecting to user management...
             </p>
           </CardContent>
@@ -214,7 +214,7 @@ export default function CreateUserPage() {
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address *</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     id="email"
                     type="email"
@@ -231,7 +231,7 @@ export default function CreateUserPage() {
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     id="phone"
                     type="tel"
@@ -247,7 +247,7 @@ export default function CreateUserPage() {
               <div className="space-y-2">
                 <Label htmlFor="department">Department *</Label>
                 <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Building className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
                   <Select
                     value={formData.department}
                     onValueChange={(value) =>
@@ -306,8 +306,8 @@ export default function CreateUserPage() {
               </div>
 
               {formData.role && (
-                <div className="p-3 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium mb-2">Role Permissions:</p>
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="mb-2 text-sm font-medium">Role Permissions:</p>
                   <div className="flex flex-wrap gap-1">
                     {rolePermissions[formData.role].slice(0, 5).map((perm) => (
                       <Badge
@@ -330,7 +330,7 @@ export default function CreateUserPage() {
               <div className="space-y-2">
                 <Label htmlFor="accessLevel">Access Level *</Label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                  <Key className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
                   <Select
                     value={formData.accessLevel}
                     onValueChange={(value) =>
@@ -358,7 +358,7 @@ export default function CreateUserPage() {
                   </Select>
                 </div>
                 {formData.accessLevel && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {accessLevelDescriptions[formData.accessLevel]}
                   </p>
                 )}
@@ -378,15 +378,15 @@ export default function CreateUserPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 {responsibilityOptions.map((area) => (
                   <div
                     key={area}
-                    className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 transition-colors ${
                       formData.responsibilityAreas.includes(area)
-                        ? "bg-primary/10 border-primary"
+                        ? "border-primary bg-primary/10"
                         : "hover:bg-muted/50"
-                    }`}
+                    } `}
                     onClick={() => handleResponsibilityToggle(area)}
                   >
                     <Checkbox
@@ -398,8 +398,8 @@ export default function CreateUserPage() {
                 ))}
               </div>
               {formData.responsibilityAreas.length > 0 && (
-                <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium mb-2">
+                <div className="bg-muted/30 mt-4 rounded-lg p-3">
+                  <p className="mb-2 text-sm font-medium">
                     Selected Areas ({formData.responsibilityAreas.length}):
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -416,7 +416,7 @@ export default function CreateUserPage() {
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="mt-6 flex justify-end gap-3">
           <Link href="/dashboard/user-management">
             <Button variant="outline" type="button">
               {"Cancel"}
@@ -425,12 +425,12 @@ export default function CreateUserPage() {
           <Button type="submit" disabled={!isFormValid || isSubmitting}>
             {isSubmitting ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <span className="mr-2 animate-spin">⏳</span>
                 Creating...
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="mr-2 size-4" />
                 {"Add User"}
               </>
             )}

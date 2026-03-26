@@ -12,11 +12,7 @@ import {
   Archive,
   Eye,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +23,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CustomServiceStatusBadge } from "./CustomServiceStatusBadge";
-import { resolveIcon } from "@/lib/service-registry";
+import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import type { CustomServiceModule } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-import { getCategoryMeta, getGradientStyle, PRICING_MODEL_LABELS } from "@/data/custom-services";
+import {
+  getCategoryMeta,
+  getGradientStyle,
+  PRICING_MODEL_LABELS,
+} from "@/data/custom-services";
 
 interface CustomServiceModuleCardProps {
   module: CustomServiceModule;
@@ -51,38 +51,44 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
   onArchive,
 }: CustomServiceModuleCardProps) {
   const router = useRouter();
-  const Icon = resolveIcon(module.icon);
   const catMeta = getCategoryMeta(module.category);
   const gradientStyle = getGradientStyle(module.iconColor, module.iconColorTo);
 
   const handleEdit = useCallback(() => {
-    onEdit
-      ? onEdit(module)
-      : router.push(
-          `/facility/dashboard/services/custom/${module.slug}/edit`,
-        );
+    if (onEdit) {
+      onEdit(module);
+    } else {
+      router.push(`/facility/dashboard/services/custom/${module.slug}/edit`);
+    }
   }, [onEdit, module, router]);
 
   return (
-    <Card className="group relative overflow-hidden transition-all duration-200 hover:shadow-md hover:-translate-y-0.5" aria-label={module.name} role="article">
+    <Card
+      className="group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      aria-label={module.name}
+      role="article"
+    >
       {/* Gradient accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={gradientStyle} />
+      <div
+        className="absolute top-0 right-0 left-0 h-1 rounded-t-2xl"
+        style={gradientStyle}
+      />
 
-      <CardHeader className="pb-3 pt-6">
+      <CardHeader className="pt-6 pb-3">
         <div className="flex items-start justify-between gap-3">
           {/* Icon + Title */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
               style={gradientStyle}
             >
-              <Icon className="h-5 w-5" />
+              <DynamicIcon name={module.icon} className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm leading-tight truncate">
+              <p className="truncate text-sm/tight font-semibold">
                 {module.name}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">
                 /{module.slug}
               </p>
             </div>
@@ -95,43 +101,35 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
                 variant="ghost"
                 size="icon"
                 aria-label={`Actions for ${module.name}`}
-                className="shrink-0 min-h-[44px] min-w-[44px] sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                className="min-h-[44px] min-w-[44px] shrink-0 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={handleEdit}>
-                <Pencil className="h-4 w-4" />
+                <Pencil className="size-4" />
                 Edit Module
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDuplicate?.(module.id)}
-              >
-                <Copy className="h-4 w-4" />
+              <DropdownMenuItem onClick={() => onDuplicate?.(module.id)}>
+                <Copy className="size-4" />
                 Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {module.status === "active" ? (
-                <DropdownMenuItem
-                  onClick={() => onToggleStatus?.(module)}
-                >
-                  <ToggleLeft className="h-4 w-4" />
+                <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
+                  <ToggleLeft className="size-4" />
                   Disable
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem
-                  onClick={() => onToggleStatus?.(module)}
-                >
-                  <ToggleRight className="h-4 w-4" />
+                <DropdownMenuItem onClick={() => onToggleStatus?.(module)}>
+                  <ToggleRight className="size-4" />
                   Activate
                 </DropdownMenuItem>
               )}
               {module.status !== "archived" && (
-                <DropdownMenuItem
-                  onClick={() => onArchive?.(module.id)}
-                >
-                  <Archive className="h-4 w-4" />
+                <DropdownMenuItem onClick={() => onArchive?.(module.id)}>
+                  <Archive className="size-4" />
                   Archive
                 </DropdownMenuItem>
               )}
@@ -140,7 +138,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
                 variant="destructive"
                 onClick={() => onDelete?.(module.id)}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -151,7 +149,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
       <CardContent className="space-y-3">
         {/* Description */}
         {module.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+          <p className="text-muted-foreground line-clamp-2 text-xs/relaxed">
             {module.description}
           </p>
         )}
@@ -160,18 +158,23 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
         <div className="flex flex-wrap gap-1.5">
           <CustomServiceStatusBadge status={module.status} />
           {catMeta && (
-            <Badge className={cn("text-xs border", catMeta.badgeClass)}>{catMeta.name}</Badge>
+            <Badge className={cn("border text-xs", catMeta.badgeClass)}>
+              {catMeta.name}
+            </Badge>
           )}
           {module.onlineBooking.enabled && (
-            <Badge variant="outline" className="text-xs text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+            <Badge
+              variant="outline"
+              className="border-blue-200 bg-blue-50 text-xs text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+            >
               Online
             </Badge>
           )}
         </div>
 
         {/* Pricing row */}
-        <div className="flex items-center justify-between pt-1 border-t border-border/50">
-          <div className="text-xs text-muted-foreground">
+        <div className="border-border/50 flex items-center justify-between border-t pt-1">
+          <div className="text-muted-foreground text-xs">
             {PRICING_MODEL_LABELS[module.pricing.model] ?? module.pricing.model}
           </div>
           <div className="text-sm font-semibold">
@@ -180,7 +183,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
         </div>
 
         {/* Feature flags */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
           {module.calendar.enabled && (
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
@@ -211,7 +214,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
         <Button
           variant="outline"
           size="sm"
-          className="w-full mt-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+          className="mt-1 w-full transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
           onClick={handleEdit}
         >
           <Eye className="h-3.5 w-3.5" />

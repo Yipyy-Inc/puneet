@@ -714,7 +714,7 @@ export default function KennelViewPage() {
     selectedClientId && selectedPetId && formCheckIn && formCheckOut;
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -729,46 +729,46 @@ export default function KennelViewPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* Service Type Toggle */}
-          <div className="flex rounded-lg border overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border">
             <Button
               variant={serviceType === "boarding" ? "secondary" : "ghost"}
               size="sm"
-              className="rounded-none gap-2"
+              className="gap-2 rounded-none"
               onClick={() => setServiceType("boarding")}
             >
-              <Moon className="h-4 w-4" />
+              <Moon className="size-4" />
               Boarding
             </Button>
             <Button
               variant={serviceType === "daycare" ? "secondary" : "ghost"}
               size="sm"
-              className="rounded-none gap-2"
+              className="gap-2 rounded-none"
               onClick={() => setServiceType("daycare")}
             >
-              <Sun className="h-4 w-4" />
+              <Sun className="size-4" />
               Daycare
             </Button>
           </div>
           {/* View Mode Toggle */}
-          <div className="flex rounded-lg border overflow-hidden">
+          <div className="flex overflow-hidden rounded-lg border">
             {serviceType === "boarding" ? (
               <>
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
-                  className="rounded-none gap-2"
+                  className="gap-2 rounded-none"
                   onClick={() => setViewMode("list")}
                 >
-                  <List className="h-4 w-4" />
+                  <List className="size-4" />
                   List
                 </Button>
                 <Button
                   variant={viewMode === "calendar" ? "secondary" : "ghost"}
                   size="sm"
-                  className="rounded-none gap-2"
+                  className="gap-2 rounded-none"
                   onClick={() => setViewMode("calendar")}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <LayoutGrid className="size-4" />
                   Calendar
                 </Button>
               </>
@@ -777,19 +777,19 @@ export default function KennelViewPage() {
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
-                  className="rounded-none gap-2"
+                  className="gap-2 rounded-none"
                   onClick={() => setViewMode("list")}
                 >
-                  <List className="h-4 w-4" />
+                  <List className="size-4" />
                   List
                 </Button>
                 <Button
                   variant={viewMode === "calendar" ? "secondary" : "ghost"}
                   size="sm"
-                  className="rounded-none gap-2"
+                  className="gap-2 rounded-none"
                   onClick={() => setViewMode("calendar")}
                 >
-                  <LayoutGrid className="h-4 w-4" />
+                  <LayoutGrid className="size-4" />
                   Calendar
                 </Button>
               </>
@@ -811,14 +811,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Vacant
                     </p>
                     <p className="text-2xl font-bold text-green-600">
                       {statusCounts.vacant}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                     <CheckCircle className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
@@ -836,14 +836,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Occupied
                     </p>
                     <p className="text-2xl font-bold text-blue-600">
                       {statusCounts.occupied}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
                     <PawPrint className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
@@ -861,14 +861,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Reserved
                     </p>
                     <p className="text-2xl font-bold text-yellow-600">
                       {statusCounts.reserved}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
                     <Calendar className="h-6 w-6 text-yellow-600" />
                   </div>
                 </div>
@@ -886,14 +886,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Maintenance
                     </p>
                     <p className="text-2xl font-bold text-red-600">
                       {statusCounts.maintenance}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
                     <Wrench className="h-6 w-6 text-red-600" />
                   </div>
                 </div>
@@ -985,10 +985,10 @@ export default function KennelViewPage() {
                       <TableRow
                         key={kennel.id}
                         className={cn(
-                          "cursor-pointer hover:bg-muted/50",
+                          `hover:bg-muted/50 cursor-pointer`,
                           kennel.petId &&
                             hasCriticalTags("pet", kennel.petId) &&
-                            "bg-red-50/50 dark:bg-red-950/20 border-l-4 border-l-red-500 dark:border-l-red-400",
+                            `border-l-4 border-l-red-500 bg-red-50/50 dark:border-l-red-400 dark:bg-red-950/20`,
                         )}
                         onClick={() => openKennelDialog(kennel)}
                       >
@@ -1011,7 +1011,7 @@ export default function KennelViewPage() {
                           {kennel.petName ? (
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
-                                <PawPrint className="h-4 w-4 text-muted-foreground" />
+                                <PawPrint className="text-muted-foreground size-4" />
                                 {kennel.petName}
                               </div>
                               {kennel.petId && (
@@ -1027,7 +1027,7 @@ export default function KennelViewPage() {
                                   ? getNoteCount("pet", kennel.petId)
                                   : 0;
                                 return noteCount > 0 ? (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <div className="text-muted-foreground flex items-center gap-1 text-xs">
                                     <MessageSquare className="h-3 w-3" />
                                     {noteCount}{" "}
                                     {noteCount === 1 ? "note" : "notes"}
@@ -1095,14 +1095,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Available
                     </p>
                     <p className="text-2xl font-bold text-green-600">
                       {daycareStatusCounts.available}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                     <CheckCircle className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
@@ -1120,14 +1120,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Occupied
                     </p>
                     <p className="text-2xl font-bold text-blue-600">
                       {daycareStatusCounts.occupied}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
                     <PawPrint className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
@@ -1145,14 +1145,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Reserved
                     </p>
                     <p className="text-2xl font-bold text-yellow-600">
                       {daycareStatusCounts.reserved}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
                     <Calendar className="h-6 w-6 text-yellow-600" />
                   </div>
                 </div>
@@ -1170,14 +1170,14 @@ export default function KennelViewPage() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground text-sm font-medium">
                       Maintenance
                     </p>
                     <p className="text-2xl font-bold text-red-600">
                       {daycareStatusCounts.maintenance}
                     </p>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
                     <Wrench className="h-6 w-6 text-red-600" />
                   </div>
                 </div>
@@ -1253,7 +1253,7 @@ export default function KennelViewPage() {
                     {filteredDaycareSpots.map((spot) => (
                       <TableRow
                         key={spot.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="hover:bg-muted/50 cursor-pointer"
                         onClick={() => {
                           // TODO: Handle spot click
                           console.log("Spot clicked:", spot);
@@ -1272,7 +1272,7 @@ export default function KennelViewPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <PawPrint className="h-4 w-4 text-muted-foreground" />
+                            <PawPrint className="text-muted-foreground size-4" />
                             {spot.capacity}
                           </div>
                         </TableCell>
@@ -1324,10 +1324,10 @@ export default function KennelViewPage() {
           {selectedKennel && (
             <div className="space-y-4 py-4">
               {selectedKennel.status === "maintenance" ? (
-                <div className="text-center py-8">
-                  <Wrench className="h-12 w-12 text-red-600 mx-auto mb-4" />
+                <div className="py-8 text-center">
+                  <Wrench className="mx-auto mb-4 h-12 w-12 text-red-600" />
                   <p className="text-lg font-medium">Under Maintenance</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     This kennel is temporarily unavailable
                   </p>
                   <Button
@@ -1358,7 +1358,7 @@ export default function KennelViewPage() {
                           >
                             {selectedClientId ? (
                               <div className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
+                                <User className="size-4" />
                                 {
                                   clients.find(
                                     (c) => c.id.toString() === selectedClientId,
@@ -1368,7 +1368,7 @@ export default function KennelViewPage() {
                             ) : (
                               "Select a client..."
                             )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
@@ -1397,14 +1397,14 @@ export default function KennelViewPage() {
                                     >
                                       <Check
                                         className={cn(
-                                          "mr-2 h-4 w-4",
+                                          "mr-2 size-4",
                                           selectedClientId ===
                                             client.id.toString()
                                             ? "opacity-100"
                                             : "opacity-0",
                                         )}
                                       />
-                                      <User className="mr-2 h-4 w-4" />
+                                      <User className="mr-2 size-4" />
                                       {client.name}
                                     </CommandItem>
                                   ))}
@@ -1432,7 +1432,7 @@ export default function KennelViewPage() {
                           >
                             {selectedPetId ? (
                               <div className="flex items-center gap-2">
-                                <PawPrint className="h-4 w-4" />
+                                <PawPrint className="size-4" />
                                 {(() => {
                                   const pet = availablePets.find(
                                     (p) => p.id.toString() === selectedPetId,
@@ -1447,7 +1447,7 @@ export default function KennelViewPage() {
                             ) : (
                               "Select a client first"
                             )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-(--radix-popover-trigger-width)! p-0">
@@ -1467,13 +1467,13 @@ export default function KennelViewPage() {
                                   >
                                     <Check
                                       className={cn(
-                                        "mr-2 h-4 w-4",
+                                        "mr-2 size-4",
                                         selectedPetId === pet.id.toString()
                                           ? "opacity-100"
                                           : "opacity-0",
                                       )}
                                     />
-                                    <PawPrint className="mr-2 h-4 w-4" />
+                                    <PawPrint className="mr-2 size-4" />
                                     {pet.name} ({pet.breed})
                                   </CommandItem>
                                 ))}
@@ -1565,7 +1565,7 @@ export default function KennelViewPage() {
                             1
                           }
                         >
-                          <Minus className="h-4 w-4" />
+                          <Minus className="size-4" />
                           Shorten
                         </Button>
                         <Button
@@ -1574,7 +1574,7 @@ export default function KennelViewPage() {
                           className="flex-1 gap-1"
                           onClick={() => handleExtendStay(1)}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="size-4" />
                           +1 Day
                         </Button>
                         <Button
@@ -1583,7 +1583,7 @@ export default function KennelViewPage() {
                           className="flex-1 gap-1"
                           onClick={() => handleExtendStay(7)}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="size-4" />
                           +1 Week
                         </Button>
                       </div>
@@ -1591,17 +1591,17 @@ export default function KennelViewPage() {
 
                   {/* Contact Info */}
                   {selectedClient?.phone && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div className="bg-muted flex items-center gap-2 rounded-lg p-3">
+                      <Phone className="text-muted-foreground size-4" />
                       <span className="text-sm">{selectedClient.phone}</span>
                     </div>
                   )}
 
                   {/* Pricing Summary */}
                   {formCheckIn && formCheckOut && (
-                    <div className="p-4 rounded-lg bg-muted">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-muted-foreground text-sm">
                           Duration
                         </span>
                         <span className="font-medium">
@@ -1609,17 +1609,17 @@ export default function KennelViewPage() {
                           nights
                         </span>
                       </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-muted-foreground text-sm">
                           Rate
                         </span>
                         <span className="font-medium">
                           ${selectedKennel.dailyRate}/night
                         </span>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center justify-between border-t pt-2">
                         <span className="font-medium">Total</span>
-                        <span className="font-bold text-green-600 text-lg">
+                        <span className="text-lg font-bold text-green-600">
                           ${calculateTotal()}
                         </span>
                       </div>

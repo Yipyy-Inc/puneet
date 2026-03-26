@@ -44,16 +44,16 @@ export function LivePetCamGrid() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Active Cameras
                 </p>
                 <p className="text-2xl font-bold">
                   {onlineCameras} / {cameras.length}
                 </p>
               </div>
-              <div className="h-12 w-px bg-border" />
+              <div className="bg-border h-12 w-px" />
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">
+                <p className="text-muted-foreground mb-2 text-xs font-medium">
                   Filter by Location
                 </p>
                 <Select
@@ -73,11 +73,11 @@ export function LivePetCamGrid() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline">
-                <Camera className="h-4 w-4 mr-2" />
+                <Camera className="mr-2 size-4" />
                 Add Camera
               </Button>
               <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="mr-2 size-4" />
                 Settings
               </Button>
             </div>
@@ -92,15 +92,15 @@ export function LivePetCamGrid() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
                     {camera.name}
                     {camera.isOnline ? (
-                      <CircleDot className="h-4 w-4 text-green-500 animate-pulse" />
+                      <CircleDot className="size-4 animate-pulse text-green-500" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <AlertCircle className="size-4 text-red-500" />
                     )}
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     {camera.location}
                   </p>
                 </div>
@@ -118,23 +118,23 @@ export function LivePetCamGrid() {
 
             <CardContent className="space-y-4">
               {/* Video Preview */}
-              <div className="relative bg-slate-900 rounded-lg aspect-video overflow-hidden">
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
                 {camera.isOnline ? (
                   <>
                     {/* Simulated video feed */}
-                    <div className="absolute inset-0 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center justify-center bg-linear-to-br from-slate-800 to-slate-900">
                       <Video className="h-16 w-16 text-slate-600" />
-                      <div className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                      <div className="absolute top-2 left-2 flex items-center gap-1 rounded-sm bg-red-600 px-2 py-1 text-xs text-white">
                         <CircleDot className="h-2 w-2 animate-pulse" />
                         LIVE
                       </div>
-                      <div className="absolute top-2 right-2 text-white text-xs bg-black/50 px-2 py-1 rounded">
+                      <div className="absolute top-2 right-2 rounded-sm bg-black/50 px-2 py-1 text-xs text-white">
                         {camera.resolution}
                       </div>
                     </div>
 
                     {/* Controls Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-4">
+                    <div className="absolute right-0 bottom-0 left-0 bg-linear-to-t from-black/80 to-transparent p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Button
@@ -142,7 +142,7 @@ export function LivePetCamGrid() {
                             variant="ghost"
                             className="h-8 w-8 p-0 text-white hover:bg-white/20"
                           >
-                            <Volume2 className="h-4 w-4" />
+                            <Volume2 className="size-4" />
                           </Button>
                           {camera.hasPanTilt && (
                             <Button
@@ -150,7 +150,7 @@ export function LivePetCamGrid() {
                               variant="ghost"
                               className="h-8 w-8 p-0 text-white hover:bg-white/20"
                             >
-                              <Move className="h-4 w-4" />
+                              <Move className="size-4" />
                             </Button>
                           )}
                         </div>
@@ -159,7 +159,7 @@ export function LivePetCamGrid() {
                           variant="ghost"
                           className="h-8 w-8 p-0 text-white hover:bg-white/20"
                         >
-                          <Maximize2 className="h-4 w-4" />
+                          <Maximize2 className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -174,27 +174,27 @@ export function LivePetCamGrid() {
 
               {/* Camera Features */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-wrap items-center gap-2">
                   {camera.hasAudio && (
                     <Badge variant="outline" className="text-xs">
-                      <Volume2 className="h-3 w-3 mr-1" />
+                      <Volume2 className="mr-1 h-3 w-3" />
                       Audio
                     </Badge>
                   )}
                   {camera.hasPanTilt && (
                     <Badge variant="outline" className="text-xs">
-                      <Move className="h-3 w-3 mr-1" />
+                      <Move className="mr-1 h-3 w-3" />
                       Pan/Tilt
                     </Badge>
                   )}
                   {camera.hasNightVision && (
                     <Badge variant="outline" className="text-xs">
-                      <Moon className="h-3 w-3 mr-1" />
+                      <Moon className="mr-1 h-3 w-3" />
                       Night Vision
                     </Badge>
                   )}
                   <Badge variant="outline" className="text-xs">
-                    <Eye className="h-3 w-3 mr-1" />
+                    <Eye className="mr-1 h-3 w-3" />
                     {camera.accessLevel.replace(/_/g, " ")}
                   </Badge>
                 </div>
@@ -205,8 +205,8 @@ export function LivePetCamGrid() {
 
               {/* Kennel Coverage */}
               {camera.kennelIds.length > 0 && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                <div className="border-t pt-2">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
                     Kennel Coverage
                   </p>
                   <div className="flex flex-wrap gap-1">

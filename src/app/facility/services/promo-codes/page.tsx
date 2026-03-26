@@ -174,7 +174,7 @@ export default function PromoCodesPage() {
       defaultVisible: true,
       render: (item: PromoWithRecord) => (
         <div className="flex items-center gap-2">
-          <code className="rounded bg-muted px-2 py-1 font-mono text-sm font-bold">
+          <code className="bg-muted rounded-sm px-2 py-1 font-mono text-sm font-bold">
             {item.code as string}
           </code>
           <Button
@@ -202,7 +202,7 @@ export default function PromoCodesPage() {
       render: (item: PromoWithRecord) => (
         <div>
           <div className="font-medium">{item.name as string}</div>
-          <div className="text-xs text-muted-foreground max-w-[200px] truncate">
+          <div className="text-muted-foreground max-w-[200px] truncate text-xs">
             {item.description as string}
           </div>
         </div>
@@ -237,9 +237,9 @@ export default function PromoCodesPage() {
             <span>
               {used} / {limit}
             </span>
-            <div className="h-1.5 w-16 rounded-full bg-muted">
+            <div className="bg-muted h-1.5 w-16 rounded-full">
               <div
-                className="h-full rounded-full bg-primary"
+                className="bg-primary h-full rounded-full"
                 style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>
@@ -272,7 +272,7 @@ export default function PromoCodesPage() {
         return (
           <div className="flex flex-wrap gap-1">
             {categories.slice(0, 2).map((cat) => (
-              <Badge key={cat} variant="outline" className="capitalize text-xs">
+              <Badge key={cat} variant="outline" className="text-xs capitalize">
                 {cat}
               </Badge>
             ))}
@@ -342,11 +342,11 @@ export default function PromoCodesPage() {
             <CardTitle className="text-sm font-medium">
               Total Promo Codes
             </CardTitle>
-            <Ticket className="h-4 w-4 text-muted-foreground" />
+            <Ticket className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{promoCodes.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {activePromos} active
             </p>
           </CardContent>
@@ -356,11 +356,11 @@ export default function PromoCodesPage() {
             <CardTitle className="text-sm font-medium">
               Total Redemptions
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalRedemptions}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
+            <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
         <Card>
@@ -368,13 +368,13 @@ export default function PromoCodesPage() {
             <CardTitle className="text-sm font-medium">
               Avg. Redemption Rate
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {avgRedemptionRate.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground">Of limited codes</p>
+            <p className="text-muted-foreground text-xs">Of limited codes</p>
           </CardContent>
         </Card>
         <Card>
@@ -382,13 +382,13 @@ export default function PromoCodesPage() {
             <CardTitle className="text-sm font-medium">
               First-Time Only
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {promoCodes.filter((p) => p.isFirstTimeOnly).length}
             </div>
-            <p className="text-xs text-muted-foreground">New customer codes</p>
+            <p className="text-muted-foreground text-xs">New customer codes</p>
           </CardContent>
         </Card>
       </div>
@@ -396,7 +396,7 @@ export default function PromoCodesPage() {
       {/* Header with Add Button */}
       <div className="flex items-center justify-end">
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Create Promo Code
         </Button>
       </div>
@@ -412,27 +412,27 @@ export default function PromoCodesPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => handleCopyCode(item.code as string)}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="mr-2 size-4" />
                 Copy Code
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleEdit(item as unknown as PromoCode)}
               >
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleDeleteClick(item as unknown as PromoCode)}
                 className="text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -442,7 +442,7 @@ export default function PromoCodesPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPromo ? "Edit" : "Create"} Promo Code
@@ -647,7 +647,7 @@ export default function PromoCodesPage() {
                   </Button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Leave empty to apply to all categories
               </p>
             </div>

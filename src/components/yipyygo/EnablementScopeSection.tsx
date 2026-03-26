@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +23,11 @@ import { Separator } from "@/components/ui/separator";
 import { Info, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { YipyyGoConfig, ServiceYipyyGoConfig, ServiceType } from "@/data/yipyygo-config";
+import type {
+  YipyyGoConfig,
+  ServiceYipyyGoConfig,
+  ServiceType,
+} from "@/data/yipyygo-config";
 import {
   SERVICE_TYPE_LABELS,
   REQUIREMENT_LABELS,
@@ -36,14 +46,17 @@ export function EnablementScopeSection({
 }: EnablementScopeSectionProps) {
   const handleServiceToggle = (serviceType: ServiceType, enabled: boolean) => {
     const updated = config.serviceConfigs.map((sc) =>
-      sc.serviceType === serviceType ? { ...sc, enabled } : sc
+      sc.serviceType === serviceType ? { ...sc, enabled } : sc,
     );
     onConfigChange({ serviceConfigs: updated });
   };
 
-  const handleRequirementChange = (serviceType: ServiceType, requirement: YipyyGoRequirement) => {
+  const handleRequirementChange = (
+    serviceType: ServiceType,
+    requirement: YipyyGoRequirement,
+  ) => {
     const updated = config.serviceConfigs.map((sc) =>
-      sc.serviceType === serviceType ? { ...sc, requirement } : sc
+      sc.serviceType === serviceType ? { ...sc, requirement } : sc,
     );
     onConfigChange({ serviceConfigs: updated });
   };
@@ -67,27 +80,38 @@ export function EnablementScopeSection({
 
   const handleCustomServiceNameChange = (index: number, name: string) => {
     const updated = config.serviceConfigs.map((sc, i) =>
-      i === index ? { ...sc, customServiceName: name } : sc
+      i === index ? { ...sc, customServiceName: name } : sc,
     );
     onConfigChange({ serviceConfigs: updated });
   };
 
   const { activeModules } = useCustomServices();
   const activeCustomModules = useMemo(
-    () => activeModules.filter(m => m.yipyyGoRequired),
+    () => activeModules.filter((m) => m.yipyyGoRequired),
     [activeModules],
   );
 
-  const standardServices: ServiceType[] = ["daycare", "boarding", "grooming", "training"];
-  const customServices = config.serviceConfigs.filter((sc) => sc.serviceType === "custom");
+  const standardServices: ServiceType[] = [
+    "daycare",
+    "boarding",
+    "grooming",
+    "training",
+  ];
+  const customServices = config.serviceConfigs.filter(
+    (sc) => sc.serviceType === "custom",
+  );
 
   // Auto-populate custom services that require YipyyGo but aren't in config yet (idempotent)
   useEffect(() => {
     const missingModules = activeCustomModules.filter(
-      m => !config.serviceConfigs.some(cs => cs.serviceType === "custom" && cs.customServiceName === m.name)
+      (m) =>
+        !config.serviceConfigs.some(
+          (cs) =>
+            cs.serviceType === "custom" && cs.customServiceName === m.name,
+        ),
     );
     if (missingModules.length === 0) return;
-    const newConfigs: ServiceYipyyGoConfig[] = missingModules.map(m => ({
+    const newConfigs: ServiceYipyyGoConfig[] = missingModules.map((m) => ({
       serviceType: "custom" as ServiceType,
       customServiceName: m.name,
       enabled: true,
@@ -104,7 +128,8 @@ export function EnablementScopeSection({
         <CardHeader>
           <CardTitle>Service Scope</CardTitle>
           <CardDescription>
-            Select which services require YipyyGo pre-check-in forms and whether they are mandatory or optional.
+            Select which services require YipyyGo pre-check-in forms and whether
+            they are mandatory or optional.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -113,22 +138,24 @@ export function EnablementScopeSection({
             <Label className="text-base font-semibold">Standard Services</Label>
             {standardServices.map((serviceType) => {
               const serviceConfig = config.serviceConfigs.find(
-                (sc) => sc.serviceType === serviceType
+                (sc) => sc.serviceType === serviceType,
               );
               if (!serviceConfig) return null;
 
               return (
                 <div
                   key={serviceType}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center justify-between rounded-lg border p-4"
                 >
                   <div className="flex items-center gap-3">
                     <Switch
                       checked={serviceConfig.enabled}
-                      onCheckedChange={(enabled) => handleServiceToggle(serviceType, enabled)}
+                      onCheckedChange={(enabled) =>
+                        handleServiceToggle(serviceType, enabled)
+                      }
                     />
                     <div className="flex-1">
-                      <Label className="text-base font-medium cursor-pointer">
+                      <Label className="cursor-pointer text-base font-medium">
                         {SERVICE_TYPE_LABELS[serviceType]}
                       </Label>
                       {serviceConfig.enabled && (
@@ -174,22 +201,24 @@ export function EnablementScopeSection({
             <div className="space-y-4">
               <Separator />
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Custom Services</Label>
+                <Label className="text-base font-semibold">
+                  Custom Services
+                </Label>
               </div>
-              {customServices.map((serviceConfig, index) => {
+              {customServices.map((serviceConfig, _index) => {
                 const actualIndex = config.serviceConfigs.findIndex(
-                  (sc) => sc === serviceConfig
+                  (sc) => sc === serviceConfig,
                 );
                 return (
                   <div
                     key={`custom-${actualIndex}`}
-                    className="flex items-center gap-3 p-4 border rounded-lg"
+                    className="flex items-center gap-3 rounded-lg border p-4"
                   >
                     <Switch
                       checked={serviceConfig.enabled}
                       onCheckedChange={(enabled) => {
                         const updated = config.serviceConfigs.map((sc, i) =>
-                          i === actualIndex ? { ...sc, enabled } : sc
+                          i === actualIndex ? { ...sc, enabled } : sc,
                         );
                         onConfigChange({ serviceConfigs: updated });
                       }}
@@ -197,7 +226,12 @@ export function EnablementScopeSection({
                     <Input
                       placeholder="Custom service name"
                       value={serviceConfig.customServiceName || ""}
-                      onChange={(e) => handleCustomServiceNameChange(actualIndex, e.target.value)}
+                      onChange={(e) =>
+                        handleCustomServiceNameChange(
+                          actualIndex,
+                          e.target.value,
+                        )
+                      }
                       className="flex-1"
                     />
                     {serviceConfig.enabled && (
@@ -205,7 +239,9 @@ export function EnablementScopeSection({
                         value={serviceConfig.requirement}
                         onValueChange={(value: YipyyGoRequirement) => {
                           const updated = config.serviceConfigs.map((sc, i) =>
-                            i === actualIndex ? { ...sc, requirement: value } : sc
+                            i === actualIndex
+                              ? { ...sc, requirement: value }
+                              : sc,
                           );
                           onConfigChange({ serviceConfigs: updated });
                         }}
@@ -228,7 +264,7 @@ export function EnablementScopeSection({
                       size="icon"
                       onClick={() => handleRemoveCustomService(actualIndex)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
                 );
@@ -242,17 +278,19 @@ export function EnablementScopeSection({
             onClick={handleAddCustomService}
             className="w-full"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             Add Custom Service
           </Button>
 
           {/* Info Alert */}
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="size-4" />
             <AlertDescription>
-              <strong>Mandatory:</strong> Booking cannot be checked-in without completion (staff can override if needed).
+              <strong>Mandatory:</strong> Booking cannot be checked-in without
+              completion (staff can override if needed).
               <br />
-              <strong>Optional:</strong> Recommended, doesn't block check-in.
+              <strong>Optional:</strong> Recommended, doesn&apos;t block
+              check-in.
             </AlertDescription>
           </Alert>
         </CardContent>

@@ -61,9 +61,9 @@ export function CancelBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-destructive">
+          <DialogTitle className="text-destructive flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             Cancel Booking #{booking.id}
           </DialogTitle>
@@ -74,7 +74,7 @@ export function CancelBookingModal({
 
         <div className="grid gap-4 py-4">
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle>Warning</AlertTitle>
             <AlertDescription>
               This action will cancel the booking. This cannot be undone.
@@ -98,10 +98,10 @@ export function CancelBookingModal({
           {canRefund && (
             <>
               <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Refund Details</h4>
+                <h4 className="mb-3 font-semibold">Refund Details</h4>
 
                 {/* Refund Amount */}
-                <div className="grid gap-2 mb-4">
+                <div className="mb-4 grid gap-2">
                   <Label htmlFor="refundAmount">Refund Amount ($)</Label>
                   <Input
                     id="refundAmount"
@@ -114,7 +114,7 @@ export function CancelBookingModal({
                       setRefundAmount(parseFloat(e.target.value) || 0)
                     }
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Original amount: ${booking.totalCost.toFixed(2)}
                   </p>
                 </div>
@@ -128,18 +128,18 @@ export function CancelBookingModal({
                       setRefundMethod(value as "card" | "store_credit")
                     }
                   >
-                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+                    <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
                       <RadioGroupItem value="card" id="card" />
                       <Label
                         htmlFor="card"
-                        className="flex-1 cursor-pointer flex items-center gap-2"
+                        className="flex flex-1 cursor-pointer items-center gap-2"
                       >
-                        <CreditCard className="h-4 w-4" />
+                        <CreditCard className="size-4" />
                         <div>
                           <div className="font-medium">
                             Original Payment Method
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Refund to{" "}
                             {booking.paymentMethod === "card" ? "card" : "cash"}
                           </div>
@@ -147,16 +147,16 @@ export function CancelBookingModal({
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+                    <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
                       <RadioGroupItem value="store_credit" id="store_credit" />
                       <Label
                         htmlFor="store_credit"
-                        className="flex-1 cursor-pointer flex items-center gap-2"
+                        className="flex flex-1 cursor-pointer items-center gap-2"
                       >
-                        <Wallet className="h-4 w-4" />
+                        <Wallet className="size-4" />
                         <div>
                           <div className="font-medium">Store Credit</div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-muted-foreground text-xs">
                             Issue store credit for future bookings
                           </div>
                         </div>
@@ -167,8 +167,8 @@ export function CancelBookingModal({
               </div>
 
               {/* Refund Summary */}
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="flex justify-between text-sm mb-1">
+              <div className="bg-muted rounded-lg p-3">
+                <div className="mb-1 flex justify-between text-sm">
                   <span>Booking Total:</span>
                   <span>${booking.totalCost.toFixed(2)}</span>
                 </div>

@@ -168,7 +168,7 @@ export function AdvancedSettings({
                   Advanced Settings
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      <Info className="text-muted-foreground size-4 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
                       <div className="space-y-2">
@@ -191,9 +191,9 @@ export function AdvancedSettings({
                   </Tooltip>
                 </div>
                 {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="size-4" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="size-4" />
                 )}
               </CardTitle>
             </CardHeader>
@@ -203,12 +203,12 @@ export function AdvancedSettings({
               {/* Pet Categories & Restrictions */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <PawPrint className="h-5 w-5" />
                     Pet Categories & Restrictions
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <Info className="text-muted-foreground size-4 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -224,7 +224,7 @@ export function AdvancedSettings({
                       size="sm"
                       onClick={() => setEditingPetCategories(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -234,11 +234,11 @@ export function AdvancedSettings({
                         size="sm"
                         onClick={handleCancelPetCategories}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSavePetCategories}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save
                       </Button>
                     </div>
@@ -247,11 +247,11 @@ export function AdvancedSettings({
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Weight Limits (lbs)</Label>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="mt-2 grid grid-cols-2 gap-4">
                       {Object.entries(config.petCategories.weightLimits).map(
                         ([size, limits]) => (
                           <div key={size} className="space-y-2">
-                            <Label className="capitalize text-sm">{size}</Label>
+                            <Label className="text-sm capitalize">{size}</Label>
                             <div className="flex space-x-2">
                               <Input
                                 placeholder="Min"
@@ -311,12 +311,12 @@ export function AdvancedSettings({
               {/* Custom Fields */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="h-5 w-5" />
                     Custom Fields
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <Info className="text-muted-foreground size-4 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -332,7 +332,7 @@ export function AdvancedSettings({
                       size="sm"
                       onClick={() => setEditingCustomFields(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -342,11 +342,11 @@ export function AdvancedSettings({
                         size="sm"
                         onClick={handleCancelCustomFields}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveCustomFields}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save
                       </Button>
                     </div>
@@ -355,7 +355,7 @@ export function AdvancedSettings({
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Pet Custom Fields</Label>
-                    <div className="space-y-2 mt-2">
+                    <div className="mt-2 space-y-2">
                       {config.customFields.pets.map((field, index) => (
                         <div
                           key={index}
@@ -382,7 +382,7 @@ export function AdvancedSettings({
                               })
                             }
                           />
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             {field.type}
                           </span>
                         </div>
@@ -395,12 +395,12 @@ export function AdvancedSettings({
               {/* Waivers & Contracts */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <FileCheck className="h-5 w-5" />
                     Waivers & Contracts
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <Info className="text-muted-foreground size-4 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -416,7 +416,7 @@ export function AdvancedSettings({
                       size="sm"
                       onClick={() => setEditingWaivers(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -426,11 +426,11 @@ export function AdvancedSettings({
                         size="sm"
                         onClick={handleCancelWaivers}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveWaivers}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save
                       </Button>
                     </div>

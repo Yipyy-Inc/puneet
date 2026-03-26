@@ -107,34 +107,32 @@ function StatCard({
   trend?: { value: string; isPositive: boolean };
 }) {
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               {title}
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
               {trend && (
                 <span
-                  className={`inline-flex items-center text-xs font-medium ${
-                    trend.isPositive ? "text-success" : "text-destructive"
-                  }`}
+                  className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`h-3 w-3 mr-0.5 ${!trend.isPositive && "rotate-180"}`}
+                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
             )}
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
             <Icon className="h-5 w-5 text-white" />
@@ -207,7 +205,7 @@ export default function FacilitiesPage() {
       render: (facility) => (
         <div className="flex flex-col">
           <span className="font-medium">{facility.name}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-muted-foreground text-xs">
             {facility.locationsList[0]?.address || "No address"}
           </span>
         </div>
@@ -334,15 +332,15 @@ export default function FacilitiesPage() {
             variant="outline"
             onClick={() => exportToCSV(facilitiesState)}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             {"Export"}
           </Button>
           <Button variant="outline" onClick={() => setIsNotifyModalOpen(true)}>
-            <Mail className="mr-2 h-4 w-4" />
+            <Mail className="mr-2 size-4" />
             {"Notify All"}
           </Button>
           <Button onClick={() => router.push("/dashboard/facilities/new")}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             {"Add Facility"}
           </Button>
         </div>
@@ -393,18 +391,18 @@ export default function FacilitiesPage() {
 
       {/* Pending Requests Alert */}
       {pendingRequestsCount > 0 && (
-        <Card className="border-0 shadow-card bg-warning/5 border-l-4 border-l-warning">
+        <Card className="border-l-warning bg-warning/5 shadow-card border-0 border-l-4">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-warning/10">
-                  <AlertCircle className="h-5 w-5 text-warning" />
+                <div className="bg-warning/10 flex h-10 w-10 items-center justify-center rounded-xl">
+                  <AlertCircle className="text-warning h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="font-semibold">
                     {pendingRequestsCount} Pending Facility Requests
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     New facilities awaiting approval
                   </p>
                 </div>
@@ -413,7 +411,7 @@ export default function FacilitiesPage() {
                 variant="outline"
                 onClick={() => router.push("/dashboard/facilities/requests")}
               >
-                <Eye className="mr-2 h-4 w-4" />
+                <Eye className="mr-2 size-4" />
                 {"View Requests"}
               </Button>
             </div>
@@ -422,7 +420,7 @@ export default function FacilitiesPage() {
       )}
 
       {/* Facilities Table */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold">
             All Facilities
@@ -451,7 +449,7 @@ export default function FacilitiesPage() {
                     setIsModalOpen(true);
                   }}
                 >
-                  <Eye className="h-4 w-4 mr-1.5" />
+                  <Eye className="mr-1.5 size-4" />
                   Overview
                 </Button>
                 <Button
@@ -471,8 +469,8 @@ export default function FacilitiesPage() {
 
       {/* Facility Details Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-0">
               <DialogTitle className="sr-only">
                 {selectedFacility?.name} - Facility Details
@@ -497,11 +495,11 @@ export default function FacilitiesPage() {
           </DialogHeader>
           {notificationSent ? (
             <div className="flex flex-col items-center py-8">
-              <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4">
-                <CheckCircle className="h-8 w-8 text-success" />
+              <div className="bg-success/10 mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                <CheckCircle className="text-success h-8 w-8" />
               </div>
               <h3 className="text-lg font-semibold">Notification Sent!</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 All facilities have been notified
               </p>
             </div>
@@ -539,7 +537,7 @@ export default function FacilitiesPage() {
                   onClick={handleSendNotification}
                   disabled={!notifySubject || !notifyMessage}
                 >
-                  <Send className="mr-2 h-4 w-4" />
+                  <Send className="mr-2 size-4" />
                   Send Notification
                 </Button>
               </DialogFooter>

@@ -2,7 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function SetRolePage() {
   const router = useRouter();
@@ -18,7 +24,7 @@ export default function SetRolePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Set User Role</CardTitle>
@@ -30,7 +36,12 @@ export default function SetRolePage() {
           <Button onClick={setFacilityAdmin} className="w-full" size="lg">
             Set as Facility Admin
           </Button>
-          <Button onClick={setSuperAdmin} variant="outline" className="w-full" size="lg">
+          <Button
+            onClick={setSuperAdmin}
+            variant="outline"
+            className="w-full"
+            size="lg"
+          >
             Set as Super Admin
           </Button>
         </CardContent>

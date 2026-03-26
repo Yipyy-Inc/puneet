@@ -192,7 +192,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-destructive" />
+          <AlertTriangle className="text-destructive h-5 w-5" />
           Report New Incident
         </DialogTitle>
         <DialogDescription>
@@ -248,10 +248,10 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 {severityLevels.map((level) => (
                   <SelectItem key={level.value} value={level.value}>
                     <div>
-                      <div className={`font-semibold ${level.color}`}>
+                      <div className={`font-semibold ${level.color} `}>
                         {level.label}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         {level.desc}
                       </div>
                     </div>
@@ -260,7 +260,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
               </SelectContent>
             </Select>
             {selectedSeverity && (
-              <p className={`text-xs ${selectedSeverity.color}`}>
+              <p className={`text-xs ${selectedSeverity.color} `}>
                 {selectedSeverity.desc}
               </p>
             )}
@@ -295,7 +295,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Pets Involved */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <Label>Pets Involved *</Label>
               <Select onValueChange={handleAddPet}>
@@ -319,7 +319,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                   <Badge
                     key={pet.id}
                     variant="default"
-                    className="text-sm py-1 px-3"
+                    className="px-3 py-1 text-sm"
                   >
                     {pet.name} ({pet.clientName})
                     <button
@@ -337,7 +337,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Staff Involved */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <Label>Staff Involved</Label>
               <div className="flex gap-2">
@@ -353,7 +353,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="flex gap-2 flex-1">
+                <div className="flex flex-1 gap-2">
                   <Input
                     placeholder="Or type name"
                     value={newStaffMember}
@@ -365,7 +365,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                     onClick={handleAddCustomStaff}
                     disabled={!newStaffMember}
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -377,7 +377,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                   <Badge
                     key={staff}
                     variant="secondary"
-                    className="text-sm py-1 px-3"
+                    className="px-3 py-1 text-sm"
                   >
                     {staff}
                     <button
@@ -431,7 +431,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Internal Notes */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="internalNotes" className="text-base">
@@ -448,7 +448,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 placeholder="Internal details, actions taken, observations (not visible to clients)..."
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 These notes are for internal use only and won&apos;t be shared
                 with clients
               </p>
@@ -458,7 +458,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Client-Facing Notes */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="clientFacingNotes" className="text-base">
@@ -478,7 +478,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 placeholder="What to communicate to the pet owner..."
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 This version will be shared with clients if you choose to notify
                 them
               </p>
@@ -488,11 +488,11 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Photos */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="flex items-center justify-between">
               <Label className="text-base">Incident Photos</Label>
               <Button variant="outline" size="sm" onClick={handleAddPhoto}>
-                <Camera className="h-4 w-4 mr-2" />
+                <Camera className="mr-2 size-4" />
                 Add Photo
               </Button>
             </div>
@@ -502,7 +502,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 {photos.map((photo) => (
                   <div
                     key={photo.id}
-                    className="p-3 border rounded-lg space-y-2"
+                    className="space-y-2 rounded-lg border p-3"
                   >
                     <div className="flex items-start justify-between">
                       <div className="text-sm font-medium">{photo.url}</div>
@@ -511,7 +511,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                         size="sm"
                         onClick={() => handleRemovePhoto(photo.id)}
                       >
-                        <X className="h-4 w-4" />
+                        <X className="size-4" />
                       </Button>
                     </div>
                     <Input
@@ -537,7 +537,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                       />
                       <label
                         htmlFor={`visible-${photo.id}`}
-                        className="text-sm cursor-pointer"
+                        className="cursor-pointer text-sm"
                       >
                         Make visible to client
                       </label>
@@ -551,7 +551,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Notifications */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Label className="text-base">Notifications</Label>
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
@@ -567,7 +567,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 />
                 <label
                   htmlFor="notifyManager"
-                  className="text-sm cursor-pointer"
+                  className="cursor-pointer text-sm"
                 >
                   Notify Manager immediately
                   {formData.severity === "critical" ||
@@ -592,7 +592,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 />
                 <label
                   htmlFor="notifyClient"
-                  className="text-sm cursor-pointer"
+                  className="cursor-pointer text-sm"
                 >
                   Notify pet owner(s) now
                 </label>
@@ -617,7 +617,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             !formData.reportedBy
           }
         >
-          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertTriangle className="mr-2 size-4" />
           Create Incident Report
         </Button>
       </DialogFooter>

@@ -44,12 +44,12 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
       <div className="space-y-6 py-4">
         {/* Call Info */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm text-muted-foreground">Type</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Phone className="h-4 w-4" />
+                <Label className="text-muted-foreground text-sm">Type</Label>
+                <div className="mt-1 flex items-center gap-2">
+                  <Phone className="size-4" />
                   <Badge
                     variant={call.type === "inbound" ? "default" : "outline"}
                   >
@@ -59,7 +59,7 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">Status</Label>
+                <Label className="text-muted-foreground text-sm">Status</Label>
                 <div className="mt-1">
                   <Badge
                     variant={
@@ -77,26 +77,26 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">From</Label>
-                <div className="font-medium mt-1">{call.from}</div>
+                <Label className="text-muted-foreground text-sm">From</Label>
+                <div className="mt-1 font-medium">{call.from}</div>
                 {call.clientName && (
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {call.clientName}
                   </div>
                 )}
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">To</Label>
-                <div className="font-medium mt-1">{call.to}</div>
+                <Label className="text-muted-foreground text-sm">To</Label>
+                <div className="mt-1 font-medium">{call.to}</div>
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">
+                <Label className="text-muted-foreground text-sm">
                   Duration
                 </Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Clock className="h-4 w-4" />
+                <div className="mt-1 flex items-center gap-2">
+                  <Clock className="size-4" />
                   <span className="font-medium">
                     {duration.minutes}:
                     {duration.seconds.toString().padStart(2, "0")}
@@ -105,19 +105,19 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div>
-                <Label className="text-sm text-muted-foreground">
+                <Label className="text-muted-foreground text-sm">
                   Handled By
                 </Label>
                 <div className="mt-1">
                   <Badge variant={call.aiHandled ? "default" : "outline"}>
                     {call.aiHandled ? (
                       <>
-                        <Zap className="h-3 w-3 mr-1 inline" />
+                        <Zap className="mr-1 inline h-3 w-3" />
                         AI Receptionist
                       </>
                     ) : (
                       <>
-                        <User className="h-3 w-3 mr-1 inline" />
+                        <User className="mr-1 inline h-3 w-3" />
                         Staff
                       </>
                     )}
@@ -126,8 +126,8 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
               </div>
 
               <div className="col-span-2">
-                <Label className="text-sm text-muted-foreground">Time</Label>
-                <div className="font-medium mt-1">
+                <Label className="text-muted-foreground text-sm">Time</Label>
+                <div className="mt-1 font-medium">
                   {new Date(call.timestamp).toLocaleString()}
                 </div>
               </div>
@@ -139,15 +139,15 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
         {call.outcome && (
           <Card>
             <CardContent className="pt-6">
-              <Label className="text-base mb-3 block">AI Outcome</Label>
-              <div className="flex items-start gap-3 p-3 bg-muted rounded-lg">
-                <Zap className="h-5 w-5 text-primary mt-0.5" />
+              <Label className="mb-3 block text-base">AI Outcome</Label>
+              <div className="bg-muted flex items-start gap-3 rounded-lg p-3">
+                <Zap className="text-primary mt-0.5 h-5 w-5" />
                 <div>
-                  <div className="font-medium capitalize mb-1">
+                  <div className="mb-1 font-medium capitalize">
                     {call.outcome.replace(/_/g, " ")}
                   </div>
                   {call.notes && (
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-muted-foreground text-sm">
                       {call.notes}
                     </div>
                   )}
@@ -160,34 +160,34 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
         {/* Recording */}
         {call.recordingUrl && (
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="flex items-center justify-between">
                 <Label className="text-base">Call Recording</Label>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm">
-                    <Play className="h-4 w-4 mr-2" />
+                    <Play className="mr-2 size-4" />
                     Play
                   </Button>
                   <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="mr-2 size-4" />
                     Download
                   </Button>
                 </div>
               </div>
 
               {/* Audio Player Placeholder */}
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <Button variant="ghost" size="sm">
-                    <Play className="h-4 w-4" />
+                    <Play className="size-4" />
                   </Button>
-                  <div className="flex-1 h-2 bg-background rounded-full">
+                  <div className="bg-background h-2 flex-1 rounded-full">
                     <div
-                      className="h-2 bg-primary rounded-full"
+                      className="bg-primary h-2 rounded-full"
                       style={{ width: "30%" }}
                     />
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     0:{duration.seconds.toString().padStart(2, "0")} /{" "}
                     {duration.minutes}:
                     {duration.seconds.toString().padStart(2, "0")}
@@ -201,16 +201,16 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
         {/* Transcription */}
         {call.transcription && (
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="flex items-center justify-between">
                 <Label className="text-base">Call Transcription</Label>
                 <Button variant="outline" size="sm">
-                  <FileText className="h-4 w-4 mr-2" />
+                  <FileText className="mr-2 size-4" />
                   Copy Text
                 </Button>
               </div>
 
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-4">
                 <p className="text-sm whitespace-pre-wrap">
                   {call.transcription}
                 </p>
@@ -223,9 +223,9 @@ export function CallDetailsModal({ call, onClose }: CallDetailsModalProps) {
         {call.status === "voicemail" && !call.transcription && (
           <Card>
             <CardContent className="pt-6">
-              <Label className="text-base mb-3 block">Voicemail</Label>
-              <div className="p-4 bg-muted rounded-lg text-center">
-                <p className="text-sm text-muted-foreground">
+              <Label className="mb-3 block text-base">Voicemail</Label>
+              <div className="bg-muted rounded-lg p-4 text-center">
+                <p className="text-muted-foreground text-sm">
                   Caller left a voicemail. Recording available above.
                 </p>
               </div>

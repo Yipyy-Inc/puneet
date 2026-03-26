@@ -1,9 +1,15 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { YipyyGoFormData } from "@/data/yipyygo-forms";
 import type { YipyyGoConfig } from "@/data/yipyygo-config";
@@ -50,9 +56,9 @@ export function ReviewSection({
         {/* Summary Sections */}
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">Belongings</h3>
+            <h3 className="mb-2 font-semibold">Belongings</h3>
             {formData.belongings.length > 0 ? (
-              <ul className="list-disc list-inside text-sm text-muted-foreground">
+              <ul className="text-muted-foreground list-inside list-disc text-sm">
                 {formData.belongings.map((item) => (
                   <li key={item.id}>
                     {item.type} {item.quantity && `(Qty: ${item.quantity})`}
@@ -60,7 +66,9 @@ export function ReviewSection({
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">No belongings listed</p>
+              <p className="text-muted-foreground text-sm">
+                No belongings listed
+              </p>
             )}
           </div>
 
@@ -69,9 +77,10 @@ export function ReviewSection({
           {formData.feedingInstructions && (
             <>
               <div>
-                <h3 className="font-semibold mb-2">Feeding Instructions</h3>
-                <p className="text-sm text-muted-foreground">
-                  {formData.feedingInstructions.foodType} - {formData.feedingInstructions.portionSize}{" "}
+                <h3 className="mb-2 font-semibold">Feeding Instructions</h3>
+                <p className="text-muted-foreground text-sm">
+                  {formData.feedingInstructions.foodType} -{" "}
+                  {formData.feedingInstructions.portionSize}{" "}
                   {formData.feedingInstructions.portionUnit}
                 </p>
               </div>
@@ -82,8 +91,8 @@ export function ReviewSection({
           {!formData.noMedications && formData.medications.length > 0 && (
             <>
               <div>
-                <h3 className="font-semibold mb-2">Medications</h3>
-                <ul className="list-disc list-inside text-sm text-muted-foreground">
+                <h3 className="mb-2 font-semibold">Medications</h3>
+                <ul className="text-muted-foreground list-inside list-disc text-sm">
                   {formData.medications.map((med) => (
                     <li key={med.id}>
                       {med.name} - {med.dosage} ({med.frequency})
@@ -98,8 +107,8 @@ export function ReviewSection({
           {formData.behaviorNotes && (
             <>
               <div>
-                <h3 className="font-semibold mb-2">Behavior Notes</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="mb-2 font-semibold">Behavior Notes</h3>
+                <p className="text-muted-foreground text-sm">
                   Energy: {formData.behaviorNotes.energyLevel} | Dogs:{" "}
                   {formData.behaviorNotes.socialization.withDogs} | Humans:{" "}
                   {formData.behaviorNotes.socialization.withHumans}
@@ -112,14 +121,15 @@ export function ReviewSection({
           {formData.addOns.filter((ao) => ao.selected).length > 0 && (
             <>
               <div>
-                <h3 className="font-semibold mb-2">Add-ons</h3>
-                <ul className="list-disc list-inside text-sm text-muted-foreground">
+                <h3 className="mb-2 font-semibold">Add-ons</h3>
+                <ul className="text-muted-foreground list-inside list-disc text-sm">
                   {formData.addOns
                     .filter((ao) => ao.selected)
                     .map((ao) => (
                       <li key={ao.id}>
-                        {ao.name} {ao.quantity && ao.quantity > 1 && `x${ao.quantity}`} - $
-                        {((ao.quantity || 1) * ao.price).toFixed(2)}
+                        {ao.name}{" "}
+                        {ao.quantity && ao.quantity > 1 && `x${ao.quantity}`} -
+                        ${((ao.quantity || 1) * ao.price).toFixed(2)}
                       </li>
                     ))}
                 </ul>
@@ -131,8 +141,8 @@ export function ReviewSection({
           {tipAmount > 0 && (
             <>
               <div>
-                <h3 className="font-semibold mb-2">Tip</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="mb-2 font-semibold">Tip</h3>
+                <p className="text-muted-foreground text-sm">
                   ${tipAmount.toFixed(2)}
                 </p>
               </div>
@@ -142,7 +152,7 @@ export function ReviewSection({
         </div>
 
         {/* Totals */}
-        <div className="p-4 bg-muted rounded-lg space-y-2">
+        <div className="bg-muted space-y-2 rounded-lg p-4">
           <div className="flex justify-between">
             <span>Stay Total:</span>
             <span>${(booking?.totalCost || 0).toFixed(2)}</span>
@@ -160,18 +170,21 @@ export function ReviewSection({
             </div>
           )}
           <Separator />
-          <div className="flex justify-between font-bold text-lg">
+          <div className="flex justify-between text-lg font-bold">
             <span>Total:</span>
-            <span>${((booking?.totalCost || 0) + addOnsTotal + tipAmount).toFixed(2)}</span>
+            <span>
+              $
+              {((booking?.totalCost || 0) + addOnsTotal + tipAmount).toFixed(2)}
+            </span>
           </div>
         </div>
 
         {/* Submit Alert */}
         <Alert>
-          <CheckCircle2 className="h-4 w-4" />
+          <CheckCircle2 className="size-4" />
           <AlertDescription>
-            By submitting this form, you confirm that all information is accurate. You can edit
-            this form until the deadline.
+            By submitting this form, you confirm that all information is
+            accurate. You can edit this form until the deadline.
           </AlertDescription>
         </Alert>
 
@@ -183,12 +196,12 @@ export function ReviewSection({
           <Button onClick={onSubmit} disabled={isSubmitting} size="lg">
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 size-4 animate-spin" />
                 Submitting...
               </>
             ) : (
               <>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
+                <CheckCircle2 className="mr-2 size-4" />
                 Submit Form
               </>
             )}

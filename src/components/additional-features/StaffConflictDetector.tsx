@@ -10,9 +10,6 @@ import {
   Info,
   CheckCircle,
   X,
-  UserX,
-  Clock,
-  Users,
   Ban,
   Edit,
   ArrowRightLeft,
@@ -52,7 +49,13 @@ interface Conflict {
   shiftId: number;
   staffId: number;
   staffName: string;
-  conflictType: "double_booking" | "overlapping" | "time_off" | "role_mismatch" | "max_hours" | "min_rest";
+  conflictType:
+    | "double_booking"
+    | "overlapping"
+    | "time_off"
+    | "role_mismatch"
+    | "max_hours"
+    | "min_rest";
   severity: "critical" | "warning" | "info";
   date: string;
   timeSlot: string;
@@ -73,22 +76,25 @@ export function StaffConflictDetector({
 }: StaffConflictDetectorProps) {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
-  const [isEditShiftModalOpen, setIsEditShiftModalOpen] = useState(false);
+  const [_isEditShiftModalOpen, _setIsEditShiftModalOpen] = useState(false);
   const [isIgnoreModalOpen, setIsIgnoreModalOpen] = useState(false);
-  const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(null);
+  const [selectedConflict, setSelectedConflict] = useState<Conflict | null>(
+    null,
+  );
   const [selectedNewStaffId, setSelectedNewStaffId] = useState<string>("");
   const [ignoreReason, setIgnoreReason] = useState("");
 
   // Detect all conflicts
-  const detectAllConflicts = (): Conflict[] => {
-    const allConflicts: Conflict[] = [];
+  const allConflicts = useMemo((): Conflict[] => {
+    const conflicts: Conflict[] = [];
 
     schedules
       .filter((s) => s.status === "scheduled")
       .forEach((shift) => {
         // 1. Check for double-booking and overlapping
         const overlapping = schedules.filter((s) => {
-          if (s.staffId !== shift.staffId || s.date !== shift.date) return false;
+          if (s.staffId !== shift.staffId || s.date !== shift.date)
+            return false;
           if (s.id === shift.id || s.status !== "scheduled") return false;
 
           const [startHour, startMin] = shift.startTime.split(":").map(Number);
@@ -105,11 +111,12 @@ export function StaffConflictDetector({
 
         if (overlapping.length > 0) {
           const isDoubleBooking = overlapping.some(
-            (s) => s.startTime === shift.startTime && s.endTime === shift.endTime
+            (s) =>
+              s.startTime === shift.startTime && s.endTime === shift.endTime,
           );
 
           const staffMember = staff.find((s) => s.id === shift.staffId);
-          allConflicts.push({
+          conflicts.push({
             id: `conflict-${shift.id}-${isDoubleBooking ? "double" : "overlap"}`,
             shiftId: shift.id,
             staffId: shift.staffId,
@@ -129,7 +136,8 @@ export function StaffConflictDetector({
 
         // 2. Check for time off overlap
         const approvedTimeOff = timeOffRequests.find((to) => {
-          if (to.staffId !== shift.staffId || to.status !== "approved") return false;
+          if (to.staffId !== shift.staffId || to.status !== "approved")
+            return false;
           const startDate = new Date(to.startDate);
           const endDate = new Date(to.endDate);
           const shiftDate = new Date(shift.date);
@@ -138,7 +146,7 @@ export function StaffConflictDetector({
 
         if (approvedTimeOff) {
           const staffMember = staff.find((s) => s.id === shift.staffId);
-          allConflicts.push({
+          conflicts.push({
             id: `conflict-${shift.id}-timeoff`,
             shiftId: shift.id,
             staffId: shift.staffId,
@@ -155,8 +163,12 @@ export function StaffConflictDetector({
 
         // 3. Check for role mismatch
         const staffMember = staff.find((s) => s.id === shift.staffId);
-        if (shift.role && staffMember?.role && shift.role !== staffMember.role) {
-          allConflicts.push({
+        if (
+          shift.role &&
+          staffMember?.role &&
+          shift.role !== staffMember.role
+        ) {
+          conflicts.push({
             id: `conflict-${shift.id}-role`,
             shiftId: shift.id,
             staffId: shift.staffId,
@@ -172,25 +184,28 @@ export function StaffConflictDetector({
 
         // 4. Check max hours per day
         const sameDayShifts = schedules.filter((s) => {
-          if (s.staffId !== shift.staffId || s.date !== shift.date) return false;
+          if (s.staffId !== shift.staffId || s.date !== shift.date)
+            return false;
           if (s.id === shift.id || s.status !== "scheduled") return false;
           return true;
         });
 
         const [startHour, startMin] = shift.startTime.split(":").map(Number);
         const [endHour, endMin] = shift.endTime.split(":").map(Number);
-        const shiftDuration = (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
+        const shiftDuration =
+          (endHour * 60 + endMin - (startHour * 60 + startMin)) / 60;
 
         const dailyHours = sameDayShifts.reduce((total, s) => {
           const [sStartHour, sStartMin] = s.startTime.split(":").map(Number);
           const [sEndHour, sEndMin] = s.endTime.split(":").map(Number);
-          const hours = (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
+          const hours =
+            (sEndHour * 60 + sEndMin - (sStartHour * 60 + sStartMin)) / 60;
           return total + hours;
         }, shiftDuration);
 
         const maxHoursPerDay = 12;
         if (dailyHours > maxHoursPerDay) {
-          allConflicts.push({
+          conflicts.push({
             id: `conflict-${shift.id}-maxhours`,
             shiftId: shift.id,
             staffId: shift.staffId,
@@ -211,33 +226,37 @@ export function StaffConflictDetector({
 
         const nextDay = new Date(shift.date);
         nextDay.setDate(nextDay.getDate() + 1);
-        const nextDayStr = nextDay.toISOString().split("T")[0];
+        // nextDayStr reserved for future next-day conflict detection
 
         const previousDayShifts = schedules.filter((s) => {
-          if (s.staffId !== shift.staffId || s.date !== previousDayStr) return false;
+          if (s.staffId !== shift.staffId || s.date !== previousDayStr)
+            return false;
           return s.status === "scheduled";
         });
 
         const minRestHours = 8;
         const minRestMinutes = minRestHours * 60;
         const shiftStart = startHour * 60 + startMin;
-        const shiftEnd = endHour * 60 + endMin;
 
         if (previousDayShifts.length > 0) {
           const lastShift = previousDayShifts.reduce((latest, s) => {
             const [sEndHour, sEndMin] = s.endTime.split(":").map(Number);
             const sEndMinutes = sEndHour * 60 + sEndMin;
-            const [latestEndHour, latestEndMin] = latest.endTime.split(":").map(Number);
+            const [latestEndHour, latestEndMin] = latest.endTime
+              .split(":")
+              .map(Number);
             const latestEndMinutes = latestEndHour * 60 + latestEndMin;
             return sEndMinutes > latestEndMinutes ? s : latest;
           }, previousDayShifts[0]);
 
-          const [lastEndHour, lastEndMin] = lastShift.endTime.split(":").map(Number);
+          const [lastEndHour, lastEndMin] = lastShift.endTime
+            .split(":")
+            .map(Number);
           const lastEndMinutes = lastEndHour * 60 + lastEndMin;
-          const restMinutes = (24 * 60 - lastEndMinutes) + shiftStart;
+          const restMinutes = 24 * 60 - lastEndMinutes + shiftStart;
 
           if (restMinutes < minRestMinutes) {
-            allConflicts.push({
+            conflicts.push({
               id: `conflict-${shift.id}-minrest`,
               shiftId: shift.id,
               staffId: shift.staffId,
@@ -256,19 +275,22 @@ export function StaffConflictDetector({
       });
 
     // Remove duplicates
-    const uniqueConflicts = allConflicts.filter((conflict, index, self) =>
-      index === self.findIndex((c) =>
-        c.shiftId === conflict.shiftId &&
-        c.conflictType === conflict.conflictType &&
-        c.conflictingShiftId === conflict.conflictingShiftId
-      )
+    const uniqueConflicts = conflicts.filter(
+      (conflict, index, self) =>
+        index ===
+        self.findIndex(
+          (c) =>
+            c.shiftId === conflict.shiftId &&
+            c.conflictType === conflict.conflictType &&
+            c.conflictingShiftId === conflict.conflictingShiftId,
+        ),
     );
 
     return uniqueConflicts;
-  };
-
-  const allConflicts = useMemo(() => detectAllConflicts(), [schedules, staff, timeOffRequests]);
-  const activeConflicts = allConflicts.filter((conflict) => !resolvedIds.has(conflict.id));
+  }, [schedules, staff, timeOffRequests]);
+  const activeConflicts = allConflicts.filter(
+    (conflict) => !resolvedIds.has(conflict.id),
+  );
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
@@ -308,8 +330,12 @@ export function StaffConflictDetector({
     return labels[type] || type;
   };
 
-  const criticalCount = activeConflicts.filter((c) => c.severity === "critical").length;
-  const warningCount = activeConflicts.filter((c) => c.severity === "warning").length;
+  const criticalCount = activeConflicts.filter(
+    (c) => c.severity === "critical",
+  ).length;
+  const warningCount = activeConflicts.filter(
+    (c) => c.severity === "warning",
+  ).length;
 
   // Get available staff for reassignment (same role preferred)
   const getAvailableStaffForReassign = (conflict: Conflict) => {
@@ -323,7 +349,12 @@ export function StaffConflictDetector({
 
         // Check if they have availability (simplified - would check actual availability)
         const hasConflict = schedules.some((sch) => {
-          if (sch.staffId !== s.id || sch.date !== shift.date || sch.status !== "scheduled") return false;
+          if (
+            sch.staffId !== s.id ||
+            sch.date !== shift.date ||
+            sch.status !== "scheduled"
+          )
+            return false;
           const [startHour, startMin] = shift.startTime.split(":").map(Number);
           const [endHour, endMin] = shift.endTime.split(":").map(Number);
           const [sStartHour, sStartMin] = sch.startTime.split(":").map(Number);
@@ -339,8 +370,10 @@ export function StaffConflictDetector({
       })
       .sort((a, b) => {
         // Prefer same role
-        if (shift.role && a.role === shift.role && b.role !== shift.role) return -1;
-        if (shift.role && b.role === shift.role && a.role !== shift.role) return 1;
+        if (shift.role && a.role === shift.role && b.role !== shift.role)
+          return -1;
+        if (shift.role && b.role === shift.role && a.role !== shift.role)
+          return 1;
         return 0;
       });
   };
@@ -353,12 +386,12 @@ export function StaffConflictDetector({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Total Conflicts
                 </p>
                 <p className="text-2xl font-bold">{activeConflicts.length}</p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+              <AlertTriangle className="text-muted-foreground h-8 w-8" />
             </div>
           </CardContent>
         </Card>
@@ -367,7 +400,7 @@ export function StaffConflictDetector({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Critical
                 </p>
                 <p className="text-2xl font-bold text-red-600">
@@ -383,7 +416,7 @@ export function StaffConflictDetector({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Warnings
                 </p>
                 <p className="text-2xl font-bold text-yellow-600">
@@ -401,11 +434,11 @@ export function StaffConflictDetector({
         {activeConflicts.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
+              <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-500" />
+              <h3 className="mb-2 text-lg font-semibold">
                 No Conflicts Detected
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 All staff schedules are optimized with no conflicts.
               </p>
             </CardContent>
@@ -414,14 +447,14 @@ export function StaffConflictDetector({
           activeConflicts.map((conflict) => (
             <Card
               key={conflict.id}
-              className={`border-2 ${getSeverityColor(conflict.severity)}`}
+              className={`border-2 ${getSeverityColor(conflict.severity)} `}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
+                  <div className="flex flex-1 items-start gap-3">
                     {getSeverityIcon(conflict.severity)}
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <CardTitle className="text-base">
                           {conflict.staffName}
                         </CardTitle>
@@ -429,7 +462,7 @@ export function StaffConflictDetector({
                           {getConflictTypeBadge(conflict.conflictType)}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
                         <span>📅 {conflict.date}</span>
                         <span>•</span>
                         <span>⏰ {conflict.timeSlot}</span>
@@ -439,18 +472,20 @@ export function StaffConflictDetector({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setResolvedIds((prev) => new Set(prev).add(conflict.id))}
+                    onClick={() =>
+                      setResolvedIds((prev) => new Set(prev).add(conflict.id))
+                    }
                   >
-                    <X className="h-4 w-4" />
+                    <X className="size-4" />
                   </Button>
                 </div>
               </CardHeader>
 
               <CardContent className="space-y-4">
                 {/* Description */}
-                <div className="p-3 bg-muted/50 rounded-lg border">
-                  <p className="text-sm font-medium mb-1">⚠️ Issue</p>
-                  <p className="text-sm text-muted-foreground">
+                <div className="bg-muted/50 rounded-lg border p-3">
+                  <p className="mb-1 text-sm font-medium">⚠️ Issue</p>
+                  <p className="text-muted-foreground text-sm">
                     {conflict.message}
                   </p>
                 </div>
@@ -459,7 +494,7 @@ export function StaffConflictDetector({
                 {conflict.conflictingShift && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Conflicting Shift:</p>
-                    <div className="p-2 bg-muted/50 rounded border text-sm">
+                    <div className="bg-muted/50 rounded-sm border p-2 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">
                           {conflict.conflictingShift.staffName}
@@ -468,15 +503,17 @@ export function StaffConflictDetector({
                           Shift #{conflict.conflictingShift.id}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {conflict.conflictingShift.date} ({conflict.conflictingShift.startTime} - {conflict.conflictingShift.endTime})
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {conflict.conflictingShift.date} (
+                        {conflict.conflictingShift.startTime} -{" "}
+                        {conflict.conflictingShift.endTime})
                       </p>
                     </div>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 pt-2 border-t">
+                <div className="flex items-center gap-2 border-t pt-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -487,7 +524,7 @@ export function StaffConflictDetector({
                       setIsReassignModalOpen(true);
                     }}
                   >
-                    <ArrowRightLeft className="h-4 w-4 mr-1" />
+                    <ArrowRightLeft className="mr-1 size-4" />
                     Reassign
                   </Button>
                   <Button
@@ -501,7 +538,7 @@ export function StaffConflictDetector({
                       }
                     }}
                   >
-                    <Edit className="h-4 w-4 mr-1" />
+                    <Edit className="mr-1 size-4" />
                     Edit Shift Time
                   </Button>
                   <Button
@@ -514,7 +551,7 @@ export function StaffConflictDetector({
                       setIsIgnoreModalOpen(true);
                     }}
                   >
-                    <Ban className="h-4 w-4 mr-1" />
+                    <Ban className="mr-1 size-4" />
                     Ignore
                   </Button>
                 </div>
@@ -533,16 +570,18 @@ export function StaffConflictDetector({
               Reassign Shift
             </DialogTitle>
             <DialogDescription>
-              Reassign this shift to another staff member to resolve the conflict.
+              Reassign this shift to another staff member to resolve the
+              conflict.
             </DialogDescription>
           </DialogHeader>
 
           {selectedConflict && (
             <div className="space-y-4 py-4">
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium mb-1">Current Shift</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedConflict.staffName} - {selectedConflict.date} ({selectedConflict.timeSlot})
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="mb-1 text-sm font-medium">Current Shift</p>
+                <p className="text-muted-foreground text-sm">
+                  {selectedConflict.staffName} - {selectedConflict.date} (
+                  {selectedConflict.timeSlot})
                 </p>
               </div>
 
@@ -563,8 +602,9 @@ export function StaffConflictDetector({
                     ))}
                   </SelectContent>
                 </Select>
-                {getAvailableStaffForReassign(selectedConflict).length === 0 && (
-                  <p className="text-sm text-muted-foreground">
+                {getAvailableStaffForReassign(selectedConflict).length ===
+                  0 && (
+                  <p className="text-muted-foreground text-sm">
                     No available staff found for this shift
                   </p>
                 )}
@@ -591,11 +631,16 @@ export function StaffConflictDetector({
                 }
 
                 if (onReassign) {
-                  onReassign(selectedConflict.shiftId, parseInt(selectedNewStaffId));
+                  onReassign(
+                    selectedConflict.shiftId,
+                    parseInt(selectedNewStaffId),
+                  );
                 }
 
                 toast.success("Shift reassigned successfully");
-                setResolvedIds((prev) => new Set(prev).add(selectedConflict.id));
+                setResolvedIds((prev) =>
+                  new Set(prev).add(selectedConflict.id),
+                );
                 setIsReassignModalOpen(false);
                 setSelectedConflict(null);
                 setSelectedNewStaffId("");
@@ -623,12 +668,13 @@ export function StaffConflictDetector({
 
           {selectedConflict && (
             <div className="space-y-4 py-4">
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm font-medium mb-1">Conflict Details</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedConflict.staffName} - {selectedConflict.date} ({selectedConflict.timeSlot})
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="mb-1 text-sm font-medium">Conflict Details</p>
+                <p className="text-muted-foreground text-sm">
+                  {selectedConflict.staffName} - {selectedConflict.date} (
+                  {selectedConflict.timeSlot})
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {selectedConflict.message}
                 </p>
               </div>
@@ -669,7 +715,9 @@ export function StaffConflictDetector({
                 }
 
                 toast.success("Conflict ignored");
-                setResolvedIds((prev) => new Set(prev).add(selectedConflict!.id));
+                setResolvedIds((prev) =>
+                  new Set(prev).add(selectedConflict!.id),
+                );
                 setIsIgnoreModalOpen(false);
                 setSelectedConflict(null);
                 setIgnoreReason("");

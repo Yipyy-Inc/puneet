@@ -5,7 +5,10 @@ import { CUSTOM_SERVICE_CATEGORIES_META } from "@/data/custom-services";
 import type { CustomServiceCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const CATEGORY_COLOR_MAP: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+const CATEGORY_COLOR_MAP: Record<
+  string,
+  { bg: string; border: string; text: string; icon: string }
+> = {
   blue: {
     bg: "bg-blue-50 dark:bg-blue-950/30",
     border: "border-blue-200 dark:border-blue-800",
@@ -49,9 +52,16 @@ interface CategorySelectorProps {
   onChange: (category: CustomServiceCategory) => void;
 }
 
-export function CategorySelector({ selected, onChange }: CategorySelectorProps) {
+export function CategorySelector({
+  selected,
+  onChange,
+}: CategorySelectorProps) {
   return (
-    <div role="radiogroup" aria-label="Service category" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div
+      role="radiogroup"
+      aria-label="Service category"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+    >
       {CUSTOM_SERVICE_CATEGORIES_META.map((cat) => {
         const Icon = resolveIcon(cat.icon);
         const isSelected = selected === cat.id;
@@ -65,10 +75,10 @@ export function CategorySelector({ selected, onChange }: CategorySelectorProps) 
             aria-checked={isSelected}
             onClick={() => onChange(cat.id as CustomServiceCategory)}
             className={cn(
-              "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+              `focus:ring-ring flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all hover:shadow-sm focus:ring-2 focus:ring-offset-1 focus:outline-none`,
               isSelected
                 ? cn(colors.bg, colors.border, "shadow-sm")
-                : "border-border bg-card hover:border-border/80 hover:bg-accent/30",
+                : `border-border bg-card hover:border-border/80 hover:bg-accent/30`,
             )}
           >
             <div
@@ -79,7 +89,7 @@ export function CategorySelector({ selected, onChange }: CategorySelectorProps) 
             >
               <Icon
                 className={cn(
-                  "h-4 w-4",
+                  "size-4",
                   isSelected ? colors.icon : "text-muted-foreground",
                 )}
               />
@@ -87,13 +97,13 @@ export function CategorySelector({ selected, onChange }: CategorySelectorProps) 
             <div>
               <p
                 className={cn(
-                  "text-sm font-semibold leading-tight",
+                  "text-sm/tight font-semibold",
                   isSelected ? colors.text : "text-foreground",
                 )}
               >
                 {cat.name}
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+              <p className="text-muted-foreground mt-0.5 text-xs/snug">
                 {cat.description}
               </p>
             </div>

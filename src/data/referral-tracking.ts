@@ -17,19 +17,19 @@ import type { ReferralRewardType } from "./facility-loyalty-config";
  */
 export interface ReferralRelationship {
   id: string;
-  referrerId: number;              // Client ID of the person who referred
-  referredCustomerId: number;       // Client ID of the person who was referred
-  referralCode: string;             // The referral code used
-  facilityId: number;              // Facility where referral was made
-  createdAt: string;                // When the referral relationship was created
+  referrerId: number; // Client ID of the person who referred
+  referredCustomerId: number; // Client ID of the person who was referred
+  referralCode: string; // The referral code used
+  facilityId: number; // Facility where referral was made
+  createdAt: string; // When the referral relationship was created
   status: "pending" | "active" | "completed" | "cancelled";
-  
+
   // Tracking fields
-  firstBookingId?: string;          // ID of the first booking
-  firstBookingDate?: string;        // Date of first completed booking
-  firstBookingValue?: number;       // Value of first booking
-  totalBookingValue?: number;       // Total value of all bookings
-  
+  firstBookingId?: string; // ID of the first booking
+  firstBookingDate?: string; // Date of first completed booking
+  firstBookingValue?: number; // Value of first booking
+  totalBookingValue?: number; // Total value of all bookings
+
   // Reward tracking
   referrerRewardStatus: "pending" | "eligible" | "issued" | "cancelled";
   referrerRewardIssuedAt?: string;
@@ -40,11 +40,11 @@ export interface ReferralRelationship {
   refereeRewardIssuedAt?: string;
   refereeRewardValue?: number | string;
   refereeRewardType?: ReferralRewardType;
-  
+
   // Validation flags
-  isSelfReferral: boolean;          // Prevent self-referrals
-  isDuplicate: boolean;             // Prevent duplicate rewards
-  validationNotes?: string;         // Notes about validation
+  isSelfReferral: boolean; // Prevent self-referrals
+  isDuplicate: boolean; // Prevent duplicate rewards
+  validationNotes?: string; // Notes about validation
 }
 
 /**
@@ -54,7 +54,13 @@ export interface ReferralRelationship {
 export interface ReferralEvent {
   id: string;
   referralRelationshipId: string;
-  eventType: "booking_created" | "booking_completed" | "booking_cancelled" | "booking_refunded" | "reward_issued" | "reward_cancelled";
+  eventType:
+    | "booking_created"
+    | "booking_completed"
+    | "booking_cancelled"
+    | "booking_refunded"
+    | "reward_issued"
+    | "reward_cancelled";
   bookingId?: string;
   bookingValue?: number;
   rewardValue?: number | string;
@@ -90,8 +96,8 @@ export const referralRelationships: ReferralRelationship[] = [
     status: "completed",
     firstBookingId: "booking-001",
     firstBookingDate: "2026-01-20T10:00:00Z",
-    firstBookingValue: 85.00,
-    totalBookingValue: 85.00,
+    firstBookingValue: 85.0,
+    totalBookingValue: 85.0,
     referrerRewardStatus: "issued",
     referrerRewardIssuedAt: "2026-01-21T10:00:00Z",
     referrerRewardValue: 20,
@@ -113,8 +119,8 @@ export const referralRelationships: ReferralRelationship[] = [
     status: "active",
     firstBookingId: "booking-002",
     firstBookingDate: "2026-02-12T10:00:00Z",
-    firstBookingValue: 50.00,
-    totalBookingValue: 50.00,
+    firstBookingValue: 50.0,
+    totalBookingValue: 50.0,
     referrerRewardStatus: "eligible",
     refereeRewardStatus: "issued",
     refereeRewardIssuedAt: "2026-02-12T10:00:00Z",
@@ -144,7 +150,7 @@ export const referralEvents: ReferralEvent[] = [
     referralRelationshipId: "ref-rel-001",
     eventType: "booking_created",
     bookingId: "booking-001",
-    bookingValue: 85.00,
+    bookingValue: 85.0,
     timestamp: "2026-01-15T10:00:00Z",
   },
   {
@@ -152,7 +158,7 @@ export const referralEvents: ReferralEvent[] = [
     referralRelationshipId: "ref-rel-001",
     eventType: "booking_completed",
     bookingId: "booking-001",
-    bookingValue: 85.00,
+    bookingValue: 85.0,
     timestamp: "2026-01-20T10:00:00Z",
   },
   {
@@ -174,21 +180,25 @@ export const referralEvents: ReferralEvent[] = [
  * Get referral relationship by referred customer ID
  */
 export function getReferralRelationshipByReferredCustomer(
-  referredCustomerId: number
+  referredCustomerId: number,
 ): ReferralRelationship | null {
-  return referralRelationships.find(
-    (rel) => rel.referredCustomerId === referredCustomerId && rel.status !== "cancelled"
-  ) || null;
+  return (
+    referralRelationships.find(
+      (rel) =>
+        rel.referredCustomerId === referredCustomerId &&
+        rel.status !== "cancelled",
+    ) || null
+  );
 }
 
 /**
  * Get all referral relationships for a referrer
  */
 export function getReferralRelationshipsByReferrer(
-  referrerId: number
+  referrerId: number,
 ): ReferralRelationship[] {
   return referralRelationships.filter(
-    (rel) => rel.referrerId === referrerId && rel.status !== "cancelled"
+    (rel) => rel.referrerId === referrerId && rel.status !== "cancelled",
   );
 }
 
@@ -196,10 +206,10 @@ export function getReferralRelationshipsByReferrer(
  * Get referral events for a relationship
  */
 export function getReferralEvents(
-  referralRelationshipId: string
+  referralRelationshipId: string,
 ): ReferralEvent[] {
   return referralEvents.filter(
-    (event) => event.referralRelationshipId === referralRelationshipId
+    (event) => event.referralRelationshipId === referralRelationshipId,
   );
 }
 
@@ -210,7 +220,7 @@ export function validateReferral(
   referrerId: number,
   referredCustomerId: number,
   referralCode: string,
-  facilityId: number
+  facilityId: number,
 ): ReferralValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -233,7 +243,7 @@ export function validateReferral(
       rel.referrerId === referrerId &&
       rel.referredCustomerId === referredCustomerId &&
       rel.facilityId === facilityId &&
-      rel.status !== "cancelled"
+      rel.status !== "cancelled",
   );
 
   if (existingRelationship) {
@@ -247,9 +257,10 @@ export function validateReferral(
       errors,
       warnings,
       canTriggerReward: false,
-      reason: existingRelationship.referrerRewardStatus === "issued" 
-        ? "Reward already issued" 
-        : "Duplicate referral relationship",
+      reason:
+        existingRelationship.referrerRewardStatus === "issued"
+          ? "Reward already issued"
+          : "Duplicate referral relationship",
     };
   }
 
@@ -281,7 +292,7 @@ export function validateBookingForReferralReward(
       firstBookingOnly?: boolean;
       serviceTypes?: string[];
     };
-  }
+  },
 ): ReferralValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -336,7 +347,10 @@ export function validateBookingForReferralReward(
 
   // Check if this is the first booking (if required)
   if (referralProgramConfig?.requirements?.firstBookingOnly) {
-    if (referralRelationship.firstBookingId && referralRelationship.firstBookingId !== booking.id) {
+    if (
+      referralRelationship.firstBookingId &&
+      referralRelationship.firstBookingId !== booking.id
+    ) {
       errors.push("Only first booking triggers reward");
       return {
         isValid: false,
@@ -352,7 +366,7 @@ export function validateBookingForReferralReward(
   if (referralProgramConfig?.requirements?.minimumPurchase) {
     if (booking.value < referralProgramConfig.requirements.minimumPurchase) {
       errors.push(
-        `Minimum purchase of $${referralProgramConfig.requirements.minimumPurchase} required`
+        `Minimum purchase of $${referralProgramConfig.requirements.minimumPurchase} required`,
       );
       return {
         isValid: false,
@@ -391,11 +405,16 @@ export function createReferralRelationship(
   referrerId: number,
   referredCustomerId: number,
   referralCode: string,
-  facilityId: number
+  facilityId: number,
 ): ReferralRelationship {
   // Validate first
-  const validation = validateReferral(referrerId, referredCustomerId, referralCode, facilityId);
-  
+  const validation = validateReferral(
+    referrerId,
+    referredCustomerId,
+    referralCode,
+    facilityId,
+  );
+
   if (!validation.isValid) {
     throw new Error(`Invalid referral: ${validation.errors.join(", ")}`);
   }
@@ -456,15 +475,17 @@ export function processBookingForReferral(
       firstBookingOnly?: boolean;
       serviceTypes?: string[];
     };
-  }
+  },
 ): {
   relationship: ReferralRelationship | null;
   referrerRewardIssued: boolean;
   refereeRewardIssued: boolean;
 } {
   // Find referral relationship for this customer
-  const relationship = getReferralRelationshipByReferredCustomer(booking.customerId);
-  
+  const relationship = getReferralRelationshipByReferredCustomer(
+    booking.customerId,
+  );
+
   if (!relationship) {
     return {
       relationship: null,
@@ -474,8 +495,12 @@ export function processBookingForReferral(
   }
 
   // Validate booking
-  const validation = validateBookingForReferralReward(relationship, booking, referralProgramConfig);
-  
+  const validation = validateBookingForReferralReward(
+    relationship,
+    booking,
+    referralProgramConfig,
+  );
+
   if (!validation.canTriggerReward) {
     // Log validation failure
     referralEvents.push({
@@ -498,23 +523,30 @@ export function processBookingForReferral(
   // Update relationship with booking info
   if (!relationship.firstBookingId) {
     relationship.firstBookingId = booking.id;
-    relationship.firstBookingDate = booking.completedAt || new Date().toISOString();
+    relationship.firstBookingDate =
+      booking.completedAt || new Date().toISOString();
     relationship.firstBookingValue = booking.value;
     relationship.totalBookingValue = booking.value;
   } else {
-    relationship.totalBookingValue = (relationship.totalBookingValue || 0) + booking.value;
+    relationship.totalBookingValue =
+      (relationship.totalBookingValue || 0) + booking.value;
   }
 
   let referrerRewardIssued = false;
   let refereeRewardIssued = false;
 
   // Issue referrer reward
-  if (relationship.referrerRewardStatus === "pending" || relationship.referrerRewardStatus === "eligible") {
+  if (
+    relationship.referrerRewardStatus === "pending" ||
+    relationship.referrerRewardStatus === "eligible"
+  ) {
     if (referralProgramConfig?.referrerReward) {
       relationship.referrerRewardStatus = "issued";
       relationship.referrerRewardIssuedAt = new Date().toISOString();
-      relationship.referrerRewardValue = referralProgramConfig.referrerReward.value;
-      relationship.referrerRewardType = referralProgramConfig.referrerReward.type;
+      relationship.referrerRewardValue =
+        referralProgramConfig.referrerReward.value;
+      relationship.referrerRewardType =
+        referralProgramConfig.referrerReward.type;
       referrerRewardIssued = true;
 
       // Log event
@@ -532,11 +564,15 @@ export function processBookingForReferral(
   }
 
   // Issue referee reward (if not already issued)
-  if (relationship.refereeRewardStatus === "pending" || relationship.refereeRewardStatus === "eligible") {
+  if (
+    relationship.refereeRewardStatus === "pending" ||
+    relationship.refereeRewardStatus === "eligible"
+  ) {
     if (referralProgramConfig?.refereeReward) {
       relationship.refereeRewardStatus = "issued";
       relationship.refereeRewardIssuedAt = new Date().toISOString();
-      relationship.refereeRewardValue = referralProgramConfig.refereeReward.value;
+      relationship.refereeRewardValue =
+        referralProgramConfig.refereeReward.value;
       relationship.refereeRewardType = referralProgramConfig.refereeReward.type;
       refereeRewardIssued = true;
 
@@ -555,7 +591,10 @@ export function processBookingForReferral(
   }
 
   // Update relationship status
-  if (relationship.referrerRewardStatus === "issued" && relationship.refereeRewardStatus === "issued") {
+  if (
+    relationship.referrerRewardStatus === "issued" &&
+    relationship.refereeRewardStatus === "issued"
+  ) {
     relationship.status = "completed";
   } else {
     relationship.status = "active";
@@ -583,13 +622,13 @@ export function processBookingForReferral(
  */
 export function handleBookingCancellationForReferral(
   bookingId: string,
-  customerId: number
+  customerId: number,
 ): {
   relationship: ReferralRelationship | null;
   rewardsCancelled: boolean;
 } {
   const relationship = getReferralRelationshipByReferredCustomer(customerId);
-  
+
   if (!relationship || relationship.firstBookingId !== bookingId) {
     return {
       relationship: null,
@@ -600,7 +639,10 @@ export function handleBookingCancellationForReferral(
   // Cancel rewards if they were issued for this booking
   let rewardsCancelled = false;
 
-  if (relationship.referrerRewardStatus === "issued" && relationship.firstBookingId === bookingId) {
+  if (
+    relationship.referrerRewardStatus === "issued" &&
+    relationship.firstBookingId === bookingId
+  ) {
     relationship.referrerRewardStatus = "cancelled";
     rewardsCancelled = true;
 
@@ -614,7 +656,10 @@ export function handleBookingCancellationForReferral(
     });
   }
 
-  if (relationship.refereeRewardStatus === "issued" && relationship.firstBookingId === bookingId) {
+  if (
+    relationship.refereeRewardStatus === "issued" &&
+    relationship.firstBookingId === bookingId
+  ) {
     relationship.refereeRewardStatus = "cancelled";
     rewardsCancelled = true;
 
@@ -661,17 +706,26 @@ export function getReferralStats(referrerId: number): {
   const relationships = getReferralRelationshipsByReferrer(referrerId);
 
   const totalReferrals = relationships.length;
-  const activeReferrals = relationships.filter((r) => r.status === "active").length;
-  const completedReferrals = relationships.filter((r) => r.status === "completed").length;
-  const rewardsEarned = relationships.filter((r) => r.referrerRewardStatus === "issued").length;
+  const activeReferrals = relationships.filter(
+    (r) => r.status === "active",
+  ).length;
+  const completedReferrals = relationships.filter(
+    (r) => r.status === "completed",
+  ).length;
+  const rewardsEarned = relationships.filter(
+    (r) => r.referrerRewardStatus === "issued",
+  ).length;
   const rewardsPending = relationships.filter(
-    (r) => r.referrerRewardStatus === "pending" || r.referrerRewardStatus === "eligible"
+    (r) =>
+      r.referrerRewardStatus === "pending" ||
+      r.referrerRewardStatus === "eligible",
   ).length;
 
   const totalRewardValue = relationships
     .filter((r) => r.referrerRewardStatus === "issued")
     .reduce((sum, r) => {
-      const value = typeof r.referrerRewardValue === "number" ? r.referrerRewardValue : 0;
+      const value =
+        typeof r.referrerRewardValue === "number" ? r.referrerRewardValue : 0;
       return sum + value;
     }, 0);
 

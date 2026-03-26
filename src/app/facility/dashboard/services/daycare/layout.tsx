@@ -120,15 +120,15 @@ export default function DaycareLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="sticky top-16 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-16 z-50 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-amber-500 to-orange-500">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-500">
                 <Sun className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
                   Daycare Module
                   <Badge
                     variant={
@@ -138,7 +138,7 @@ export default function DaycareLayout({
                     {daycare.status.disabled ? "Disabled" : "Enabled"}
                   </Badge>
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Manage daycare operations, check-ins, rates, and report cards
                 </p>
               </div>
@@ -164,13 +164,13 @@ export default function DaycareLayout({
                   })
                 }
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Book
               </Button>
             </div>
           </div>
         </div>
-        <nav className="px-6 flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive =
               pathname === tab.href ||
@@ -183,14 +183,14 @@ export default function DaycareLayout({
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? "bg-background border-b-2 border-primary text-primary"
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 {tab.name}
               </Link>
             );

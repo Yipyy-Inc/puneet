@@ -14,7 +14,7 @@ import {
 
 export default function AnalyticsOverviewPage() {
   return (
-    <div className="flex-1 p-6 lg:p-8 bg-background bg-gradient-mesh min-h-screen">
+    <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -27,116 +27,116 @@ export default function AnalyticsOverviewPage() {
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     New Customers
                   </p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-bold tracking-tight">1,250</h3>
-                    <span className="inline-flex items-center text-xs font-medium text-success">
-                      <TrendingUp className="h-3 w-3 mr-0.5" />
+                    <span className="text-success inline-flex items-center text-xs font-medium">
+                      <TrendingUp className="mr-0.5 size-3" />
                       +18.5%
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     This month
                   </p>
                 </div>
                 <div
-                  className="flex items-center justify-center w-11 h-11 rounded-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
                   style={{
                     background:
                       "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                   }}
                 >
-                  <Users className="h-5 w-5 text-white" />
+                  <Users className="size-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     Total Reservations
                   </p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-bold tracking-tight">8,290</h3>
-                    <span className="inline-flex items-center text-xs font-medium text-success">
+                    <span className="text-success inline-flex items-center text-xs font-medium">
                       90%
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     Completion rate
                   </p>
                 </div>
                 <div
-                  className="flex items-center justify-center w-11 h-11 rounded-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
                   style={{
                     background:
                       "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                   }}
                 >
-                  <Calendar className="h-5 w-5 text-white" />
+                  <Calendar className="size-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     System Utilization
                   </p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-bold tracking-tight">78.8%</h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     Average across facilities
                   </p>
                 </div>
                 <div
-                  className="flex items-center justify-center w-11 h-11 rounded-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
                   style={{
                     background:
                       "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                   }}
                 >
-                  <Building2 className="h-5 w-5 text-white" />
+                  <Building2 className="size-5 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
                     System Uptime
                   </p>
                   <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-bold tracking-tight">99.8%</h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     This month
                   </p>
                 </div>
                 <div
-                  className="flex items-center justify-center w-11 h-11 rounded-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
                   style={{
                     background:
                       "linear-gradient(135deg, #10b981 0%, #059669 100%)",
                   }}
                 >
-                  <CheckCircle2 className="h-5 w-5 text-white" />
+                  <CheckCircle2 className="size-5 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -146,11 +146,11 @@ export default function AnalyticsOverviewPage() {
         {/* Analytics Sections */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Business Intelligence */}
-          <Card className="border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+          <Card className="hover:shadow-elevated group shadow-card border-0 transition-all duration-300">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -160,41 +160,41 @@ export default function AnalyticsOverviewPage() {
                 </div>
                 <CardTitle className="text-xl">Business Intelligence</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Customer acquisition, reservation analytics, and facility
                 utilization metrics
               </p>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm mb-4">
+              <ul className="mb-4 space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <div className="bg-primary size-1.5 rounded-full" />
                   Customer Acquisition Tracking
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <div className="bg-primary size-1.5 rounded-full" />
                   Reservation Analytics
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <div className="bg-primary size-1.5 rounded-full" />
                   Facility Utilization
                 </li>
               </ul>
-              <Button asChild className="w-full gap-2 group/btn">
+              <Button asChild className="group/btn w-full gap-2">
                 <Link href="/dashboard/analytics/business-intelligence">
                   View Details
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                  <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>
             </CardContent>
           </Card>
 
           {/* Performance Metrics */}
-          <Card className="border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+          <Card className="hover:shadow-elevated group shadow-card border-0 transition-all duration-300">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -204,41 +204,41 @@ export default function AnalyticsOverviewPage() {
                 </div>
                 <CardTitle className="text-xl">Performance Metrics</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Facility performance, system monitoring, and operational
                 efficiency
               </p>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm mb-4">
+              <ul className="mb-4 space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                  <div className="bg-success size-1.5 rounded-full" />
                   Facility Performance
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                  <div className="bg-success size-1.5 rounded-full" />
                   System Health Monitoring
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                  <div className="bg-success size-1.5 rounded-full" />
                   Efficiency Tracking
                 </li>
               </ul>
-              <Button asChild className="w-full gap-2 group/btn">
+              <Button asChild className="group/btn w-full gap-2">
                 <Link href="/dashboard/analytics/performance">
                   View Details
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                  <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>
             </CardContent>
           </Card>
 
           {/* Custom Reports */}
-          <Card className="border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+          <Card className="hover:shadow-elevated group shadow-card border-0 transition-all duration-300">
             <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
+              <div className="mb-2 flex items-center gap-3">
                 <div
-                  className="flex items-center justify-center w-12 h-12 rounded-xl transition-transform duration-300 group-hover:scale-110"
+                  className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
                   style={{
                     background:
                       "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -248,29 +248,29 @@ export default function AnalyticsOverviewPage() {
                 </div>
                 <CardTitle className="text-xl">Custom Reports</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Build, schedule, and export custom reports with various formats
               </p>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm mb-4">
+              <ul className="mb-4 space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-warning" />
+                  <div className="bg-warning size-1.5 rounded-full" />
                   Report Builder
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-warning" />
+                  <div className="bg-warning size-1.5 rounded-full" />
                   Scheduled Reports
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-warning" />
+                  <div className="bg-warning size-1.5 rounded-full" />
                   Export (PDF, Excel, CSV)
                 </li>
               </ul>
-              <Button asChild className="w-full gap-2 group/btn">
+              <Button asChild className="group/btn w-full gap-2">
                 <Link href="/dashboard/analytics/reports">
                   View Details
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                  <ArrowRight className="size-4 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>
             </CardContent>

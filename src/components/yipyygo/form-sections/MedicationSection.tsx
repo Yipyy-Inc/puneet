@@ -1,7 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,11 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, X, Pill, Clock, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  X,
+  Pill,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  ShieldAlert,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { YipyyGoFormData, MedicationItem } from "@/data/yipyygo-forms";
 import type { YipyyGoConfig } from "@/data/yipyygo-config";
-import type { MedForm, MedFrequency, MedAdminInstruction, MissedDoseAction } from "@/lib/types";
+import type {
+  MedForm,
+  MedFrequency,
+  MedAdminInstruction,
+  MissedDoseAction,
+} from "@/lib/types";
 
 interface MedicationSectionProps {
   formData: YipyyGoFormData;
@@ -76,7 +97,15 @@ const MISSED_DOSE_OPTIONS: { value: MissedDoseAction; label: string }[] = [
 
 const COMMON_MED_TIMES = ["08:00", "12:00", "18:00", "20:00"];
 
-const HIGH_RISK_KEYWORDS = ["insulin", "seizure", "phenobarbital", "prednisone", "thyroid", "heart", "blood pressure"];
+const HIGH_RISK_KEYWORDS = [
+  "insulin",
+  "seizure",
+  "phenobarbital",
+  "prednisone",
+  "thyroid",
+  "heart",
+  "blood pressure",
+];
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -108,7 +137,7 @@ export function MedicationSection({
   isLastSection,
 }: MedicationSectionProps) {
   const [expandedMed, setExpandedMed] = useState<string | null>(
-    formData.medications.length > 0 ? formData.medications[0].id : null
+    formData.medications.length > 0 ? formData.medications[0].id : null,
   );
 
   const handleNoMedicationsToggle = (checked: boolean) => {
@@ -147,7 +176,7 @@ export function MedicationSection({
   const updateMed = (id: string, updates: Partial<MedicationItem>) => {
     updateFormData({
       medications: formData.medications.map((m) =>
-        m.id === id ? { ...m, ...updates } : m
+        m.id === id ? { ...m, ...updates } : m,
       ),
     });
   };
@@ -156,7 +185,9 @@ export function MedicationSection({
     const med = formData.medications.find((m) => m.id === medId);
     if (!med) return;
     const current = med.adminInstructions || [];
-    const updated = current.includes(val) ? current.filter((v) => v !== val) : [...current, val];
+    const updated = current.includes(val)
+      ? current.filter((v) => v !== val)
+      : [...current, val];
     updateMed(medId, { adminInstructions: updated });
   };
 
@@ -176,7 +207,7 @@ export function MedicationSection({
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
             <Pill className="h-4.5 w-4.5 text-red-600" />
           </div>
           <div>
@@ -188,12 +219,11 @@ export function MedicationSection({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-
         {/* ── No Medications Toggle ── */}
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div className="flex items-center justify-between rounded-lg border p-4">
           <div>
             <Label className="text-sm font-medium">No Medications</Label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {formData.petName} is not taking any medications
             </p>
           </div>
@@ -216,20 +246,31 @@ export function MedicationSection({
                   key={med.id}
                   className={cn(
                     "rounded-lg border transition-colors",
-                    showHighRisk ? "border-red-200 bg-red-50/30" : isExpanded ? "border-violet-200 bg-violet-50/20" : "border-input"
+                    showHighRisk
+                      ? "border-red-200 bg-red-50/30"
+                      : isExpanded
+                        ? "border-violet-200 bg-violet-50/20"
+                        : "border-input",
                   )}
                 >
                   {/* Card header */}
                   <div
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                    className="flex cursor-pointer items-center justify-between px-4 py-3"
                     onClick={() => setExpandedMed(isExpanded ? null : med.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center",
-                        showHighRisk ? "bg-red-100" : "bg-violet-100"
-                      )}>
-                        <Pill className={cn("h-3.5 w-3.5", showHighRisk ? "text-red-600" : "text-violet-600")} />
+                      <div
+                        className={cn(
+                          `flex h-8 w-8 items-center justify-center rounded-full`,
+                          showHighRisk ? "bg-red-100" : "bg-violet-100",
+                        )}
+                      >
+                        <Pill
+                          className={cn(
+                            "h-3.5 w-3.5",
+                            showHighRisk ? "text-red-600" : "text-violet-600",
+                          )}
+                        />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -237,17 +278,25 @@ export function MedicationSection({
                             {med.name || "New Medication"}
                           </span>
                           {showHighRisk && (
-                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                              <ShieldAlert className="h-3 w-3 mr-0.5" />
+                            <Badge
+                              variant="destructive"
+                              className="px-1.5 py-0 text-[10px]"
+                            >
+                              <ShieldAlert className="mr-0.5 h-3 w-3" />
                               High Risk
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           {med.dosage && <span>{med.dosage}</span>}
                           {med.strength && <span>&middot; {med.strength}</span>}
                           {med.frequency && (
-                            <span>&middot; {MED_FREQUENCIES.find((f) => f.value === med.frequency)?.label || med.frequency}</span>
+                            <span>
+                              &middot;{" "}
+                              {MED_FREQUENCIES.find(
+                                (f) => f.value === med.frequency,
+                              )?.label || med.frequency}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -257,26 +306,34 @@ export function MedicationSection({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); removeMedication(med.id); }}
+                        className="text-muted-foreground hover:text-destructive h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeMedication(med.id);
+                        }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                      {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      {isExpanded ? (
+                        <ChevronUp className="text-muted-foreground size-4" />
+                      ) : (
+                        <ChevronDown className="text-muted-foreground size-4" />
+                      )}
                     </div>
                   </div>
 
                   {/* Expanded details */}
                   {isExpanded && (
-                    <div className="px-4 pb-4 space-y-4 border-t border-violet-100">
-
+                    <div className="space-y-4 border-t border-violet-100 px-4 pb-4">
                       {/* Name + Purpose */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                      <div className="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-2">
                         <div className="space-y-1">
                           <Label className="text-xs">Medication Name *</Label>
                           <Input
                             value={med.name}
-                            onChange={(e) => updateMed(med.id, { name: e.target.value })}
+                            onChange={(e) =>
+                              updateMed(med.id, { name: e.target.value })
+                            }
                             placeholder="e.g., Apoquel"
                             className="h-9"
                           />
@@ -285,7 +342,9 @@ export function MedicationSection({
                           <Label className="text-xs">Purpose</Label>
                           <Input
                             value={med.purpose || ""}
-                            onChange={(e) => updateMed(med.id, { purpose: e.target.value })}
+                            onChange={(e) =>
+                              updateMed(med.id, { purpose: e.target.value })
+                            }
                             placeholder="e.g., Allergy, Joint, Heart"
                             className="h-9"
                           />
@@ -293,14 +352,18 @@ export function MedicationSection({
                       </div>
 
                       {/* Dosing section */}
-                      <div className="rounded-md border bg-white p-3 space-y-3">
-                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dosage</h5>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="space-y-3 rounded-md border bg-white p-3">
+                        <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                          Dosage
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                           <div className="space-y-1">
                             <Label className="text-xs">Amount *</Label>
                             <Input
                               value={med.dosage}
-                              onChange={(e) => updateMed(med.id, { dosage: e.target.value })}
+                              onChange={(e) =>
+                                updateMed(med.id, { dosage: e.target.value })
+                              }
                               placeholder="e.g., 1 tablet"
                               className="h-8 text-xs"
                             />
@@ -309,7 +372,9 @@ export function MedicationSection({
                             <Label className="text-xs">Strength</Label>
                             <Input
                               value={med.strength || ""}
-                              onChange={(e) => updateMed(med.id, { strength: e.target.value })}
+                              onChange={(e) =>
+                                updateMed(med.id, { strength: e.target.value })
+                              }
                               placeholder="e.g., 16mg"
                               className="h-8 text-xs"
                             />
@@ -318,30 +383,42 @@ export function MedicationSection({
                             <Label className="text-xs">Form</Label>
                             <Select
                               value={med.form || "pill"}
-                              onValueChange={(v) => updateMed(med.id, { form: v as MedForm })}
+                              onValueChange={(v) =>
+                                updateMed(med.id, { form: v as MedForm })
+                              }
                             >
                               <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {MED_FORMS.map((f) => (
-                                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                  <SelectItem key={f.value} value={f.value}>
+                                    {f.label}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                        {(med.form === "liquid") && (
-                          <p className="text-xs text-muted-foreground">Use ml for liquid dosage amount</p>
+                        {med.form === "liquid" && (
+                          <p className="text-muted-foreground text-xs">
+                            Use ml for liquid dosage amount
+                          </p>
                         )}
-                        {(med.form === "ear_drops" || med.form === "eye_drops") && (
-                          <p className="text-xs text-muted-foreground">Specify number of drops and per ear/eye in the amount field</p>
+                        {(med.form === "ear_drops" ||
+                          med.form === "eye_drops") && (
+                          <p className="text-muted-foreground text-xs">
+                            Specify number of drops and per ear/eye in the
+                            amount field
+                          </p>
                         )}
                       </div>
 
                       {/* Timing section */}
-                      <div className="rounded-md border bg-white p-3 space-y-3">
-                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Schedule</h5>
+                      <div className="space-y-3 rounded-md border bg-white p-3">
+                        <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                          Schedule
+                        </h5>
                         <div className="space-y-2">
                           <Label className="text-xs">Frequency</Label>
                           <div className="flex flex-wrap gap-1.5">
@@ -349,12 +426,14 @@ export function MedicationSection({
                               <button
                                 key={freq.value}
                                 type="button"
-                                onClick={() => updateMed(med.id, { frequency: freq.value })}
+                                onClick={() =>
+                                  updateMed(med.id, { frequency: freq.value })
+                                }
                                 className={cn(
-                                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                  `rounded-full border px-3 py-1 text-xs font-medium transition-colors`,
                                   med.frequency === freq.value
-                                    ? "border-violet-300 bg-violet-50 text-violet-700"
-                                    : "border-input hover:bg-muted/50 text-muted-foreground"
+                                    ? `border-violet-300 bg-violet-50 text-violet-700`
+                                    : `border-input text-muted-foreground hover:bg-muted/50`,
                                 )}
                               >
                                 {freq.label}
@@ -366,7 +445,11 @@ export function MedicationSection({
                         {med.frequency === "other" && (
                           <Input
                             value={med.frequencyNotes || ""}
-                            onChange={(e) => updateMed(med.id, { frequencyNotes: e.target.value })}
+                            onChange={(e) =>
+                              updateMed(med.id, {
+                                frequencyNotes: e.target.value,
+                              })
+                            }
                             placeholder="Describe schedule..."
                             className="h-8 text-xs"
                           />
@@ -375,13 +458,20 @@ export function MedicationSection({
                         {med.frequency === "prn" && (
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <Label className="text-xs">Max times per day</Label>
+                              <Label className="text-xs">
+                                Max times per day
+                              </Label>
                               <Input
                                 type="number"
                                 min={1}
                                 max={10}
                                 value={med.prnMaxPerDay || ""}
-                                onChange={(e) => updateMed(med.id, { prnMaxPerDay: parseInt(e.target.value) || undefined })}
+                                onChange={(e) =>
+                                  updateMed(med.id, {
+                                    prnMaxPerDay:
+                                      parseInt(e.target.value) || undefined,
+                                  })
+                                }
                                 className="h-8 text-xs"
                               />
                             </div>
@@ -389,7 +479,11 @@ export function MedicationSection({
                               <Label className="text-xs">Trigger reason</Label>
                               <Input
                                 value={med.prnTrigger || ""}
-                                onChange={(e) => updateMed(med.id, { prnTrigger: e.target.value })}
+                                onChange={(e) =>
+                                  updateMed(med.id, {
+                                    prnTrigger: e.target.value,
+                                  })
+                                }
                                 placeholder="e.g., Itching, Anxiety"
                                 className="h-8 text-xs"
                               />
@@ -399,7 +493,9 @@ export function MedicationSection({
 
                         {/* Times */}
                         <div className="space-y-2">
-                          <Label className="text-xs">Administration Times</Label>
+                          <Label className="text-xs">
+                            Administration Times
+                          </Label>
                           <div className="flex flex-wrap gap-1.5">
                             {COMMON_MED_TIMES.map((time) => (
                               <button
@@ -407,14 +503,14 @@ export function MedicationSection({
                                 type="button"
                                 onClick={() => addTime(med.id, time)}
                                 disabled={med.times.includes(time)}
-                                className="rounded-full border border-input px-3 py-1 text-xs hover:bg-muted/50 disabled:opacity-40 transition-colors"
+                                className="border-input hover:bg-muted/50 rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-40"
                               >
                                 + {formatTime(time)}
                               </button>
                             ))}
                             <Input
                               type="time"
-                              className="w-28 h-7 text-xs"
+                              className="h-7 w-28 text-xs"
                               onBlur={(e) => {
                                 if (e.target.value) {
                                   addTime(med.id, e.target.value);
@@ -424,15 +520,18 @@ export function MedicationSection({
                             />
                           </div>
                           {med.times.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
+                            <div className="mt-1 flex flex-wrap gap-1">
                               {med.times.map((time, idx) => (
                                 <span
                                   key={idx}
-                                  className="inline-flex items-center gap-1 rounded-full bg-violet-100 text-violet-700 px-2.5 py-0.5 text-xs"
+                                  className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-700"
                                 >
                                   <Clock className="h-3 w-3" />
                                   {formatTime(time)}
-                                  <button type="button" onClick={() => removeTime(med.id, idx)}>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTime(med.id, idx)}
+                                  >
                                     <X className="h-3 w-3" />
                                   </button>
                                 </span>
@@ -443,21 +542,27 @@ export function MedicationSection({
                       </div>
 
                       {/* Administration instructions */}
-                      <div className="rounded-md border bg-white p-3 space-y-3">
-                        <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">How to Give</h5>
+                      <div className="space-y-3 rounded-md border bg-white p-3">
+                        <h5 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                          How to Give
+                        </h5>
                         <div className="flex flex-wrap gap-1.5">
                           {ADMIN_INSTRUCTIONS.map((inst) => {
-                            const active = (med.adminInstructions || []).includes(inst.value);
+                            const active = (
+                              med.adminInstructions || []
+                            ).includes(inst.value);
                             return (
                               <button
                                 key={inst.value}
                                 type="button"
-                                onClick={() => toggleAdminInstruction(med.id, inst.value)}
+                                onClick={() =>
+                                  toggleAdminInstruction(med.id, inst.value)
+                                }
                                 className={cn(
-                                  "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                  `rounded-full border px-3 py-1 text-xs font-medium transition-colors`,
                                   active
                                     ? "border-teal-300 bg-teal-50 text-teal-700"
-                                    : "border-input hover:bg-muted/50 text-muted-foreground"
+                                    : `border-input text-muted-foreground hover:bg-muted/50`,
                                 )}
                               >
                                 {inst.label}
@@ -467,7 +572,9 @@ export function MedicationSection({
                         </div>
                         <Input
                           value={med.adminNotes || ""}
-                          onChange={(e) => updateMed(med.id, { adminNotes: e.target.value })}
+                          onChange={(e) =>
+                            updateMed(med.id, { adminNotes: e.target.value })
+                          }
                           placeholder="Other administration notes..."
                           className="h-8 text-xs"
                         />
@@ -475,18 +582,22 @@ export function MedicationSection({
 
                       {/* If dose is missed */}
                       <div className="space-y-2">
-                        <Label className="text-xs font-medium">If a dose is missed</Label>
+                        <Label className="text-xs font-medium">
+                          If a dose is missed
+                        </Label>
                         <div className="flex flex-wrap gap-1.5">
                           {MISSED_DOSE_OPTIONS.map((opt) => (
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => updateMed(med.id, { ifMissed: opt.value })}
+                              onClick={() =>
+                                updateMed(med.id, { ifMissed: opt.value })
+                              }
                               className={cn(
-                                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                                `rounded-full border px-3 py-1 text-xs font-medium transition-colors`,
                                 med.ifMissed === opt.value
-                                  ? "border-amber-300 bg-amber-50 text-amber-700"
-                                  : "border-input hover:bg-muted/50 text-muted-foreground"
+                                  ? `border-amber-300 bg-amber-50 text-amber-700`
+                                  : `border-input text-muted-foreground hover:bg-muted/50`,
                               )}
                             >
                               {opt.label}
@@ -498,19 +609,28 @@ export function MedicationSection({
                       {/* Safety: high risk + confirmation */}
                       <div className="flex items-center justify-between rounded-lg border p-3">
                         <div>
-                          <Label className="text-xs font-medium">High-risk medication</Label>
-                          <p className="text-[11px] text-muted-foreground">Mark if this requires extra caution (insulin, seizure meds, etc.)</p>
+                          <Label className="text-xs font-medium">
+                            High-risk medication
+                          </Label>
+                          <p className="text-muted-foreground text-[11px]">
+                            Mark if this requires extra caution (insulin,
+                            seizure meds, etc.)
+                          </p>
                         </div>
                         <Switch
                           checked={med.isHighRisk || false}
-                          onCheckedChange={(checked) => updateMed(med.id, { isHighRisk: checked })}
+                          onCheckedChange={(checked) =>
+                            updateMed(med.id, { isHighRisk: checked })
+                          }
                         />
                       </div>
 
                       {/* Photo upload */}
                       {config?.formTemplate.features.photoUploads && (
                         <div className="space-y-1">
-                          <Label className="text-xs">Photo of Medication Label (optional)</Label>
+                          <Label className="text-xs">
+                            Photo of Medication Label (optional)
+                          </Label>
                           <Input
                             type="file"
                             accept="image/*"
@@ -518,15 +638,20 @@ export function MedicationSection({
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                updateMed(med.id, { photoUrl: URL.createObjectURL(file) });
+                                updateMed(med.id, {
+                                  photoUrl: URL.createObjectURL(file),
+                                });
                               }
                             }}
                           />
                           {med.photoUrl && (
-                            <img
+                            <Image
                               src={med.photoUrl}
                               alt="Medication label"
-                              className="mt-2 w-28 h-28 object-cover border rounded"
+                              width={112}
+                              height={112}
+                              className="mt-2 h-28 w-28 rounded-sm border object-cover"
+                              unoptimized
                             />
                           )}
                         </div>
@@ -535,7 +660,9 @@ export function MedicationSection({
                       {/* Notes */}
                       <Input
                         value={med.methodNotes || ""}
-                        onChange={(e) => updateMed(med.id, { methodNotes: e.target.value })}
+                        onChange={(e) =>
+                          updateMed(med.id, { methodNotes: e.target.value })
+                        }
                         placeholder="Additional notes for this medication..."
                         className="h-8 text-xs"
                       />
@@ -552,7 +679,7 @@ export function MedicationSection({
               onClick={addMedication}
               className="w-full"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Medication
             </Button>
 
@@ -572,11 +699,15 @@ export function MedicationSection({
                   }}
                 />
                 <div>
-                  <Label htmlFor="med-confirm" className="text-sm font-medium cursor-pointer">
+                  <Label
+                    htmlFor="med-confirm"
+                    className="cursor-pointer text-sm font-medium"
+                  >
                     I confirm all medication dosages are correct
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Please verify each medication name, dosage, and frequency before continuing
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Please verify each medication name, dosage, and frequency
+                    before continuing
                   </p>
                 </div>
               </div>
@@ -589,9 +720,7 @@ export function MedicationSection({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? "Review" : "Next"}
-          </Button>
+          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
         </div>
       </CardContent>
     </Card>

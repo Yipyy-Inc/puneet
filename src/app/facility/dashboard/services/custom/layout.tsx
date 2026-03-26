@@ -7,9 +7,5 @@ interface CustomServicesLayoutProps {
 export default function CustomServicesLayout({
   children,
 }: CustomServicesLayoutProps) {
-  return (
-    <div className="min-h-screen bg-background">
-      {children}
-    </div>
-  );
+  return <div className="bg-background min-h-screen">{children}</div>;
 }

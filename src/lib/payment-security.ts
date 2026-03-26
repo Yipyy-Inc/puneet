@@ -1,6 +1,6 @@
 /**
  * Payment Security Utilities
- * 
+ *
  * Functions for masking card details and security checks
  */
 
@@ -9,10 +9,10 @@
  */
 export function maskCardNumber(cardNumber: string | undefined | null): string {
   if (!cardNumber) return "****";
-  
+
   const cleaned = cardNumber.replace(/\s/g, "");
   if (cleaned.length < 4) return "****";
-  
+
   const last4 = cleaned.slice(-4);
   return `****${last4}`;
 }
@@ -20,12 +20,14 @@ export function maskCardNumber(cardNumber: string | undefined | null): string {
 /**
  * Format card number for display (masked)
  */
-export function formatCardNumberForDisplay(cardNumber: string | undefined | null): string {
+export function formatCardNumberForDisplay(
+  cardNumber: string | undefined | null,
+): string {
   if (!cardNumber) return "**** **** **** ****";
-  
+
   const cleaned = cardNumber.replace(/\s/g, "");
   if (cleaned.length < 4) return "**** **** **** ****";
-  
+
   const last4 = cleaned.slice(-4);
   return `**** **** **** ${last4}`;
 }

@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, GripVertical, Settings2 } from "lucide-react";
+import { Plus, Trash2, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -23,9 +29,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import type {
   YipyyGoConfig,
   FormSection,
@@ -47,7 +51,9 @@ export function FormTemplateSection({
   config,
   onConfigChange,
 }: FormTemplateSectionProps) {
-  const [editingQuestion, setEditingQuestion] = useState<CustomQuestion | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<CustomQuestion | null>(
+    null,
+  );
   const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
 
   const handleSectionToggle = (sectionId: string, enabled: boolean) => {
@@ -68,7 +74,10 @@ export function FormTemplateSection({
     }
   };
 
-  const handleFeatureToggle = (feature: keyof typeof config.formTemplate.features, enabled: boolean) => {
+  const handleFeatureToggle = (
+    feature: keyof typeof config.formTemplate.features,
+    enabled: boolean,
+  ) => {
     onConfigChange({
       formTemplate: {
         ...config.formTemplate,
@@ -105,7 +114,7 @@ export function FormTemplateSection({
     if (editingQuestion?.id) {
       // Update existing
       const updated = config.formTemplate.globalCustomQuestions.map((q) =>
-        q.id === editingQuestion.id ? question : q
+        q.id === editingQuestion.id ? question : q,
       );
       onConfigChange({
         formTemplate: {
@@ -118,7 +127,10 @@ export function FormTemplateSection({
       onConfigChange({
         formTemplate: {
           ...config.formTemplate,
-          globalCustomQuestions: [...config.formTemplate.globalCustomQuestions, question],
+          globalCustomQuestions: [
+            ...config.formTemplate.globalCustomQuestions,
+            question,
+          ],
         },
       });
     }
@@ -127,7 +139,9 @@ export function FormTemplateSection({
   };
 
   const handleRemoveQuestion = (id: string) => {
-    const updated = config.formTemplate.globalCustomQuestions.filter((q) => q.id !== id);
+    const updated = config.formTemplate.globalCustomQuestions.filter(
+      (q) => q.id !== id,
+    );
     onConfigChange({
       formTemplate: {
         ...config.formTemplate,
@@ -136,7 +150,10 @@ export function FormTemplateSection({
     });
   };
 
-  const standardSections: Array<{ key: keyof typeof config.formTemplate.sections; label: string }> = [
+  const standardSections: Array<{
+    key: keyof typeof config.formTemplate.sections;
+    label: string;
+  }> = [
     { key: "petInfo", label: "Pet Information" },
     { key: "careInstructions", label: "Care Instructions" },
     { key: "medications", label: "Medications" },
@@ -163,23 +180,29 @@ export function FormTemplateSection({
             return (
               <div
                 key={key}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className="flex items-center justify-between rounded-lg border p-4"
               >
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex flex-1 items-center gap-3">
                   <Switch
                     checked={section.enabled}
-                    onCheckedChange={(enabled) => handleSectionToggle(key, enabled)}
+                    onCheckedChange={(enabled) =>
+                      handleSectionToggle(key, enabled)
+                    }
                   />
                   <div className="flex-1">
-                    <Label className="text-base font-medium cursor-pointer">{label}</Label>
+                    <Label className="cursor-pointer text-base font-medium">
+                      {label}
+                    </Label>
                     {section.enabled && (
                       <div className="mt-2 flex items-center gap-3">
                         <div className="flex items-center gap-2">
                           <Switch
                             checked={section.required}
-                            onCheckedChange={(required) => handleSectionRequired(key, required)}
+                            onCheckedChange={(required) =>
+                              handleSectionRequired(key, required)
+                            }
                           />
-                          <Label className="text-sm text-muted-foreground">
+                          <Label className="text-muted-foreground text-sm">
                             Required
                           </Label>
                         </div>
@@ -205,40 +228,46 @@ export function FormTemplateSection({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label className="text-base font-medium">Photo Uploads</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Allow customers to upload photos with their form
               </p>
             </div>
             <Switch
               checked={config.formTemplate.features.photoUploads}
-              onCheckedChange={(enabled) => handleFeatureToggle("photoUploads", enabled)}
+              onCheckedChange={(enabled) =>
+                handleFeatureToggle("photoUploads", enabled)
+              }
             />
           </div>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label className="text-base font-medium">Add-ons Section</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Show add-ons selection in the form
               </p>
             </div>
             <Switch
               checked={config.formTemplate.features.addOnsSection}
-              onCheckedChange={(enabled) => handleFeatureToggle("addOnsSection", enabled)}
+              onCheckedChange={(enabled) =>
+                handleFeatureToggle("addOnsSection", enabled)
+              }
             />
           </div>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <Label className="text-base font-medium">Tip Section</Label>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Allow customers to add a tip in the form
               </p>
             </div>
             <Switch
               checked={config.formTemplate.features.tipSection}
-              onCheckedChange={(enabled) => handleFeatureToggle("tipSection", enabled)}
+              onCheckedChange={(enabled) =>
+                handleFeatureToggle("tipSection", enabled)
+              }
             />
           </div>
         </CardContent>
@@ -255,17 +284,21 @@ export function FormTemplateSection({
         <CardContent>
           <Select
             value={config.formTemplate.multiPetBehavior}
-            onValueChange={(value: MultiPetBehavior) => handleMultiPetBehaviorChange(value)}
+            onValueChange={(value: MultiPetBehavior) =>
+              handleMultiPetBehaviorChange(value)
+            }
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(MULTI_PET_BEHAVIOR_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
+              {Object.entries(MULTI_PET_BEHAVIOR_LABELS).map(
+                ([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
         </CardContent>
@@ -281,31 +314,43 @@ export function FormTemplateSection({
                 Add custom questions to the form template.
               </CardDescription>
             </div>
-            <Button onClick={handleAddCustomQuestion} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button
+              onClick={handleAddCustomQuestion}
+              variant="outline"
+              size="sm"
+            >
+              <Plus className="mr-2 size-4" />
               Add Question
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {config.formTemplate.globalCustomQuestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="text-muted-foreground py-4 text-center text-sm">
               No custom questions. Add one to collect additional information.
             </p>
           ) : (
             config.formTemplate.globalCustomQuestions
               .sort((a, b) => a.order - b.order)
               .map((question) => (
-                <div key={question.id} className="p-4 border rounded-lg">
+                <div key={question.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{QUESTION_TYPE_LABELS[question.type]}</Badge>
-                        {question.required && <Badge variant="destructive">Required</Badge>}
+                      <div className="mb-2 flex items-center gap-2">
+                        <Badge variant="outline">
+                          {QUESTION_TYPE_LABELS[question.type]}
+                        </Badge>
+                        {question.required && (
+                          <Badge variant="destructive">Required</Badge>
+                        )}
                       </div>
-                      <Label className="text-base font-medium">{question.label}</Label>
+                      <Label className="text-base font-medium">
+                        {question.label}
+                      </Label>
                       {question.helpText && (
-                        <p className="text-sm text-muted-foreground mt-1">{question.helpText}</p>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          {question.helpText}
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -317,14 +362,14 @@ export function FormTemplateSection({
                           setIsQuestionDialogOpen(true);
                         }}
                       >
-                        <Settings2 className="h-4 w-4" />
+                        <Settings2 className="size-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveQuestion(question.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -335,8 +380,11 @@ export function FormTemplateSection({
       </Card>
 
       {/* Custom Question Dialog */}
-      <Dialog open={isQuestionDialogOpen} onOpenChange={setIsQuestionDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog
+        open={isQuestionDialogOpen}
+        onOpenChange={setIsQuestionDialogOpen}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingQuestion?.id ? "Edit Question" : "Add Custom Question"}
@@ -367,7 +415,11 @@ interface CustomQuestionFormProps {
   onCancel: () => void;
 }
 
-function CustomQuestionForm({ question, onSave, onCancel }: CustomQuestionFormProps) {
+function CustomQuestionForm({
+  question,
+  onSave,
+  onCancel,
+}: CustomQuestionFormProps) {
   const [localQuestion, setLocalQuestion] = useState<CustomQuestion>(question);
 
   const handleChange = (updates: Partial<CustomQuestion>) => {
@@ -387,7 +439,9 @@ function CustomQuestionForm({ question, onSave, onCancel }: CustomQuestionFormPr
         <Label>Question Type</Label>
         <Select
           value={localQuestion.type}
-          onValueChange={(value: CustomQuestionType) => handleChange({ type: value })}
+          onValueChange={(value: CustomQuestionType) =>
+            handleChange({ type: value })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -435,7 +489,7 @@ function CustomQuestionForm({ question, onSave, onCancel }: CustomQuestionFormPr
           type="checkbox"
           checked={localQuestion.required}
           onChange={(e) => handleChange({ required: e.target.checked })}
-          className="rounded"
+          className="rounded-sm"
         />
         <Label>Required field</Label>
       </div>
@@ -469,7 +523,9 @@ function CustomQuestionForm({ question, onSave, onCancel }: CustomQuestionFormPr
             <Input
               type="number"
               value={localQuestion.min || ""}
-              onChange={(e) => handleChange({ min: parseInt(e.target.value, 10) || undefined })}
+              onChange={(e) =>
+                handleChange({ min: parseInt(e.target.value, 10) || undefined })
+              }
             />
           </div>
           <div className="space-y-2">
@@ -477,7 +533,9 @@ function CustomQuestionForm({ question, onSave, onCancel }: CustomQuestionFormPr
             <Input
               type="number"
               value={localQuestion.max || ""}
-              onChange={(e) => handleChange({ max: parseInt(e.target.value, 10) || undefined })}
+              onChange={(e) =>
+                handleChange({ max: parseInt(e.target.value, 10) || undefined })
+              }
             />
           </div>
         </div>

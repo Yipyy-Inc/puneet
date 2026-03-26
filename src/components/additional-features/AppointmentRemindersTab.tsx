@@ -71,12 +71,12 @@ export function AppointmentRemindersTab() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Total Reminders
                 </p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
-              <Calendar className="h-8 w-8 text-muted-foreground" />
+              <Calendar className="text-muted-foreground h-8 w-8" />
             </div>
           </CardContent>
         </Card>
@@ -85,7 +85,7 @@ export function AppointmentRemindersTab() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Pending
                 </p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
@@ -99,7 +99,7 @@ export function AppointmentRemindersTab() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Overdue
                 </p>
                 <p className="text-2xl font-bold text-red-600">
@@ -115,7 +115,7 @@ export function AppointmentRemindersTab() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Sent This Week
                 </p>
                 <p className="text-2xl font-bold text-green-600">
@@ -135,16 +135,16 @@ export function AppointmentRemindersTab() {
             <CardTitle>Appointment Reminders</CardTitle>
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
                 <Input
                   placeholder="Search pet, owner, type..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-64"
+                  className="w-64 pl-8"
                 />
               </div>
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Add Reminder
               </Button>
             </div>
@@ -186,24 +186,24 @@ export function AppointmentRemindersTab() {
                   </TableCell>
                   <TableCell>
                     {reminder.lastReminderDate ? (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-1 text-xs">
                         <CheckCircle className="h-3 w-3 text-green-600" />
                         {new Date(
                           reminder.lastReminderDate,
                         ).toLocaleDateString()}
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                  <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
                     {reminder.notes || "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       {!reminder.reminderSent && (
                         <Button variant="outline" size="sm">
-                          <Send className="h-3 w-3 mr-1" />
+                          <Send className="mr-1 h-3 w-3" />
                           Send
                         </Button>
                       )}

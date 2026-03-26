@@ -25,7 +25,7 @@ export function CallingButton() {
             aria-label="Calling"
             className="relative h-10 w-10 rounded-xl"
           >
-            <Phone className="h-5 w-5 text-muted-foreground" />
+            <Phone className="text-muted-foreground h-5 w-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" align="center">

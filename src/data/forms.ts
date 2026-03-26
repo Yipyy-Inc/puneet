@@ -107,7 +107,9 @@ export interface FormFieldRecord {
   mappingTarget?: string;
   order: number;
   /** Phase 2: multi-language labels. See forms-phase2-types. */
-  labelI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
+  labelI18n?: Partial<
+    Record<import("./forms-phase2-types").SupportedFormLocale, string>
+  >;
   /** Phase 2: payment block (when tokenization supported). */
   paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
 }
@@ -156,11 +158,7 @@ export interface LogicRuleRecord {
 }
 
 // ----- Legacy / flat shape (backward compat for existing UI) -----
-export type ServiceType =
-  | "boarding"
-  | "grooming"
-  | "training"
-  | "evaluation";
+export type ServiceType = "boarding" | "grooming" | "training" | "evaluation";
 
 export type QuestionType =
   | "text"
@@ -178,7 +176,15 @@ export type QuestionType =
   | "email"
   | "address";
 
-export type ConditionOperator = "eq" | "neq" | "contains" | "in" | "gt" | "lt" | "answered" | "not_answered";
+export type ConditionOperator =
+  | "eq"
+  | "neq"
+  | "contains"
+  | "in"
+  | "gt"
+  | "lt"
+  | "answered"
+  | "not_answered";
 
 export type ContextField = "petType" | "serviceType" | "evaluationStatus";
 
@@ -208,8 +214,12 @@ export interface FormQuestion {
   appliesToPetType?: string;
   validation?: FieldValidation;
   /** Phase 2: multi-language (EN/FR). See FormQuestionI18n in forms-phase2-types. */
-  labelI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
-  placeholderI18n?: Partial<Record<import("./forms-phase2-types").SupportedFormLocale, string>>;
+  labelI18n?: Partial<
+    Record<import("./forms-phase2-types").SupportedFormLocale, string>
+  >;
+  placeholderI18n?: Partial<
+    Record<import("./forms-phase2-types").SupportedFormLocale, string>
+  >;
   /** Phase 2: payment block config (when payments module supports tokenization). */
   paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
 }
@@ -227,7 +237,14 @@ export interface FieldMappingItem {
   target: string;
 }
 
-export type LogicActionType = "show" | "hide" | "require" | "skip_to_section" | "end_form" | "set_tag" | "alert_flag";
+export type LogicActionType =
+  | "show"
+  | "hide"
+  | "require"
+  | "skip_to_section"
+  | "end_form"
+  | "set_tag"
+  | "alert_flag";
 
 export interface FormLogicRule {
   id: string;
@@ -288,7 +305,10 @@ let logicRules: LogicRuleRecord[] = [];
 let formTemplates: FormTemplate[] = [];
 
 const slugify = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -317,9 +337,13 @@ function fieldTypeToQuestionType(ft: FieldType): QuestionType {
 function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
   const version = versionId
     ? formVersions.find((v) => v.id === versionId)
-    : formVersions.filter((v) => v.formId === record.id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
+    : formVersions
+        .filter((v) => v.formId === record.id)
+        .sort((a, b) => b.versionNumber - a.versionNumber)[0];
   const sectionsOrdered = version
-    ? formSections.filter((s) => s.formVersionId === version.id).sort((a, b) => a.order - b.order)
+    ? formSections
+        .filter((s) => s.formVersionId === version.id)
+        .sort((a, b) => a.order - b.order)
     : [];
   const sectionIds = sectionsOrdered.map((s) => s.id);
   const fields = formFields
@@ -331,13 +355,17 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
       return a.order - b.order;
     });
   const questions: FormQuestion[] = fields.map((f) => {
-    const opts = formOptions.filter((o) => o.fieldId === f.id).sort((a, b) => a.order - b.order);
+    const opts = formOptions
+      .filter((o) => o.fieldId === f.id)
+      .sort((a, b) => a.order - b.order);
     return {
       id: f.id,
       type: fieldTypeToQuestionType(f.fieldType),
       label: f.label,
       required: f.required,
-      options: opts.length ? opts.map((o) => ({ value: o.value, label: o.label })) : undefined,
+      options: opts.length
+        ? opts.map((o) => ({ value: o.value, label: o.label }))
+        : undefined,
       placeholder: f.helpText ?? undefined,
       helpText: f.helpText,
       defaultValue: f.defaultValue,
@@ -419,21 +447,33 @@ function resolveConditionSource(
   context?: ConditionContext,
 ): unknown {
   // Phase 2: explicit sourceType
-  if (c.sourceType === "petAttribute" && c.petAttribute && context?.petAttributes) {
+  if (
+    c.sourceType === "petAttribute" &&
+    c.petAttribute &&
+    context?.petAttributes
+  ) {
     const attr = c.petAttribute;
     if (attr === "pet.breed") return context.petAttributes.breed;
     if (attr === "pet.type") return context.petAttributes.type;
     if (attr === "pet.age") return context.petAttributes.age;
     if (attr === "pet.weight") return context.petAttributes.weight;
     if (attr === "pet.gender") return context.petAttributes.gender;
-    if (attr === "pet.hasTag") return context.petAttributes.tags?.includes(String(c.value)) ? "true" : "false";
+    if (attr === "pet.hasTag")
+      return context.petAttributes.tags?.includes(String(c.value))
+        ? "true"
+        : "false";
   }
   if (c.sourceType === "tag" && c.tagId) {
-    const allTags = [...(context?.petAttributes?.tags ?? []), ...(context?.customerTags ?? [])];
+    const allTags = [
+      ...(context?.petAttributes?.tags ?? []),
+      ...(context?.customerTags ?? []),
+    ];
     return allTags.includes(c.tagId) ? "true" : "false";
   }
-  if (c.sourceType === "serviceType" && context?.serviceType) return context.serviceType;
-  if (c.sourceType === "evaluationStatus" && context?.evaluationStatus) return context.evaluationStatus;
+  if (c.sourceType === "serviceType" && context?.serviceType)
+    return context.serviceType;
+  if (c.sourceType === "evaluationStatus" && context?.evaluationStatus)
+    return context.evaluationStatus;
   // Legacy: contextField or questionId
   if (c.contextField && context) return context[c.contextField];
   if (c.questionId) return answers[c.questionId];
@@ -444,7 +484,7 @@ function resolveConditionSource(
 export function shouldShowQuestion(
   question: FormQuestion,
   answers: Record<string, unknown>,
-  context?: ConditionContext
+  context?: ConditionContext,
 ): boolean {
   if (!question.condition) return true;
   const c = question.condition;
@@ -458,21 +498,29 @@ export function shouldShowQuestion(
     case "neq":
       return sourceValue !== target && String(sourceValue) !== String(target);
     case "contains": {
-      const str = Array.isArray(sourceValue) ? sourceValue.join(" ") : String(sourceValue ?? "");
+      const str = Array.isArray(sourceValue)
+        ? sourceValue.join(" ")
+        : String(sourceValue ?? "");
       return str.toLowerCase().includes(String(target).toLowerCase());
     }
     case "in": {
       const arr = Array.isArray(target) ? target : [target];
-      return arr.some((t) => sourceValue === t || String(sourceValue) === String(t));
+      return arr.some(
+        (t) => sourceValue === t || String(sourceValue) === String(t),
+      );
     }
     case "gt":
       return Number(sourceValue) > Number(target);
     case "lt":
       return Number(sourceValue) < Number(target);
     case "answered":
-      return sourceValue !== undefined && sourceValue !== "" && sourceValue !== null;
+      return (
+        sourceValue !== undefined && sourceValue !== "" && sourceValue !== null
+      );
     case "not_answered":
-      return sourceValue === undefined || sourceValue === "" || sourceValue === null;
+      return (
+        sourceValue === undefined || sourceValue === "" || sourceValue === null
+      );
     default:
       return true;
   }
@@ -503,18 +551,32 @@ export function evaluateLogicRules(
   for (const rule of rules) {
     // Phase 2: resolve from context if triggerSource is set
     let sourceValue: unknown;
-    const ts = (rule as unknown as Record<string, unknown>).triggerSource as string | undefined;
+    const ts = (rule as unknown as Record<string, unknown>).triggerSource as
+      | string
+      | undefined;
     if (ts === "petAttribute" && context?.petAttributes) {
-      const attr = (rule as unknown as Record<string, unknown>).petAttribute as string | undefined;
+      const attr = (rule as unknown as Record<string, unknown>).petAttribute as
+        | string
+        | undefined;
       if (attr === "pet.breed") sourceValue = context.petAttributes.breed;
       else if (attr === "pet.type") sourceValue = context.petAttributes.type;
       else if (attr === "pet.age") sourceValue = context.petAttributes.age;
-      else if (attr === "pet.weight") sourceValue = context.petAttributes.weight;
-      else if (attr === "pet.gender") sourceValue = context.petAttributes.gender;
-      else if (attr === "pet.hasTag") sourceValue = context.petAttributes.tags?.includes(String(rule.value)) ? "true" : "false";
+      else if (attr === "pet.weight")
+        sourceValue = context.petAttributes.weight;
+      else if (attr === "pet.gender")
+        sourceValue = context.petAttributes.gender;
+      else if (attr === "pet.hasTag")
+        sourceValue = context.petAttributes.tags?.includes(String(rule.value))
+          ? "true"
+          : "false";
     } else if (ts === "tag") {
-      const tagId = (rule as unknown as Record<string, unknown>).tagId as string | undefined;
-      const allTags = [...(context?.petAttributes?.tags ?? []), ...(context?.customerTags ?? [])];
+      const tagId = (rule as unknown as Record<string, unknown>).tagId as
+        | string
+        | undefined;
+      const allTags = [
+        ...(context?.petAttributes?.tags ?? []),
+        ...(context?.customerTags ?? []),
+      ];
       sourceValue = tagId && allTags.includes(tagId) ? "true" : "false";
     } else if (ts === "serviceType") {
       sourceValue = context?.serviceType;
@@ -526,22 +588,46 @@ export function evaluateLogicRules(
     const target = rule.value;
     let matches = false;
     switch (rule.operator) {
-      case "eq": matches = sourceValue === target || String(sourceValue) === String(target); break;
-      case "neq": matches = sourceValue !== target && String(sourceValue) !== String(target); break;
+      case "eq":
+        matches =
+          sourceValue === target || String(sourceValue) === String(target);
+        break;
+      case "neq":
+        matches =
+          sourceValue !== target && String(sourceValue) !== String(target);
+        break;
       case "contains": {
-        const s = Array.isArray(sourceValue) ? sourceValue.join(" ") : String(sourceValue ?? "");
+        const s = Array.isArray(sourceValue)
+          ? sourceValue.join(" ")
+          : String(sourceValue ?? "");
         matches = s.toLowerCase().includes(String(target).toLowerCase());
         break;
       }
       case "in": {
         const arr = Array.isArray(target) ? target : [target];
-        matches = arr.some((t) => sourceValue === t || String(sourceValue) === String(t));
+        matches = arr.some(
+          (t) => sourceValue === t || String(sourceValue) === String(t),
+        );
         break;
       }
-      case "gt": matches = Number(sourceValue) > Number(target); break;
-      case "lt": matches = Number(sourceValue) < Number(target); break;
-      case "answered": matches = sourceValue !== undefined && sourceValue !== "" && sourceValue !== null; break;
-      case "not_answered": matches = sourceValue === undefined || sourceValue === "" || sourceValue === null; break;
+      case "gt":
+        matches = Number(sourceValue) > Number(target);
+        break;
+      case "lt":
+        matches = Number(sourceValue) < Number(target);
+        break;
+      case "answered":
+        matches =
+          sourceValue !== undefined &&
+          sourceValue !== "" &&
+          sourceValue !== null;
+        break;
+      case "not_answered":
+        matches =
+          sourceValue === undefined ||
+          sourceValue === "" ||
+          sourceValue === null;
+        break;
     }
     if (!matches) continue;
     switch (rule.action) {
@@ -549,16 +635,22 @@ export function evaluateLogicRules(
         // Show is the default; no-op since questions are visible by default
         break;
       case "hide":
-        rule.targetQuestionIds?.forEach((id) => effects.hiddenQuestionIds.add(id));
+        rule.targetQuestionIds?.forEach((id) =>
+          effects.hiddenQuestionIds.add(id),
+        );
         break;
       case "require":
-        rule.targetQuestionIds?.forEach((id) => effects.requiredQuestionIds.add(id));
+        rule.targetQuestionIds?.forEach((id) =>
+          effects.requiredQuestionIds.add(id),
+        );
         break;
       case "skip_to_section":
-        if (rule.targetSectionId) effects.skipToSectionId = rule.targetSectionId;
+        if (rule.targetSectionId)
+          effects.skipToSectionId = rule.targetSectionId;
         break;
       case "end_form":
-        effects.endFormMessage = rule.endMessage || "This form has ended based on your responses.";
+        effects.endFormMessage =
+          rule.endMessage || "This form has ended based on your responses.";
         break;
       case "set_tag":
         if (rule.tagValue) effects.tags.push(rule.tagValue);
@@ -584,17 +676,24 @@ export function getFormById(id: string): Form | undefined {
 }
 
 export function getFormBySlug(slug: string): Form | undefined {
-  const record = formRecords.find((f) => f.slug === slug && f.audience !== "staff" && f.status === "published");
+  const record = formRecords.find(
+    (f) =>
+      f.slug === slug && f.audience !== "staff" && f.status === "published",
+  );
   return record ? formRecordToFlatForm(record) : undefined;
 }
 
 /** Also resolve by slug for draft (e.g. preview); internal forms not returned */
 export function getFormBySlugOrDraft(slug: string): Form | undefined {
-  const record = formRecords.find((f) => f.slug === slug && f.audience !== "staff");
+  const record = formRecords.find(
+    (f) => f.slug === slug && f.audience !== "staff",
+  );
   return record ? formRecordToFlatForm(record) : undefined;
 }
 
-export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">): Form {
+export function createForm(
+  input: Omit<Form, "id" | "createdAt" | "updatedAt">,
+): Form {
   const now = new Date().toISOString();
   const id = generateId("form");
   let slug = input.slug || slugify(input.name);
@@ -641,17 +740,22 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
       order: idx,
     });
   });
-  const firstSectionId = formSections.find((s) => s.formVersionId === versionId)?.id ?? sectionIdToRecord.get(inputSections[0].id)!;
+  const firstSectionId =
+    formSections.find((s) => s.formVersionId === versionId)?.id ??
+    sectionIdToRecord.get(inputSections[0].id)!;
   input.questions.forEach((q, i) => {
     const fieldId = q.id.startsWith("q-") ? q.id : generateId("f");
     const qq = q as FormQuestion & { visibility?: "customer" | "staff" };
-    const resolvedSectionId = qq.sectionId && sectionIdToRecord.has(qq.sectionId)
-      ? sectionIdToRecord.get(qq.sectionId)!
-      : firstSectionId;
-    const sectionOrder = formSections.findIndex((s) => s.id === resolvedSectionId);
+    const resolvedSectionId =
+      qq.sectionId && sectionIdToRecord.has(qq.sectionId)
+        ? sectionIdToRecord.get(qq.sectionId)!
+        : firstSectionId;
     const fieldsInSection = input.questions.filter((oq) => {
       const osid = (oq as FormQuestion & { sectionId?: string }).sectionId;
-      const orid = osid && sectionIdToRecord.has(osid) ? sectionIdToRecord.get(osid)! : firstSectionId;
+      const orid =
+        osid && sectionIdToRecord.has(osid)
+          ? sectionIdToRecord.get(osid)!
+          : firstSectionId;
       return orid === resolvedSectionId;
     });
     const orderInSection = fieldsInSection.indexOf(q);
@@ -660,13 +764,19 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
       sectionId: resolvedSectionId,
       label: q.label,
       helpText: q.helpText ?? q.placeholder,
-      fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
+      fieldType:
+        q.type === "textarea"
+          ? "long_text"
+          : q.type === "text"
+            ? "short_text"
+            : (q.type as FieldType),
       required: q.required,
       visibility: qq.visibility ?? "customer",
       defaultValue: q.defaultValue,
       appliesToPetType: q.appliesToPetType,
       validation: q.validation,
-      mappingTarget: input.fieldMapping.find((m) => m.questionId === q.id)?.target,
+      mappingTarget: input.fieldMapping.find((m) => m.questionId === q.id)
+        ?.target,
       order: orderInSection >= 0 ? orderInSection : i,
     });
     (q.options ?? []).forEach((o, j) => {
@@ -713,7 +823,7 @@ export function createForm(input: Omit<Form, "id" | "createdAt" | "updatedAt">):
 
 export function updateForm(
   id: string,
-  input: Partial<Omit<Form, "id" | "facilityId" | "createdAt">>
+  input: Partial<Omit<Form, "id" | "facilityId" | "createdAt">>,
 ): Form | null {
   const idx = formRecords.findIndex((f) => f.id === id);
   if (idx === -1) return null;
@@ -724,15 +834,21 @@ export function updateForm(
     ...(input.slug !== undefined && { slug: input.slug }),
     ...(input.type !== undefined && { type: input.type }),
     ...(input.status !== undefined && { status: input.status as FormStatus }),
-    ...(input.audience !== undefined && { audience: input.audience as FormAudience }),
+    ...(input.audience !== undefined && {
+      audience: input.audience as FormAudience,
+    }),
     ...(input.appliesTo !== undefined && { appliesTo: input.appliesTo }),
     ...(input.settings !== undefined && { settings: input.settings }),
-    ...(input.repeatPerPet !== undefined && { repeatPerPet: input.repeatPerPet }),
+    ...(input.repeatPerPet !== undefined && {
+      repeatPerPet: input.repeatPerPet,
+    }),
     ...(input.requireAuth !== undefined && { requireAuth: input.requireAuth }),
     updatedAt: new Date().toISOString(),
   };
   formRecords[idx] = updatedRecord;
-  const version = formVersions.filter((v) => v.formId === id).sort((a, b) => b.versionNumber - a.versionNumber)[0];
+  const version = formVersions
+    .filter((v) => v.formId === id)
+    .sort((a, b) => b.versionNumber - a.versionNumber)[0];
   if (input.status === "published" && version) {
     const publishedAt = new Date().toISOString();
     version.publishedAt = publishedAt;
@@ -745,11 +861,17 @@ export function updateForm(
     });
   }
   if (version && input.questions !== undefined) {
-    const oldSectionIds = formSections.filter((s) => s.formVersionId === version.id).map((s) => s.id);
-    const removedFieldIds = formFields.filter((f) => oldSectionIds.includes(f.sectionId)).map((f) => f.id);
+    const oldSectionIds = formSections
+      .filter((s) => s.formVersionId === version.id)
+      .map((s) => s.id);
+    const removedFieldIds = formFields
+      .filter((f) => oldSectionIds.includes(f.sectionId))
+      .map((f) => f.id);
     formFields = formFields.filter((f) => !oldSectionIds.includes(f.sectionId));
     formSections = formSections.filter((s) => s.formVersionId !== version.id);
-    formOptions = formOptions.filter((o) => !removedFieldIds.includes(o.fieldId));
+    formOptions = formOptions.filter(
+      (o) => !removedFieldIds.includes(o.fieldId),
+    );
     // Clear old logic rules for this version
     logicRules = logicRules.filter((r) => r.formVersionId !== version.id);
     // Persist new logic rules
@@ -789,16 +911,25 @@ export function updateForm(
         order: idx,
       });
     });
-    const firstSectionId = formSections.find((s) => s.formVersionId === version.id)?.id ?? sectionIdToRecord.get(inputSections[0].id)!;
+    const firstSectionId =
+      formSections.find((s) => s.formVersionId === version.id)?.id ??
+      sectionIdToRecord.get(inputSections[0].id)!;
     questions.forEach((q, i) => {
       const fieldId = q.id;
-      const qq = q as FormQuestion & { visibility?: "customer" | "staff"; sectionId?: string };
-      const resolvedSectionId = qq.sectionId && sectionIdToRecord.has(qq.sectionId)
-        ? sectionIdToRecord.get(qq.sectionId)!
-        : firstSectionId;
+      const qq = q as FormQuestion & {
+        visibility?: "customer" | "staff";
+        sectionId?: string;
+      };
+      const resolvedSectionId =
+        qq.sectionId && sectionIdToRecord.has(qq.sectionId)
+          ? sectionIdToRecord.get(qq.sectionId)!
+          : firstSectionId;
       const fieldsInThisSection = questions.filter((oq) => {
         const osid = (oq as FormQuestion & { sectionId?: string }).sectionId;
-        const orid = osid && sectionIdToRecord.has(osid) ? sectionIdToRecord.get(osid)! : firstSectionId;
+        const orid =
+          osid && sectionIdToRecord.has(osid)
+            ? sectionIdToRecord.get(osid)!
+            : firstSectionId;
         return orid === resolvedSectionId;
       });
       const orderInSection = fieldsInThisSection.indexOf(q);
@@ -807,17 +938,29 @@ export function updateForm(
         sectionId: resolvedSectionId,
         label: q.label,
         helpText: q.helpText ?? q.placeholder,
-        fieldType: q.type === "textarea" ? "long_text" : q.type === "text" ? "short_text" : (q.type as FieldType),
+        fieldType:
+          q.type === "textarea"
+            ? "long_text"
+            : q.type === "text"
+              ? "short_text"
+              : (q.type as FieldType),
         required: q.required,
         visibility: qq.visibility ?? "customer",
         defaultValue: q.defaultValue,
         appliesToPetType: q.appliesToPetType,
         validation: q.validation,
-        mappingTarget: input.fieldMapping?.find((m) => m.questionId === q.id)?.target,
+        mappingTarget: input.fieldMapping?.find((m) => m.questionId === q.id)
+          ?.target,
         order: orderInSection >= 0 ? orderInSection : i,
       });
       (q.options ?? []).forEach((o, j) => {
-        formOptions.push({ id: generateId("opt"), fieldId, label: o.label, value: o.value, order: j });
+        formOptions.push({
+          id: generateId("opt"),
+          fieldId,
+          label: o.label,
+          value: o.value,
+          order: j,
+        });
       });
     });
   }
@@ -839,8 +982,12 @@ export function getFormVersionHistory(formId: string): FormVersionSummary[] {
     .filter((v) => v.formId === formId)
     .sort((a, b) => b.versionNumber - a.versionNumber)
     .map((v) => {
-      const sectionIds = formSections.filter((s) => s.formVersionId === v.id).map((s) => s.id);
-      const fieldCount = formFields.filter((f) => sectionIds.includes(f.sectionId)).length;
+      const sectionIds = formSections
+        .filter((s) => s.formVersionId === v.id)
+        .map((s) => s.id);
+      const fieldCount = formFields.filter((f) =>
+        sectionIds.includes(f.sectionId),
+      ).length;
       return {
         versionId: v.id,
         versionNumber: v.versionNumber,
@@ -855,19 +1002,31 @@ export function getFormVersionHistory(formId: string): FormVersionSummary[] {
 export function archiveForm(id: string): Form | null {
   const idx = formRecords.findIndex((f) => f.id === id);
   if (idx === -1) return null;
-  formRecords[idx] = { ...formRecords[idx], status: "archived", updatedAt: new Date().toISOString() };
+  formRecords[idx] = {
+    ...formRecords[idx],
+    status: "archived",
+    updatedAt: new Date().toISOString(),
+  };
   return formRecordToFlatForm(formRecords[idx]);
 }
 
 export function deleteForm(id: string): boolean {
   const idx = formRecords.findIndex((f) => f.id === id);
   if (idx === -1) return false;
-  const versionIds = formVersions.filter((v) => v.formId === id).map((v) => v.id);
-  const sectionIds = formSections.filter((s) => versionIds.includes(s.formVersionId)).map((s) => s.id);
-  const removedFieldIds = formFields.filter((f) => sectionIds.includes(f.sectionId)).map((f) => f.id);
+  const versionIds = formVersions
+    .filter((v) => v.formId === id)
+    .map((v) => v.id);
+  const sectionIds = formSections
+    .filter((s) => versionIds.includes(s.formVersionId))
+    .map((s) => s.id);
+  const removedFieldIds = formFields
+    .filter((f) => sectionIds.includes(f.sectionId))
+    .map((f) => f.id);
   formRecords.splice(idx, 1);
   formVersions = formVersions.filter((v) => v.formId !== id);
-  formSections = formSections.filter((s) => !versionIds.includes(s.formVersionId));
+  formSections = formSections.filter(
+    (s) => !versionIds.includes(s.formVersionId),
+  );
   formFields = formFields.filter((f) => !sectionIds.includes(f.sectionId));
   formOptions = formOptions.filter((o) => !removedFieldIds.includes(o.fieldId));
   logicRules = logicRules.filter((r) => !versionIds.includes(r.formVersionId));
@@ -878,7 +1037,12 @@ export function duplicateForm(id: string, facilityId: number): Form | null {
   const existing = getFormById(id);
   if (!existing) return null;
   const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = existing;
-  return createForm({ ...rest, facilityId, name: `${existing.name} (Copy)`, slug: "" });
+  return createForm({
+    ...rest,
+    facilityId,
+    name: `${existing.name} (Copy)`,
+    slug: "",
+  });
 }
 
 // ----- Templates -----
@@ -896,7 +1060,7 @@ export function getTemplateById(id: string): FormTemplate | undefined {
 }
 
 export function createTemplate(
-  input: Omit<FormTemplate, "id" | "createdAt" | "updatedAt">
+  input: Omit<FormTemplate, "id" | "createdAt" | "updatedAt">,
 ): FormTemplate {
   const now = new Date().toISOString();
   const template: FormTemplate = {
@@ -911,11 +1075,15 @@ export function createTemplate(
 
 export function updateTemplate(
   id: string,
-  input: Partial<Omit<FormTemplate, "id" | "facilityId" | "createdAt">>
+  input: Partial<Omit<FormTemplate, "id" | "facilityId" | "createdAt">>,
 ): FormTemplate | null {
   const idx = formTemplates.findIndex((t) => t.id === id);
   if (idx === -1) return null;
-  formTemplates[idx] = { ...formTemplates[idx], ...input, updatedAt: new Date().toISOString() };
+  formTemplates[idx] = {
+    ...formTemplates[idx],
+    ...input,
+    updatedAt: new Date().toISOString(),
+  };
   return formTemplates[idx];
 }
 
@@ -927,7 +1095,10 @@ export function deleteTemplate(id: string): boolean {
 }
 
 /** Create a new form from a template (starter or facility). Duplicate and edit flow. */
-export function createFormFromTemplate(templateId: string, facilityId: number): Form | null {
+export function createFormFromTemplate(
+  templateId: string,
+  facilityId: number,
+): Form | null {
   const template = formTemplates.find((t) => t.id === templateId);
   if (!template) return null;
   const secId = generateId("sec");
@@ -940,7 +1111,9 @@ export function createFormFromTemplate(templateId: string, facilityId: number): 
   return createForm({
     facilityId,
     name: template.name,
-    slug: formRecords.some((f) => f.slug === slug) ? `${slug}-${Date.now().toString(36)}` : slug,
+    slug: formRecords.some((f) => f.slug === slug)
+      ? `${slug}-${Date.now().toString(36)}`
+      : slug,
     type: template.formType,
     internal: false,
     sections: [{ id: secId, title: "Default", order: 0 }],
@@ -967,17 +1140,58 @@ formRecords = [
     updatedAt: now,
   },
 ];
-formVersions = [{ id: seedVerId, formId: seedFormId, versionNumber: 1, publishedAt: now, createdAt: now }];
-formSections = [{ id: seedSecId, formVersionId: seedVerId, title: "Default", order: 0 }];
+formVersions = [
+  {
+    id: seedVerId,
+    formId: seedFormId,
+    versionNumber: 1,
+    publishedAt: now,
+    createdAt: now,
+  },
+];
+formSections = [
+  { id: seedSecId, formVersionId: seedVerId, title: "Default", order: 0 },
+];
 formFields = [
-  { id: "q1", sectionId: seedSecId, label: "Full name", fieldType: "short_text", required: true, order: 0, mappingTarget: "customer.name", labelI18n: { fr: "Nom complet" } },
-  { id: "q2", sectionId: seedSecId, label: "Email", fieldType: "email", required: true, order: 1, mappingTarget: "customer.email", labelI18n: { fr: "Courriel" } },
-  { id: "q3", sectionId: seedSecId, label: "How did you hear about us?", fieldType: "long_text", required: false, order: 2, labelI18n: { fr: "Comment avez-vous entendu parler de nous?" } },
+  {
+    id: "q1",
+    sectionId: seedSecId,
+    label: "Full name",
+    fieldType: "short_text",
+    required: true,
+    order: 0,
+    mappingTarget: "customer.name",
+    labelI18n: { fr: "Nom complet" },
+  },
+  {
+    id: "q2",
+    sectionId: seedSecId,
+    label: "Email",
+    fieldType: "email",
+    required: true,
+    order: 1,
+    mappingTarget: "customer.email",
+    labelI18n: { fr: "Courriel" },
+  },
+  {
+    id: "q3",
+    sectionId: seedSecId,
+    label: "How did you hear about us?",
+    fieldType: "long_text",
+    required: false,
+    order: 2,
+    labelI18n: { fr: "Comment avez-vous entendu parler de nous?" },
+  },
 ];
 formOptions = [];
 logicRules = [];
 // Starter templates (facilityId 0): ship with app; facilities duplicate and edit
-const starterTpl = (id: string, name: string, formType: FormType, questions: FormQuestion[]) => ({
+const starterTpl = (
+  id: string,
+  name: string,
+  formType: FormType,
+  questions: FormQuestion[],
+) => ({
   id,
   facilityId: 0,
   name,
@@ -991,36 +1205,121 @@ formTemplates = [
     { id: "q1", type: "text", label: "Full name", required: true },
     { id: "q2", type: "email", label: "Email", required: true },
     { id: "q3", type: "phone", label: "Phone", required: false },
-    { id: "q4", type: "textarea", label: "How did you hear about us?", required: false },
-    { id: "q5", type: "textarea", label: "Anything else we should know?", required: false },
+    {
+      id: "q4",
+      type: "textarea",
+      label: "How did you hear about us?",
+      required: false,
+    },
+    {
+      id: "q5",
+      type: "textarea",
+      label: "Anything else we should know?",
+      required: false,
+    },
   ]),
   starterTpl("tpl-starter-pet-profile", "Pet profile basics", "pet", [
     { id: "q1", type: "text", label: "Pet name", required: true },
     { id: "q2", type: "text", label: "Species / type", required: true },
     { id: "q3", type: "text", label: "Breed", required: false },
-    { id: "q4", type: "date", label: "Date of birth (approx. ok)", required: false },
+    {
+      id: "q4",
+      type: "date",
+      label: "Date of birth (approx. ok)",
+      required: false,
+    },
     { id: "q5", type: "yes_no", label: "Spayed or neutered?", required: false },
-    { id: "q6", type: "textarea", label: "Allergies or special needs", required: false },
+    {
+      id: "q6",
+      type: "textarea",
+      label: "Allergies or special needs",
+      required: false,
+    },
   ]),
   starterTpl("tpl-starter-boarding", "Boarding intake", "service", [
     { id: "q1", type: "text", label: "Emergency contact name", required: true },
-    { id: "q2", type: "phone", label: "Emergency contact phone", required: true },
-    { id: "q2b", type: "textarea", label: "Feeding instructions", required: false },
-    { id: "q3", type: "textarea", label: "Medication (if any)", required: false },
-    { id: "q4", type: "yes_no", label: "Can we share space with other dogs?", required: false },
-    { id: "q5", type: "textarea", label: "Behavior notes for staff", required: false },
+    {
+      id: "q2",
+      type: "phone",
+      label: "Emergency contact phone",
+      required: true,
+    },
+    {
+      id: "q2b",
+      type: "textarea",
+      label: "Feeding instructions",
+      required: false,
+    },
+    {
+      id: "q3",
+      type: "textarea",
+      label: "Medication (if any)",
+      required: false,
+    },
+    {
+      id: "q4",
+      type: "yes_no",
+      label: "Can we share space with other dogs?",
+      required: false,
+    },
+    {
+      id: "q5",
+      type: "textarea",
+      label: "Behavior notes for staff",
+      required: false,
+    },
   ]),
   starterTpl("tpl-starter-grooming", "Grooming consent", "service", [
-    { id: "q1", type: "yes_no", label: "I consent to standard grooming procedures", required: true },
-    { id: "q2", type: "textarea", label: "Sensitivities or areas to avoid", required: false },
-    { id: "q3", type: "yes_no", label: "May we use photos for portfolio/social?", required: false },
+    {
+      id: "q1",
+      type: "yes_no",
+      label: "I consent to standard grooming procedures",
+      required: true,
+    },
+    {
+      id: "q2",
+      type: "textarea",
+      label: "Sensitivities or areas to avoid",
+      required: false,
+    },
+    {
+      id: "q3",
+      type: "yes_no",
+      label: "May we use photos for portfolio/social?",
+      required: false,
+    },
   ]),
   starterTpl("tpl-starter-behavior", "Behavior evaluation", "pet", [
-    { id: "q1", type: "yes_no", label: "Has your pet ever shown aggression to people?", required: true },
-    { id: "q2", type: "yes_no", label: "Has your pet ever shown aggression to other animals?", required: true },
-    { id: "q3", type: "textarea", label: "If yes, describe circumstances", required: false },
-    { id: "q4", type: "textarea", label: "What does your pet enjoy most?", required: false },
-    { id: "q5", type: "textarea", label: "Any triggers we should avoid?", required: false },
+    {
+      id: "q1",
+      type: "yes_no",
+      label: "Has your pet ever shown aggression to people?",
+      required: true,
+    },
+    {
+      id: "q2",
+      type: "yes_no",
+      label: "Has your pet ever shown aggression to other animals?",
+      required: true,
+    },
+    {
+      id: "q3",
+      type: "textarea",
+      label: "If yes, describe circumstances",
+      required: false,
+    },
+    {
+      id: "q4",
+      type: "textarea",
+      label: "What does your pet enjoy most?",
+      required: false,
+    },
+    {
+      id: "q5",
+      type: "textarea",
+      label: "Any triggers we should avoid?",
+      required: false,
+    },
   ]),
   {
     id: "tpl-intake-base",

@@ -67,11 +67,23 @@ export default function CustomServiceCheckInPage() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(slug ?? "");
+  const serviceModule = getModuleBySlug(slug ?? "");
 
   const [entries, setEntries] = useState<CheckInEntry[]>(MOCK_ENTRIES);
 
-  if (!module) return null;
+  const { checkedIn, scheduled, checkedOut } = useMemo(() => {
+    let ci = 0,
+      sc = 0,
+      co = 0;
+    for (const e of entries) {
+      if (e.status === "checked-in") ci++;
+      else if (e.status === "scheduled") sc++;
+      else if (e.status === "checked-out") co++;
+    }
+    return { checkedIn: ci, scheduled: sc, checkedOut: co };
+  }, [entries]);
+
+  if (!serviceModule) return null;
 
   const handleCheckIn = (id: string) => {
     setEntries((prev) =>
@@ -93,37 +105,27 @@ export default function CustomServiceCheckInPage() {
     );
   };
 
-  const { checkedIn, scheduled, checkedOut } = useMemo(() => {
-    let ci = 0, sc = 0, co = 0;
-    for (const e of entries) {
-      if (e.status === "checked-in") ci++;
-      else if (e.status === "scheduled") sc++;
-      else if (e.status === "checked-out") co++;
-    }
-    return { checkedIn: ci, scheduled: sc, checkedOut: co };
-  }, [entries]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold">Check-In / Check-Out</h2>
-        <p className="text-sm text-muted-foreground">
-          Manage arrivals and departures for {module.name} today
+        <p className="text-muted-foreground text-sm">
+          Manage arrivals and departures for {serviceModule.name} today
         </p>
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 grid-cols-3">
+      <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Currently In</p>
+                <p className="text-muted-foreground text-sm">Currently In</p>
                 <p className="text-2xl font-bold">{checkedIn}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                <LogIn className="h-6 w-6 text-primary" />
+              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <LogIn className="text-primary h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -132,11 +134,11 @@ export default function CustomServiceCheckInPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Upcoming</p>
+                <p className="text-muted-foreground text-sm">Upcoming</p>
                 <p className="text-2xl font-bold">{scheduled}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary/50">
-                <Clock className="h-6 w-6 text-muted-foreground" />
+              <div className="bg-secondary/50 flex h-12 w-12 items-center justify-center rounded-full">
+                <Clock className="text-muted-foreground h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -145,11 +147,11 @@ export default function CustomServiceCheckInPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-muted-foreground text-sm">Completed</p>
                 <p className="text-2xl font-bold">{checkedOut}</p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
-                <LogOut className="h-6 w-6 text-muted-foreground" />
+              <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
+                <LogOut className="text-muted-foreground h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -159,7 +161,7 @@ export default function CustomServiceCheckInPage() {
       {/* Booking List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Clock className="h-5 w-5" />
             Today&apos;s Appointments
           </CardTitle>
@@ -171,19 +173,19 @@ export default function CustomServiceCheckInPage() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                  className="bg-card hover:bg-muted/30 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     {/* Pet photo placeholder */}
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 shrink-0">
-                      <PawPrint className="h-6 w-6 text-primary" />
+                    <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
+                      <PawPrint className="text-primary h-6 w-6" />
                     </div>
                     <div>
                       <p className="font-semibold">{entry.petName}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {entry.petBreed}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {entry.clientName}
                       </p>
                     </div>

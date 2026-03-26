@@ -19,7 +19,10 @@ import { runPostCheckInAutomation } from "@/lib/post-checkin-automation";
 import { logStaffOverride } from "@/lib/checkin-audit";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { getYipyyGoForm, getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
+import {
+  getYipyyGoForm,
+  getYipyyGoDisplayStatusForBooking,
+} from "@/data/yipyygo-forms";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import {
   CheckCircle2,
@@ -56,15 +59,15 @@ function CheckInContent() {
 
   const booking = useMemo(
     () => (payload ? bookings.find((b) => b.id === payload.bookingId) : null),
-    [payload]
+    [payload],
   );
   const form = useMemo(
     () => (payload ? getYipyyGoForm(payload.bookingId, payload.petId) : null),
-    [payload]
+    [payload],
   );
   const client = useMemo(
     () => (booking ? clients.find((c) => c.id === booking.clientId) : null),
-    [booking]
+    [booking],
   );
   const pet = useMemo(() => {
     if (!client || !booking) return null;
@@ -74,18 +77,24 @@ function CheckInContent() {
 
   const config = useMemo(
     () => (booking ? getYipyyGoConfig(booking.facilityId) : null),
-    [booking]
+    [booking],
   );
 
   const isMandatoryPreCheck = useMemo(() => {
     if (!config?.enabled || !booking?.service) return false;
-    const svc = booking.service.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+    const svc = booking.service.toLowerCase() as
+      | "daycare"
+      | "boarding"
+      | "grooming"
+      | "training";
     const sc = config.serviceConfigs.find((s) => s.serviceType === svc);
     return Boolean(sc?.enabled && sc?.requirement === "mandatory");
   }, [config, booking]);
 
   const hasRequiredFields = Boolean(
-    form?.submittedAt || form?.staffStatus === "approved" || form?.manuallyCompletedAt
+    form?.submittedAt ||
+    form?.staffStatus === "approved" ||
+    form?.manuallyCompletedAt,
   );
   const isPreCheckMissing = isMandatoryPreCheck && !hasRequiredFields;
 
@@ -95,13 +104,15 @@ function CheckInContent() {
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
 
-  const hasMeds = Boolean(form && !form.noMedications && form.medications?.length > 0);
+  const hasMeds = Boolean(
+    form && !form.noMedications && form.medications?.length > 0,
+  );
   const checklistComplete =
-    requiredAck &&
-    (hasMeds ? medsAck : true) &&
-    belongingsAck;
-  const overrideComplete = !isPreCheckMissing || overrideReason.trim().length > 0;
-  const canCheckIn = (checklistComplete || isPreCheckMissing) && overrideComplete;
+    requiredAck && (hasMeds ? medsAck : true) && belongingsAck;
+  const overrideComplete =
+    !isPreCheckMissing || overrideReason.trim().length > 0;
+  const canCheckIn =
+    (checklistComplete || isPreCheckMissing) && overrideComplete;
 
   const handleCheckIn = useCallback(() => {
     if (!payload || !booking || !canCheckIn) return;
@@ -120,7 +131,11 @@ function CheckInContent() {
       }
       recordQrCheckIn(payload.bookingId, payload.facilityId);
 
-      const serviceType = booking.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+      const serviceType = booking.service?.toLowerCase() as
+        | "daycare"
+        | "boarding"
+        | "grooming"
+        | "training";
       const { tasksCreated } = runPostCheckInAutomation({
         bookingId: payload.bookingId,
         facilityId: payload.facilityId,
@@ -136,23 +151,39 @@ function CheckInContent() {
       setCheckedIn(true);
       toast.success("Check-in complete");
       if (tasksCreated > 0) {
-        toast.info(`${tasksCreated} stay task(s) created (feeding, meds, etc.).`);
+        toast.info(
+          `${tasksCreated} stay task(s) created (feeding, meds, etc.).`,
+        );
       }
-      if (config?.addOnsApproval === "auto" && form?.addOns?.filter((a) => a.selected)?.length) {
+      if (
+        config?.addOnsApproval === "auto" &&
+        form?.addOns?.filter((a) => a.selected)?.length
+      ) {
         toast.info("Add-ons will be added to invoice per facility rules.");
       }
-    } catch (e) {
+    } catch {
       toast.error("Check-in failed");
     } finally {
       setCheckingIn(false);
     }
-  }, [payload, booking, canCheckIn, config, form, isPreCheckMissing, overrideReason, token]);
+  }, [
+    payload,
+    booking,
+    canCheckIn,
+    config,
+    form,
+    isPreCheckMissing,
+    overrideReason,
+    token,
+  ]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.trim().toLowerCase();
     const byId = bookings.filter(
-      (b) => b.facilityId === DEFAULT_FACILITY_ID && String(b.id) === searchQuery.trim()
+      (b) =>
+        b.facilityId === DEFAULT_FACILITY_ID &&
+        String(b.id) === searchQuery.trim(),
     );
     const byName = bookings.filter((b) => {
       if (b.facilityId !== DEFAULT_FACILITY_ID) return false;
@@ -176,12 +207,12 @@ function CheckInContent() {
 
   if (!token && manualBookingId == null) {
     return (
-      <div className="min-h-screen bg-muted/30 p-4 md:p-6">
-        <div className="max-w-lg mx-auto space-y-6">
+      <div className="bg-muted/30 min-h-screen p-4 md:p-6">
+        <div className="mx-auto max-w-lg space-y-6">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/facility/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-1" />
+                <ArrowLeft className="mr-1 size-4" />
                 Dashboard
               </Link>
             </Button>
@@ -194,8 +225,9 @@ function CheckInContent() {
                 Find booking
               </CardTitle>
               <CardDescription>
-                QR not available? Search by booking ID or client/pet name to check in manually.
-                YipyyGo status and form contents will still be shown.
+                QR not available? Search by booking ID or client/pet name to
+                check in manually. YipyyGo status and form contents will still
+                be shown.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -205,7 +237,7 @@ function CheckInContent() {
                   id="search"
                   type="text"
                   placeholder="e.g. 5 or Smith or Bella"
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                  className="border-input mt-1 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -213,11 +245,12 @@ function CheckInContent() {
               {searchResults.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Select a booking</p>
-                  <ul className="border rounded-md divide-y max-h-48 overflow-auto">
+                  <ul className="max-h-48 divide-y overflow-auto rounded-md border">
                     {searchResults.map((b) => {
                       const c = clients.find((x) => x.id === b.clientId);
                       const pid = Array.isArray(b.petId) ? b.petId[0] : b.petId;
-                      const petName = c?.pets?.find((p) => p.id === pid)?.name ?? "—";
+                      const petName =
+                        c?.pets?.find((p) => p.id === pid)?.name ?? "—";
                       const status = getYipyyGoDisplayStatusForBooking(b.id, {
                         facilityId: b.facilityId,
                         service: b.service,
@@ -226,17 +259,27 @@ function CheckInContent() {
                         <li key={b.id}>
                           <button
                             type="button"
-                            className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center justify-between"
+                            className="hover:bg-muted flex w-full items-center justify-between px-3 py-2 text-left text-sm"
                             onClick={() => {
                               setManualBookingId(b.id);
                               setSearchQuery("");
                             }}
                           >
                             <span>
-                              #{b.id} · {c?.name ?? "—"} · {petName} · {b.service}
+                              #{b.id} · {c?.name ?? "—"} · {petName} ·{" "}
+                              {b.service}
                             </span>
-                            <Badge variant={status === "precheck_missing" ? "destructive" : "secondary"} className="text-xs">
-                              {status === "precheck_missing" ? "PreCheck Missing" : status.replace("_", " ")}
+                            <Badge
+                              variant={
+                                status === "precheck_missing"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                              className="text-xs"
+                            >
+                              {status === "precheck_missing"
+                                ? "PreCheck Missing"
+                                : status.replace("_", " ")}
                             </Badge>
                           </button>
                         </li>
@@ -247,8 +290,10 @@ function CheckInContent() {
               )}
             </CardContent>
           </Card>
-          <p className="text-xs text-muted-foreground text-center">
-            Or scan the customer’s QR code with <code className="bg-muted px-1">?t=...</code> for fast-track check-in.
+          <p className="text-muted-foreground text-center text-xs">
+            Or scan the customer’s QR code with{" "}
+            <code className="bg-muted px-1">?t=...</code> for fast-track
+            check-in.
           </p>
         </div>
       </div>
@@ -257,17 +302,20 @@ function CheckInContent() {
 
   if (token && (!payload || !booking)) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Invalid or expired token</CardTitle>
             <CardDescription>
-              This check-in link may have expired. Use manual check-in below or ask the customer to show their QR again.
+              This check-in link may have expired. Use manual check-in below or
+              ask the customer to show their QR again.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button asChild>
-              <Link href="/facility/checkin">Manual check-in (search booking)</Link>
+              <Link href="/facility/checkin">
+                Manual check-in (search booking)
+              </Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/facility/dashboard">Go to dashboard</Link>
@@ -280,12 +328,13 @@ function CheckInContent() {
 
   if (!payload || !booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Booking not found</CardTitle>
             <CardDescription>
-              The selected booking could not be loaded. Try manual check-in again.
+              The selected booking could not be loaded. Try manual check-in
+              again.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -300,18 +349,18 @@ function CheckInContent() {
 
   if (checkedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-md w-full border-green-200 bg-green-50">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="w-full max-w-md border-green-200 bg-green-50">
           <CardContent className="pt-6 text-center">
-            <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Checked in</h2>
+            <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-green-600" />
+            <h2 className="mb-2 text-xl font-semibold">Checked in</h2>
             <p className="text-muted-foreground mb-4">
               {pet?.name} · Booking #{booking.id}
             </p>
             <Button asChild>
               <Link href={`/facility/dashboard/bookings/${booking.id}`}>
                 Open reservation
-                <ExternalLink className="ml-2 h-4 w-4" />
+                <ExternalLink className="ml-2 size-4" />
               </Link>
             </Button>
             <Button variant="outline" className="mt-2 w-full" asChild>
@@ -331,16 +380,18 @@ function CheckInContent() {
     : null;
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4 md:p-6">
-      <div className="max-w-lg mx-auto space-y-6">
+    <div className="bg-muted/30 min-h-screen p-4 md:p-6">
+      <div className="mx-auto max-w-lg space-y-6">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/facility/dashboard">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+              <ArrowLeft className="mr-1 size-4" />
               Dashboard
             </Link>
           </Button>
-          <Badge variant="secondary">{token ? "QR Check-in" : "Manual check-in"}</Badge>
+          <Badge variant="secondary">
+            {token ? "QR Check-in" : "Manual check-in"}
+          </Badge>
         </div>
 
         <Card>
@@ -358,7 +409,8 @@ function CheckInContent() {
               <strong>Client:</strong> {client?.name ?? "—"}
             </p>
             <p>
-              <strong>Date:</strong> {booking.startDate} · {booking.checkInTime ?? "—"}
+              <strong>Date:</strong> {booking.startDate} ·{" "}
+              {booking.checkInTime ?? "—"}
             </p>
           </CardContent>
         </Card>
@@ -366,72 +418,78 @@ function CheckInContent() {
         {(form || isPreCheckMissing) && (
           <Card className={isPreCheckMissing ? "border-destructive/50" : ""}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                {isPreCheckMissing && <AlertCircle className="h-4 w-4 text-destructive" />}
+              <CardTitle className="flex items-center gap-2 text-base">
+                {isPreCheckMissing && (
+                  <AlertCircle className="text-destructive size-4" />
+                )}
                 YipyyGo {form ? "summary" : "— PreCheck missing"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {form ? (
                 <>
-              <div className="flex items-start gap-2">
-                <Package className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Belongings</p>
-                  {form.belongings?.length ? (
-                    <ul className="list-disc pl-4 text-muted-foreground">
-                      {form.belongings.map((b) => (
-                        <li key={b.id}>
-                          {b.type.replace("_", " ")} {b.quantity ? `× ${b.quantity}` : ""}
-                          {b.notes ? ` – ${b.notes}` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground">None listed</p>
+                  <div className="flex items-start gap-2">
+                    <Package className="text-muted-foreground mt-0.5 size-4" />
+                    <div>
+                      <p className="font-medium">Belongings</p>
+                      {form.belongings?.length ? (
+                        <ul className="text-muted-foreground list-disc pl-4">
+                          {form.belongings.map((b) => (
+                            <li key={b.id}>
+                              {b.type.replace("_", " ")}{" "}
+                              {b.quantity ? `× ${b.quantity}` : ""}
+                              {b.notes ? ` – ${b.notes}` : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-muted-foreground">None listed</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Utensils className="text-muted-foreground mt-0.5 size-4" />
+                    <div>
+                      <p className="font-medium">Feeding</p>
+                      <p className="text-muted-foreground">
+                        {form.feedingInstructions?.foodType
+                          ? `${form.feedingInstructions.foodType} – ${form.feedingInstructions.portionSize} ${form.feedingInstructions.portionUnit}`
+                          : "Not provided"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Pill className="text-muted-foreground mt-0.5 size-4" />
+                    <div>
+                      <p className="font-medium">Medications</p>
+                      {form.noMedications || !form.medications?.length ? (
+                        <p className="text-muted-foreground">None</p>
+                      ) : (
+                        <ul className="text-muted-foreground list-disc pl-4">
+                          {form.medications.map((m) => (
+                            <li key={m.id}>
+                              {m.name} – {m.dosage}, {m.frequency}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  {(selectedAddOns.length > 0 || tipLabel) && (
+                    <div>
+                      <p className="font-medium">Add-ons & tip</p>
+                      <p className="text-muted-foreground">
+                        {selectedAddOns.map((a) => a.name).join(", ") || "—"}
+                        {tipLabel ? ` · Tip: ${tipLabel}` : ""}
+                      </p>
+                    </div>
                   )}
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Utensils className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Feeding</p>
-                  <p className="text-muted-foreground">
-                    {form.feedingInstructions?.foodType
-                      ? `${form.feedingInstructions.foodType} – ${form.feedingInstructions.portionSize} ${form.feedingInstructions.portionUnit}`
-                      : "Not provided"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Pill className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Medications</p>
-                  {form.noMedications || !form.medications?.length ? (
-                    <p className="text-muted-foreground">None</p>
-                  ) : (
-                    <ul className="list-disc pl-4 text-muted-foreground">
-                      {form.medications.map((m) => (
-                        <li key={m.id}>
-                          {m.name} – {m.dosage}, {m.frequency}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              {(selectedAddOns.length > 0 || tipLabel) && (
-                <div>
-                  <p className="font-medium">Add-ons & tip</p>
-                  <p className="text-muted-foreground">
-                    {selectedAddOns.map((a) => a.name).join(", ") || "—"}
-                    {tipLabel ? ` · Tip: ${tipLabel}` : ""}
-                  </p>
-                </div>
-              )}
                 </>
               ) : (
-                <p className="text-muted-foreground">No form submitted. Use override below to check in with a reason.</p>
+                <p className="text-muted-foreground">
+                  No form submitted. Use override below to check in with a
+                  reason.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -439,8 +497,8 @@ function CheckInContent() {
 
         <Card className="border-primary/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="text-primary size-4" />
               Ready to check-in
             </CardTitle>
             <CardDescription>
@@ -455,17 +513,26 @@ function CheckInContent() {
                   checked={requiredAck}
                   onCheckedChange={(v) => setRequiredAck(!!v)}
                 />
-                <Label htmlFor="required" className="cursor-pointer font-normal">
+                <Label
+                  htmlFor="required"
+                  className="cursor-pointer font-normal"
+                >
                   Required fields complete
-                  {hasRequiredFields ? " (form submitted or approved)" : " (mandatory form if applicable)"}
+                  {hasRequiredFields
+                    ? " (form submitted or approved)"
+                    : " (mandatory form if applicable)"}
                 </Label>
               </div>
             )}
             {isPreCheckMissing && (
-              <div className="space-y-2 rounded-md border border-destructive/50 bg-destructive/5 p-3">
-                <Label className="text-destructive font-medium">PreCheck missing (mandatory)</Label>
-                <p className="text-sm text-muted-foreground">
-                  Customer did not submit the pre-check form. You can complete manually from the booking detail, or override and check in with a reason below (logged for audit).
+              <div className="border-destructive/50 bg-destructive/5 space-y-2 rounded-md border p-3">
+                <Label className="text-destructive font-medium">
+                  PreCheck missing (mandatory)
+                </Label>
+                <p className="text-muted-foreground text-sm">
+                  Customer did not submit the pre-check form. You can complete
+                  manually from the booking detail, or override and check in
+                  with a reason below (logged for audit).
                 </p>
                 <Textarea
                   placeholder="e.g. Customer completed form verbally at desk; running late, form not sent in time"
@@ -493,25 +560,33 @@ function CheckInContent() {
                 checked={belongingsAck}
                 onCheckedChange={(v) => setBelongingsAck(!!v)}
               />
-              <Label htmlFor="belongings" className="cursor-pointer font-normal">
+              <Label
+                htmlFor="belongings"
+                className="cursor-pointer font-normal"
+              >
                 Belongings confirmed
               </Label>
             </div>
 
             <Button
-              className="w-full mt-4 gap-2"
+              className="mt-4 w-full gap-2"
               size="lg"
               disabled={!canCheckIn || checkingIn}
               onClick={handleCheckIn}
             >
               <LogIn className="h-5 w-5" />
-              {checkingIn ? "Checking in…" : isPreCheckMissing ? "Override and check in" : "Check in"}
+              {checkingIn
+                ? "Checking in…"
+                : isPreCheckMissing
+                  ? "Override and check in"
+                  : "Check in"}
             </Button>
           </CardContent>
         </Card>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Scanned from phone? Open this link on your facility desktop to complete check-in there.
+        <p className="text-muted-foreground text-center text-xs">
+          Scanned from phone? Open this link on your facility desktop to
+          complete check-in there.
         </p>
       </div>
     </div>
@@ -522,7 +597,7 @@ export default function FacilityCheckInPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center">
           <p className="text-muted-foreground">Loading…</p>
         </div>
       }

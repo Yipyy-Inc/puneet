@@ -1,6 +1,12 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -70,8 +76,14 @@ export function TipSection({
             {TIP_PERCENTAGES.map((percent) => (
               <Button
                 key={percent}
-                variant={tip.type === "percentage" && tip.percentage === percent ? "default" : "outline"}
-                onClick={() => handleUpdate({ type: "percentage", percentage: percent })}
+                variant={
+                  tip.type === "percentage" && tip.percentage === percent
+                    ? "default"
+                    : "outline"
+                }
+                onClick={() =>
+                  handleUpdate({ type: "percentage", percentage: percent })
+                }
                 className="w-full"
               >
                 {percent}%
@@ -83,7 +95,7 @@ export function TipSection({
         <div className="space-y-2">
           <Label>Custom Amount</Label>
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
             <Input
               type="number"
               min="0"
@@ -107,16 +119,19 @@ export function TipSection({
         </div>
 
         {tipAmount > 0 && (
-          <div className="p-4 bg-muted rounded-lg">
+          <div className="bg-muted rounded-lg p-4">
             <div className="flex items-center justify-between">
               <span className="font-medium">Tip Amount:</span>
               <span className="text-lg font-bold">
-                <DollarSign className="inline h-4 w-4" />
+                <DollarSign className="inline size-4" />
                 {tipAmount.toFixed(2)}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Applies to: {tip.appliesTo === "stay_total" ? "Stay Total" : "Selected Services"}
+            <p className="text-muted-foreground mt-1 text-sm">
+              Applies to:{" "}
+              {tip.appliesTo === "stay_total"
+                ? "Stay Total"
+                : "Selected Services"}
             </p>
           </div>
         )}
@@ -125,9 +140,7 @@ export function TipSection({
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
-          <Button onClick={onNext}>
-            {isLastSection ? "Review" : "Next"}
-          </Button>
+          <Button onClick={onNext}>{isLastSection ? "Review" : "Next"}</Button>
         </div>
       </CardContent>
     </Card>

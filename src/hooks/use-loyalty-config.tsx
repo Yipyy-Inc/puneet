@@ -1,6 +1,6 @@
 /**
  * Loyalty Configuration Hook
- * 
+ *
  * Provides facility-specific loyalty configuration with:
  * - Multi-location support
  * - Role-based permissions
@@ -12,7 +12,7 @@ import { useMemo } from "react";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
 
 // Mock settings - TODO: Replace with actual useSettings hook
-interface MockSettings {
+interface _MockSettings {
   selectedFacility: { id: number } | null;
   userRole: string;
   userPermissions: string[];
@@ -22,17 +22,17 @@ interface UseLoyaltyConfigResult {
   // Configuration state
   isEnabled: boolean;
   config: any | null;
-  
+
   // Location awareness
   isEnabledForLocation: (locationId?: number) => boolean;
-  
+
   // Permission checks
   canViewLoyalty: boolean;
   canManageLoyalty: boolean;
   canViewReports: boolean;
   canManageRewards: boolean;
   canManageReferrals: boolean;
-  
+
   // Feature flags
   features: {
     pointsEnabled: boolean;
@@ -41,7 +41,7 @@ interface UseLoyaltyConfigResult {
     referralsEnabled: boolean;
     expirationEnabled: boolean;
   };
-  
+
   // Location-specific config
   getLocationConfig: (locationId?: number) => any | null;
 }
@@ -53,9 +53,11 @@ interface UseLoyaltyConfigResult {
 export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
   // TODO: Replace with actual useSettings hook
   // For now, use mock data
-  const selectedFacility: { id: number } | null = { id: 1 }; // Mock
+  const selectedFacility = useMemo<{ id: number } | null>(
+    () => ({ id: 1 }),
+    [],
+  ); // Mock
   const userRole = "facility_admin"; // Mock
-  const userPermissions: string[] = []; // Mock
 
   // Get facility loyalty config
   const config = useMemo(() => {
@@ -73,10 +75,10 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
   const isEnabledForLocation = useMemo(() => {
     return (targetLocationId?: number) => {
       if (!isEnabled || !config) return false;
-      
+
       // If no location specified, check facility default
       if (!targetLocationId && !locationId) return isEnabled;
-      
+
       // In production, check location-specific settings
       // For now, if loyalty is enabled at facility level, it's enabled for all locations
       return isEnabled;
@@ -86,13 +88,16 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
   // Permission checks
   const permissions = useMemo(() => {
     // Default permissions based on role
-    const rolePermissions: Record<string, {
-      canViewLoyalty: boolean;
-      canManageLoyalty: boolean;
-      canViewReports: boolean;
-      canManageRewards: boolean;
-      canManageReferrals: boolean;
-    }> = {
+    const rolePermissions: Record<
+      string,
+      {
+        canViewLoyalty: boolean;
+        canManageLoyalty: boolean;
+        canViewReports: boolean;
+        canManageRewards: boolean;
+        canManageReferrals: boolean;
+      }
+    > = {
       facility_admin: {
         canViewLoyalty: true,
         canManageLoyalty: true,
@@ -123,12 +128,13 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
       },
     };
 
-    const defaultPermissions = rolePermissions[userRole || "staff"] || rolePermissions.staff;
+    const defaultPermissions =
+      rolePermissions[userRole || "staff"] || rolePermissions.staff;
 
     // In production, check actual permissions from userPermissions
     // For now, use role-based defaults
     return defaultPermissions;
-  }, [userRole, userPermissions]);
+  }, [userRole]);
 
   // Feature flags from config
   const features = useMemo(() => {
@@ -145,7 +151,8 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
     return {
       pointsEnabled: config.pointsEarning ? true : false,
       tiersEnabled: config.tiers && config.tiers.length > 0,
-      rewardsEnabled: config.rewardTypes && config.rewardTypes.some((rt: any) => rt.enabled),
+      rewardsEnabled:
+        config.rewardTypes && config.rewardTypes.some((rt: any) => rt.enabled),
       referralsEnabled: config.referralProgram?.enabled === true,
       expirationEnabled: config.pointsExpiration?.enabled === true,
     };
@@ -153,9 +160,9 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
 
   // Get location-specific config
   const getLocationConfig = useMemo(() => {
-    return (targetLocationId?: number) => {
+    return (_targetLocationId?: number) => {
       if (!config || !isEnabled) return null;
-      
+
       // In production, this would fetch location-specific overrides
       // For now, return facility config
       return config;

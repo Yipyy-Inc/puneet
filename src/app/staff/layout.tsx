@@ -17,14 +17,14 @@ export default function StaffLayout({
   return (
     <SettingsProviderWrapper>
       {isAuthRoute ? (
-        <div className="min-h-screen flex flex-col">
+        <div className="flex min-h-screen flex-col">
           <main className="flex-1">{children}</main>
         </div>
       ) : (
         <SidebarProvider>
           <>
             <StaffSidebar />
-            <SidebarInset className="flex flex-col min-h-screen">
+            <SidebarInset className="flex min-h-screen flex-col">
               <StaffHeader />
               <main className="flex-1 overflow-x-hidden">{children}</main>
             </SidebarInset>

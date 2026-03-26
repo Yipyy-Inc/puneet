@@ -225,7 +225,7 @@ export default function StaffTasksPage() {
         <div className="flex flex-col">
           <span className="font-medium">{task.templateName}</span>
           {task.petName && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <PawPrint className="h-3 w-3" />
               {task.petName}
             </span>
@@ -283,7 +283,7 @@ export default function StaffTasksPage() {
       defaultVisible: true,
       render: (task) =>
         task.requiresPhoto ? (
-          <Camera className="h-4 w-4 text-muted-foreground" />
+          <Camera className="text-muted-foreground size-4" />
         ) : (
           "—"
         ),
@@ -353,7 +353,7 @@ export default function StaffTasksPage() {
       label: "Description",
       defaultVisible: true,
       render: (template) => (
-        <span className="text-sm text-muted-foreground line-clamp-1">
+        <span className="text-muted-foreground line-clamp-1 text-sm">
           {template.description}
         </span>
       ),
@@ -396,11 +396,11 @@ export default function StaffTasksPage() {
             <CardTitle className="text-sm font-medium">
               Today&apos;s Tasks
             </CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <ClipboardList className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todayTasks.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {pendingTasks.length} pending
             </p>
           </CardContent>
@@ -408,21 +408,21 @@ export default function StaffTasksPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <PlayCircle className="h-4 w-4 text-blue-500" />
+            <PlayCircle className="size-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{inProgressTasks.length}</div>
-            <p className="text-xs text-muted-foreground">Being worked on</p>
+            <p className="text-muted-foreground text-xs">Being worked on</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CheckCircle2 className="size-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{completedTasks.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {todayTasks.length > 0
                 ? `${Math.round((completedTasks.length / todayTasks.length) * 100)}% completion rate`
                 : "No tasks today"}
@@ -434,11 +434,11 @@ export default function StaffTasksPage() {
             <CardTitle className="text-sm font-medium">
               Task Templates
             </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{facilityTemplates.length}</div>
-            <p className="text-xs text-muted-foreground">Active templates</p>
+            <p className="text-muted-foreground text-xs">Active templates</p>
           </CardContent>
         </Card>
       </div>
@@ -453,13 +453,13 @@ export default function StaffTasksPage() {
           <div className="flex items-center space-x-2">
             {activeTab === "assigned" && (
               <Button onClick={handleAddTask}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 Assign Task
               </Button>
             )}
             {activeTab === "templates" && (
               <Button onClick={handleAddTemplate}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 New Template
               </Button>
             )}
@@ -483,7 +483,7 @@ export default function StaffTasksPage() {
                     onClick={() => handleCompleteTask(task)}
                     title="Mark as Complete"
                   >
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="size-4 text-green-500" />
                   </Button>
                 )}
                 <Button
@@ -491,10 +491,10 @@ export default function StaffTasksPage() {
                   size="sm"
                   onClick={() => handleEditTask(task)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-4" />
                 </Button>
                 <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
               </div>
             )}
@@ -522,17 +522,17 @@ export default function StaffTasksPage() {
                   }}
                   title="Create Task from Template"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="size-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleEditTemplate(template)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-4" />
                 </Button>
                 <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
               </div>
             )}
@@ -610,7 +610,7 @@ export default function StaffTasksPage() {
                 }
                 placeholder="e.g., Buddy, Max"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Associate this task with a specific pet
               </p>
             </div>
@@ -836,9 +836,9 @@ export default function StaffTasksPage() {
             {completingTask?.requiresPhoto && (
               <div className="space-y-2">
                 <Label>Photo Proof (Required)</Label>
-                <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                  <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="rounded-lg border-2 border-dashed p-8 text-center">
+                  <Camera className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                  <p className="text-muted-foreground text-sm">
                     Click to upload photo proof
                   </p>
                   <Input
@@ -879,7 +879,7 @@ export default function StaffTasksPage() {
 
             <div className="bg-muted/50 rounded-lg p-3 text-sm">
               <p className="font-medium">Completion Details:</p>
-              <ul className="mt-1 text-muted-foreground">
+              <ul className="text-muted-foreground mt-1">
                 <li>• Staff ID and initials will be recorded</li>
                 <li>• Timestamp: {new Date().toLocaleString()}</li>
               </ul>
@@ -894,7 +894,7 @@ export default function StaffTasksPage() {
               Cancel
             </Button>
             <Button onClick={handleSubmitCompletion}>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
+              <CheckCircle2 className="mr-2 size-4" />
               Mark Complete
             </Button>
           </DialogFooter>

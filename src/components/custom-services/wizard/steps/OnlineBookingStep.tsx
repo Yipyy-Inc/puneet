@@ -36,15 +36,19 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
   return (
     <div className="space-y-6">
       {/* Enable toggle */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+      <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
         <div className="flex items-start gap-3">
-          <Globe className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+          <Globe className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
           <div className="space-y-0.5">
-            <Label htmlFor="ob-enabled" className="text-sm font-semibold cursor-pointer">
+            <Label
+              htmlFor="ob-enabled"
+              className="cursor-pointer text-sm font-semibold"
+            >
               Enable Online Booking
             </Label>
-            <p className="text-xs text-muted-foreground">
-              Clients can discover and book this service from your public booking portal.
+            <p className="text-muted-foreground text-xs">
+              Clients can discover and book this service from your public
+              booking portal.
             </p>
           </div>
         </div>
@@ -56,20 +60,27 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
       </div>
 
       {!ob.enabled && (
-        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-          <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+        <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-lg p-3 text-xs">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
-            Online booking is off. This service can only be booked internally by staff.
-            {data.category === "addon_only" && " Add-on services are typically booked alongside a primary service."}
+            Online booking is off. This service can only be booked internally by
+            staff.
+            {data.category === "addon_only" &&
+              " Add-on services are typically booked alongside a primary service."}
           </span>
         </div>
       )}
 
-      <div className={cn("space-y-6", !ob.enabled && "opacity-50 pointer-events-none")}>
+      <div
+        className={cn(
+          "space-y-6",
+          !ob.enabled && "pointer-events-none opacity-50",
+        )}
+      >
         {/* Eligible Clients */}
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold">Client Eligibility</Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Who can book this service online.
           </p>
           <Select
@@ -83,27 +94,37 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Clients</SelectItem>
-              <SelectItem value="approved_only">Approved Clients Only</SelectItem>
-              <SelectItem value="active_members_only">Active Members Only</SelectItem>
+              <SelectItem value="approved_only">
+                Approved Clients Only
+              </SelectItem>
+              <SelectItem value="active_members_only">
+                Active Members Only
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Approval Required */}
-        <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+        <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
           <div className="space-y-0.5">
-            <Label htmlFor="ob-approval" className="text-sm font-medium cursor-pointer">
+            <Label
+              htmlFor="ob-approval"
+              className="cursor-pointer text-sm font-medium"
+            >
               Require Staff Approval
             </Label>
-            <p className="text-xs text-muted-foreground">
-              Online bookings are held as &quot;Pending&quot; until a staff member approves them.
-              Great for services with limited capacity or prerequisites.
+            <p className="text-muted-foreground text-xs">
+              Online bookings are held as &quot;Pending&quot; until a staff
+              member approves them. Great for services with limited capacity or
+              prerequisites.
             </p>
           </div>
           <Switch
             id="ob-approval"
             checked={ob.approvalRequired}
-            onCheckedChange={(approvalRequired) => updateOb({ approvalRequired })}
+            onCheckedChange={(approvalRequired) =>
+              updateOb({ approvalRequired })
+            }
           />
         </div>
 
@@ -120,7 +141,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
             }
             className="w-full sm:w-36"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Maximum number of dogs a single booking can include.
           </p>
         </div>
@@ -131,7 +152,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
         <div className="space-y-3">
           <div>
             <Label className="text-sm font-semibold">Cancellation Policy</Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               Set the notice period and fee for late cancellations.
             </p>
           </div>
@@ -149,7 +170,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
                   })
                 }
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Clients must cancel at least this many hours before the booking.
               </p>
             </div>
@@ -167,7 +188,7 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
                   })
                 }
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 0% = free cancellation. 100% = no refund.
               </p>
             </div>
@@ -178,19 +199,24 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
 
         {/* Deposit */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="deposit-required" className="text-sm font-medium cursor-pointer">
+              <Label
+                htmlFor="deposit-required"
+                className="cursor-pointer text-sm font-medium"
+              >
                 Require Deposit
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Clients pay a deposit upfront to secure their booking.
               </p>
             </div>
             <Switch
               id="deposit-required"
               checked={ob.depositRequired}
-              onCheckedChange={(depositRequired) => updateOb({ depositRequired })}
+              onCheckedChange={(depositRequired) =>
+                updateOb({ depositRequired })
+              }
             />
           </div>
 

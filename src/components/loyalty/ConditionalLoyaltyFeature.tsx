@@ -20,7 +20,8 @@ export function ConditionalLoyaltyFeature({
   fallback,
   locationId,
 }: ConditionalLoyaltyFeatureProps) {
-  const { isEnabled, features, isEnabledForLocation } = useLoyaltyConfig(locationId);
+  const { isEnabled, features, isEnabledForLocation } =
+    useLoyaltyConfig(locationId);
 
   // Check if module is enabled
   if (!isEnabled) {

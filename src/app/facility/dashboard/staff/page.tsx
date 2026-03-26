@@ -509,11 +509,11 @@ export default function FacilityStaffPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{facilityStaff.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {facilityStaff.filter((s) => s.status === "active").length} active
             </p>
           </CardContent>
@@ -523,13 +523,13 @@ export default function FacilityStaffPage() {
             <CardTitle className="text-sm font-medium">
               Certifications
             </CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
+            <Award className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {staffCertifications.length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {staffCertifications.filter((c) => c.status === "valid").length}{" "}
               valid
             </p>
@@ -538,11 +538,11 @@ export default function FacilityStaffPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Documents</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <FileText className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{staffDocuments.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {staffDocuments.filter((d) => !d.isExpired).length} current
             </p>
           </CardContent>
@@ -550,7 +550,7 @@ export default function FacilityStaffPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -559,7 +559,7 @@ export default function FacilityStaffPage() {
                   .length
               }
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Certifications need renewal
             </p>
           </CardContent>
@@ -578,21 +578,21 @@ export default function FacilityStaffPage() {
             {activeTab === "profiles" && (
               <>
                 <Button onClick={handleAddNew}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 size-4" />
                   Add Staff
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => exportStaffToCSV(facilityStaff)}
                 >
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="mr-2 size-4" />
                   Export
                 </Button>
               </>
             )}
             {(activeTab === "documents" || activeTab === "certifications") && (
               <Button onClick={() => setIsDocumentModalOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
+                <Upload className="mr-2 size-4" />
                 Upload Document
               </Button>
             )}
@@ -614,21 +614,21 @@ export default function FacilityStaffPage() {
                   size="sm"
                   onClick={() => setSelectedStaff(staff)}
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye className="size-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleEdit(staff)}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleDeleteClick(staff)}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
               </div>
             )}
@@ -645,10 +645,10 @@ export default function FacilityStaffPage() {
             actions={() => (
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
-                  <Eye className="h-4 w-4" />
+                  <Eye className="size-4" />
                 </Button>
                 <Button variant="outline" size="sm">
-                  <Edit className="h-4 w-4" />
+                  <Edit className="size-4" />
                 </Button>
               </div>
             )}
@@ -665,10 +665,10 @@ export default function FacilityStaffPage() {
             actions={() => (
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4" />
+                  <Download className="size-4" />
                 </Button>
                 <Button variant="outline" size="sm">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <Trash2 className="text-destructive size-4" />
                 </Button>
               </div>
             )}
@@ -681,8 +681,8 @@ export default function FacilityStaffPage() {
         open={!!selectedStaff}
         onOpenChange={() => setSelectedStaff(null)}
       >
-        <DialogContent className="min-w-5xl max-h-[90vh] flex flex-col p-0">
-          <div className="p-6 flex-1 overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-0">
               <DialogTitle className="sr-only">
                 {selectedStaff?.name} - Staff Details
@@ -695,7 +695,7 @@ export default function FacilityStaffPage() {
 
       {/* Add/Edit Staff Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
@@ -799,7 +799,7 @@ export default function FacilityStaffPage() {
 
             <div className="space-y-2">
               <Label>Permissions</Label>
-              <div className="border rounded-lg p-4 max-h-[300px] overflow-y-auto">
+              <div className="max-h-[300px] overflow-y-auto rounded-lg border p-4">
                 <div className="grid grid-cols-2 gap-3">
                   {availablePermissions.map((permission) => (
                     <div
@@ -813,7 +813,7 @@ export default function FacilityStaffPage() {
                       />
                       <Label
                         htmlFor={permission}
-                        className="text-sm font-normal cursor-pointer"
+                        className="cursor-pointer text-sm font-normal"
                       >
                         {permission.replace(/_/g, " ")}
                       </Label>
@@ -821,7 +821,7 @@ export default function FacilityStaffPage() {
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Selected permissions: {formData.permissions.length}
               </p>
             </div>
@@ -949,7 +949,7 @@ export default function FacilityStaffPage() {
             <div className="space-y-2">
               <Label htmlFor="docFile">File *</Label>
               <Input id="docFile" type="file" accept=".pdf,.jpg,.jpeg,.png" />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Accepted formats: PDF, JPG, PNG
               </p>
             </div>

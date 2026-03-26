@@ -224,7 +224,7 @@ export function PricingSettings({
               Pricing Structures
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <Info className="text-muted-foreground size-4 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-sm">
                   <div className="space-y-2">
@@ -241,9 +241,9 @@ export function PricingSettings({
               </Tooltip>
             </div>
             {isOpen ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="size-4" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" />
             )}
           </CardTitle>
         </CardHeader>
@@ -252,7 +252,7 @@ export function PricingSettings({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-base font-medium">Default Pricing</h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Set default pricing for services across all facilities
                 </p>
               </div>
@@ -267,7 +267,7 @@ export function PricingSettings({
                 </Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    <Info className="text-muted-foreground size-4 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm">
                     <div className="space-y-2">
@@ -290,7 +290,7 @@ export function PricingSettings({
               ([service, pricing]) => (
                 <div key={service} className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h5 className="capitalize text-sm font-medium">
+                    <h5 className="text-sm font-medium capitalize">
                       {service} Pricing
                     </h5>
                     {!editingField && (
@@ -299,7 +299,7 @@ export function PricingSettings({
                         size="sm"
                         onClick={() => startEditing(service as PricingField)}
                       >
-                        <Edit className="h-3 w-3 mr-1" />
+                        <Edit className="mr-1 h-3 w-3" />
                         Edit
                       </Button>
                     )}
@@ -310,7 +310,7 @@ export function PricingSettings({
                           size="sm"
                           onClick={handleSaveClick}
                         >
-                          <Check className="h-3 w-3 mr-1" />
+                          <Check className="mr-1 h-3 w-3" />
                           Save
                         </Button>
                         <Button
@@ -318,7 +318,7 @@ export function PricingSettings({
                           size="sm"
                           onClick={cancelEditing}
                         >
-                          <X className="h-3 w-3 mr-1" />
+                          <X className="mr-1 h-3 w-3" />
                           Cancel
                         </Button>
                       </div>
@@ -371,7 +371,7 @@ export function PricingSettings({
                     size="sm"
                     onClick={() => startEditing("boarding" as PricingField)} // Use any field to enable tax editing
                   >
-                    <Edit className="h-3 w-3 mr-1" />
+                    <Edit className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
                 )}
@@ -382,11 +382,11 @@ export function PricingSettings({
                       size="sm"
                       onClick={handleSaveClick}
                     >
-                      <Check className="h-3 w-3 mr-1" />
+                      <Check className="mr-1 h-3 w-3" />
                       Save
                     </Button>
                     <Button variant="outline" size="sm" onClick={cancelEditing}>
-                      <X className="h-3 w-3 mr-1" />
+                      <X className="mr-1 h-3 w-3" />
                       Cancel
                     </Button>
                   </div>

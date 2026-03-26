@@ -41,7 +41,6 @@ const customerVariables: TemplateVariable[] = [
     description: "Customer's first name",
     example: "Sarah",
     fallback: "there",
-
   },
   {
     key: "customer_last_name",
@@ -49,7 +48,6 @@ const customerVariables: TemplateVariable[] = [
     category: "customer",
     description: "Customer's last name",
     example: "Johnson",
-
   },
   {
     key: "customer_full_name",
@@ -58,7 +56,6 @@ const customerVariables: TemplateVariable[] = [
     description: "Customer's full name",
     example: "Sarah Johnson",
     fallback: "Valued Customer",
-
   },
   {
     key: "customer_phone",
@@ -173,7 +170,8 @@ const bookingVariables: TemplateVariable[] = [
     key: "service_name",
     label: "Service Name",
     category: "booking",
-    description: "Name of the booked service (Daycare, Boarding, Grooming, etc.)",
+    description:
+      "Name of the booked service (Daycare, Boarding, Grooming, etc.)",
     example: "Daycare",
     contextRequired: ["booking"],
   },
@@ -276,7 +274,6 @@ const facilityVariables: TemplateVariable[] = [
     category: "facility",
     description: "Name of the facility",
     example: "Doggieville MTL",
-
   },
   {
     key: "facility_phone",
@@ -284,7 +281,6 @@ const facilityVariables: TemplateVariable[] = [
     category: "facility",
     description: "Facility phone number",
     example: "(514) 555-0100",
-
   },
   {
     key: "facility_email",
@@ -292,7 +288,6 @@ const facilityVariables: TemplateVariable[] = [
     category: "facility",
     description: "Facility email address",
     example: "info@doggievillemtl.com",
-
   },
   {
     key: "facility_address",
@@ -419,7 +414,6 @@ const linkVariables: TemplateVariable[] = [
     category: "links",
     description: "Link to the customer portal",
     example: "https://portal.yipyy.com",
-
   },
   {
     key: "booking_details_link",
@@ -509,15 +503,15 @@ export function getVariableDisplayTag(key: string): string {
   return `{{${key}}}`;
 }
 
-export function getGroupedVariablesForContext(
-  context: VariableContext,
-): { category: VariableCategory; label: string; variables: TemplateVariable[] }[] {
+export function getGroupedVariablesForContext(context: VariableContext): {
+  category: VariableCategory;
+  label: string;
+  variables: TemplateVariable[];
+}[] {
   const contextVars = getVariablesForContext(context);
-  return VARIABLE_CATEGORY_ORDER
-    .map((category) => ({
-      category,
-      label: VARIABLE_CATEGORY_LABELS[category],
-      variables: contextVars.filter((v) => v.category === category),
-    }))
-    .filter((group) => group.variables.length > 0);
+  return VARIABLE_CATEGORY_ORDER.map((category) => ({
+    category,
+    label: VARIABLE_CATEGORY_LABELS[category],
+    variables: contextVars.filter((v) => v.category === category),
+  })).filter((group) => group.variables.length > 0);
 }

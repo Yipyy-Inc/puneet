@@ -26,9 +26,9 @@ interface StaffTabProps {
 
 export function StaffTab({ usersList }: StaffTabProps) {
   return (
-    <Card className="border-0 shadow-card">
+    <Card className="shadow-card border-0">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
           <Users className="h-5 w-5" />
           Staff Members
           <Badge variant="secondary" className="ml-2">
@@ -52,7 +52,7 @@ export function StaffTab({ usersList }: StaffTabProps) {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex items-center justify-center w-8 h-8 rounded-full font-semibold text-xs text-white"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white"
                         style={{
                           background:
                             user.role === "Admin"
@@ -72,7 +72,7 @@ export function StaffTab({ usersList }: StaffTabProps) {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
                       {user.person.email}
                     </span>

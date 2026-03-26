@@ -264,7 +264,7 @@ export function ExportReportModal({
       <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
               <Check className="h-6 w-6 text-green-600" />
             </div>
             Export Complete
@@ -275,7 +275,7 @@ export function ExportReportModal({
           </DialogDescription>
         </DialogHeader>
         <div className="py-6 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             This dialog will close automatically...
           </p>
         </div>
@@ -302,17 +302,17 @@ export function ExportReportModal({
                 key={fmt}
                 className={`cursor-pointer transition-all ${
                   format === fmt
-                    ? "ring-2 ring-primary bg-primary/5"
+                    ? "bg-primary/5 ring-primary ring-2"
                     : "hover:bg-muted/50"
-                }`}
+                } `}
                 onClick={() => setFormat(fmt)}
               >
                 <CardContent className="pt-6 text-center">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <FileText className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
                   <div className="font-medium capitalize">
                     {fmt.toUpperCase()}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-muted-foreground mt-1 text-xs">
                     {fmt === "csv" && "Comma-separated values"}
                     {fmt === "pdf" && "Portable document"}
                     {fmt === "excel" && "Microsoft Excel"}
@@ -333,7 +333,7 @@ export function ExportReportModal({
               onChange={(e) => setFileName(e.target.value)}
               placeholder="report-name"
             />
-            <div className="flex items-center px-3 py-2 border rounded-md bg-muted text-muted-foreground text-sm">
+            <div className="bg-muted text-muted-foreground flex items-center rounded-md border px-3 py-2 text-sm">
               .{format === "excel" ? "xls" : format}
             </div>
           </div>
@@ -353,7 +353,7 @@ export function ExportReportModal({
               />
               <label
                 htmlFor="includeHeaders"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Include column headers
               </label>
@@ -364,7 +364,7 @@ export function ExportReportModal({
         {/* Preview Info */}
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm space-y-2">
+            <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Report Type:</span>
                 <span className="font-medium capitalize">
@@ -399,12 +399,12 @@ export function ExportReportModal({
         <Button onClick={handleExport} disabled={exporting || !fileName}>
           {exporting ? (
             <>
-              <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="border-primary mr-2 size-4 animate-spin rounded-full border-2 border-t-transparent" />
               Exporting...
             </>
           ) : (
             <>
-              <Download className="h-4 w-4 mr-2" />
+              <Download className="mr-2 size-4" />
               Export {format.toUpperCase()}
             </>
           )}

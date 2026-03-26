@@ -72,12 +72,12 @@ export function FacilityRevenueTable() {
         <div className="flex items-center justify-end gap-1">
           {item.growthRate > 0 ? (
             <>
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="size-4 text-green-600" />
               <span className="text-green-600">+{item.growthRate}%</span>
             </>
           ) : (
             <>
-              <TrendingDown className="h-4 w-4 text-red-600" />
+              <TrendingDown className="size-4 text-red-600" />
               <span className="text-red-600">{item.growthRate}%</span>
             </>
           )}
@@ -96,7 +96,7 @@ export function FacilityRevenueTable() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -136,7 +136,7 @@ export function FacilityRevenueTable() {
             <div className="text-2xl font-bold">
               ${totalRevenue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Across all facilities
             </p>
           </CardContent>
@@ -149,7 +149,7 @@ export function FacilityRevenueTable() {
             <div className="text-lg font-bold">
               {topPerformer?.facilityName}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               $
               {(
                 topPerformer.subscriptionRevenue +
@@ -170,7 +170,7 @@ export function FacilityRevenueTable() {
             <div className="text-2xl font-bold">
               ${(totalRevenue / data.length).toFixed(0)}
             </div>
-            <p className="text-xs text-muted-foreground">Per facility</p>
+            <p className="text-muted-foreground text-xs">Per facility</p>
           </CardContent>
         </Card>
       </div>

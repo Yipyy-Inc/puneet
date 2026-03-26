@@ -25,7 +25,10 @@ export const COLOR_HEX_MAP: Record<string, string> = {
   "gray-400": "#9ca3af",
 };
 
-export function getGradientStyle(fromColor: string, toColor: string): { background: string } {
+export function getGradientStyle(
+  fromColor: string,
+  toColor: string,
+): { background: string } {
   return {
     background: `linear-gradient(135deg, ${COLOR_HEX_MAP[fromColor] ?? "#3b82f6"}, ${COLOR_HEX_MAP[toColor] ?? "#6366f1"})`,
   };
@@ -65,23 +68,29 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
   {
     id: "timed_session",
     name: "Timed Session",
-    description: "Fixed or variable-duration bookings like pool sessions or enrichment suites",
+    description:
+      "Fixed or variable-duration bookings like pool sessions or enrichment suites",
     icon: "Clock",
     color: "blue",
-    badgeClass: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800",
+    badgeClass:
+      "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800",
     tintClass: "bg-sky-50 dark:bg-sky-950/20",
-    iconContainerClass: "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
+    iconContainerClass:
+      "bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400",
     textClass: "text-sky-600 dark:text-sky-400",
   },
   {
     id: "stay_based",
     name: "Stay-Based",
-    description: "Multi-day services that may require room or kennel assignment",
+    description:
+      "Multi-day services that may require room or kennel assignment",
     icon: "Bed",
     color: "purple",
-    badgeClass: "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800",
+    badgeClass:
+      "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800",
     tintClass: "bg-violet-50 dark:bg-violet-950/20",
-    iconContainerClass: "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
+    iconContainerClass:
+      "bg-violet-100 text-violet-600 dark:bg-violet-900/40 dark:text-violet-400",
     textClass: "text-violet-600 dark:text-violet-400",
   },
   {
@@ -90,9 +99,11 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     description: "Route-based services like chauffeur pickup and drop-off",
     icon: "Car",
     color: "green",
-    badgeClass: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
+    badgeClass:
+      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
     tintClass: "bg-emerald-50 dark:bg-emerald-950/20",
-    iconContainerClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+    iconContainerClass:
+      "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
     textClass: "text-emerald-600 dark:text-emerald-400",
   },
   {
@@ -101,20 +112,25 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     description: "One-off or recurring group events like birthday parties",
     icon: "PartyPopper",
     color: "orange",
-    badgeClass: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+    badgeClass:
+      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
     tintClass: "bg-amber-50 dark:bg-amber-950/20",
-    iconContainerClass: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+    iconContainerClass:
+      "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
     textClass: "text-amber-600 dark:text-amber-400",
   },
   {
     id: "addon_only",
     name: "Add-On Only",
-    description: "Cannot be booked standalone — must be linked to another service",
+    description:
+      "Cannot be booked standalone — must be linked to another service",
     icon: "PlusCircle",
     color: "gray",
-    badgeClass: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700",
+    badgeClass:
+      "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700",
     tintClass: "bg-slate-50 dark:bg-slate-900/20",
-    iconContainerClass: "bg-slate-100 text-slate-500 dark:bg-slate-800/40 dark:text-slate-400",
+    iconContainerClass:
+      "bg-slate-100 text-slate-500 dark:bg-slate-800/40 dark:text-slate-400",
     textClass: "text-slate-500 dark:text-slate-400",
   },
   {
@@ -123,16 +139,20 @@ export const CUSTOM_SERVICE_CATEGORIES_META: CategoryMeta[] = [
     description: "Single scheduled appointment like therapy sessions",
     icon: "CalendarCheck",
     color: "teal",
-    badgeClass: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800",
+    badgeClass:
+      "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800",
     tintClass: "bg-teal-50 dark:bg-teal-950/20",
-    iconContainerClass: "bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400",
+    iconContainerClass:
+      "bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400",
     textClass: "text-teal-600 dark:text-teal-400",
   },
 ];
 
 /** Lookup helper for category metadata by ID */
-export function getCategoryMeta(categoryId: CustomServiceCategory): CategoryMeta | undefined {
-  return CUSTOM_SERVICE_CATEGORIES_META.find(c => c.id === categoryId);
+export function getCategoryMeta(
+  categoryId: CustomServiceCategory,
+): CategoryMeta | undefined {
+  return CUSTOM_SERVICE_CATEGORIES_META.find((c) => c.id === categoryId);
 }
 
 // ========================================

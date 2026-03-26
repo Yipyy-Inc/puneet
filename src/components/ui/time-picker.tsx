@@ -94,7 +94,9 @@ export function TimePicker({
       disabled={disabled || options.length === 0}
     >
       <SelectTrigger className={cn("w-full", className)}>
-        <SelectValue placeholder={options.length === 0 ? "No times" : placeholder} />
+        <SelectValue
+          placeholder={options.length === 0 ? "No times" : placeholder}
+        />
       </SelectTrigger>
       <SelectContent className="max-h-72">
         {options.map((t) => (
@@ -106,4 +108,3 @@ export function TimePicker({
     </Select>
   );
 }
-

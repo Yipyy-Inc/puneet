@@ -3,7 +3,13 @@
 import { useState, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { paymentMethods } from "@/data/payments";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,7 +31,7 @@ const MOCK_CUSTOMER_ID = 15;
 const HAS_AUTOPAY_MEMBERSHIP = true;
 
 export function PaymentMethodsTab() {
-  const { selectedFacility } = useCustomerFacility();
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -90,7 +96,10 @@ export function PaymentMethodsTab() {
       const month = parseInt(formData.expiryMonth);
       const year = parseInt(`20${formData.expiryYear}`);
       const now = new Date();
-      if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
+      if (
+        year < now.getFullYear() ||
+        (year === now.getFullYear() && month < now.getMonth() + 1)
+      ) {
         newErrors.expiry = "Card has expired";
       }
     }
@@ -143,7 +152,7 @@ export function PaymentMethodsTab() {
     setIsDeleting(null);
   };
 
-  const handleSetDefault = async (id: string) => {
+  const handleSetDefault = async (_id: string) => {
     // TODO: Call API to set as default
     toast.success("Default payment method updated");
   };
@@ -158,21 +167,21 @@ export function PaymentMethodsTab() {
           </p>
         </div>
         <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 size-4" />
           Add Payment Method
         </Button>
       </div>
 
       {customerPaymentMethods.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center space-y-3">
-            <CreditCard className="h-12 w-12 mx-auto text-muted-foreground opacity-50" />
+          <CardContent className="space-y-3 py-12 text-center">
+            <CreditCard className="text-muted-foreground mx-auto h-12 w-12 opacity-50" />
             <p className="font-semibold">No payment methods</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Add a payment method to make booking and payments easier
             </p>
             <Button onClick={() => setIsAddModalOpen(true)} className="mt-4">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Your First Card
             </Button>
           </CardContent>
@@ -189,7 +198,9 @@ export function PaymentMethodsTab() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="text-2xl">{getCardIcon(method.cardBrand)}</div>
+                      <div className="text-2xl">
+                        {getCardIcon(method.cardBrand)}
+                      </div>
                       <div>
                         <CardTitle className="text-base">
                           {method.cardBrand
@@ -208,7 +219,10 @@ export function PaymentMethodsTab() {
                               : "No expiry date"}
                           </span>
                           {isCardExpired(method) && (
-                            <Badge variant="destructive" className="text-[10px]">
+                            <Badge
+                              variant="destructive"
+                              className="text-[10px]"
+                            >
                               Expired
                             </Badge>
                           )}
@@ -258,14 +272,14 @@ export function PaymentMethodsTab() {
                         disabled={isDeleting === method.id || disableRemove}
                         className="text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
+                        <Trash2 className="mr-1 size-4" />
                         {isDeleting === method.id ? "Removing..." : "Remove"}
                       </Button>
                     </div>
                     {disableRemove && (
-                      <p className="text-xs text-muted-foreground">
-                        You can’t remove your only card while an auto-pay membership is
-                        active. Please add another card first.
+                      <p className="text-muted-foreground text-xs">
+                        You can’t remove your only card while an auto-pay
+                        membership is active. Please add another card first.
                       </p>
                     )}
                   </div>
@@ -295,13 +309,14 @@ export function PaymentMethodsTab() {
                 onChange={(e) => {
                   const formatted = formatCardNumber(e.target.value);
                   setFormData({ ...formData, cardNumber: formatted });
-                  if (errors.cardNumber) setErrors({ ...errors, cardNumber: "" });
+                  if (errors.cardNumber)
+                    setErrors({ ...errors, cardNumber: "" });
                 }}
                 maxLength={19}
                 aria-invalid={!!errors.cardNumber}
               />
               {errors.cardNumber && (
-                <p className="text-sm text-destructive flex items-center gap-1">
+                <p className="text-destructive flex items-center gap-1 text-sm">
                   <AlertCircle className="h-3 w-3" />
                   {errors.cardNumber}
                 </p>
@@ -339,7 +354,7 @@ export function PaymentMethodsTab() {
               </div>
             </div>
             {errors.expiry && (
-              <p className="text-sm text-destructive flex items-center gap-1">
+              <p className="text-destructive flex items-center gap-1 text-sm">
                 <AlertCircle className="h-3 w-3" />
                 {errors.expiry}
               </p>
@@ -360,7 +375,7 @@ export function PaymentMethodsTab() {
                 aria-invalid={!!errors.cvc}
               />
               {errors.cvc && (
-                <p className="text-sm text-destructive flex items-center gap-1">
+                <p className="text-destructive flex items-center gap-1 text-sm">
                   <AlertCircle className="h-3 w-3" />
                   {errors.cvc}
                 </p>
@@ -375,12 +390,13 @@ export function PaymentMethodsTab() {
                 value={formData.cardholderName}
                 onChange={(e) => {
                   setFormData({ ...formData, cardholderName: e.target.value });
-                  if (errors.cardholderName) setErrors({ ...errors, cardholderName: "" });
+                  if (errors.cardholderName)
+                    setErrors({ ...errors, cardholderName: "" });
                 }}
                 aria-invalid={!!errors.cardholderName}
               />
               {errors.cardholderName && (
-                <p className="text-sm text-destructive flex items-center gap-1">
+                <p className="text-destructive flex items-center gap-1 text-sm">
                   <AlertCircle className="h-3 w-3" />
                   {errors.cardholderName}
                 </p>

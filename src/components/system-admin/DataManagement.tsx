@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -6,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
+import type { ColumnDef } from "@/components/ui/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,12 @@ import {
   dataRecoveries,
   retentionPolicies,
 } from "@/data/system-administration";
+import type {
+  DataBackup,
+  DataRecovery,
+  RetentionPolicy,
+} from "@/data/system-administration";
+import type { LucideIcon } from "lucide-react";
 import {
   Database,
   HardDrive,
@@ -47,12 +53,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "success"
+  | "warning"
+  | "info"
+  | "outline";
+
 export function DataManagement() {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showEditPolicyModal, setShowEditPolicyModal] = useState(false);
-  const [selectedBackup, setSelectedBackup] = useState<any>(null);
-  const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
+  const [selectedBackup, setSelectedBackup] = useState<DataBackup | null>(null);
+  const [selectedPolicy, setSelectedPolicy] = useState<RetentionPolicy | null>(
+    null,
+  );
   const [backupInProgress, setBackupInProgress] = useState(false);
   const [backupComplete, setBackupComplete] = useState(false);
   const [restoreInProgress, setRestoreInProgress] = useState(false);
@@ -83,7 +100,7 @@ export function DataManagement() {
     }, 2000);
   };
 
-  const handleDownload = (backup: any) => {
+  const handleDownload = (backup: DataBackup) => {
     // Simulate download
     const blob = new Blob(
       [`Backup: ${backup.backupName}\nDate: ${backup.startTime}`],
@@ -97,7 +114,7 @@ export function DataManagement() {
     document.body.removeChild(link);
   };
 
-  const handleRunPolicy = (policy: any) => {
+  const handleRunPolicy = (policy: RetentionPolicy) => {
     // Simulate running policy
     alert(`Policy "${policy.policyName}" execution started!`);
   };
@@ -105,7 +122,7 @@ export function DataManagement() {
   const getBackupStatusBadge = (status: string) => {
     const variants: Record<
       string,
-      { variant: any; icon: any; className: string }
+      { variant: BadgeVariant; icon: LucideIcon; className: string }
     > = {
       Completed: {
         variant: "default",
@@ -142,7 +159,10 @@ export function DataManagement() {
   };
 
   const getVerificationBadge = (status: string) => {
-    const variants: Record<string, { variant: any; className: string }> = {
+    const variants: Record<
+      string,
+      { variant: BadgeVariant; className: string }
+    > = {
       Verified: {
         variant: "default",
         className: "bg-green-100 text-green-700",
@@ -159,14 +179,20 @@ export function DataManagement() {
     };
     const config = variants[status] || variants["Not Verified"];
     return (
-      <Badge variant={config.variant} className={`text-xs ${config.className}`}>
+      <Badge
+        variant={config.variant}
+        className={`text-xs ${config.className} `}
+      >
         {status}
       </Badge>
     );
   };
 
   const getRecoveryStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any; className: string }> = {
+    const variants: Record<
+      string,
+      { variant: BadgeVariant; className: string }
+    > = {
       Completed: {
         variant: "default",
         className: "bg-green-100 text-green-700",
@@ -183,14 +209,17 @@ export function DataManagement() {
     };
     const config = variants[status] || variants.Requested;
     return (
-      <Badge variant={config.variant} className={`text-xs ${config.className}`}>
+      <Badge
+        variant={config.variant}
+        className={`text-xs ${config.className} `}
+      >
         {status}
       </Badge>
     );
   };
 
   const getPolicyStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, BadgeVariant> = {
       Active: "default",
       Inactive: "secondary",
       Draft: "outline",
@@ -203,14 +232,14 @@ export function DataManagement() {
   };
 
   // Backup Columns
-  const backupColumns = [
+  const backupColumns: ColumnDef<DataBackup>[] = [
     {
       key: "backupName",
       label: "Backup Name",
-      render: (item: any) => (
+      render: (item) => (
         <div>
           <div className="font-medium">{item.backupName}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.backupType} - {item.scope}
           </div>
         </div>
@@ -219,22 +248,22 @@ export function DataManagement() {
     {
       key: "facilityName",
       label: "Facility",
-      render: (item: any) => (
+      render: (item) => (
         <span className="text-sm">{item.facilityName || "All Facilities"}</span>
       ),
     },
     {
       key: "status",
       label: "Status",
-      render: (item: any) => getBackupStatusBadge(item.status),
+      render: (item) => getBackupStatusBadge(item.status),
     },
     {
       key: "startTime",
       label: "Date & Time",
-      render: (item: any) => (
+      render: (item) => (
         <div className="text-sm">
           <div>{new Date(item.startTime).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.startTime).toLocaleTimeString()}
           </div>
         </div>
@@ -243,7 +272,7 @@ export function DataManagement() {
     {
       key: "size",
       label: "Size",
-      render: (item: any) => (
+      render: (item) => (
         <span className="font-mono text-sm">
           {item.size >= 1024
             ? `${(item.size / 1024).toFixed(2)} GB`
@@ -254,12 +283,12 @@ export function DataManagement() {
     {
       key: "verificationStatus",
       label: "Verification",
-      render: (item: any) => getVerificationBadge(item.verificationStatus),
+      render: (item) => getVerificationBadge(item.verificationStatus),
     },
     {
       key: "backupMethod",
       label: "Method",
-      render: (item: any) => (
+      render: (item) => (
         <Badge variant="outline" className="text-xs">
           {item.backupMethod}
         </Badge>
@@ -267,7 +296,7 @@ export function DataManagement() {
     },
   ];
 
-  const backupActions = (item: any) => (
+  const backupActions = (item: DataBackup) => (
     <div className="flex gap-2">
       <Button
         variant="ghost"
@@ -278,7 +307,7 @@ export function DataManagement() {
           setShowRestoreModal(true);
         }}
       >
-        <RefreshCw className="h-4 w-4" />
+        <RefreshCw className="size-4" />
         Restore
       </Button>
       <Button
@@ -287,21 +316,21 @@ export function DataManagement() {
         className="gap-2"
         onClick={() => handleDownload(item)}
       >
-        <Download className="h-4 w-4" />
+        <Download className="size-4" />
         Download
       </Button>
     </div>
   );
 
   // Recovery Columns
-  const recoveryColumns = [
+  const recoveryColumns: ColumnDef<DataRecovery>[] = [
     {
       key: "recoveryName",
       label: "Recovery Name",
-      render: (item: any) => (
+      render: (item) => (
         <div>
           <div className="font-medium">{item.recoveryName}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.recoveryType}
           </div>
         </div>
@@ -310,15 +339,15 @@ export function DataManagement() {
     {
       key: "backupName",
       label: "Source Backup",
-      render: (item: any) => <span className="text-sm">{item.backupName}</span>,
+      render: (item) => <span className="text-sm">{item.backupName}</span>,
     },
     {
       key: "requestedBy",
       label: "Requested By",
-      render: (item: any) => (
+      render: (item) => (
         <div>
           <div className="font-medium">{item.requestedBy}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.requestedAt).toLocaleDateString()}
           </div>
         </div>
@@ -327,36 +356,36 @@ export function DataManagement() {
     {
       key: "status",
       label: "Status",
-      render: (item: any) => getRecoveryStatusBadge(item.status),
+      render: (item) => getRecoveryStatusBadge(item.status),
     },
     {
       key: "progress",
       label: "Progress",
-      render: (item: any) => (
+      render: (item) => (
         <div className="w-32">
           <Progress value={item.progress} className="h-2" />
-          <p className="text-xs text-muted-foreground mt-1">{item.progress}%</p>
+          <p className="text-muted-foreground mt-1 text-xs">{item.progress}%</p>
         </div>
       ),
     },
   ];
 
   // Retention Policy Columns
-  const policyColumns = [
+  const policyColumns: ColumnDef<RetentionPolicy>[] = [
     {
       key: "policyName",
       label: "Policy Name",
-      render: (item: any) => (
+      render: (item) => (
         <div>
           <div className="font-medium">{item.policyName}</div>
-          <div className="text-xs text-muted-foreground">{item.dataType}</div>
+          <div className="text-muted-foreground text-xs">{item.dataType}</div>
         </div>
       ),
     },
     {
       key: "retentionPeriod",
       label: "Retention Period",
-      render: (item: any) => (
+      render: (item) => (
         <span className="font-medium">
           {item.retentionPeriod} days ({Math.floor(item.retentionPeriod / 365)}{" "}
           years)
@@ -366,7 +395,7 @@ export function DataManagement() {
     {
       key: "action",
       label: "Action",
-      render: (item: any) => {
+      render: (item) => {
         const colors: Record<string, string> = {
           Archive: "bg-blue-100 text-blue-700",
           Purge: "bg-red-100 text-red-700",
@@ -375,7 +404,7 @@ export function DataManagement() {
         return (
           <Badge
             variant="secondary"
-            className={`text-xs ${colors[item.action]}`}
+            className={`text-xs ${colors[item.action]} `}
           >
             {item.action}
           </Badge>
@@ -385,12 +414,12 @@ export function DataManagement() {
     {
       key: "status",
       label: "Status",
-      render: (item: any) => getPolicyStatusBadge(item.status),
+      render: (item) => getPolicyStatusBadge(item.status),
     },
     {
       key: "itemsProcessed",
       label: "Items Processed",
-      render: (item: any) => (
+      render: (item) => (
         <span className="font-semibold">
           {item.itemsProcessed.toLocaleString()}
         </span>
@@ -399,7 +428,7 @@ export function DataManagement() {
     {
       key: "nextExecution",
       label: "Next Execution",
-      render: (item: any) => (
+      render: (item) => (
         <span className="text-sm">
           {new Date(item.nextExecution).toLocaleDateString()}
         </span>
@@ -407,7 +436,7 @@ export function DataManagement() {
     },
   ];
 
-  const policyActions = (item: any) => (
+  const policyActions = (item: RetentionPolicy) => (
     <div className="flex gap-2">
       <Button
         variant="ghost"
@@ -415,7 +444,7 @@ export function DataManagement() {
         className="gap-2"
         onClick={() => handleRunPolicy(item)}
       >
-        <Play className="h-4 w-4" />
+        <Play className="size-4" />
         Run Now
       </Button>
       <Button
@@ -427,7 +456,7 @@ export function DataManagement() {
           setShowEditPolicyModal(true);
         }}
       >
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
         Edit
       </Button>
     </div>
@@ -453,34 +482,34 @@ export function DataManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Data Management</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage backups, recovery, and data retention policies
           </p>
         </div>
         <Button className="gap-2" onClick={() => setShowBackupModal(true)}>
-          <Database className="h-4 w-4" />
+          <Database className="size-4" />
           Create Manual Backup
         </Button>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total Backups
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {dataBackups.length}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {completedBackups} completed
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -492,22 +521,22 @@ export function DataManagement() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Storage Used
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {(totalBackupSize / 1024).toFixed(1)} GB
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Across all backups
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -519,23 +548,23 @@ export function DataManagement() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Verified Backups
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {verifiedBackups}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {((verifiedBackups / dataBackups.length) * 100).toFixed(0)}%
                   verification rate
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -547,22 +576,22 @@ export function DataManagement() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Recoveries
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {activeRecoveries}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   In progress
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -585,20 +614,20 @@ export function DataManagement() {
 
         {/* Backups Tab */}
         <TabsContent value="backups" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Backup History
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 All system and facility backups with verification status
               </p>
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={backupColumns as any}
-                data={dataBackups as any}
-                actions={backupActions as any}
+                columns={backupColumns}
+                data={dataBackups}
+                actions={backupActions}
                 searchKey="backupName"
                 searchPlaceholder="Search backups..."
               />
@@ -608,19 +637,19 @@ export function DataManagement() {
 
         {/* Recovery Tab */}
         <TabsContent value="recovery" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Recovery Operations
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Track data recovery and restoration processes
               </p>
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={recoveryColumns as any}
-                data={dataRecoveries as any}
+                columns={recoveryColumns}
+                data={dataRecoveries}
                 searchKey="recoveryName"
                 searchPlaceholder="Search recovery operations..."
               />
@@ -628,9 +657,9 @@ export function DataManagement() {
           </Card>
 
           {/* Disaster Recovery Info */}
-          <Card className="border-0 shadow-card bg-blue-50/50">
+          <Card className="shadow-card border-0 bg-blue-50/50">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <ShieldCheck className="h-5 w-5 text-blue-600" />
                 Disaster Recovery Procedures
               </CardTitle>
@@ -638,45 +667,45 @@ export function DataManagement() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-semibold text-xs mt-0.5">
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     1
                   </div>
                   <div>
                     <p className="font-medium">Assess the Situation</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Identify the scope of data loss and affected systems
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-semibold text-xs mt-0.5">
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     2
                   </div>
                   <div>
                     <p className="font-medium">Select Recovery Point</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Choose the most recent verified backup before the incident
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-semibold text-xs mt-0.5">
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     3
                   </div>
                   <div>
                     <p className="font-medium">Execute Recovery</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Initiate full or partial recovery based on requirements
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-semibold text-xs mt-0.5">
+                  <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
                     4
                   </div>
                   <div>
                     <p className="font-medium">Verify & Test</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Validate data integrity and system functionality
                     </p>
                   </div>
@@ -688,20 +717,20 @@ export function DataManagement() {
 
         {/* Retention Policies Tab */}
         <TabsContent value="retention" className="space-y-6">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
                 Retention Policies
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Automated data retention and compliance management
               </p>
             </CardHeader>
             <CardContent>
               <DataTable
-                columns={policyColumns as any}
-                data={retentionPolicies as any}
-                actions={policyActions as any}
+                columns={policyColumns}
+                data={retentionPolicies}
+                actions={policyActions}
                 searchKey="policyName"
                 searchPlaceholder="Search policies..."
               />
@@ -710,44 +739,44 @@ export function DataManagement() {
 
           {/* Compliance Info */}
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Archive className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Archive className="size-4" />
                   Archive Policy
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Data is archived to cold storage and remains accessible for
                   compliance audits
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Trash2 className="size-4" />
                   Purge Policy
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Data is permanently deleted after retention period expires
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-0 shadow-card">
+            <Card className="shadow-card border-0">
               <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <ShieldCheck className="size-4" />
                   Anonymize Policy
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Personal data is anonymized while preserving statistical value
                 </p>
               </CardContent>
@@ -770,21 +799,21 @@ export function DataManagement() {
           </DialogHeader>
           {backupComplete ? (
             <div className="flex flex-col items-center py-8">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold">Backup Created!</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Your backup has been created successfully
               </p>
             </div>
           ) : backupInProgress ? (
             <div className="flex flex-col items-center py-8">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold">Creating Backup...</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Please wait while we create your backup
               </p>
             </div>
@@ -837,7 +866,7 @@ export function DataManagement() {
                   Cancel
                 </Button>
                 <Button onClick={handleCreateBackup}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Backup
                 </Button>
               </DialogFooter>
@@ -860,35 +889,35 @@ export function DataManagement() {
           </DialogHeader>
           {restoreComplete ? (
             <div className="flex flex-col items-center py-8">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
               <h3 className="text-lg font-semibold">Restore Complete!</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Data has been restored successfully
               </p>
             </div>
           ) : restoreInProgress ? (
             <div className="flex flex-col items-center py-8">
-              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold">Restoring...</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Please wait while we restore your data
               </p>
             </div>
           ) : (
             <>
-              <div className="py-4 space-y-4">
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="space-y-4 py-4">
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                   <p className="text-sm text-yellow-800">
                     <strong>Warning:</strong> Restoring this backup will replace
                     current data. This action cannot be undone.
                   </p>
                 </div>
                 {selectedBackup && (
-                  <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                  <div className="bg-muted/50 space-y-2 rounded-lg p-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
                         Backup Name:
@@ -927,7 +956,7 @@ export function DataManagement() {
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={handleRestore}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="mr-2 size-4" />
                   Restore Backup
                 </Button>
               </DialogFooter>

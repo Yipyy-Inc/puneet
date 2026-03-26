@@ -20,7 +20,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Bell, Camera } from "lucide-react";
 import { clients } from "@/data/clients";
-import { resolveTemplate, resolveVariable, getMockPreviewData } from "@/lib/template-variable-resolver";
+import {
+  resolveTemplate,
+  resolveVariable,
+  getMockPreviewData,
+} from "@/lib/template-variable-resolver";
 import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
 import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
 
@@ -105,13 +109,14 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
     });
   };
 
-  const setMessage = useCallback(
-    (newValue: string) => {
-      setFormData((prev) => ({ ...prev, message: newValue }));
-    },
-    [],
+  const setMessage = useCallback((newValue: string) => {
+    setFormData((prev) => ({ ...prev, message: newValue }));
+  }, []);
+  const handleInsertVariable = useInsertAtCursor(
+    messageRef,
+    formData.message,
+    setMessage,
   );
-  const handleInsertVariable = useInsertAtCursor(messageRef, formData.message, setMessage);
 
   const handlePhotoAttach = () => {
     setPhotoAttached(!photoAttached);
@@ -187,12 +192,12 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
         {/* One-Tap Quick Update Buttons */}
         {formData.petId && (
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <Label className="text-base">Quick Update Buttons</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Tap a button for instant update with pre-filled message
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {quickUpdates.map((update) => (
                   <Button
                     key={update.type}
@@ -237,7 +242,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                 placeholder="Enter update message..."
                 rows={4}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 You can edit the pre-filled message or write your own
               </p>
             </div>
@@ -248,7 +253,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <Label>Attach Photo (Optional)</Label>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       Add a photo to make the update more personal
                     </p>
                   </div>
@@ -256,7 +261,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
                     variant={photoAttached ? "default" : "outline"}
                     onClick={handlePhotoAttach}
                   >
-                    <Camera className="h-4 w-4 mr-2" />
+                    <Camera className="mr-2 size-4" />
                     {photoAttached ? "Photo Added" : "Add Photo"}
                   </Button>
                 </div>
@@ -266,21 +271,19 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
             {/* Notification Preview */}
             <Card>
               <CardContent className="pt-6">
-                <Label className="text-base mb-3 block">
+                <Label className="mb-3 block text-base">
                   Push Notification Preview
                 </Label>
-                <div className="p-4 bg-muted rounded-lg space-y-2">
+                <div className="bg-muted space-y-2 rounded-lg p-4">
                   <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4" />
+                    <Bell className="size-4" />
                     <span className="font-semibold">{facilityName}</span>
                   </div>
                   <div className="text-sm">
-                    <strong>
-                      {selectedPet?.name} Update:
-                    </strong>{" "}
+                    <strong>{selectedPet?.name} Update:</strong>{" "}
                     {formData.message}
                   </div>
-                  <div className="text-xs text-muted-foreground">Just now</div>
+                  <div className="text-muted-foreground text-xs">Just now</div>
                 </div>
               </CardContent>
             </Card>
@@ -296,7 +299,7 @@ export function PetUpdateModal({ onClose }: PetUpdateModalProps) {
           onClick={handleSend}
           disabled={!formData.clientId || !formData.petId || !formData.message}
         >
-          <Bell className="h-4 w-4 mr-2" />
+          <Bell className="mr-2 size-4" />
           Send Update & Notify Owner
         </Button>
       </DialogFooter>

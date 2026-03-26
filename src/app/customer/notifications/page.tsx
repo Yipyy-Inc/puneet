@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CustomerNotifications, type Notification } from "@/components/customer/CustomerNotifications";
+import { type Notification } from "@/components/customer/CustomerNotifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle2, X } from "lucide-react";
@@ -65,7 +64,8 @@ const mockNotifications: Notification[] = [
     id: "6",
     type: "form_confirmed",
     title: "Form Submission Confirmed",
-    message: "Your New Client Intake Form has been reviewed and confirmed by the facility",
+    message:
+      "Your New Client Intake Form has been reviewed and confirmed by the facility",
     read: false,
     createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
     link: "/customer/documents",
@@ -75,7 +75,8 @@ const mockNotifications: Notification[] = [
     id: "7",
     type: "form_reminder",
     title: "Missing Required Form",
-    message: "Please complete the Vaccination Records form before your upcoming boarding on March 28",
+    message:
+      "Please complete the Vaccination Records form before your upcoming boarding on March 28",
     read: false,
     createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
     link: "/customer/documents",
@@ -85,7 +86,8 @@ const mockNotifications: Notification[] = [
     id: "8",
     type: "form_correction",
     title: "Form Needs Correction",
-    message: "Your Boarding Agreement form needs an update — please review the emergency contact section",
+    message:
+      "Your Boarding Agreement form needs an update — please review the emergency contact section",
     read: false,
     createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
     link: "/customer/documents",
@@ -107,7 +109,7 @@ const notificationIcons: Record<Notification["type"], string> = {
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) return "just now";
   if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60);
@@ -122,7 +124,8 @@ function formatTimeAgo(date: Date): string {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] =
+    useState<Notification[]>(mockNotifications);
   const [filter, setFilter] = useState<"all" | "unread" | "read">("all");
 
   const filteredNotifications = notifications.filter((n) => {
@@ -135,7 +138,7 @@ export default function NotificationsPage() {
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
   };
 
@@ -148,16 +151,19 @@ export default function NotificationsPage() {
   };
 
   // Group by category
-  const groupedNotifications = filteredNotifications.reduce((acc, notif) => {
-    if (!acc[notif.category]) {
-      acc[notif.category] = [];
-    }
-    acc[notif.category].push(notif);
-    return acc;
-  }, {} as Record<string, Notification[]>);
+  const groupedNotifications = filteredNotifications.reduce(
+    (acc, notif) => {
+      if (!acc[notif.category]) {
+        acc[notif.category] = [];
+      }
+      acc[notif.category].push(notif);
+      return acc;
+    },
+    {} as Record<string, Notification[]>,
+  );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Notifications</h1>
@@ -169,7 +175,7 @@ export default function NotificationsPage() {
         </div>
         {unreadCount > 0 && (
           <Button variant="outline" onClick={markAllAsRead}>
-            <CheckCircle2 className="mr-2 h-4 w-4" />
+            <CheckCircle2 className="mr-2 size-4" />
             Mark all as read
           </Button>
         )}
@@ -184,7 +190,7 @@ export default function NotificationsPage() {
           <TabsTrigger value="read">Read</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={filter} className="space-y-4 mt-4">
+        <TabsContent value={filter} className="mt-4 space-y-4">
           {filteredNotifications.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -192,93 +198,95 @@ export default function NotificationsPage() {
                   {filter === "unread"
                     ? "No unread notifications"
                     : filter === "read"
-                    ? "No read notifications"
-                    : "No notifications"}
+                      ? "No read notifications"
+                      : "No notifications"}
                 </p>
               </CardContent>
             </Card>
           ) : (
-            Object.entries(groupedNotifications).map(([category, categoryNotifications]) => (
-              <Card key={category}>
-                <CardHeader>
-                  <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                    {category}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {categoryNotifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`p-4 rounded-lg border transition-colors ${
-                        !notif.read ? "bg-muted/50 border-primary/20" : "bg-background"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl flex-shrink-0">
-                          {notificationIcons[notif.type]}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3
-                                  className={`text-sm font-medium ${
-                                    !notif.read ? "font-semibold" : ""
-                                  }`}
-                                >
-                                  {notif.title}
-                                </h3>
-                                {!notif.read && (
-                                  <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                                )}
+            Object.entries(groupedNotifications).map(
+              ([category, categoryNotifications]) => (
+                <Card key={category}>
+                  <CardHeader>
+                    <CardTitle className="text-muted-foreground text-sm font-semibold uppercase">
+                      {category}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {categoryNotifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`rounded-lg border p-4 transition-colors ${
+                          !notif.read
+                            ? "border-primary/20 bg-muted/50"
+                            : "bg-background"
+                        } `}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="shrink-0 text-2xl">
+                            {notificationIcons[notif.type]}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3
+                                    className={`text-sm font-medium ${!notif.read ? "font-semibold" : ""} `}
+                                  >
+                                    {notif.title}
+                                  </h3>
+                                  {!notif.read && (
+                                    <div className="bg-primary h-2 w-2 shrink-0 rounded-full" />
+                                  )}
+                                </div>
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                  {notif.message}
+                                </p>
+                                <p className="text-muted-foreground mt-2 text-xs">
+                                  {formatTimeAgo(new Date(notif.createdAt))}
+                                </p>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {notif.message}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                {formatTimeAgo(new Date(notif.createdAt))}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {!notif.read && (
+                              <div className="flex items-center gap-2">
+                                {!notif.read && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => markAsRead(notif.id)}
+                                    title="Mark as read"
+                                  >
+                                    <CheckCircle2 className="size-4" />
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => markAsRead(notif.id)}
-                                  title="Mark as read"
+                                  onClick={() => deleteNotification(notif.id)}
+                                  title="Delete"
                                 >
-                                  <CheckCircle2 className="h-4 w-4" />
+                                  <X className="size-4" />
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => deleteNotification(notif.id)}
-                                title="Delete"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+                              </div>
                             </div>
+                            {notif.link && (
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="mt-2 h-auto p-0 text-xs"
+                                asChild
+                              >
+                                <Link href={notif.link}>View details →</Link>
+                              </Button>
+                            )}
                           </div>
-                          {notif.link && (
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="mt-2 h-auto p-0 text-xs"
-                              asChild
-                            >
-                              <Link href={notif.link}>View details →</Link>
-                            </Button>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))
+                    ))}
+                  </CardContent>
+                </Card>
+              ),
+            )
           )}
         </TabsContent>
       </Tabs>

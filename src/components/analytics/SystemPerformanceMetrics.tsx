@@ -40,25 +40,25 @@ export function SystemPerformanceMetrics() {
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   System Uptime
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.systemUptime}%
                   </h3>
-                  <CheckCircle2 className="h-5 w-5 text-success" />
+                  <CheckCircle2 className="text-success h-5 w-5" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   This month
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -70,11 +70,11 @@ export function SystemPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Response Time
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -82,10 +82,10 @@ export function SystemPerformanceMetrics() {
                     {metrics.averageResponseTime}ms
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Average</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">Average</p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -97,27 +97,27 @@ export function SystemPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Error Rate
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {metrics.errorRate}%
                   </h3>
-                  <span className="inline-flex items-center text-xs font-medium text-success">
+                  <span className="text-success inline-flex items-center text-xs font-medium">
                     Low
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {metrics.failedRequests.toLocaleString()} errors
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -129,11 +129,11 @@ export function SystemPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Users
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -141,12 +141,12 @@ export function SystemPerformanceMetrics() {
                     {metrics.activeUsers.toLocaleString()}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {metrics.totalSessions.toLocaleString()} sessions
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -160,12 +160,12 @@ export function SystemPerformanceMetrics() {
       </div>
 
       {/* Uptime Monitoring Chart */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             System Uptime Monitoring
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Weekly uptime percentage tracking
           </p>
         </CardHeader>
@@ -204,7 +204,10 @@ export function SystemPerformanceMetrics() {
                     borderRadius: "12px",
                     boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                   }}
-                  formatter={(value: number | undefined) => [`${value || 0}%`, "Uptime"]}
+                  formatter={(value: number | undefined) => [
+                    `${value || 0}%`,
+                    "Uptime",
+                  ]}
                 />
                 <Area
                   type="monotone"
@@ -220,10 +223,10 @@ export function SystemPerformanceMetrics() {
             {metrics.uptimeTrend.map((week, index) => (
               <div
                 key={index}
-                className="text-center p-3 rounded-lg bg-muted/50"
+                className="bg-muted/50 rounded-lg p-3 text-center"
               >
-                <p className="text-xs text-muted-foreground">{week.date}</p>
-                <p className="text-xl font-bold text-success mt-1">
+                <p className="text-muted-foreground text-xs">{week.date}</p>
+                <p className="text-success mt-1 text-xl font-bold">
                   {week.uptime}%
                 </p>
               </div>
@@ -234,12 +237,12 @@ export function SystemPerformanceMetrics() {
 
       {/* Error Tracking */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Error Distribution
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Weekly error count tracking
             </p>
           </CardHeader>
@@ -284,12 +287,12 @@ export function SystemPerformanceMetrics() {
         </Card>
 
         {/* Request Statistics */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Request Statistics
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Total requests and success rate
             </p>
           </CardHeader>
@@ -297,15 +300,15 @@ export function SystemPerformanceMetrics() {
             <div className="space-y-6">
               {/* Total Requests */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-sm font-medium">Total Requests</span>
                   <span className="text-2xl font-bold">
                     {(metrics.totalRequests / 1000000).toFixed(2)}M
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-3">
+                <div className="bg-muted h-3 w-full rounded-full">
                   <div
-                    className="bg-primary rounded-full h-3"
+                    className="bg-primary h-3 rounded-full"
                     style={{ width: "100%" }}
                   />
                 </div>
@@ -313,23 +316,23 @@ export function SystemPerformanceMetrics() {
 
               {/* Successful Requests */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <CheckCircle2 className="text-success size-4" />
                     <span className="text-sm font-medium">Successful</span>
                   </div>
                   <div className="text-right">
                     <span className="text-xl font-bold">
                       {(metrics.successfulRequests / 1000000).toFixed(2)}M
                     </span>
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-muted-foreground ml-2 text-sm">
                       ({successRate}%)
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-3">
+                <div className="bg-muted h-3 w-full rounded-full">
                   <div
-                    className="bg-success rounded-full h-3"
+                    className="bg-success h-3 rounded-full"
                     style={{ width: `${successRate}%` }}
                   />
                 </div>
@@ -337,30 +340,30 @@ export function SystemPerformanceMetrics() {
 
               {/* Failed Requests */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <AlertCircle className="text-destructive size-4" />
                     <span className="text-sm font-medium">Failed</span>
                   </div>
                   <div className="text-right">
                     <span className="text-xl font-bold">
                       {metrics.failedRequests.toLocaleString()}
                     </span>
-                    <span className="text-sm text-muted-foreground ml-2">
+                    <span className="text-muted-foreground ml-2 text-sm">
                       ({failureRate}%)
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-muted rounded-full h-3">
+                <div className="bg-muted h-3 w-full rounded-full">
                   <div
-                    className="bg-destructive rounded-full h-3"
+                    className="bg-destructive h-3 rounded-full"
                     style={{ width: `${failureRate}%` }}
                   />
                 </div>
               </div>
 
               {/* Additional Stats */}
-              <div className="pt-4 mt-4 border-t border-border space-y-3">
+              <div className="border-border mt-4 space-y-3 border-t pt-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Success Rate</span>
                   <Badge variant="default" className="text-xs">
@@ -381,11 +384,11 @@ export function SystemPerformanceMetrics() {
 
       {/* Performance Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -394,18 +397,18 @@ export function SystemPerformanceMetrics() {
                 <Zap className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Page Load Time</p>
+                <p className="text-muted-foreground text-xs">Page Load Time</p>
                 <p className="text-2xl font-bold">{metrics.pageLoadTime}s</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -414,7 +417,7 @@ export function SystemPerformanceMetrics() {
                 <Activity className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">API Response</p>
+                <p className="text-muted-foreground text-xs">API Response</p>
                 <p className="text-2xl font-bold">
                   {metrics.apiResponseTime}ms
                 </p>
@@ -423,11 +426,11 @@ export function SystemPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -436,7 +439,7 @@ export function SystemPerformanceMetrics() {
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Avg Session</p>
+                <p className="text-muted-foreground text-xs">Avg Session</p>
                 <p className="text-2xl font-bold">
                   {metrics.averageSessionDuration}m
                 </p>
@@ -445,11 +448,11 @@ export function SystemPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -458,7 +461,7 @@ export function SystemPerformanceMetrics() {
                 <CheckCircle2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Sessions</p>
+                <p className="text-muted-foreground text-xs">Total Sessions</p>
                 <p className="text-2xl font-bold">
                   {(metrics.totalSessions / 1000).toFixed(1)}K
                 </p>
@@ -469,20 +472,20 @@ export function SystemPerformanceMetrics() {
       </div>
 
       {/* System Health Status */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             System Health Status
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Current status of all system components
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-              <div className="flex items-center gap-3 mb-3">
-                <CheckCircle2 className="h-5 w-5 text-success" />
+            <div className="border-success/20 bg-success/10 rounded-xl border p-4">
+              <div className="mb-3 flex items-center gap-3">
+                <CheckCircle2 className="text-success h-5 w-5" />
                 <h4 className="font-semibold">Operational</h4>
               </div>
               <ul className="space-y-2 text-sm">
@@ -513,9 +516,9 @@ export function SystemPerformanceMetrics() {
               </ul>
             </div>
 
-            <div className="p-4 rounded-xl bg-muted/50">
-              <div className="flex items-center gap-3 mb-3">
-                <Activity className="h-5 w-5 text-primary" />
+            <div className="bg-muted/50 rounded-xl p-4">
+              <div className="mb-3 flex items-center gap-3">
+                <Activity className="text-primary h-5 w-5" />
                 <h4 className="font-semibold">Performance Metrics</h4>
               </div>
               <ul className="space-y-2 text-sm">

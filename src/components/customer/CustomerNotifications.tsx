@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) return "just now";
   if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60);
@@ -32,7 +32,15 @@ import Link from "next/link";
 
 export interface Notification {
   id: string;
-  type: "reminder" | "receipt" | "report_card" | "vaccination" | "booking_update" | "form_confirmed" | "form_reminder" | "form_correction";
+  type:
+    | "reminder"
+    | "receipt"
+    | "report_card"
+    | "vaccination"
+    | "booking_update"
+    | "form_confirmed"
+    | "form_reminder"
+    | "form_correction";
   title: string;
   message: string;
   read: boolean;
@@ -107,14 +115,15 @@ const notificationIcons: Record<Notification["type"], string> = {
 };
 
 export function CustomerNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] =
+    useState<Notification[]>(mockNotifications);
   const [open, setOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
     );
   };
 
@@ -123,13 +132,16 @@ export function CustomerNotifications() {
   };
 
   // Group notifications by category
-  const groupedNotifications = notifications.reduce((acc, notif) => {
-    if (!acc[notif.category]) {
-      acc[notif.category] = [];
-    }
-    acc[notif.category].push(notif);
-    return acc;
-  }, {} as Record<string, Notification[]>);
+  const groupedNotifications = notifications.reduce(
+    (acc, notif) => {
+      if (!acc[notif.category]) {
+        acc[notif.category] = [];
+      }
+      acc[notif.category].push(notif);
+      return acc;
+    },
+    {} as Record<string, Notification[]>,
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -139,7 +151,7 @@ export function CustomerNotifications() {
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center p-0 text-xs"
             >
               {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
@@ -148,8 +160,8 @@ export function CustomerNotifications() {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold text-sm">Notifications</h3>
+        <div className="flex items-center justify-between border-b p-4">
+          <h3 className="text-sm font-semibold">Notifications</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -163,88 +175,84 @@ export function CustomerNotifications() {
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
+            <div className="text-muted-foreground p-4 text-center text-sm">
               No notifications
             </div>
           ) : (
             <div className="p-2">
-              {Object.entries(groupedNotifications).map(([category, categoryNotifications]) => (
-                <div key={category} className="mb-4">
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
-                    {category}
-                  </div>
-                  {categoryNotifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`p-3 rounded-lg hover:bg-muted cursor-pointer transition-colors ${
-                        !notif.read ? "bg-muted/50" : ""
-                      }`}
-                      onClick={() => {
-                        markAsRead(notif.id);
-                        if (notif.link) {
-                          setOpen(false);
-                        }
-                      }}
-                    >
-                      {notif.link ? (
-                        <Link href={notif.link} className="block">
+              {Object.entries(groupedNotifications).map(
+                ([category, categoryNotifications]) => (
+                  <div key={category} className="mb-4">
+                    <div className="text-muted-foreground px-2 py-1 text-xs font-semibold uppercase">
+                      {category}
+                    </div>
+                    {categoryNotifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`hover:bg-muted cursor-pointer rounded-lg p-3 transition-colors ${!notif.read ? "bg-muted/50" : ""} `}
+                        onClick={() => {
+                          markAsRead(notif.id);
+                          if (notif.link) {
+                            setOpen(false);
+                          }
+                        }}
+                      >
+                        {notif.link ? (
+                          <Link href={notif.link} className="block">
+                            <div className="flex items-start gap-3">
+                              <span className="text-lg">
+                                {notificationIcons[notif.type]}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p
+                                    className={`text-sm font-medium ${!notif.read ? "font-semibold" : ""} `}
+                                  >
+                                    {notif.title}
+                                  </p>
+                                  {!notif.read && (
+                                    <div className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full" />
+                                  )}
+                                </div>
+                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                                  {notif.message}
+                                </p>
+                                <p className="text-muted-foreground mt-1 text-xs">
+                                  {formatTimeAgo(new Date(notif.createdAt))}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        ) : (
                           <div className="flex items-start gap-3">
                             <span className="text-lg">
                               {notificationIcons[notif.type]}
                             </span>
-                            <div className="flex-1 min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-start justify-between gap-2">
                                 <p
-                                  className={`text-sm font-medium ${
-                                    !notif.read ? "font-semibold" : ""
-                                  }`}
+                                  className={`text-sm font-medium ${!notif.read ? "font-semibold" : ""} `}
                                 >
                                   {notif.title}
                                 </p>
                                 {!notif.read && (
-                                  <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+                                  <div className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full" />
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                                 {notif.message}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-muted-foreground mt-1 text-xs">
                                 {formatTimeAgo(new Date(notif.createdAt))}
                               </p>
                             </div>
                           </div>
-                        </Link>
-                      ) : (
-                        <div className="flex items-start gap-3">
-                          <span className="text-lg">
-                            {notificationIcons[notif.type]}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <p
-                                className={`text-sm font-medium ${
-                                  !notif.read ? "font-semibold" : ""
-                                }`}
-                              >
-                                {notif.title}
-                              </p>
-                              {!notif.read && (
-                                <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                              {notif.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatTimeAgo(new Date(notif.createdAt))}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ))}
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
             </div>
           )}
         </ScrollArea>
@@ -257,7 +265,9 @@ export function CustomerNotifications() {
                 className="w-full justify-center text-xs"
                 asChild
               >
-                <Link href="/customer/notifications">View all notifications</Link>
+                <Link href="/customer/notifications">
+                  View all notifications
+                </Link>
               </Button>
             </div>
           </>

@@ -12,7 +12,11 @@ interface CheckInQRCodeProps {
   className?: string;
 }
 
-export function CheckInQRCode({ token, size = 256, className }: CheckInQRCodeProps) {
+export function CheckInQRCode({
+  token,
+  size = 256,
+  className,
+}: CheckInQRCodeProps) {
   const url = useMemo(() => buildCheckInUrl(token), [token]);
   return (
     <div className={className}>

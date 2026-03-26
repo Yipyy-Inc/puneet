@@ -40,7 +40,8 @@ export function getPetStayRecords(filters?: {
   if (filters?.status != null)
     list = list.filter((r) => r.status === filters.status);
   return list.sort(
-    (a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
+    (a, b) =>
+      new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime(),
   );
 }
 
@@ -90,7 +91,8 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
 
   // 1. Create/update pet stay record (calendar + lodging/kennel view)
   const existingStay = petStayRecords.find(
-    (r) => r.bookingId === bookingId && r.petId === petId && r.status === "active"
+    (r) =>
+      r.bookingId === bookingId && r.petId === petId && r.status === "active",
   );
   const stayRecord: PetStayRecord = existingStay ?? {
     id: `stay-${bookingId}-${petId}-${Date.now()}`,
@@ -125,7 +127,9 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
         const task: StaffTask = {
           id: nextTaskId(),
           templateId: occ.time <= "12:00" ? 1 : 2,
-          templateName: occ.label || (occ.time <= "12:00" ? "Morning Feeding" : "Evening Feeding"),
+          templateName:
+            occ.label ||
+            (occ.time <= "12:00" ? "Morning Feeding" : "Evening Feeding"),
           category: taskCategory,
           description: `Feed ${petName} – ${occ.label}: ${componentsSummary || "see details"}`,
           assignedTo: assignToStaffId ?? 0,
@@ -149,7 +153,8 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
         const task: StaffTask = {
           id: nextTaskId(),
           templateId: slot.time <= "12:00" ? 1 : 2,
-          templateName: slot.time <= "12:00" ? "Morning Feeding" : "Evening Feeding",
+          templateName:
+            slot.time <= "12:00" ? "Morning Feeding" : "Evening Feeding",
           category: taskCategory,
           description: `Feed ${petName} – ${fi.foodType} ${slot.amount}`,
           assignedTo: assignToStaffId ?? 0,
@@ -206,9 +211,13 @@ export function runPostCheckInAutomation(params: PostCheckInParams): {
       const playTask: StaffTask = {
         id: nextTaskId(),
         templateId: serviceType === "boarding" ? 8 : 7,
-        templateName: serviceType === "boarding" ? "Individual Walk" : "Group Play Session",
+        templateName:
+          serviceType === "boarding" ? "Individual Walk" : "Group Play Session",
         category: taskCategory,
-        description: serviceType === "boarding" ? `${petName} – walk` : `Play session – ${petName}`,
+        description:
+          serviceType === "boarding"
+            ? `${petName} – walk`
+            : `Play session – ${petName}`,
         assignedTo: assignToStaffId ?? 0,
         assignedToName: assignToStaffName ?? "Unassigned",
         petId,

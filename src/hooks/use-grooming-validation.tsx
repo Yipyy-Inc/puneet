@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   type GroomingFacilityConfig,
   type GroomingPreBookingValidation,
@@ -12,23 +13,19 @@ import { useSettings } from "@/hooks/use-settings";
 
 /**
  * Hook for grooming pre-booking validation
- * 
+ *
  * This hook performs Phase 1 validation (invisible to customer):
  * - Checks facility configuration
  * - Validates lead times
  * - Determines available service categories
  * - Calculates deposit requirements
  * - Determines groomer selection options
- * 
+ *
  * All validation happens BEFORE the customer sees any booking options.
  */
 export function useGroomingValidation(requestedDate?: Date) {
   const { grooming } = useSettings();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useHydrated();
 
   // Get grooming config from settings
   // TODO: In production, this would come from the facility's actual settings
@@ -47,9 +44,12 @@ export function useGroomingValidation(requestedDate?: Date) {
         // Facility can override lead time (would come from facility settings in production)
         // For now, use defaults
         leadTime: {
-          minimumHours: defaultGroomingConfig.bookingRules.leadTime.minimumHours,
-          allowSameDay: defaultGroomingConfig.bookingRules.leadTime.allowSameDay,
-          allowTomorrow: defaultGroomingConfig.bookingRules.leadTime.allowTomorrow,
+          minimumHours:
+            defaultGroomingConfig.bookingRules.leadTime.minimumHours,
+          allowSameDay:
+            defaultGroomingConfig.bookingRules.leadTime.allowSameDay,
+          allowTomorrow:
+            defaultGroomingConfig.bookingRules.leadTime.allowTomorrow,
         },
         // Facility can override deposit settings (would come from facility settings in production)
         deposit: {
@@ -57,7 +57,7 @@ export function useGroomingValidation(requestedDate?: Date) {
         },
       },
     };
-  }, [grooming, requestedDate]);
+  }, [grooming]);
 
   // Perform pre-booking validation (only on client to avoid hydration issues)
   const validation: GroomingPreBookingValidation = useMemo(() => {

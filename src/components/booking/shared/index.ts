@@ -24,15 +24,10 @@ export { MedicationForm } from "./MedicationForm";
 export type { PetOption as MedicationPetOption } from "./MedicationForm";
 
 export { RequirementsGateStep } from "./RequirementsGateStep";
-export type {
-  MissingRequirement,
-} from "./RequirementsGateStep";
+export type { MissingRequirement } from "./RequirementsGateStep";
 
 export { TipStep } from "./TipStep";
-export type {
-  TipSuggestion,
-  TipStepConfig,
-} from "./TipStep";
+export type { TipSuggestion, TipStepConfig } from "./TipStep";
 
 /** TimeRangeSlider is in UI; re-export for convenience so both flows can import from shared. */
 export {

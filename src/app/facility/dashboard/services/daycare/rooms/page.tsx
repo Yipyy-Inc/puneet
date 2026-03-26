@@ -117,7 +117,7 @@ export default function DaycareRoomsPage() {
           </p>
         </div>
         <Button onClick={() => openDialog()}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-2 size-4" />
           Add Room
         </Button>
       </div>
@@ -127,7 +127,7 @@ export default function DaycareRoomsPage() {
           <Card key={room.id}>
             <CardContent className="p-0">
               {room.imageUrl && (
-                <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
+                <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
                   <Image
                     src={room.imageUrl}
                     alt={room.name}
@@ -137,18 +137,18 @@ export default function DaycareRoomsPage() {
                 </div>
               )}
               <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2">{room.name}</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <h3 className="mb-2 text-lg font-semibold">{room.name}</h3>
+                <p className="text-muted-foreground mb-4 text-sm">
                   {room.description}
                 </p>
-                <div className="space-y-2 mb-4">
+                <div className="mb-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Capacity:</span>
                     <span className="font-medium">{room.capacity} pets</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Base Price:</span>
-                    <span className="font-semibold text-lg">
+                    <span className="text-lg font-semibold">
                       ${room.basePrice}
                     </span>
                   </div>
@@ -159,14 +159,14 @@ export default function DaycareRoomsPage() {
                     className="flex-1"
                     onClick={() => openDialog(room)}
                   >
-                    <Edit2 className="mr-2 h-4 w-4" />
+                    <Edit2 className="mr-2 size-4" />
                     Edit
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={() => deleteRoom(room.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -182,7 +182,7 @@ export default function DaycareRoomsPage() {
               No rooms configured yet
             </p>
             <Button onClick={() => openDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 size-4" />
               Add Your First Room
             </Button>
           </CardContent>
@@ -252,7 +252,7 @@ export default function DaycareRoomsPage() {
             <div className="space-y-2">
               <Label>Room Image</Label>
               {roomForm.imageUrl && (
-                <div className="relative w-full h-32 rounded-lg overflow-hidden mb-2 border">
+                <div className="relative mb-2 h-32 w-full overflow-hidden rounded-lg border">
                   <Image
                     src={roomForm.imageUrl}
                     alt="Preview"
@@ -276,7 +276,7 @@ export default function DaycareRoomsPage() {
                     document.getElementById("roomImageUpload")?.click()
                   }
                 >
-                  <ImageIcon className="h-4 w-4" />
+                  <ImageIcon className="size-4" />
                 </Button>
                 <input
                   id="roomImageUpload"

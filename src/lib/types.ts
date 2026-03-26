@@ -66,12 +66,36 @@ export interface Client {
 // FEEDING TYPES — Modular Meal Builder
 // ========================================
 
-export type FoodComponentType = "kibble" | "wet_food" | "raw" | "supplement" | "toppers" | "prescription" | "other";
+export type FoodComponentType =
+  | "kibble"
+  | "wet_food"
+  | "raw"
+  | "supplement"
+  | "toppers"
+  | "prescription"
+  | "other";
 export type FoodUnit = "cups" | "tbsp" | "grams" | "oz" | "scoop" | "other";
 export type FoodSource = "parent_brings" | "facility_provides" | "mix";
-export type PrepInstruction = "soak" | "microwave" | "mix_powder" | "serve_separately" | "warm_water" | "other";
-export type RefusalAction = "plain_kibble" | "warm_water" | "skip_notify" | "call_parent" | "try_again_1hr" | "add_toppers";
-export type FeedingFrequency = "daily" | "specific_days" | "every_other_day" | "custom_dates" | "day_before_checkout";
+export type PrepInstruction =
+  | "soak"
+  | "microwave"
+  | "mix_powder"
+  | "serve_separately"
+  | "warm_water"
+  | "other";
+export type RefusalAction =
+  | "plain_kibble"
+  | "warm_water"
+  | "skip_notify"
+  | "call_parent"
+  | "try_again_1hr"
+  | "add_toppers";
+export type FeedingFrequency =
+  | "daily"
+  | "specific_days"
+  | "every_other_day"
+  | "custom_dates"
+  | "day_before_checkout";
 
 export interface MealComponent {
   id: string;
@@ -108,10 +132,36 @@ export interface FeedingScheduleItem {
 // MEDICATION TYPES — Per-Med Card Builder
 // ========================================
 
-export type MedForm = "pill" | "liquid" | "topical" | "injection" | "powder" | "ear_drops" | "eye_drops";
-export type MedFrequency = "once_daily" | "twice_daily" | "every_8hrs" | "every_other_day" | "specific_days" | "prn" | "other";
-export type MedAdminInstruction = "with_food" | "empty_stomach" | "hide_in_treat" | "crush_and_mix" | "give_whole" | "after_cleaning" | "refrigerate" | "other";
-export type MissedDoseAction = "skip_continue" | "give_when_remembered" | "call_parent" | "do_not_double";
+export type MedForm =
+  | "pill"
+  | "liquid"
+  | "topical"
+  | "injection"
+  | "powder"
+  | "ear_drops"
+  | "eye_drops";
+export type MedFrequency =
+  | "once_daily"
+  | "twice_daily"
+  | "every_8hrs"
+  | "every_other_day"
+  | "specific_days"
+  | "prn"
+  | "other";
+export type MedAdminInstruction =
+  | "with_food"
+  | "empty_stomach"
+  | "hide_in_treat"
+  | "crush_and_mix"
+  | "give_whole"
+  | "after_cleaning"
+  | "refrigerate"
+  | "other";
+export type MissedDoseAction =
+  | "skip_continue"
+  | "give_when_remembered"
+  | "call_parent"
+  | "do_not_double";
 
 export interface MedicationItem {
   id: string;
@@ -173,7 +223,13 @@ export interface NewBooking {
   endDate: string;
   checkInTime?: string;
   checkOutTime?: string;
-  status: "pending" | "request_submitted" | "waitlisted" | "confirmed" | "completed" | "cancelled";
+  status:
+    | "pending"
+    | "request_submitted"
+    | "waitlisted"
+    | "confirmed"
+    | "completed"
+    | "cancelled";
   basePrice: number;
   discount: number;
   discountReason?: string;
@@ -479,7 +535,12 @@ export interface ReportCardAutoSendConfig {
   };
 }
 
-export type ReportCardServiceId = "daycare" | "boarding" | "grooming" | "training" | (string & {});
+export type ReportCardServiceId =
+  | "daycare"
+  | "boarding"
+  | "grooming"
+  | "training"
+  | (string & {});
 
 export type ReportCardSectionId =
   | "todaysVibe"

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import {
   daycareConfig,
   boardingConfig,
@@ -73,110 +73,93 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
+function loadStored<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  const stored = localStorage.getItem(key);
+  if (!stored) return fallback;
+  try {
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(fallback)) {
+      return Array.isArray(parsed) ? (parsed as unknown as T) : fallback;
+    }
+    if (parsed && typeof parsed === "object") {
+      return { ...fallback, ...parsed };
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
+function normalizeEvaluation(
+  next: EvaluationConfig,
+  fallback: EvaluationConfig,
+): EvaluationConfig {
+  if (next.schedule) return next;
+  return { ...next, schedule: fallback.schedule };
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [daycare, setDaycare] = useState<ModuleConfig>(daycareConfig);
-  const [boarding, setBoarding] = useState<ModuleConfig>(boardingConfig);
-  const [grooming, setGrooming] = useState<ModuleConfig>(groomingConfig);
-  const [training, setTraining] = useState<ModuleConfig>(trainingConfig);
-  const [evaluation, setEvaluation] = useState<EvaluationConfig>(evaluationConfig);
-  const [hours, setHours] = useState<BusinessHours>(businessHours);
-  const [profile, setProfile] = useState<BusinessProfile>(businessProfile);
-  const [rules, setRules] = useState<BookingRules>(bookingRules);
-  const [bookingFlow, setBookingFlow] =
-    useState<FacilityBookingFlowConfig>(facilityBookingFlowConfig);
-  const [reportCards, setReportCards] =
-    useState<ReportCardConfig>(reportCardConfig);
+  const [daycare, setDaycare] = useState<ModuleConfig>(() =>
+    loadStored("settings-daycare", daycareConfig),
+  );
+  const [boarding, setBoarding] = useState<ModuleConfig>(() =>
+    loadStored("settings-boarding", boardingConfig),
+  );
+  const [grooming, setGrooming] = useState<ModuleConfig>(() =>
+    loadStored("settings-grooming", groomingConfig),
+  );
+  const [training, setTraining] = useState<ModuleConfig>(() =>
+    loadStored("settings-training", trainingConfig),
+  );
+  const [evaluation, setEvaluation] = useState<EvaluationConfig>(() =>
+    normalizeEvaluation(
+      loadStored("settings-evaluation", evaluationConfig),
+      evaluationConfig,
+    ),
+  );
+  const [hours, setHours] = useState<BusinessHours>(() =>
+    loadStored("settings-hours", businessHours),
+  );
+  const [profile, setProfile] = useState<BusinessProfile>(() =>
+    loadStored("settings-profile", businessProfile),
+  );
+  const [rules, setRules] = useState<BookingRules>(() =>
+    loadStored("settings-rules", bookingRules),
+  );
+  const [bookingFlow, setBookingFlow] = useState<FacilityBookingFlowConfig>(
+    () => loadStored("settings-booking-flow", facilityBookingFlowConfig),
+  );
+  const [reportCards, setReportCards] = useState<ReportCardConfig>(() =>
+    loadStored("settings-report-cards", reportCardConfig),
+  );
   const [serviceDateBlocksState, setServiceDateBlocksState] = useState<
     ServiceDateBlock[]
-  >(defaultServiceDateBlocks);
+  >(() => loadStored("settings-service-date-blocks", defaultServiceDateBlocks));
   const [scheduleTimeOverridesState, setScheduleTimeOverridesState] = useState<
     ScheduleTimeOverride[]
-  >(defaultScheduleTimeOverrides);
-  const [dropOffPickUpOverridesState, setDropOffPickUpOverridesState] =
-    useState<DropOffPickUpOverride[]>(defaultDropOffPickUpOverrides);
-  const [notifications, setNotifications] =
-    useState<NotificationToggle[]>(notificationToggles);
-  const [integrationsData, setIntegrationsData] =
-    useState<Integration[]>(integrations);
-  const [addons, setAddons] = useState<ModuleAddon[]>(moduleAddons);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const loadStored = <T,>(key: string, fallback: T): T | null => {
-      const stored = localStorage.getItem(key);
-      if (!stored) return null;
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(fallback)) {
-          return Array.isArray(parsed) ? (parsed as unknown as T) : null;
-        }
-        if (parsed && typeof parsed === "object") {
-          return { ...fallback, ...parsed };
-        }
-      } catch {
-        return null;
-      }
-      return null;
-    };
-
-    const normalizeEvaluation = (
-      next: EvaluationConfig,
-      fallback: EvaluationConfig,
-    ): EvaluationConfig => {
-      if (next.schedule) return next;
-      return { ...next, schedule: fallback.schedule };
-    };
-
-    const nextDaycare = loadStored("settings-daycare", daycareConfig);
-    if (nextDaycare) setDaycare(nextDaycare);
-    const nextBoarding = loadStored("settings-boarding", boardingConfig);
-    if (nextBoarding) setBoarding(nextBoarding);
-    const nextGrooming = loadStored("settings-grooming", groomingConfig);
-    if (nextGrooming) setGrooming(nextGrooming);
-    const nextTraining = loadStored("settings-training", trainingConfig);
-    if (nextTraining) setTraining(nextTraining);
-    const nextEvaluation = loadStored("settings-evaluation", evaluationConfig);
-    if (nextEvaluation)
-      setEvaluation(normalizeEvaluation(nextEvaluation, evaluationConfig));
-    const nextHours = loadStored("settings-hours", businessHours);
-    if (nextHours) setHours(nextHours);
-    const nextProfile = loadStored("settings-profile", businessProfile);
-    if (nextProfile) setProfile(nextProfile);
-    const nextRules = loadStored("settings-rules", bookingRules);
-    if (nextRules) setRules(nextRules);
-    const nextBookingFlow = loadStored(
-      "settings-booking-flow",
-      facilityBookingFlowConfig,
-    );
-    if (nextBookingFlow) setBookingFlow(nextBookingFlow);
-    const nextReportCards = loadStored("settings-report-cards", reportCardConfig);
-    if (nextReportCards) setReportCards(nextReportCards);
-    const nextBlocks = loadStored(
-      "settings-service-date-blocks",
-      defaultServiceDateBlocks,
-    );
-    if (nextBlocks) setServiceDateBlocksState(nextBlocks);
-    const nextOverrides = loadStored(
+  >(() =>
+    loadStored(
       "settings-schedule-time-overrides",
       defaultScheduleTimeOverrides,
+    ),
+  );
+  const [dropOffPickUpOverridesState, setDropOffPickUpOverridesState] =
+    useState<DropOffPickUpOverride[]>(() =>
+      loadStored(
+        "settings-drop-off-pick-up-overrides",
+        defaultDropOffPickUpOverrides,
+      ),
     );
-    if (nextOverrides) setScheduleTimeOverridesState(nextOverrides);
-    const nextDropOffPickUp = loadStored(
-      "settings-drop-off-pick-up-overrides",
-      defaultDropOffPickUpOverrides,
-    );
-    if (nextDropOffPickUp) setDropOffPickUpOverridesState(nextDropOffPickUp);
-    const nextNotifications = loadStored(
-      "settings-notifications",
-      notificationToggles,
-    );
-    if (nextNotifications) setNotifications(nextNotifications);
-    const nextIntegrations = loadStored("settings-integrations", integrations);
-    if (nextIntegrations) setIntegrationsData(nextIntegrations);
-    const nextAddons = loadStored("settings-addons", moduleAddons);
-    if (nextAddons) setAddons(nextAddons);
-  }, []);
+  const [notifications, setNotifications] = useState<NotificationToggle[]>(() =>
+    loadStored("settings-notifications", notificationToggles),
+  );
+  const [integrationsData, setIntegrationsData] = useState<Integration[]>(() =>
+    loadStored("settings-integrations", integrations),
+  );
+  const [addons, setAddons] = useState<ModuleAddon[]>(() =>
+    loadStored("settings-addons", moduleAddons),
+  );
 
   const updateDaycare = (config: ModuleConfig) => {
     setDaycare(config);

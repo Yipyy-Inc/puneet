@@ -105,7 +105,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
               setFormData({ ...formData, priority: parseInt(e.target.value) })
             }
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Lower numbers = higher priority. Rules are evaluated in priority
             order.
           </p>
@@ -113,9 +113,9 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
 
         {/* Conditions */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <Label className="text-base">Conditions</Label>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               When should this rule apply? Leave empty to match all.
             </p>
 
@@ -150,7 +150,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
                 <div className="space-y-2">
                   <Label
                     htmlFor="timeStart"
-                    className="text-xs text-muted-foreground"
+                    className="text-muted-foreground text-xs"
                   >
                     Start Time
                   </Label>
@@ -166,7 +166,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
                 <div className="space-y-2">
                   <Label
                     htmlFor="timeEnd"
-                    className="text-xs text-muted-foreground"
+                    className="text-muted-foreground text-xs"
                   >
                     End Time
                   </Label>
@@ -284,7 +284,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
           />
           <label
             htmlFor="enabled"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
             Enable this routing rule
           </label>
@@ -293,11 +293,11 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
         {/* Preview */}
         <Card>
           <CardContent className="pt-6">
-            <Label className="text-base mb-3 block">Rule Preview</Label>
-            <div className="p-4 bg-muted rounded-lg space-y-2 text-sm">
+            <Label className="mb-3 block text-base">Rule Preview</Label>
+            <div className="bg-muted space-y-2 rounded-lg p-4 text-sm">
               <div>
                 <strong>If:</strong>
-                <ul className="ml-4 mt-1 space-y-1">
+                <ul className="mt-1 ml-4 space-y-1">
                   {formData.callerType && (
                     <li>
                       • Caller is:{" "}
@@ -328,7 +328,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
               </div>
               <div>
                 <strong>Then:</strong>
-                <div className="ml-4 mt-1">
+                <div className="mt-1 ml-4">
                   •{" "}
                   {formData.action.replace(/_/g, " ").charAt(0).toUpperCase() +
                     formData.action.replace(/_/g, " ").slice(1)}
@@ -345,7 +345,7 @@ export function RoutingRuleModal({ onClose }: RoutingRuleModalProps) {
           Cancel
         </Button>
         <Button onClick={handleSave} disabled={!formData.name}>
-          <PhoneForwarded className="h-4 w-4 mr-2" />
+          <PhoneForwarded className="mr-2 size-4" />
           Create Rule
         </Button>
       </DialogFooter>

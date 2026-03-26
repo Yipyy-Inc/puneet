@@ -1,17 +1,11 @@
 /**
  * Stylist Assignment Validation
- * 
+ *
  * Handles conflict detection, capacity limits, and skill-based filtering
  * for grooming appointment assignments.
  */
 
-import type {
-  GroomingAppointment,
-  Stylist,
-  StylistCapacity,
-  PetSize,
-  GroomingStatus,
-} from "@/data/grooming";
+import type { GroomingAppointment, Stylist, PetSize } from "@/data/grooming";
 
 export interface StylistConflict {
   hasConflict: boolean;
@@ -99,9 +93,7 @@ export function checkStylistConflicts(
       continue;
     }
 
-    if (
-      timeRangesOverlap(startTime, endTime, apt.startTime, apt.endTime)
-    ) {
+    if (timeRangesOverlap(startTime, endTime, apt.startTime, apt.endTime)) {
       conflicts.push({
         type: "overlap",
         message: `Time conflict with ${apt.petName} (${apt.startTime} - ${apt.endTime})`,
@@ -143,9 +135,10 @@ export function checkStylistDailyCapacity(
   );
 
   // Use global max if provided and it's lower than stylist's capacity
-  const effectiveMax = globalMaxPerDay && globalMaxPerDay > 0
-    ? Math.min(maxDailyAppointments, globalMaxPerDay)
-    : maxDailyAppointments;
+  const effectiveMax =
+    globalMaxPerDay && globalMaxPerDay > 0
+      ? Math.min(maxDailyAppointments, globalMaxPerDay)
+      : maxDailyAppointments;
 
   const currentCount = dayAppointments.length;
   const remaining = Math.max(0, effectiveMax - currentCount);
@@ -368,7 +361,13 @@ export function getSuitableStylists(
   return stylists
     .filter((stylist) => stylist.status === "active")
     .filter((stylist) =>
-      canStylistHandlePet(stylist, petSize, coatCondition, isAnxious, isAggressive),
+      canStylistHandlePet(
+        stylist,
+        petSize,
+        coatCondition,
+        isAnxious,
+        isAggressive,
+      ),
     )
     .sort((a, b) => {
       // Sort by skill level

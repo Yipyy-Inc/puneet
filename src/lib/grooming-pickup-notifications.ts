@@ -10,7 +10,7 @@ interface GroomingSettings {
  */
 export async function sendPickupNotifications(
   appointment: GroomingAppointment,
-  settings: GroomingSettings
+  settings: GroomingSettings,
 ): Promise<{ smsSent: boolean; emailSent: boolean }> {
   const results = { smsSent: false, emailSent: false };
 
@@ -36,7 +36,7 @@ export async function sendPickupNotifications(
   if (settings.autoReadyForPickupSMS && ownerPhone) {
     try {
       const smsMessage = `Hi ${ownerName}! ${petName}'s ${packageName} is complete and ready for pickup. Please come by to collect your pet. Thank you!`;
-      
+
       // TODO: Replace with actual SMS API call (e.g., Twilio)
       await sendSMS(ownerPhone, smsMessage);
       results.smsSent = true;
@@ -90,7 +90,7 @@ async function sendSMS(phoneNumber: string, message: string): Promise<void> {
   //   from: process.env.TWILIO_PHONE_NUMBER,
   //   body: message,
   // });
-  
+
   // For now, just log the SMS
   console.log(`[SMS] To: ${phoneNumber}, Message: ${message}`);
   await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate API call
@@ -102,7 +102,7 @@ async function sendSMS(phoneNumber: string, message: string): Promise<void> {
 async function sendEmail(
   to: string,
   subject: string,
-  body: string
+  body: string,
 ): Promise<void> {
   // TODO: Integrate with Email provider (e.g., SendGrid, AWS SES, Nodemailer)
   // Example:
@@ -112,7 +112,7 @@ async function sendEmail(
   //   subject,
   //   text: body,
   // });
-  
+
   // For now, just log the email
   console.log(`[Email] To: ${to}, Subject: ${subject}, Body: ${body}`);
   await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate API call

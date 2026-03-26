@@ -9,14 +9,16 @@ import { Calendar, ClipboardList, ShieldAlert, CreditCard } from "lucide-react";
 
 function statusBadge(status: BoardingBookingRequest["status"]) {
   if (status === "new") return <Badge variant="warning">New</Badge>;
-  if (status === "in-review") return <Badge variant="secondary">In review</Badge>;
+  if (status === "in-review")
+    return <Badge variant="secondary">In review</Badge>;
   if (status === "accepted") return <Badge variant="success">Accepted</Badge>;
   return <Badge variant="destructive">Declined</Badge>;
 }
 
 function preCheckBadge(status: BoardingBookingRequest["preCheck"]["status"]) {
   if (status === "approved") return <Badge variant="success">Approved</Badge>;
-  if (status === "submitted") return <Badge variant="secondary">Submitted</Badge>;
+  if (status === "submitted")
+    return <Badge variant="secondary">Submitted</Badge>;
   if (status === "corrections-requested")
     return <Badge variant="destructive">Corrections</Badge>;
   return <Badge variant="warning">Missing</Badge>;
@@ -50,7 +52,7 @@ export function BoardingOpsRequestsTable({
         render: (r) => (
           <div className="space-y-1">
             <div className="font-medium">{r.id}</div>
-            <div className="text-xs text-muted-foreground">{r.clientName}</div>
+            <div className="text-muted-foreground text-xs">{r.clientName}</div>
           </div>
         ),
       },
@@ -69,7 +71,9 @@ export function BoardingOpsRequestsTable({
         render: (r) => (
           <div className="text-sm">
             <div>{r.checkInDate}</div>
-            <div className="text-xs text-muted-foreground">→ {r.checkOutDate}</div>
+            <div className="text-muted-foreground text-xs">
+              → {r.checkOutDate}
+            </div>
           </div>
         ),
         sortValue: (r) => r.checkInDate,
@@ -81,7 +85,7 @@ export function BoardingOpsRequestsTable({
         render: (r) => (
           <div className="space-y-1">
             <div className="text-sm font-medium">{r.pets.length} pet(s)</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {r.pets.map((p) => p.petName).join(", ")}
             </div>
           </div>
@@ -180,4 +184,3 @@ export function BoardingOpsRequestsTable({
     />
   );
 }
-

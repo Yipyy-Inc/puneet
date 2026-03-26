@@ -212,9 +212,7 @@ export function resolveVariable(
         ? `https://portal.yipyy.com/bookings/BK-${booking.id}`
         : null;
     case "yipyygo_link":
-      return booking?.id
-        ? `https://go.yipyy.com/form/${booking.id}`
-        : null;
+      return booking?.id ? `https://go.yipyy.com/form/${booking.id}` : null;
     case "invoice_link":
       return payment?.invoiceId
         ? `https://portal.yipyy.com/invoices/${payment.invoiceId}`

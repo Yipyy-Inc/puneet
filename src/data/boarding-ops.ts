@@ -31,7 +31,11 @@ export type YipyyGoPreCheckStatus =
 
 export type PaymentStatus = "unpaid" | "deposit" | "partial" | "paid";
 
-export type BookingRequestStatus = "new" | "in-review" | "accepted" | "declined";
+export type BookingRequestStatus =
+  | "new"
+  | "in-review"
+  | "accepted"
+  | "declined";
 
 export interface PreCheckAuditEvent {
   id: string;
@@ -213,10 +217,22 @@ export const BOARDING_BOOKING_REQUESTS: BoardingBookingRequest[] = [
     ],
     addOnsByPetId: {
       1: [
-        { id: "ao-play", name: "Extra Playtime", unit: "day", unitPrice: 15, quantity: 2 },
+        {
+          id: "ao-play",
+          name: "Extra Playtime",
+          unit: "day",
+          unitPrice: 15,
+          quantity: 2,
+        },
       ],
       3: [
-        { id: "ao-groom", name: "Grooming", unit: "flat", unitPrice: 45, quantity: 1 },
+        {
+          id: "ao-groom",
+          name: "Grooming",
+          unit: "flat",
+          unitPrice: 45,
+          quantity: 1,
+        },
       ],
     },
     paymentStatus: "deposit",
@@ -264,7 +280,15 @@ export const BOARDING_BOOKING_REQUESTS: BoardingBookingRequest[] = [
       },
     ],
     addOnsByPetId: {
-      13: [{ id: "ao-photo", name: "Daily Photo Update", unit: "day", unitPrice: 5, quantity: 3 }],
+      13: [
+        {
+          id: "ao-photo",
+          name: "Daily Photo Update",
+          unit: "day",
+          unitPrice: 5,
+          quantity: 3,
+        },
+      ],
     },
     paymentStatus: "unpaid",
     tipAmount: 0,
@@ -291,4 +315,3 @@ export const BOARDING_BOOKING_REQUESTS: BoardingBookingRequest[] = [
     },
   },
 ];
-

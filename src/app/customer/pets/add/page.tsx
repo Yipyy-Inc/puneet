@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,17 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ArrowLeft,
-  Save,
-  Loader2,
-  Dog,
-  Cat,
-  Upload,
-  Image as ImageIcon,
-} from "lucide-react";
+import { ArrowLeft, Save, Loader2, Dog, Cat, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
 import { FormWizard } from "@/components/forms/FormWizard";
 
 interface PetFormData {
@@ -116,8 +114,8 @@ export default function AddPetPage() {
         toast.success("Pet added successfully!");
         router.push("/customer/pets");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add pet");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to add pet");
     } finally {
       setIsSaving(false);
     }
@@ -125,7 +123,10 @@ export default function AddPetPage() {
 
   // Placeholder function - replace with actual API call. Return { id } to redirect to pet Forms tab.
   const createPet = async (
-    petData: Omit<PetFormData, "age" | "weight"> & { age: number; weight: number }
+    _petData: Omit<PetFormData, "age" | "weight"> & {
+      age: number;
+      weight: number;
+    },
   ): Promise<{ id: number } | void> => {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     // When API returns new pet: return { id: newPet.id };
@@ -138,22 +139,32 @@ export default function AddPetPage() {
 
   if (showWizard && newPetId) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-6">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <div className="bg-background min-h-screen p-4 md:p-6">
+        <div className="mx-auto max-w-2xl space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.push(`/customer/pets/${newPetId}?tab=forms`)}>
-              <ArrowLeft className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+                router.push(`/customer/pets/${newPetId}?tab=forms`)
+              }
+            >
+              <ArrowLeft className="size-4" />
             </Button>
             <div>
               <h1 className="text-2xl font-bold">Required Forms</h1>
-              <p className="text-muted-foreground text-sm">Complete these forms for {formData.name}</p>
+              <p className="text-muted-foreground text-sm">
+                Complete these forms for {formData.name}
+              </p>
             </div>
           </div>
           <FormWizard
             petId={newPetId}
             customerId={MOCK_CUSTOMER_ID}
             facilityId={facilityId}
-            onComplete={() => router.push(`/customer/pets/${newPetId}?tab=forms`)}
+            onComplete={() =>
+              router.push(`/customer/pets/${newPetId}?tab=forms`)
+            }
           />
         </div>
       </div>
@@ -161,8 +172,8 @@ export default function AddPetPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="bg-background min-h-screen p-4 md:p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button
@@ -170,12 +181,12 @@ export default function AddPetPage() {
             size="icon"
             onClick={() => router.push("/customer/pets")}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Add a New Pet</h1>
             <p className="text-muted-foreground mt-1">
-              Add your pet's information to start booking services
+              Add your pet&apos;s information to start booking services
             </p>
           </div>
         </div>
@@ -191,24 +202,25 @@ export default function AddPetPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-6">
-                <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                <div className="bg-muted relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-lg">
                   {formData.imageUrl ? (
-                    <img
+                    <Image
                       src={formData.imageUrl}
                       alt="Pet preview"
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   ) : (
-                    <PetIcon className="h-16 w-16 text-muted-foreground" />
+                    <PetIcon className="text-muted-foreground h-16 w-16" />
                   )}
                 </div>
                 <div className="flex-1">
                   <Button type="button" variant="outline" size="sm">
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="mr-2 size-4" />
                     Upload Photo
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    You can add a photo later from your pet's profile
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    You can add a photo later from your pet&apos;s profile
                   </p>
                 </div>
               </div>
@@ -218,13 +230,15 @@ export default function AddPetPage() {
           {/* Basic Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">Basic Information</CardTitle>
+              <CardTitle className="text-sm font-semibold">
+                Basic Information
+              </CardTitle>
               <CardDescription>
                 Essential details about your pet
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">
                     Pet Name <span className="text-destructive">*</span>
@@ -240,7 +254,7 @@ export default function AddPetPage() {
                     aria-invalid={errors.name ? "true" : "false"}
                   />
                   {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name}</p>
+                    <p className="text-destructive text-sm">{errors.name}</p>
                   )}
                 </div>
 
@@ -263,7 +277,7 @@ export default function AddPetPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="breed">
                     Breed <span className="text-destructive">*</span>
@@ -279,7 +293,7 @@ export default function AddPetPage() {
                     aria-invalid={errors.breed ? "true" : "false"}
                   />
                   {errors.breed && (
-                    <p className="text-sm text-destructive">{errors.breed}</p>
+                    <p className="text-destructive text-sm">{errors.breed}</p>
                   )}
                 </div>
 
@@ -298,12 +312,12 @@ export default function AddPetPage() {
                     aria-invalid={errors.color ? "true" : "false"}
                   />
                   {errors.color && (
-                    <p className="text-sm text-destructive">{errors.color}</p>
+                    <p className="text-destructive text-sm">{errors.color}</p>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="age">
                     Age (years) <span className="text-destructive">*</span>
@@ -315,7 +329,8 @@ export default function AddPetPage() {
                     max="30"
                     value={formData.age}
                     onChange={(e) => {
-                      const value = e.target.value === "" ? "" : parseInt(e.target.value);
+                      const value =
+                        e.target.value === "" ? "" : parseInt(e.target.value);
                       setFormData({ ...formData, age: value });
                       if (errors.age) setErrors({ ...errors, age: "" });
                     }}
@@ -323,7 +338,7 @@ export default function AddPetPage() {
                     aria-invalid={errors.age ? "true" : "false"}
                   />
                   {errors.age && (
-                    <p className="text-sm text-destructive">{errors.age}</p>
+                    <p className="text-destructive text-sm">{errors.age}</p>
                   )}
                 </div>
 
@@ -338,7 +353,8 @@ export default function AddPetPage() {
                     step="0.1"
                     value={formData.weight}
                     onChange={(e) => {
-                      const value = e.target.value === "" ? "" : parseFloat(e.target.value);
+                      const value =
+                        e.target.value === "" ? "" : parseFloat(e.target.value);
                       setFormData({ ...formData, weight: value });
                       if (errors.weight) setErrors({ ...errors, weight: "" });
                     }}
@@ -346,7 +362,7 @@ export default function AddPetPage() {
                     aria-invalid={errors.weight ? "true" : "false"}
                   />
                   {errors.weight && (
-                    <p className="text-sm text-destructive">{errors.weight}</p>
+                    <p className="text-destructive text-sm">{errors.weight}</p>
                   )}
                 </div>
               </div>
@@ -362,8 +378,8 @@ export default function AddPetPage() {
                   placeholder="123456789"
                   className="font-mono"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Optional - Enter your pet's microchip number if available
+                <p className="text-muted-foreground text-xs">
+                  Optional - Enter your pet&apos;s microchip number if available
                 </p>
               </div>
             </CardContent>
@@ -376,7 +392,7 @@ export default function AddPetPage() {
                 Medical & Health Information
               </CardTitle>
               <CardDescription>
-                Important health details for your pet's care
+                Important health details for your pet&apos;s care
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -391,8 +407,9 @@ export default function AddPetPage() {
                   placeholder="List any allergies (e.g., Chicken, Beef) or enter 'None'"
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  List any known allergies. Enter "None" if your pet has no allergies.
+                <p className="text-muted-foreground text-xs">
+                  List any known allergies. Enter &quot;None&quot; if your pet
+                  has no allergies.
                 </p>
               </div>
 
@@ -407,8 +424,9 @@ export default function AddPetPage() {
                   placeholder="Any special medical or care needs (e.g., medication, mobility assistance)"
                   rows={3}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Include any special care requirements, medications, or health conditions.
+                <p className="text-muted-foreground text-xs">
+                  Include any special care requirements, medications, or health
+                  conditions.
                 </p>
               </div>
             </CardContent>
@@ -427,12 +445,12 @@ export default function AddPetPage() {
             <Button type="submit" disabled={isSaving}>
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Adding Pet...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="mr-2 size-4" />
                   Add Pet
                 </>
               )}

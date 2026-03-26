@@ -62,7 +62,7 @@ const defaultSizes: Record<ModalProps["type"], keyof typeof sizeClasses> = {
 const defaultIcons: Record<ModalProps["type"], React.ReactNode> = {
   confirmation: <Info className="h-6 w-6 text-blue-500" />,
   warning: <AlertTriangle className="h-6 w-6 text-amber-500" />,
-  details: <CheckCircle2 className="h-6 w-6 text-primary" />,
+  details: <CheckCircle2 className="text-primary h-6 w-6" />,
   form: null,
 };
 
@@ -138,7 +138,7 @@ export function Modal({
           </div>
         </DialogHeader>
 
-        <div className="py-4 px-2 overflow-y-auto">{children}</div>
+        <div className="overflow-y-auto px-2 py-4">{children}</div>
 
         {footer ? (
           <DialogFooter>{footer}</DialogFooter>
@@ -146,7 +146,7 @@ export function Modal({
           actions &&
           (actions.primary || actions.secondary || actions.tertiary) && (
             <DialogFooter className="gap-2">
-              <div className="flex items-center justify-between w-full gap-2">
+              <div className="flex w-full items-center justify-between gap-2">
                 <div className="flex gap-2">
                   {actions.tertiary && (
                     <Button
@@ -162,7 +162,7 @@ export function Modal({
                     </Button>
                   )}
                 </div>
-                <div className="flex gap-2 ml-auto">
+                <div className="ml-auto flex gap-2">
                   {actions.secondary && (
                     <Button
                       variant={actions.secondary.variant || "outline"}

@@ -46,37 +46,35 @@ function StatCard({
   trend?: { value: string; isPositive: boolean };
 }) {
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-xs font-medium text-muted-foreground mb-0.5">
+            <p className="text-muted-foreground mb-0.5 text-xs font-medium">
               {title}
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-xl font-bold tracking-tight">{value}</h3>
               {trend && (
                 <span
-                  className={`inline-flex items-center text-xs font-medium ${
-                    trend.isPositive ? "text-success" : "text-destructive"
-                  }`}
+                  className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`h-3 w-3 mr-0.5 ${!trend.isPositive && "rotate-180"}`}
+                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">{subtitle}</p>
             )}
           </div>
           <div
-            className="flex items-center justify-center w-9 h-9 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
-            <Icon className="h-4 w-4 text-white" />
+            <Icon className="size-4 text-white" />
           </div>
         </div>
       </CardContent>
@@ -111,7 +109,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl"
+              className="flex h-12 w-12 items-center justify-center rounded-xl"
               style={{
                 background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
               }}
@@ -120,7 +118,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             </div>
             <div>
               <h2 className="text-xl font-bold">{facility.name}</h2>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <StatusBadge type="status" value={facility.status} showIcon />
                 <StatusBadge type="plan" value={facility.plan} showIcon />
               </div>
@@ -129,7 +127,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
         </div>
         <Link href={`/dashboard/facilities/${facility.id}`}>
           <Button variant="outline" size="sm">
-            <ExternalLink className="h-4 w-4 mr-2" />
+            <ExternalLink className="mr-2 size-4" />
             Full Details
           </Button>
         </Link>
@@ -144,9 +142,9 @@ export function FacilityModal({ facility }: FacilityModalProps) {
               <Badge
                 key={service}
                 variant="secondary"
-                className="capitalize py-1.5 px-3"
+                className="px-3 py-1.5 capitalize"
               >
-                <Icon className="h-3.5 w-3.5 mr-1.5" />
+                <Icon className="mr-1.5 h-3.5 w-3.5" />
                 {service}
               </Badge>
             );
@@ -155,7 +153,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           title="Staff Members"
           value={facility.usersList.length}
@@ -196,43 +194,43 @@ export function FacilityModal({ facility }: FacilityModalProps) {
 
       {/* Plan Limits */}
       {facility.limits && (
-        <Card className="border-0 shadow-card">
-          <CardHeader className="pb-2 pt-4 px-4">
+        <Card className="shadow-card border-0">
+          <CardHeader className="px-4 pt-4 pb-2">
             <CardTitle className="text-sm font-semibold">Plan Limits</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="grid grid-cols-4 gap-3">
-              <div className="text-center p-2 rounded-lg bg-muted/50">
-                <Building2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <Building2 className="text-muted-foreground mx-auto mb-1 size-4" />
                 <p className="text-sm font-semibold">
                   {facility.limits.locations === -1
                     ? "∞"
                     : facility.limits.locations}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Locations</p>
+                <p className="text-muted-foreground text-[10px]">Locations</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-muted/50">
-                <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <Users className="text-muted-foreground mx-auto mb-1 size-4" />
                 <p className="text-sm font-semibold">
                   {facility.limits.staff === -1 ? "∞" : facility.limits.staff}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Staff</p>
+                <p className="text-muted-foreground text-[10px]">Staff</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-muted/50">
-                <UserCheck className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <UserCheck className="text-muted-foreground mx-auto mb-1 size-4" />
                 <p className="text-sm font-semibold">
                   {facility.limits.clients === -1
                     ? "∞"
                     : facility.limits.clients}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Clients</p>
+                <p className="text-muted-foreground text-[10px]">Clients</p>
               </div>
-              <div className="text-center p-2 rounded-lg bg-muted/50">
-                <PawPrint className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+              <div className="bg-muted/50 rounded-lg p-2 text-center">
+                <PawPrint className="text-muted-foreground mx-auto mb-1 size-4" />
                 <p className="text-sm font-semibold">
                   {facility.limits.pets === -1 ? "∞" : facility.limits.pets}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Pets</p>
+                <p className="text-muted-foreground text-[10px]">Pets</p>
               </div>
             </div>
           </CardContent>
@@ -242,29 +240,29 @@ export function FacilityModal({ facility }: FacilityModalProps) {
       {/* Contact & Owner Info */}
       <div className="grid grid-cols-2 gap-3">
         {/* Contact Information */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Phone className="h-4 w-4" />
+        <Card className="shadow-card border-0">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Phone className="size-4" />
               Contact Info
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 space-y-2">
+          <CardContent className="space-y-2 px-4 pb-4">
             <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs truncate">
+              <Mail className="text-muted-foreground h-3.5 w-3.5" />
+              <span className="truncate text-xs">
                 {facility.contact?.email || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <Phone className="text-muted-foreground h-3.5 w-3.5" />
               <span className="text-xs">
                 {facility.contact?.phone || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs truncate">
+              <Globe className="text-muted-foreground h-3.5 w-3.5" />
+              <span className="truncate text-xs">
                 {facility.contact?.website || "Not provided"}
               </span>
             </div>
@@ -272,17 +270,17 @@ export function FacilityModal({ facility }: FacilityModalProps) {
         </Card>
 
         {/* Owner Information */}
-        <Card className="border-0 shadow-card">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <User className="h-4 w-4" />
+        <Card className="shadow-card border-0">
+          <CardHeader className="px-4 pt-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <User className="size-4" />
               Owner / Admin
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 space-y-2">
+          <CardContent className="space-y-2 px-4 pb-4">
             <div className="flex items-center gap-2">
               <div
-                className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-semibold text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -299,13 +297,13 @@ export function FacilityModal({ facility }: FacilityModalProps) {
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs truncate">
+              <Mail className="text-muted-foreground h-3.5 w-3.5" />
+              <span className="truncate text-xs">
                 {facility.owner?.email || "Not provided"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <Phone className="text-muted-foreground h-3.5 w-3.5" />
               <span className="text-xs">
                 {facility.owner?.phone || "Not provided"}
               </span>
@@ -316,24 +314,24 @@ export function FacilityModal({ facility }: FacilityModalProps) {
 
       {/* Date Info */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="border-0 shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-              <Calendar className="h-5 w-5 text-primary" />
+        <Card className="shadow-card border-0">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-xl">
+              <Calendar className="text-primary h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Member Since</p>
+              <p className="text-muted-foreground text-xs">Member Since</p>
               <p className="font-semibold">{facility.dayJoined}</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-warning/10">
-              <Clock className="h-5 w-5 text-warning" />
+        <Card className="shadow-card border-0">
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="bg-warning/10 flex h-10 w-10 items-center justify-center rounded-xl">
+              <Clock className="text-warning h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Subscription Ends</p>
+              <p className="text-muted-foreground text-xs">Subscription Ends</p>
               <p className="font-semibold">
                 {facility.subscriptionEnd || "N/A"}
               </p>
@@ -344,12 +342,12 @@ export function FacilityModal({ facility }: FacilityModalProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="locations" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto bg-muted/50">
+        <TabsList className="bg-muted/50 grid h-auto w-full grid-cols-3">
           <TabsTrigger
             value="locations"
             className="gap-2 data-[state=active]:shadow-sm"
           >
-            <MapPin className="h-4 w-4" />
+            <MapPin className="size-4" />
             <span className="hidden sm:inline">Locations</span>
             <Badge variant="secondary" className="ml-1 h-5 px-1.5">
               {facility.locationsList.length}
@@ -359,7 +357,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             value="clients"
             className="gap-2 data-[state=active]:shadow-sm"
           >
-            <UserCheck className="h-4 w-4" />
+            <UserCheck className="size-4" />
             <span className="hidden sm:inline">Clients</span>
             <Badge variant="secondary" className="ml-1 h-5 px-1.5">
               {facility.clients.length}
@@ -369,7 +367,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             value="users"
             className="gap-2 data-[state=active]:shadow-sm"
           >
-            <Users className="h-4 w-4" />
+            <Users className="size-4" />
             <span className="hidden sm:inline">Staff</span>
             <Badge variant="secondary" className="ml-1 h-5 px-1.5">
               {facility.usersList.length}
@@ -382,12 +380,12 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             {facility.locationsList.map((location, index: number) => (
               <Card
                 key={index}
-                className="border-0 shadow-card hover:shadow-elevated transition-all duration-200 group"
+                className="hover:shadow-elevated group shadow-card border-0 transition-all duration-200"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div
-                      className="flex items-center justify-center w-10 h-10 rounded-xl transition-transform group-hover:scale-110"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
                       style={{
                         background:
                           "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -397,11 +395,11 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold">{location.name}</h4>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
                         <MapPin className="h-3.5 w-3.5" />
                         {location.address}
                       </p>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
                         {location.services.map((service: string) => (
                           <Badge
                             key={service}
@@ -425,12 +423,12 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             {facility.clients.map((client, index: number) => (
               <Card
                 key={index}
-                className="border-0 shadow-card hover:shadow-elevated transition-all duration-200"
+                className="hover:shadow-elevated shadow-card border-0 transition-all duration-200"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-semibold text-sm">
+                      <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold">
                         {client.person.name
                           .split(" ")
                           .map((n) => n[0])
@@ -439,13 +437,13 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                       </div>
                       <div>
                         <h4 className="font-semibold">{client.person.name}</h4>
-                        <div className="flex items-center gap-4 mt-1">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div className="mt-1 flex items-center gap-4">
+                          <span className="text-muted-foreground flex items-center gap-1 text-xs">
                             <Mail className="h-3 w-3" />
                             {client.person.email}
                           </span>
                           {client.person.phone && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span className="text-muted-foreground flex items-center gap-1 text-xs">
                               <Phone className="h-3 w-3" />
                               {client.person.phone}
                             </span>
@@ -477,13 +475,13 @@ export function FacilityModal({ facility }: FacilityModalProps) {
             {facility.usersList.map((user, index: number) => (
               <Card
                 key={index}
-                className="border-0 shadow-card hover:shadow-elevated transition-all duration-200"
+                className="hover:shadow-elevated shadow-card border-0 transition-all duration-200"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div
-                        className="flex items-center justify-center w-10 h-10 rounded-full font-semibold text-sm text-white"
+                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white"
                         style={{
                           background:
                             user.role === "Admin"
@@ -501,7 +499,7 @@ export function FacilityModal({ facility }: FacilityModalProps) {
                       </div>
                       <div>
                         <h4 className="font-semibold">{user.person.name}</h4>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-muted-foreground flex items-center gap-1 text-xs">
                           <Mail className="h-3 w-3" />
                           {user.person.email}
                         </span>

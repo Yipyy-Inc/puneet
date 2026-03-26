@@ -5,10 +5,26 @@ import { useRouter } from "next/navigation";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, Clock, MapPin, DollarSign, User, Phone, Mail, FileText } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  MapPin,
+  DollarSign,
+  User,
+  Phone,
+  Mail,
+  FileText,
+} from "lucide-react";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
@@ -26,19 +42,45 @@ export default function BookingDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { selectedFacility } = useCustomerFacility();
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
 
   const booking = useMemo(() => {
-    return bookings.find((b) => String(b.id) === id && b.clientId === MOCK_CUSTOMER_ID);
+    return bookings.find(
+      (b) => String(b.id) === id && b.clientId === MOCK_CUSTOMER_ID,
+    );
   }, [id]);
 
   const customer = useMemo(() => {
     return clients.find((c) => c.id === MOCK_CUSTOMER_ID);
   }, []);
 
+  // Check if YipyyGo is enabled for this booking
+  const yipyyGoConfig = useMemo(() => {
+    if (!booking) return null;
+    return getYipyyGoConfig(booking.facilityId);
+  }, [booking]);
+
+  const isYipyyGoEnabled = useMemo(() => {
+    if (!booking || !yipyyGoConfig || !yipyyGoConfig.enabled) return false;
+    const serviceType = booking.service.toLowerCase() as
+      | "daycare"
+      | "boarding"
+      | "grooming"
+      | "training";
+    const serviceConfig = yipyyGoConfig.serviceConfigs.find(
+      (sc) => sc.serviceType === serviceType,
+    );
+    return serviceConfig?.enabled || false;
+  }, [yipyyGoConfig, booking]);
+
+  const yipyyGoForm = useMemo(
+    () => (booking ? getYipyyGoForm(booking.id) : null),
+    [booking],
+  );
+
   if (!booking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold">Booking not found</h2>
           <Button
@@ -46,7 +88,7 @@ export default function BookingDetailPage({
             className="mt-4"
             onClick={() => router.push("/customer/bookings")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 size-4" />
             Back to Bookings
           </Button>
         </div>
@@ -59,26 +101,13 @@ export default function BookingDetailPage({
   const isUpcoming = bookingDate >= new Date();
   const isGrooming = booking.service.toLowerCase() === "grooming";
   const isSalon = booking.serviceType === "salon" || !booking.serviceType; // Default to salon if not specified
-
-  // Check if YipyyGo is enabled for this booking
-  const yipyyGoConfig = useMemo(() => {
-    return getYipyyGoConfig(booking.facilityId);
-  }, [booking.facilityId]);
-
-  const isYipyyGoEnabled = useMemo(() => {
-    if (!yipyyGoConfig || !yipyyGoConfig.enabled) return false;
-    const serviceType = booking.service.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
-    const serviceConfig = yipyyGoConfig.serviceConfigs.find(
-      (sc) => sc.serviceType === serviceType
-    );
-    return serviceConfig?.enabled || false;
-  }, [yipyyGoConfig, booking.service]);
-
-  const yipyyGoForm = useMemo(() => getYipyyGoForm(booking.id), [booking.id]);
-  const hasCheckInQR = Boolean(yipyyGoForm?.qrCheckInToken && (yipyyGoForm.submittedAt || yipyyGoForm.staffStatus === "approved"));
+  const hasCheckInQR = Boolean(
+    yipyyGoForm?.qrCheckInToken &&
+    (yipyyGoForm.submittedAt || yipyyGoForm.staffStatus === "approved"),
+  );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -86,7 +115,7 @@ export default function BookingDetailPage({
             size="sm"
             onClick={() => router.push("/customer/bookings")}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="mr-2 size-4" />
             Back
           </Button>
           <div>
@@ -109,9 +138,9 @@ export default function BookingDetailPage({
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Booking Information */}
           <Card>
             <CardHeader>
@@ -120,9 +149,9 @@ export default function BookingDetailPage({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <Calendar className="text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
+                    <p className="text-muted-foreground text-sm">Date</p>
                     <p className="font-medium">
                       {bookingDate.toLocaleDateString("en-US", {
                         weekday: "long",
@@ -134,26 +163,30 @@ export default function BookingDetailPage({
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <Clock className="text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Time</p>
-                    <p className="font-medium">{booking.checkInTime || "Not specified"}</p>
+                    <p className="text-muted-foreground text-sm">Time</p>
+                    <p className="font-medium">
+                      {booking.checkInTime || "Not specified"}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <MapPin className="text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Location</p>
+                    <p className="text-muted-foreground text-sm">Location</p>
                     <p className="font-medium">
                       {isSalon ? "Salon" : "Mobile Van"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <DollarSign className="text-muted-foreground mt-0.5 h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Cost</p>
-                    <p className="font-medium">${booking.totalCost.toFixed(2)}</p>
+                    <p className="text-muted-foreground text-sm">Total Cost</p>
+                    <p className="font-medium">
+                      ${booking.totalCost.toFixed(2)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -167,21 +200,25 @@ export default function BookingDetailPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Service</p>
+                <p className="text-muted-foreground mb-1 text-sm">Service</p>
                 <p className="font-medium">{booking.service}</p>
               </div>
               {booking.extraServices && booking.extraServices.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Add-ons</p>
+                  <p className="text-muted-foreground mb-1 text-sm">Add-ons</p>
                   <div className="flex flex-wrap gap-2">
                     {booking.extraServices.map((service, index) => {
                       // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
-                      const serviceName = typeof service === "string" 
-                        ? service 
-                        : typeof service === "object" && "serviceId" in service
-                        ? service.serviceId.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-                        : String(service);
-                      
+                      const serviceName =
+                        typeof service === "string"
+                          ? service
+                          : typeof service === "object" &&
+                              "serviceId" in service
+                            ? service.serviceId
+                                .replace(/-/g, " ")
+                                .replace(/\b\w/g, (l) => l.toUpperCase())
+                            : String(service);
+
                       return (
                         <Badge key={index} variant="outline">
                           {serviceName}
@@ -199,16 +236,20 @@ export default function BookingDetailPage({
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <QrCode className="h-5 w-5 text-primary" />
+                  <QrCode className="text-primary h-5 w-5" />
                   Fast-track check-in QR
                 </CardTitle>
                 <CardDescription>
-                  Show this QR at drop-off so staff can open your reservation and check you in quickly.
+                  Show this QR at drop-off so staff can open your reservation
+                  and check you in quickly.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col items-center">
-                <div className="p-4 bg-white rounded-xl shadow-sm">
-                  <CheckInQRCode token={yipyyGoForm!.qrCheckInToken!} size={200} />
+                <div className="rounded-xl bg-white p-4 shadow-sm">
+                  <CheckInQRCode
+                    token={yipyyGoForm!.qrCheckInToken!}
+                    size={200}
+                  />
                 </div>
                 <Button variant="outline" size="sm" className="mt-4" asChild>
                   <Link href={`/customer/bookings/${booking.id}/check-in-qr`}>
@@ -220,39 +261,49 @@ export default function BookingDetailPage({
           )}
 
           {/* Check-in Section (Day of appointment, Salon only) */}
-          {isGrooming && isSalon && isToday && isUpcoming && booking.status === "confirmed" && (
-            <Card className="border-primary/50 bg-primary/5">
-              <CardHeader>
-                <CardTitle>Check In</CardTitle>
-                <CardDescription>
-                  Let us know when you arrive at the salon
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <GroomingCheckInButton
-                  bookingId={String(booking.id)}
-                  clientId={MOCK_CUSTOMER_ID}
-                />
-              </CardContent>
-            </Card>
-          )}
+          {isGrooming &&
+            isSalon &&
+            isToday &&
+            isUpcoming &&
+            booking.status === "confirmed" && (
+              <Card className="border-primary/50 bg-primary/5">
+                <CardHeader>
+                  <CardTitle>Check In</CardTitle>
+                  <CardDescription>
+                    Let us know when you arrive at the salon
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GroomingCheckInButton
+                    bookingId={String(booking.id)}
+                    clientId={MOCK_CUSTOMER_ID}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
           {/* Mobile Groomer Arrival Notification */}
-          {isGrooming && !isSalon && isToday && isUpcoming && booking.status === "confirmed" && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle>Groomer Arrival</CardTitle>
-                <CardDescription>
-                  You'll receive a notification when the groomer is 10 minutes away
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  The mobile grooming van will arrive at your location. You'll be notified when they're on their way.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          {isGrooming &&
+            !isSalon &&
+            isToday &&
+            isUpcoming &&
+            booking.status === "confirmed" && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle>Groomer Arrival</CardTitle>
+                  <CardDescription>
+                    You&apos;ll receive a notification when the groomer is 10
+                    minutes away
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">
+                    The mobile grooming van will arrive at your location.
+                    You&apos;ll be notified when they&apos;re on their way.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
         </div>
 
         {/* Sidebar */}
@@ -266,24 +317,28 @@ export default function BookingDetailPage({
               {customer && (
                 <>
                   <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <User className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Name</p>
+                      <p className="text-muted-foreground text-sm">Name</p>
                       <p className="font-medium">{customer.name}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <Phone className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="font-medium">{customer.phone || "Not provided"}</p>
+                      <p className="text-muted-foreground text-sm">Phone</p>
+                      <p className="font-medium">
+                        {customer.phone || "Not provided"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <Mail className="text-muted-foreground mt-0.5 h-5 w-5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{customer.email || "Not provided"}</p>
+                      <p className="text-muted-foreground text-sm">Email</p>
+                      <p className="font-medium">
+                        {customer.email || "Not provided"}
+                      </p>
                     </div>
                   </div>
                 </>
@@ -300,14 +355,18 @@ export default function BookingDetailPage({
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/customer/bookings">View All Bookings</Link>
               </Button>
-              {isYipyyGoEnabled && booking.status === "confirmed" && isUpcoming && (
-                <Button className="w-full" asChild>
-                  <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Complete YipyyGo Form
-                  </Link>
-                </Button>
-              )}
+              {isYipyyGoEnabled &&
+                booking.status === "confirmed" &&
+                isUpcoming && (
+                  <Button className="w-full" asChild>
+                    <Link
+                      href={`/customer/bookings/${booking.id}/yipyygo-form`}
+                    >
+                      <FileText className="mr-2 size-4" />
+                      Complete YipyyGo Form
+                    </Link>
+                  </Button>
+                )}
               {booking.status === "confirmed" && isUpcoming && (
                 <Button variant="outline" className="w-full">
                   Reschedule

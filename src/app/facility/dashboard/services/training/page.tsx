@@ -1,8 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Calendar, BookOpen, Users, CalendarDays } from "lucide-react";
+import { BookOpen, Users, CalendarDays } from "lucide-react";
 import Link from "next/link";
 
 export default function TrainingPage() {

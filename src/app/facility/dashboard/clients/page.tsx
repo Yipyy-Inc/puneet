@@ -181,11 +181,11 @@ export default function FacilityClientsPage() {
             variant="outline"
             onClick={() => exportClientsToCSV(facilityClients)}
           >
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="mr-2 size-4" />
             Export
           </Button>
           <Button onClick={() => setCreatingClient(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             New Client
           </Button>
         </div>
@@ -199,7 +199,7 @@ export default function FacilityClientsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{facilityClients.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {facilityClients.filter((c) => c.status === "active").length}{" "}
               active
             </p>
@@ -215,7 +215,7 @@ export default function FacilityClientsPage() {
             <div className="text-2xl font-bold">
               {facilityClients.filter((c) => c.status === "active").length}
             </div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
+            <p className="text-muted-foreground text-xs">Currently active</p>
           </CardContent>
         </Card>
         <Card>
@@ -224,7 +224,7 @@ export default function FacilityClientsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalPets}</div>
-            <p className="text-xs text-muted-foreground">Across all clients</p>
+            <p className="text-muted-foreground text-xs">Across all clients</p>
           </CardContent>
         </Card>
         <Card>
@@ -239,7 +239,7 @@ export default function FacilityClientsPage() {
                 ? Math.round((totalPets / facilityClients.length) * 10) / 10
                 : 0}
             </div>
-            <p className="text-xs text-muted-foreground">Per client</p>
+            <p className="text-muted-foreground text-xs">Per client</p>
           </CardContent>
         </Card>
       </div>
@@ -259,7 +259,7 @@ export default function FacilityClientsPage() {
               router.push(`/facility/dashboard/clients/${client.id}`)
             }
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           </Button>
         )}
       />

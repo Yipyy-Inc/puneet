@@ -164,7 +164,9 @@ export default function GroomingPackagesPage() {
       return;
     }
 
-    const product = activeProducts.find((p) => p.id === newProductUsage.productId);
+    const product = activeProducts.find(
+      (p) => p.id === newProductUsage.productId,
+    );
     if (!product) return;
 
     const usage: ProductUsage = {
@@ -222,12 +224,12 @@ export default function GroomingPackagesPage() {
             <span className="font-medium">{pkg.name}</span>
             {pkg.isPopular && (
               <Badge className="bg-yellow-100 text-yellow-700">
-                <Star className="h-3 w-3 mr-1 fill-yellow-500" />
+                <Star className="mr-1 h-3 w-3 fill-yellow-500" />
                 Popular
               </Badge>
             )}
           </div>
-          <p className="text-sm text-muted-foreground truncate max-w-xs">
+          <p className="text-muted-foreground max-w-xs truncate text-sm">
             {pkg.description}
           </p>
         </div>
@@ -245,7 +247,7 @@ export default function GroomingPackagesPage() {
       label: "Size Pricing",
       defaultVisible: true,
       render: (pkg) => (
-        <div className="text-sm space-y-0.5">
+        <div className="space-y-0.5 text-sm">
           <div className="flex gap-2">
             <Badge variant="outline" className="text-xs">
               S: ${pkg.sizePricing.small}
@@ -333,19 +335,19 @@ export default function GroomingPackagesPage() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleEdit(pkg)}>
-              <Edit className="mr-2 h-4 w-4" />
+              <Edit className="mr-2 size-4" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleDeleteClick(pkg)}
               className="text-red-600"
             >
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="mr-2 size-4" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -375,11 +377,11 @@ export default function GroomingPackagesPage() {
             <CardTitle className="text-sm font-medium">
               Active Packages
             </CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activePackages}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               of {groomingPackages.length} total
             </p>
           </CardContent>
@@ -387,35 +389,35 @@ export default function GroomingPackagesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sold</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {totalSold.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">All time</p>
+            <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Price</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${avgPrice.toFixed(0)}</div>
-            <p className="text-xs text-muted-foreground">Base price average</p>
+            <p className="text-muted-foreground text-xs">Base price average</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Most Popular</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <Star className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold truncate">
+            <div className="truncate text-2xl font-bold">
               {popularPackage.name}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {popularPackage.purchaseCount} sales
             </p>
           </CardContent>
@@ -427,7 +429,7 @@ export default function GroomingPackagesPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Grooming Packages</CardTitle>
           <Button onClick={handleAddNew}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             Add Package
           </Button>
         </CardHeader>
@@ -449,13 +451,13 @@ export default function GroomingPackagesPage() {
           .map((pkg) => (
             <Card key={pkg.id} className="relative overflow-hidden">
               {pkg.isPopular && (
-                <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-semibold px-3 py-1 rounded-bl-lg">
+                <div className="absolute top-0 right-0 rounded-bl-lg bg-yellow-400 px-3 py-1 text-xs font-semibold text-yellow-900">
                   Popular
                 </div>
               )}
               <CardHeader>
                 <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {pkg.description}
                 </p>
               </CardHeader>
@@ -464,16 +466,16 @@ export default function GroomingPackagesPage() {
                   <span className="text-3xl font-bold">${pkg.basePrice}</span>
                   <span className="text-muted-foreground">base price</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Clock className="size-4" />
                   <span>{pkg.duration} minutes</span>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Includes:</p>
-                  <ul className="text-sm space-y-1">
+                  <ul className="space-y-1 text-sm">
                     {pkg.includes.slice(0, 5).map((item, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <span className="text-green-500 mt-0.5">✓</span>
+                        <span className="mt-0.5 text-green-500">✓</span>
                         {item}
                       </li>
                     ))}
@@ -484,11 +486,11 @@ export default function GroomingPackagesPage() {
                     )}
                   </ul>
                 </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">
+                <div className="border-t pt-2">
+                  <p className="text-muted-foreground mb-2 text-xs">
                     Price by size:
                   </p>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">
                       Small: ${pkg.sizePricing.small}
                     </Badge>
@@ -510,7 +512,7 @@ export default function GroomingPackagesPage() {
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPackage ? "Edit Package" : "Add New Package"}
@@ -551,9 +553,9 @@ export default function GroomingPackagesPage() {
                     })
                   }
                 />
-                <p className="text-xs text-muted-foreground">
-                  This duration is automatically used when scheduling appointments.
-                  End time is calculated as start time + duration.
+                <p className="text-muted-foreground text-xs">
+                  This duration is automatically used when scheduling
+                  appointments. End time is calculated as start time + duration.
                 </p>
               </div>
             </div>
@@ -668,19 +670,16 @@ export default function GroomingPackagesPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                  <Users className="size-4" />
                   Assign to Specific Stylists (Optional)
                 </Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Leave empty for all stylists
                 </p>
               </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
+              <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
                 {activeStylists.map((stylist) => (
-                  <div
-                    key={stylist.id}
-                    className="flex items-center space-x-2"
-                  >
+                  <div key={stylist.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`stylist-${stylist.id}`}
                       checked={formData.assignedStylistIds.includes(stylist.id)}
@@ -696,16 +695,17 @@ export default function GroomingPackagesPage() {
                         } else {
                           setFormData({
                             ...formData,
-                            assignedStylistIds: formData.assignedStylistIds.filter(
-                              (id) => id !== stylist.id,
-                            ),
+                            assignedStylistIds:
+                              formData.assignedStylistIds.filter(
+                                (id) => id !== stylist.id,
+                              ),
                           });
                         }
                       }}
                     />
                     <Label
                       htmlFor={`stylist-${stylist.id}`}
-                      className="text-sm font-normal cursor-pointer flex-1"
+                      className="flex-1 cursor-pointer text-sm font-normal"
                     >
                       <div className="flex items-center justify-between">
                         <span>{stylist.name}</span>
@@ -718,7 +718,7 @@ export default function GroomingPackagesPage() {
                 ))}
               </div>
               {formData.assignedStylistIds.length > 0 && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {formData.assignedStylistIds.length} stylist(s) selected. Only
                   these stylists can be assigned to appointments using this
                   package.
@@ -732,11 +732,14 @@ export default function GroomingPackagesPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="requiresEvaluation" className="flex items-center gap-2">
-                    <FileCheck className="h-4 w-4" />
+                  <Label
+                    htmlFor="requiresEvaluation"
+                    className="flex items-center gap-2"
+                  >
+                    <FileCheck className="size-4" />
                     Requires Evaluation
                   </Label>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     If enabled, pets must have a valid evaluation before booking
                     this package
                   </p>
@@ -750,8 +753,8 @@ export default function GroomingPackagesPage() {
                 />
               </div>
               {formData.requiresEvaluation && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
-                  <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5" />
+                <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-900 dark:bg-orange-950/20">
+                  <AlertCircle className="mt-0.5 size-4 text-orange-600" />
                   <p className="text-sm text-orange-800 dark:text-orange-200">
                     Pets without a valid evaluation will not be able to book
                     this package. Ensure evaluation requirements are clearly
@@ -767,27 +770,26 @@ export default function GroomingPackagesPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
+                  <Package className="size-4" />
                   Product Usage (Auto-deducted on completion)
                 </Label>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Configure products used for this package
                 </p>
               </div>
 
               {/* Existing Product Usage */}
               {formData.productUsage.length > 0 && (
-                <div className="space-y-2 border rounded-lg p-3">
+                <div className="space-y-2 rounded-lg border p-3">
                   {formData.productUsage.map((usage, index) => {
-                    const product = activeProducts.find((p) => p.id === usage.productId);
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2 rounded bg-muted"
+                        className="bg-muted flex items-center justify-between rounded-sm p-2"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
+                            <span className="text-sm font-medium">
                               {usage.productName}
                             </span>
                             {usage.isOptional && (
@@ -796,7 +798,7 @@ export default function GroomingPackagesPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {usage.quantity} {usage.unit} per service
                           </p>
                         </div>
@@ -805,7 +807,7 @@ export default function GroomingPackagesPage() {
                           variant="ghost"
                           onClick={() => handleRemoveProductUsage(index)}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     );
@@ -814,7 +816,7 @@ export default function GroomingPackagesPage() {
               )}
 
               {/* Add New Product Usage */}
-              <div className="space-y-2 p-3 border-2 border-dashed rounded-lg">
+              <div className="space-y-2 rounded-lg border-2 border-dashed p-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label htmlFor="product-select" className="text-xs">
@@ -823,7 +825,9 @@ export default function GroomingPackagesPage() {
                     <Select
                       value={newProductUsage.productId}
                       onValueChange={(value) => {
-                        const product = activeProducts.find((p) => p.id === value);
+                        const product = activeProducts.find(
+                          (p) => p.id === value,
+                        );
                         setNewProductUsage({
                           ...newProductUsage,
                           productId: value,
@@ -837,7 +841,8 @@ export default function GroomingPackagesPage() {
                       <SelectContent>
                         {activeProducts.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.brand}) - Stock: {product.currentStock} {product.unit}
+                            {product.name} ({product.brand}) - Stock:{" "}
+                            {product.currentStock} {product.unit}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -902,17 +907,20 @@ export default function GroomingPackagesPage() {
                 <Button
                   size="sm"
                   onClick={handleAddProductUsage}
-                  disabled={!newProductUsage.productId || newProductUsage.quantity <= 0}
+                  disabled={
+                    !newProductUsage.productId || newProductUsage.quantity <= 0
+                  }
                   className="w-full"
                 >
-                  <Plus className="h-3 w-3 mr-1" />
+                  <Plus className="mr-1 h-3 w-3" />
                   Add Product
                 </Button>
               </div>
 
               {formData.productUsage.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Products will be automatically deducted from inventory when an appointment using this package is completed.
+                <p className="text-muted-foreground text-xs">
+                  Products will be automatically deducted from inventory when an
+                  appointment using this package is completed.
                 </p>
               )}
             </div>

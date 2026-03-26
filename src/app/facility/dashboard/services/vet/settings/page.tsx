@@ -126,11 +126,11 @@ export default function VetSettingsPage() {
           {isEditing ? (
             <>
               <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="mr-2 h-4 w-4" />
+                <RotateCcw className="mr-2 size-4" />
                 Cancel
               </Button>
               <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-2 size-4" />
                 Save Changes
               </Button>
             </>
@@ -153,7 +153,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Veterinary Service</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow veterinary appointments and services
                 </p>
               </div>
@@ -169,7 +169,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Online Booking</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Clients can book appointments online
                 </p>
               </div>
@@ -185,7 +185,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Accept New Patients</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Accept new pet registrations
                 </p>
               </div>
@@ -201,7 +201,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Referral</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   New patients require a referral
                 </p>
               </div>
@@ -288,7 +288,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Same-Day Appointments</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Accept appointments for the current day
                 </p>
               </div>
@@ -306,7 +306,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Walk-Ins</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Accept patients without appointments
                 </p>
               </div>
@@ -356,7 +356,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Emergency Hours</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer after-hours emergency services
                 </p>
               </div>
@@ -458,7 +458,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Payment Plans</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer payment plans for major procedures
                 </p>
               </div>
@@ -474,7 +474,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Surgery Deposit</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Collect deposit before surgical procedures
                 </p>
               </div>
@@ -524,7 +524,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Medical History</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   New patients must provide medical history
                 </p>
               </div>
@@ -556,7 +556,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Patient Portal</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow clients to access records online
                 </p>
               </div>
@@ -571,7 +571,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Record Download</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Clients can download medical records
                 </p>
               </div>
@@ -596,7 +596,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Prescriptions</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Manage and issue prescriptions
                 </p>
               </div>
@@ -614,7 +614,7 @@ export default function VetSettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Enable Refill Requests</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Allow online prescription refill requests
                     </p>
                   </div>
@@ -645,7 +645,7 @@ export default function VetSettingsPage() {
                       disabled={!isEditing}
                       className="w-32"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Days before prescription runs out that refill can be
                       requested
                     </p>
@@ -655,7 +655,7 @@ export default function VetSettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Enable Pharmacy Integration</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Send prescriptions directly to pharmacy
                     </p>
                   </div>
@@ -685,7 +685,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable In-House Lab</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Perform lab tests on-site
                 </p>
               </div>
@@ -701,7 +701,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>External Lab Integration</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Connect with external laboratory services
                 </p>
               </div>
@@ -720,7 +720,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Lab Results Notification</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Notify clients when lab results are ready
                 </p>
               </div>
@@ -735,7 +735,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto-Send Lab Results</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Automatically send results to client portal
                 </p>
               </div>
@@ -760,7 +760,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Track Vaccination History</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Maintain vaccination records for all patients
                 </p>
               </div>
@@ -776,7 +776,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Vaccination Reminders</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send reminders for upcoming vaccinations
                 </p>
               </div>
@@ -824,7 +824,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Telemedicine</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer virtual veterinary consultations
                 </p>
               </div>
@@ -886,7 +886,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Appointment Confirmation</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send confirmation when appointment is booked
                 </p>
               </div>
@@ -905,7 +905,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Appointment Reminder</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Send reminder before scheduled appointment
                 </p>
               </div>
@@ -938,7 +938,7 @@ export default function VetSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Follow-Up Reminder</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Remind clients to schedule follow-up visits
                 </p>
               </div>

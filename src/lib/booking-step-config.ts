@@ -9,7 +9,12 @@
  * - Evaluation: date/time → forms → tip → confirm
  */
 
-export type ServiceType = "daycare" | "boarding" | "grooming" | "evaluation" | "training";
+export type ServiceType =
+  | "daycare"
+  | "boarding"
+  | "grooming"
+  | "evaluation"
+  | "training";
 
 /** Detail sub-step IDs (within the "details" step) */
 export type DetailsSubStepId =
@@ -37,12 +42,13 @@ export interface DetailStepDef {
 }
 
 /** Ordered detail sub-steps for each service type */
-export const DETAIL_STEPS_BY_SERVICE: Record<
-  ServiceType,
-  DetailStepDef[]
-> = {
+export const DETAIL_STEPS_BY_SERVICE: Record<ServiceType, DetailStepDef[]> = {
   daycare: [
-    { id: "schedule", label: "Schedule", description: "Select dates and times" },
+    {
+      id: "schedule",
+      label: "Schedule",
+      description: "Select dates and times",
+    },
     { id: "addons", label: "Add-ons", description: "Optional services" },
     // feeding/meds optional for daycare; can be included if facility supports
     // { id: "feedingMeds", label: "Feeding & Medication" },
@@ -93,7 +99,7 @@ export const FACILITY_MAIN_STEPS: MainStepId[] = [
  * Returns array of step definitions; index in array = subStepIndex.
  */
 export function getDetailStepsForService(
-  service: ServiceType
+  service: ServiceType,
 ): DetailStepDef[] {
   return DETAIL_STEPS_BY_SERVICE[service] ?? [];
 }
@@ -110,7 +116,7 @@ export function getDetailStepCount(service: ServiceType): number {
  */
 export function getDetailStepIdAt(
   service: ServiceType,
-  index: number
+  index: number,
 ): DetailsSubStepId | null {
   const steps = getDetailStepsForService(service);
   return steps[index]?.id ?? null;

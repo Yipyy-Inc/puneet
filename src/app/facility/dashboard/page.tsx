@@ -20,7 +20,7 @@ export default function FacilityDashboard() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* YipyyGo Pending (when facility has pending forms) */}
       <YipyyGoPendingWidget facilityId={facilityId} maxItems={5} />
 

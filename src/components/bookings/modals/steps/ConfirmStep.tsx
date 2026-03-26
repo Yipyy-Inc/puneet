@@ -1,8 +1,13 @@
-import { PawPrint, Mail, MessageSquare, Receipt } from "lucide-react";
+import { PawPrint, Receipt } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type { Pet, Client, FeedingScheduleItem, MedicationItem } from "@/lib/types";
+import type {
+  Pet,
+  Client,
+  FeedingScheduleItem,
+  MedicationItem,
+} from "@/lib/types";
 import { SERVICE_CATEGORIES } from "../constants";
 
 interface ConfirmStepProps {
@@ -65,11 +70,11 @@ export function ConfirmStep({
   const ServiceIcon = serviceInfo?.icon;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl">
       {/* Receipt Card - Paper-like design */}
-      <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
+      <div className="bg-card overflow-hidden rounded-xl border shadow-lg">
         {/* Header - Gradient with icon */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 px-6 py-6">
+        <div className="relative overflow-hidden bg-linear-to-br from-amber-500 via-orange-500 to-rose-500 px-6 py-6">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTZzLTItNC0yLTYgMi00IDItNi0yLTQtMi02IDItNCAyLTYtMi00LTIgLTYgMi00IDItNiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
           <div className="relative flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
@@ -80,7 +85,7 @@ export function ConfirmStep({
               )}
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
+              <h2 className="text-xl font-bold tracking-tight text-white">
                 Booking Receipt
               </h2>
               <p className="text-sm text-white/90">
@@ -93,21 +98,21 @@ export function ConfirmStep({
         {/* Client & Pet Info */}
         <div className="p-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="bg-muted/30 rounded-lg border p-4">
+              <p className="text-muted-foreground mb-1 text-xs font-medium tracking-wider uppercase">
                 Client
               </p>
-              <p className="font-semibold text-foreground">
+              <p className="text-foreground font-semibold">
                 {displayClient?.name || "Unknown"}
               </p>
               {displayClient?.email && (
-                <p className="mt-0.5 text-sm text-muted-foreground">
+                <p className="text-muted-foreground mt-0.5 text-sm">
                   {displayClient.email}
                 </p>
               )}
             </div>
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <div className="bg-muted/30 rounded-lg border p-4">
+              <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
                 Pet{displayPets.length > 1 ? "s" : ""}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -132,11 +137,11 @@ export function ConfirmStep({
         <div className="p-6">
           <div className="space-y-3">
             {/* Main Service */}
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">{serviceInfo?.name}</p>
                 {serviceType && (
-                  <p className="text-sm text-muted-foreground capitalize">
+                  <p className="text-muted-foreground text-sm capitalize">
                     {serviceType.replace(/_/g, " ")}
                   </p>
                 )}
@@ -149,7 +154,7 @@ export function ConfirmStep({
             </div>
 
             {/* Date & Time */}
-            <div className="flex justify-between items-center text-sm">
+            <div className="flex items-center justify-between text-sm">
               <div>
                 <p className="text-muted-foreground">Date & Time</p>
                 {selectedService === "daycare" &&
@@ -159,11 +164,11 @@ export function ConfirmStep({
                       {daycareSelectedDates.length} day
                       {daycareSelectedDates.length !== 1 ? "s" : ""}
                     </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="mt-1 flex flex-wrap gap-1">
                       {daycareSelectedDates.slice(0, 3).map((date, idx) => (
                         <span
                           key={idx}
-                          className="text-xs bg-muted px-2 py-1 rounded"
+                          className="bg-muted rounded-sm px-2 py-1 text-xs"
                         >
                           {date.toLocaleDateString("en-US", {
                             month: "short",
@@ -172,7 +177,7 @@ export function ConfirmStep({
                         </span>
                       ))}
                       {daycareSelectedDates.length > 3 && (
-                        <span className="text-xs bg-muted px-2 py-1 rounded">
+                        <span className="bg-muted rounded-sm px-2 py-1 text-xs">
                           +{daycareSelectedDates.length - 3} more
                         </span>
                       )}
@@ -215,7 +220,7 @@ export function ConfirmStep({
             {(selectedService === "daycare" ||
               selectedService === "boarding") &&
               roomAssignments.length > 0 && (
-                <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center justify-between text-sm">
                   <div>
                     <p className="text-muted-foreground">Room Assignments</p>
                     {roomAssignments.map((assignment) => {
@@ -234,7 +239,7 @@ export function ConfirmStep({
 
             {/* Evaluation Details */}
             {selectedService === "evaluation" && (
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex items-center justify-between text-sm">
                 <div className="space-y-1">
                   <p className="text-muted-foreground">Evaluation Details</p>
                   <p>Scheduled evaluation</p>
@@ -247,7 +252,7 @@ export function ConfirmStep({
               selectedService === "boarding") &&
               extraServices.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Add-ons</p>
+                  <p className="text-muted-foreground mb-2 text-sm">Add-ons</p>
                   <div className="space-y-1">
                     {Object.entries(
                       extraServices.reduce(
@@ -272,7 +277,7 @@ export function ConfirmStep({
                           return (
                             <div
                               key={`${item.serviceId}-${item.petId}`}
-                              className="flex justify-between text-sm ml-4"
+                              className="ml-4 flex justify-between text-sm"
                             >
                               <span>{assignedPet?.name}</span>
                               <span>× {item.quantity}</span>
@@ -290,40 +295,42 @@ export function ConfirmStep({
         {/* Additional Details */}
         {(selectedService === "daycare" || selectedService === "boarding") &&
           (feedingSchedule.length > 0 || medications.length > 0) && (
-            <div className="p-4 border-b border-dashed">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">
+            <div className="border-b border-dashed p-4">
+              <p className="text-muted-foreground mb-3 text-xs tracking-wide uppercase">
                 Additional Details
               </p>
 
               {/* Feeding Schedule */}
               {feedingSchedule.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-sm font-medium mb-2">Feeding Schedule</p>
+                  <p className="mb-2 text-sm font-medium">Feeding Schedule</p>
                   <div className="space-y-2">
                     {feedingSchedule.map((item, idx) => (
                       <div
                         key={idx}
-                        className="text-xs bg-muted/50 p-2 rounded"
+                        className="bg-muted/50 rounded-sm p-2 text-xs"
                       >
                         <div className="flex justify-between">
-                          <span className="font-medium">
-                            Feeding {idx + 1}
-                          </span>
+                          <span className="font-medium">Feeding {idx + 1}</span>
                           <span>
-                            {item.source.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            {item.source
+                              .replace(/_/g, " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase())}
                           </span>
                         </div>
                         {item.occasions.length > 0 && (
                           <div className="mt-1 space-y-0.5">
                             {item.occasions.map((occ) => (
                               <p key={occ.id} className="text-muted-foreground">
-                                {occ.label} ({occ.time}) — {occ.components.length} {occ.components.length === 1 ? "item" : "items"}
+                                {occ.label} ({occ.time}) —{" "}
+                                {occ.components.length}{" "}
+                                {occ.components.length === 1 ? "item" : "items"}
                               </p>
                             ))}
                           </div>
                         )}
                         {item.notes && (
-                          <p className="text-muted-foreground italic mt-1">
+                          <p className="text-muted-foreground mt-1 italic">
                             &ldquo;{item.notes}&rdquo;
                           </p>
                         )}
@@ -336,12 +343,12 @@ export function ConfirmStep({
               {/* Medications */}
               {medications.length > 0 && (
                 <div>
-                  <p className="text-sm font-medium mb-2">Medications</p>
+                  <p className="mb-2 text-sm font-medium">Medications</p>
                   <div className="space-y-2">
                     {medications.map((item, idx) => (
                       <div
                         key={idx}
-                        className="text-xs bg-muted/50 p-2 rounded"
+                        className="bg-muted/50 rounded-sm p-2 text-xs"
                       >
                         <div className="flex justify-between">
                           <span className="font-medium">
@@ -351,19 +358,28 @@ export function ConfirmStep({
                             {item.times
                               .map((t) => {
                                 try {
-                                  return new Date(`2000-01-01T${t}`).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-                                } catch { return t; }
+                                  return new Date(
+                                    `2000-01-01T${t}`,
+                                  ).toLocaleTimeString("en-US", {
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                    hour12: true,
+                                  });
+                                } catch {
+                                  return t;
+                                }
                               })
                               .join(", ")}
                           </span>
                         </div>
                         <p className="text-muted-foreground mt-1">
-                          {item.amount}{item.strength ? ` (${item.strength})` : ""} •{" "}
+                          {item.amount}
+                          {item.strength ? ` (${item.strength})` : ""} •{" "}
                           {item.form.replace(/_/g, " ")}
                           {item.purpose && ` • ${item.purpose}`}
                         </p>
                         {item.notes && (
-                          <p className="text-muted-foreground italic mt-1">
+                          <p className="text-muted-foreground mt-1 italic">
                             &ldquo;{item.notes}&rdquo;
                           </p>
                         )}
@@ -376,8 +392,8 @@ export function ConfirmStep({
           )}
 
         {/* Notification Preferences */}
-        <div className="p-4 border-b border-dashed">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">
+        <div className="border-b border-dashed p-4">
+          <p className="text-muted-foreground mb-3 text-xs tracking-wide uppercase">
             Notification Preferences
           </p>
           <div className="space-y-3">
@@ -407,7 +423,7 @@ export function ConfirmStep({
         {/* Total */}
         <div className="p-4">
           <div className="border-t-2 border-dashed pt-3">
-            <div className="flex justify-between items-center text-lg font-bold">
+            <div className="flex items-center justify-between text-lg font-bold">
               <span>Total</span>
               <span>${calculatePrice.total.toFixed(2)}</span>
             </div>
@@ -415,11 +431,11 @@ export function ConfirmStep({
         </div>
 
         {/* Footer */}
-        <div className="bg-muted/50 p-3 text-center border-t">
-          <p className="text-xs text-muted-foreground">
+        <div className="bg-muted/50 border-t p-3 text-center">
+          <p className="text-muted-foreground text-xs">
             Thank you for choosing our pet care services!
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             Receipt generated on {new Date().toLocaleDateString()}
           </p>
         </div>

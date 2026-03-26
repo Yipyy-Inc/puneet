@@ -315,7 +315,7 @@ export default function MembershipsPage() {
       render: (item: MembershipWithRecord) => (
         <div>
           <div className="font-medium">{item.customerName as string}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.customerEmail as string}
           </div>
         </div>
@@ -491,11 +491,11 @@ export default function MembershipsPage() {
             <CardTitle className="text-sm font-medium">
               Membership Plans
             </CardTitle>
-            <Crown className="h-4 w-4 text-muted-foreground" />
+            <Crown className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{membershipPlans.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {membershipPlans.filter((p) => p.isActive).length} active
             </p>
           </CardContent>
@@ -505,11 +505,11 @@ export default function MembershipsPage() {
             <CardTitle className="text-sm font-medium">
               Active Subscribers
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSubscribers}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {memberships.filter((m) => m.status === "paused").length} paused
             </p>
           </CardContent>
@@ -519,13 +519,13 @@ export default function MembershipsPage() {
             <CardTitle className="text-sm font-medium">
               Monthly Revenue
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${monthlyRevenue.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">From memberships</p>
+            <p className="text-muted-foreground text-xs">From memberships</p>
           </CardContent>
         </Card>
         <Card>
@@ -533,13 +533,13 @@ export default function MembershipsPage() {
             <CardTitle className="text-sm font-medium">
               Prepaid Credits
             </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${totalCreditsOutstanding.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">Outstanding balance</p>
+            <p className="text-muted-foreground text-xs">Outstanding balance</p>
           </CardContent>
         </Card>
       </div>
@@ -549,15 +549,15 @@ export default function MembershipsPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="plans">
-              <Crown className="mr-2 h-4 w-4" />
+              <Crown className="mr-2 size-4" />
               Plans ({membershipPlans.length})
             </TabsTrigger>
             <TabsTrigger value="subscriptions">
-              <CreditCard className="mr-2 h-4 w-4" />
+              <CreditCard className="mr-2 size-4" />
               Subscriptions ({memberships.length})
             </TabsTrigger>
             <TabsTrigger value="credits">
-              <Wallet className="mr-2 h-4 w-4" />
+              <Wallet className="mr-2 size-4" />
               Prepaid Credits ({prepaidCredits.length})
             </TabsTrigger>
           </TabsList>
@@ -568,7 +568,7 @@ export default function MembershipsPage() {
               else handleAddCredits();
             }}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             {activeTab === "plans"
               ? "Add Plan"
               : activeTab === "subscriptions"
@@ -587,7 +587,7 @@ export default function MembershipsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -596,7 +596,7 @@ export default function MembershipsPage() {
                       handleEditPlan(item as unknown as MembershipPlan)
                     }
                   >
-                    <Edit className="mr-2 h-4 w-4" />
+                    <Edit className="mr-2 size-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -605,7 +605,7 @@ export default function MembershipsPage() {
                     }
                     className="text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-2 size-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -625,24 +625,24 @@ export default function MembershipsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {(item.status as MembershipStatus) === "active" && (
                     <DropdownMenuItem>
-                      <Pause className="mr-2 h-4 w-4" />
+                      <Pause className="mr-2 size-4" />
                       Pause
                     </DropdownMenuItem>
                   )}
                   {(item.status as MembershipStatus) === "paused" && (
                     <DropdownMenuItem>
-                      <Play className="mr-2 h-4 w-4" />
+                      <Play className="mr-2 size-4" />
                       Resume
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem>
-                    <Mail className="mr-2 h-4 w-4" />
+                    <Mail className="mr-2 size-4" />
                     Send Reminder
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -654,7 +654,7 @@ export default function MembershipsPage() {
                     }
                     className="text-destructive"
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-2 size-4" />
                     Cancel
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -673,16 +673,16 @@ export default function MembershipsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="mr-2 size-4" />
                     Add Credits
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <DollarSign className="mr-2 h-4 w-4" />
+                    <DollarSign className="mr-2 size-4" />
                     Refund
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -691,7 +691,7 @@ export default function MembershipsPage() {
                     }
                     className="text-destructive"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <Trash2 className="mr-2 size-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -703,7 +703,7 @@ export default function MembershipsPage() {
 
       {/* Plan Modal */}
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPlan ? "Edit" : "Create"} Membership Plan
@@ -862,14 +862,14 @@ export default function MembershipsPage() {
                 </Button>
               </div>
               {planForm.perks.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {planForm.perks.map((perk, index) => (
                     <Badge key={index} variant="secondary" className="gap-1">
                       {perk}
                       <button
                         type="button"
                         onClick={() => removePerk(index)}
-                        className="ml-1 hover:text-destructive"
+                        className="hover:text-destructive ml-1"
                       >
                         <X className="h-3 w-3" />
                       </button>

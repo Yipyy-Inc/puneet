@@ -129,11 +129,11 @@ export function AddNoteModal({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {visibility === "internal" ? (
-              <EyeOff className="h-4 w-4 text-muted-foreground" />
+              <EyeOff className="text-muted-foreground size-4" />
             ) : (
-              <Eye className="h-4 w-4 text-primary" />
+              <Eye className="text-primary size-4" />
             )}
-            <Label className="text-sm cursor-pointer" htmlFor="note-visibility">
+            <Label className="cursor-pointer text-sm" htmlFor="note-visibility">
               {visibility === "internal"
                 ? "Internal only"
                 : "Visible to customer"}
@@ -147,8 +147,8 @@ export function AddNoteModal({
             />
           </div>
           <div className="flex items-center gap-2">
-            <Pin className="h-4 w-4 text-muted-foreground" />
-            <Label className="text-sm cursor-pointer" htmlFor="note-pin">
+            <Pin className="text-muted-foreground size-4" />
+            <Label className="cursor-pointer text-sm" htmlFor="note-pin">
               Pin
             </Label>
             <Switch

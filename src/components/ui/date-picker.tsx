@@ -4,7 +4,11 @@ import * as React from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { cn } from "@/lib/utils";
 
@@ -24,11 +28,7 @@ function parseISODateString(value: string | undefined | null): Date | null {
   if (!y || !m || !d) return null;
   const dt = new Date(y, m - 1, d);
   // Guard against invalid dates like 2025-02-31
-  if (
-    dt.getFullYear() !== y ||
-    dt.getMonth() !== m - 1 ||
-    dt.getDate() !== d
-  ) {
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
     return null;
   }
   return dt;
@@ -95,7 +95,7 @@ export function DatePicker({
             className,
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 size-4" />
           {displayValue || placeholder}
         </Button>
       </PopoverTrigger>
@@ -113,7 +113,12 @@ export function DatePicker({
 
         <div className="mt-2 flex items-center justify-end gap-2">
           {(value ?? "").length > 0 && (
-            <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+            >
               Clear
             </Button>
           )}
@@ -122,4 +127,3 @@ export function DatePicker({
     </Popover>
   );
 }
-

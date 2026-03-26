@@ -75,9 +75,9 @@ export function FacilityPerformanceMetrics() {
       render: (item) => (
         <div className="flex items-center gap-1">
           {item.revenueGrowth > 0 ? (
-            <TrendingUp className="h-3 w-3 text-success" />
+            <TrendingUp className="text-success h-3 w-3" />
           ) : (
-            <TrendingDown className="h-3 w-3 text-destructive" />
+            <TrendingDown className="text-destructive h-3 w-3" />
           )}
           <span
             className={
@@ -95,9 +95,9 @@ export function FacilityPerformanceMetrics() {
       label: "Staff Efficiency",
       render: (item) => (
         <div className="flex items-center gap-2">
-          <div className="w-20 bg-muted rounded-full h-2">
+          <div className="bg-muted h-2 w-20 rounded-full">
             <div
-              className="bg-primary rounded-full h-2"
+              className="bg-primary h-2 rounded-full"
               style={{ width: `${item.staffEfficiency}%` }}
             />
           </div>
@@ -110,7 +110,7 @@ export function FacilityPerformanceMetrics() {
       label: "Satisfaction",
       render: (item) => (
         <div className="flex items-center gap-1">
-          <Star className="h-4 w-4 text-warning fill-warning" />
+          <Star className="fill-warning text-warning size-4" />
           <span className="font-medium">
             {item.customerSatisfaction.toFixed(1)}
           </span>
@@ -135,28 +135,28 @@ export function FacilityPerformanceMetrics() {
     <div className="space-y-6">
       {/* Key Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Total Revenue
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     ${(totalRevenue / 1000).toFixed(0)}K
                   </h3>
-                  <span className="inline-flex items-center text-xs font-medium text-success">
-                    <TrendingUp className="h-3 w-3 mr-0.5" />+
+                  <span className="text-success inline-flex items-center text-xs font-medium">
+                    <TrendingUp className="mr-0.5 h-3 w-3" />+
                     {avgGrowth.toFixed(1)}%
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Across all facilities
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -168,11 +168,11 @@ export function FacilityPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Avg Growth Rate
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -180,12 +180,12 @@ export function FacilityPerformanceMetrics() {
                     +{avgGrowth.toFixed(1)}%
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Month-over-month
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -197,25 +197,25 @@ export function FacilityPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Avg Satisfaction
                 </p>
                 <div className="flex items-baseline gap-2">
                   <h3 className="text-2xl font-bold tracking-tight">
                     {avgSatisfaction.toFixed(1)}
                   </h3>
-                  <Star className="h-5 w-5 text-warning fill-warning" />
+                  <Star className="fill-warning text-warning h-5 w-5" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Out of 5.0
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -227,11 +227,11 @@ export function FacilityPerformanceMetrics() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Average NPS
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -239,12 +239,12 @@ export function FacilityPerformanceMetrics() {
                     {avgNPS.toFixed(0)}
                   </h3>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Net Promoter Score
                 </p>
               </div>
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-xl"
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -258,12 +258,12 @@ export function FacilityPerformanceMetrics() {
       </div>
 
       {/* Revenue Comparison Chart */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Revenue by Facility
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Compare revenue performance across all facilities
           </p>
         </CardHeader>
@@ -316,12 +316,12 @@ export function FacilityPerformanceMetrics() {
 
       {/* Performance Radar Chart */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Multi-Dimensional Performance
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Compare facilities across key performance indicators
             </p>
           </CardHeader>
@@ -383,12 +383,12 @@ export function FacilityPerformanceMetrics() {
         </Card>
 
         {/* Growth Rate Comparison */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Growth Rate Comparison
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Monthly and yearly growth rates by facility
             </p>
           </CardHeader>
@@ -423,7 +423,10 @@ export function FacilityPerformanceMetrics() {
                       borderRadius: "12px",
                       boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.1)",
                     }}
-                    formatter={(value: number | undefined) => [`${value || 0}%`, ""]}
+                    formatter={(value: number | undefined) => [
+                      `${value || 0}%`,
+                      "",
+                    ]}
                   />
                   <Legend />
                   <Bar
@@ -446,12 +449,12 @@ export function FacilityPerformanceMetrics() {
       </div>
 
       {/* Performance Table */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
             Facility Performance Details
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Comprehensive performance metrics for all facilities
           </p>
         </CardHeader>
@@ -469,14 +472,14 @@ export function FacilityPerformanceMetrics() {
       {/* Detailed Performance Cards */}
       <div className="space-y-4">
         {facilityPerformance.map((facility) => (
-          <Card key={facility.id} className="border-0 shadow-card">
+          <Card key={facility.id} className="shadow-card border-0">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
+              <div className="mb-4 flex items-start justify-between">
                 <div>
                   <h4 className="text-lg font-semibold">
                     {facility.facilityName}
                   </h4>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Period: {facility.period}
                   </p>
                 </div>
@@ -490,78 +493,78 @@ export function FacilityPerformanceMetrics() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Revenue</p>
+                  <p className="text-muted-foreground mb-1 text-xs">Revenue</p>
                   <p className="text-lg font-bold">
                     ${(facility.totalRevenue / 1000).toFixed(0)}K
                   </p>
-                  <div className="flex items-center gap-1 text-xs text-success mt-0.5">
+                  <div className="text-success mt-0.5 flex items-center gap-1 text-xs">
                     <TrendingUp className="h-3 w-3" />+{facility.revenueGrowth}%
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Staff</p>
+                  <p className="text-muted-foreground mb-1 text-xs">Staff</p>
                   <p className="text-lg font-bold">{facility.employeeCount}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     ${(facility.revenuePerEmployee / 1000).toFixed(1)}K/emp
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Efficiency
                   </p>
                   <p className="text-lg font-bold">
                     {facility.staffEfficiency}%
                   </p>
-                  <div className="w-full bg-muted rounded-full h-1 mt-1">
+                  <div className="bg-muted mt-1 h-1 w-full rounded-full">
                     <div
-                      className="bg-primary rounded-full h-1"
+                      className="bg-primary h-1 rounded-full"
                       style={{ width: `${facility.staffEfficiency}%` }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Satisfaction
                   </p>
                   <div className="flex items-center gap-1">
                     <p className="text-lg font-bold">
                       {facility.customerSatisfaction}
                     </p>
-                    <Star className="h-4 w-4 text-warning fill-warning" />
+                    <Star className="fill-warning text-warning size-4" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     Out of 5.0
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Retention
                   </p>
                   <p className="text-lg font-bold">
                     {facility.customerRetention}%
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     NPS: {facility.nps}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Response Time
                   </p>
                   <div className="flex items-center gap-1">
                     <p className="text-lg font-bold">
                       {facility.averageResponseTime}
                     </p>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Clock className="text-muted-foreground size-4" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     hours avg
                   </p>
                 </div>

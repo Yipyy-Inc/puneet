@@ -26,7 +26,7 @@ export function CustomReportsManager() {
       render: (item) => (
         <div>
           <div className="font-medium">{item.name}</div>
-          <div className="text-xs text-muted-foreground line-clamp-1">
+          <div className="text-muted-foreground line-clamp-1 text-xs">
             {item.description}
           </div>
         </div>
@@ -46,7 +46,7 @@ export function CustomReportsManager() {
         return (
           <Badge
             variant="secondary"
-            className={`text-xs ${colors[item.category] || ""}`}
+            className={`text-xs ${colors[item.category] || ""} `}
           >
             {item.category}
           </Badge>
@@ -81,7 +81,7 @@ export function CustomReportsManager() {
       label: "Schedule",
       render: (item) => {
         if (!item.schedule)
-          return <span className="text-xs text-muted-foreground">Manual</span>;
+          return <span className="text-muted-foreground text-xs">Manual</span>;
         return (
           <div className="text-xs">
             <div className="font-medium">{item.schedule.frequency}</div>
@@ -96,7 +96,7 @@ export function CustomReportsManager() {
       key: "lastRun",
       label: "Last Run",
       render: (item) => (
-        <div className="text-xs text-muted-foreground">{item.lastRun}</div>
+        <div className="text-muted-foreground text-xs">{item.lastRun}</div>
       ),
     },
     {
@@ -115,7 +115,7 @@ export function CustomReportsManager() {
             return (
               <div
                 key={format}
-                className="w-6 h-6 rounded flex items-center justify-center bg-muted"
+                className="bg-muted flex h-6 w-6 items-center justify-center rounded-sm"
                 title={format}
               >
                 <Icon className="h-3 w-3" />
@@ -129,7 +129,7 @@ export function CustomReportsManager() {
 
   const renderActions = () => (
     <Button variant="ghost" size="icon" className="h-8 w-8">
-      <MoreHorizontal className="h-4 w-4" />
+      <MoreHorizontal className="size-4" />
     </Button>
   );
 
@@ -139,23 +139,23 @@ export function CustomReportsManager() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Custom Reports</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Manage and schedule custom report generation
           </p>
         </div>
         <Button className="gap-2">
-          <FileText className="h-4 w-4" />
+          <FileText className="size-4" />
           Create New Report
         </Button>
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-10 h-10 rounded-lg"
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -164,18 +164,18 @@ export function CustomReportsManager() {
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Reports</p>
+                <p className="text-muted-foreground text-xs">Total Reports</p>
                 <p className="text-2xl font-bold">{customReports.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-10 h-10 rounded-lg"
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #10b981 0%, #059669 100%)",
@@ -184,7 +184,7 @@ export function CustomReportsManager() {
                 <PlayCircle className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Active</p>
+                <p className="text-muted-foreground text-xs">Active</p>
                 <p className="text-2xl font-bold">
                   {customReports.filter((r) => r.status === "Active").length}
                 </p>
@@ -193,11 +193,11 @@ export function CustomReportsManager() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-10 h-10 rounded-lg"
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -206,7 +206,7 @@ export function CustomReportsManager() {
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Scheduled</p>
+                <p className="text-muted-foreground text-xs">Scheduled</p>
                 <p className="text-2xl font-bold">
                   {customReports.filter((r) => r.schedule).length}
                 </p>
@@ -215,11 +215,11 @@ export function CustomReportsManager() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-10 h-10 rounded-lg"
+                className="flex h-10 w-10 items-center justify-center rounded-lg"
                 style={{
                   background:
                     "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
@@ -228,7 +228,7 @@ export function CustomReportsManager() {
                 <Download className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Exports</p>
+                <p className="text-muted-foreground text-xs">Exports</p>
                 <p className="text-2xl font-bold">148</p>
               </div>
             </div>
@@ -237,7 +237,7 @@ export function CustomReportsManager() {
       </div>
 
       {/* Reports Table */}
-      <Card className="border-0 shadow-card">
+      <Card className="shadow-card border-0">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">All Reports</CardTitle>
         </CardHeader>
@@ -253,15 +253,15 @@ export function CustomReportsManager() {
       {/* Report Details Cards */}
       <div className="space-y-4">
         {customReports.map((report) => (
-          <Card key={report.id} className="border-0 shadow-card">
+          <Card key={report.id} className="shadow-card border-0">
             <CardContent className="p-6">
               <div
                 key={report.id}
-                className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
+                className="bg-card rounded-lg border p-4 transition-shadow hover:shadow-md"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="mb-3 flex items-start justify-between">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex items-center gap-3">
                       <h4 className="text-lg font-semibold">{report.name}</h4>
                       <Badge
                         variant={
@@ -275,39 +275,39 @@ export function CustomReportsManager() {
                         {report.category}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {report.description}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="gap-2">
-                      <PlayCircle className="h-4 w-4" />
+                      <PlayCircle className="size-4" />
                       Run
                     </Button>
                     <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Created By
                   </p>
                   <p className="text-sm font-medium">{report.createdBy}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Created</p>
+                  <p className="text-muted-foreground mb-1 text-xs">Created</p>
                   <p className="text-sm font-medium">{report.createdAt}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Last Run</p>
+                  <p className="text-muted-foreground mb-1 text-xs">Last Run</p>
                   <p className="text-sm font-medium">{report.lastRun}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-muted-foreground mb-1 text-xs">
                     Frequency
                   </p>
                   <p className="text-sm font-medium">
@@ -317,9 +317,9 @@ export function CustomReportsManager() {
               </div>
 
               {report.schedule && (
-                <div className="flex gap-4 text-sm mb-4 p-3 rounded-lg bg-muted/50">
+                <div className="bg-muted/50 mb-4 flex gap-4 rounded-lg p-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Calendar className="text-muted-foreground size-4" />
                     <span>
                       <span className="text-muted-foreground">Next run:</span>{" "}
                       <span className="font-medium">
@@ -328,7 +328,7 @@ export function CustomReportsManager() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Clock className="text-muted-foreground size-4" />
                     <span>
                       <span className="text-muted-foreground">Recipients:</span>{" "}
                       <span className="font-medium">
@@ -341,14 +341,14 @@ export function CustomReportsManager() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">
+                  <p className="text-muted-foreground mb-2 text-xs">
                     Visualizations
                   </p>
                   <div className="space-y-2">
                     {report.visualizations.map((viz, index) => (
                       <div
                         key={index}
-                        className="text-xs p-2 rounded bg-muted/50 flex items-center gap-2"
+                        className="bg-muted/50 flex items-center gap-2 rounded-sm p-2 text-xs"
                       >
                         <span className="font-medium">{viz.type}</span>
                         <span className="text-muted-foreground">-</span>
@@ -361,7 +361,7 @@ export function CustomReportsManager() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">
+                  <p className="text-muted-foreground mb-2 text-xs">
                     Export Formats
                   </p>
                   <div className="flex gap-2">
@@ -376,9 +376,9 @@ export function CustomReportsManager() {
                       return (
                         <div
                           key={format}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50"
+                          className="bg-muted/50 flex items-center gap-2 rounded-lg px-3 py-2"
                         >
-                          <Icon className="h-4 w-4" />
+                          <Icon className="size-4" />
                           <span className="text-xs font-medium">{format}</span>
                         </div>
                       );

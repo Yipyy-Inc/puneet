@@ -253,7 +253,7 @@ export default function BoardingRatesPage() {
       render: (rate) => (
         <div>
           <p className="font-medium">{rate.name}</p>
-          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+          <p className="text-muted-foreground max-w-[200px] truncate text-xs">
             {rate.description}
           </p>
         </div>
@@ -273,7 +273,7 @@ export default function BoardingRatesPage() {
       label: "Size Pricing",
       defaultVisible: true,
       render: (rate) => (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex flex-wrap gap-1">
           <Badge variant="outline" className="text-xs">
             S: ${rate.sizePricing.small}
           </Badge>
@@ -311,7 +311,7 @@ export default function BoardingRatesPage() {
             variant="ghost"
             onClick={() => handleEditRate(rate)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             size="sm"
@@ -319,7 +319,7 @@ export default function BoardingRatesPage() {
             className="text-destructive"
             onClick={() => setDeleteModal({ type: "rate", item: rate })}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </Button>
         </div>
       ),
@@ -381,7 +381,7 @@ export default function BoardingRatesPage() {
             variant="ghost"
             onClick={() => handleEditDiscount(discount)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             size="sm"
@@ -389,7 +389,7 @@ export default function BoardingRatesPage() {
             className="text-destructive"
             onClick={() => setDeleteModal({ type: "discount", item: discount })}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </Button>
         </div>
       ),
@@ -458,7 +458,7 @@ export default function BoardingRatesPage() {
             variant="ghost"
             onClick={() => handleEditSurcharge(surcharge)}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             size="sm"
@@ -468,7 +468,7 @@ export default function BoardingRatesPage() {
               setDeleteModal({ type: "surcharge", item: surcharge })
             }
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </Button>
         </div>
       ),
@@ -483,15 +483,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Active Rates
                 </p>
                 <p className="text-2xl font-bold">
                   {rates.filter((r) => r.isActive).length}
                 </p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
-                <DollarSign className="h-6 w-6 text-primary" />
+              <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <DollarSign className="text-primary h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -500,15 +500,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Active Discounts
                 </p>
                 <p className="text-2xl font-bold">
                   {discounts.filter((d) => d.isActive).length}
                 </p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-success/10">
-                <Percent className="h-6 w-6 text-success" />
+              <div className="bg-success/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <Percent className="text-success h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -517,15 +517,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-muted-foreground text-sm font-medium">
                   Peak Periods
                 </p>
                 <p className="text-2xl font-bold">
                   {surcharges.filter((s) => s.isActive).length}
                 </p>
               </div>
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-warning/10">
-                <TrendingUp className="h-6 w-6 text-warning" />
+              <div className="bg-warning/10 flex h-12 w-12 items-center justify-center rounded-full">
+                <TrendingUp className="text-warning h-6 w-6" />
               </div>
             </div>
           </CardContent>
@@ -535,12 +535,12 @@ export default function BoardingRatesPage() {
       {/* Nightly Rates */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <DollarSign className="h-5 w-5" />
             Nightly Rates
           </CardTitle>
           <Button onClick={handleAddRate}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             Add Rate
           </Button>
         </CardHeader>
@@ -557,12 +557,12 @@ export default function BoardingRatesPage() {
       {/* Multi-Night Discounts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Percent className="h-5 w-5" />
             Multi-Night Discounts
           </CardTitle>
           <Button onClick={handleAddDiscount}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             Add Discount
           </Button>
         </CardHeader>
@@ -579,12 +579,12 @@ export default function BoardingRatesPage() {
       {/* Peak Surcharges */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Calendar className="h-5 w-5" />
             Peak Period Surcharges
           </CardTitle>
           <Button onClick={handleAddSurcharge}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 size-4" />
             Add Peak Period
           </Button>
         </CardHeader>
@@ -647,7 +647,7 @@ export default function BoardingRatesPage() {
               <Label>Size-Based Pricing</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Small</Label>
+                  <Label className="text-muted-foreground text-xs">Small</Label>
                   <Input
                     type="number"
                     value={rateForm.sizePricing.small}
@@ -663,7 +663,7 @@ export default function BoardingRatesPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">
+                  <Label className="text-muted-foreground text-xs">
                     Medium
                   </Label>
                   <Input
@@ -681,7 +681,7 @@ export default function BoardingRatesPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Large</Label>
+                  <Label className="text-muted-foreground text-xs">Large</Label>
                   <Input
                     type="number"
                     value={rateForm.sizePricing.large}
@@ -697,7 +697,7 @@ export default function BoardingRatesPage() {
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Giant</Label>
+                  <Label className="text-muted-foreground text-xs">Giant</Label>
                   <Input
                     type="number"
                     value={rateForm.sizePricing.giant}
@@ -929,7 +929,7 @@ export default function BoardingRatesPage() {
               Confirm Deletion
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Are you sure you want to delete this{" "}
             {deleteModal?.type === "rate"
               ? "rate"
@@ -943,7 +943,7 @@ export default function BoardingRatesPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 size-4" />
               Delete
             </Button>
           </DialogFooter>

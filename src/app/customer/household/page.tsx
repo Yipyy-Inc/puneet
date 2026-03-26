@@ -3,7 +3,13 @@
 import { useState, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clients } from "@/data/clients";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,14 +33,14 @@ type HouseholdContact = {
 };
 
 export default function CustomerHouseholdPage() {
-  const { selectedFacility } = useCustomerFacility();
+  const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   // Get customer data
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
-    []
+    [],
   );
 
   const [profileData, setProfileData] = useState({
@@ -49,7 +55,9 @@ export default function CustomerHouseholdPage() {
     },
   });
 
-  const [householdContacts, setHouseholdContacts] = useState<HouseholdContact[]>(() => {
+  const [householdContacts, setHouseholdContacts] = useState<
+    HouseholdContact[]
+  >(() => {
     const primary: HouseholdContact = {
       id: "primary",
       name: profileData.name,
@@ -67,14 +75,17 @@ export default function CustomerHouseholdPage() {
           name: profileData.emergencyContact.name,
           email: profileData.emergencyContact.email,
           phone: profileData.emergencyContact.phone,
-          relationship: profileData.emergencyContact.relationship || "Secondary contact",
+          relationship:
+            profileData.emergencyContact.relationship || "Secondary contact",
           canBook: true,
           canPay: false,
           canViewCameras: true,
         } as HouseholdContact)
       : undefined;
 
-    return secondaryFromEmergency ? [primary, secondaryFromEmergency] : [primary];
+    return secondaryFromEmergency
+      ? [primary, secondaryFromEmergency]
+      : [primary];
   });
 
   const [newContact, setNewContact] = useState<HouseholdContact>({
@@ -95,8 +106,12 @@ export default function CustomerHouseholdPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsEditing(false);
       toast.success("Household contacts updated successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update household contacts");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update household contacts",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -128,35 +143,40 @@ export default function CustomerHouseholdPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Household & Contacts</h1>
             <p className="text-muted-foreground mt-1">
-              Manage who in your household can book, pay, and view cameras for your pets
+              Manage who in your household can book, pay, and view cameras for
+              your pets
             </p>
           </div>
           {!isEditing ? (
             <Button onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="mr-2 size-4" />
               Edit Contacts
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
+                    <Save className="mr-2 size-4" />
                     Save Changes
                   </>
                 )}
@@ -173,38 +193,42 @@ export default function CustomerHouseholdPage() {
               Household & Contacts
             </CardTitle>
             <CardDescription>
-              Manage who in your household can book, pay, and view cameras for your pets.
+              Manage who in your household can book, pay, and view cameras for
+              your pets.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              Many families share responsibilities. Add secondary contacts (spouse, partner,
-              roommate) and choose what each person is allowed to do.
+            <div className="text-muted-foreground text-sm">
+              Many families share responsibilities. Add secondary contacts
+              (spouse, partner, roommate) and choose what each person is allowed
+              to do.
             </div>
 
             {/* Existing Contacts */}
             <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">People on this account</div>
+              <div className="text-muted-foreground text-sm font-medium">
+                People on this account
+              </div>
               <div className="space-y-2">
                 {householdContacts.map((contact) => (
                   <div
                     key={contact.id}
-                    className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center p-3 rounded-lg border bg-background/60"
+                    className="bg-background/60 grid grid-cols-1 items-center gap-3 rounded-lg border p-3 md:grid-cols-5"
                   >
                     <div className="space-y-0.5 md:col-span-2">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">{contact.name}</p>
+                        <p className="text-sm font-medium">{contact.name}</p>
                         {contact.id === "primary" && (
                           <Badge className="text-xs" variant="default">
                             Primary
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {contact.relationship || "Household member"}
                       </p>
                       {(contact.email || contact.phone) && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {contact.email && <span>{contact.email}</span>}
                           {contact.email && contact.phone && <span> · </span>}
                           {contact.phone && <span>{contact.phone}</span>}
@@ -217,7 +241,9 @@ export default function CustomerHouseholdPage() {
                         onCheckedChange={(checked) =>
                           setHouseholdContacts((prev) =>
                             prev.map((c) =>
-                              c.id === contact.id ? { ...c, canBook: checked } : c,
+                              c.id === contact.id
+                                ? { ...c, canBook: checked }
+                                : c,
                             ),
                           )
                         }
@@ -231,7 +257,9 @@ export default function CustomerHouseholdPage() {
                         onCheckedChange={(checked) =>
                           setHouseholdContacts((prev) =>
                             prev.map((c) =>
-                              c.id === contact.id ? { ...c, canPay: checked } : c,
+                              c.id === contact.id
+                                ? { ...c, canPay: checked }
+                                : c,
                             ),
                           )
                         }
@@ -245,7 +273,9 @@ export default function CustomerHouseholdPage() {
                         onCheckedChange={(checked) =>
                           setHouseholdContacts((prev) =>
                             prev.map((c) =>
-                              c.id === contact.id ? { ...c, canViewCameras: checked } : c,
+                              c.id === contact.id
+                                ? { ...c, canViewCameras: checked }
+                                : c,
                             ),
                           )
                         }
@@ -258,10 +288,10 @@ export default function CustomerHouseholdPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8"
                           onClick={() => handleRemoveContact(contact.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       </div>
                     )}
@@ -271,18 +301,21 @@ export default function CustomerHouseholdPage() {
             </div>
 
             {/* Add Secondary Contact */}
-            <div className="pt-2 border-t space-y-3">
+            <div className="space-y-3 border-t pt-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Add Secondary Contact</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 <div className="space-y-1">
                   <Label htmlFor="hh-name">Name</Label>
                   <Input
                     id="hh-name"
                     value={newContact.name}
                     onChange={(e) =>
-                      setNewContact((prev) => ({ ...prev, name: e.target.value }))
+                      setNewContact((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
                     }
                     disabled={!isEditing}
                     placeholder="Spouse / Partner"
@@ -295,7 +328,10 @@ export default function CustomerHouseholdPage() {
                     type="email"
                     value={newContact.email}
                     onChange={(e) =>
-                      setNewContact((prev) => ({ ...prev, email: e.target.value }))
+                      setNewContact((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
                     }
                     disabled={!isEditing}
                     placeholder="contact@example.com"
@@ -307,7 +343,10 @@ export default function CustomerHouseholdPage() {
                     id="hh-phone"
                     value={newContact.phone}
                     onChange={(e) =>
-                      setNewContact((prev) => ({ ...prev, phone: e.target.value }))
+                      setNewContact((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
                     }
                     disabled={!isEditing}
                     placeholder="(555) 123-4567"
@@ -355,7 +394,10 @@ export default function CustomerHouseholdPage() {
                   <Switch
                     checked={newContact.canViewCameras}
                     onCheckedChange={(checked) =>
-                      setNewContact((prev) => ({ ...prev, canViewCameras: checked }))
+                      setNewContact((prev) => ({
+                        ...prev,
+                        canViewCameras: checked,
+                      }))
                     }
                     disabled={!isEditing}
                   />
@@ -389,7 +431,7 @@ export default function CustomerHouseholdPage() {
                   toast.success("Contact added");
                 }}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Add Contact
               </Button>
             </div>

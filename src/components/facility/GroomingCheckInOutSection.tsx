@@ -14,7 +14,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import Link from "next/link";
 import Image from "next/image";
 import {
   PawPrint,
@@ -22,7 +21,6 @@ import {
   LogIn,
   LogOut,
   CheckCircle,
-  AlertTriangle,
   Phone,
   Scissors,
   Eye,
@@ -36,7 +34,6 @@ import {
   type GroomingIntake,
   type PriceAdjustment,
 } from "@/data/grooming";
-import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
 
@@ -93,7 +90,8 @@ const petImages: Record<number, string> = {
   5: "/api/placeholder/40/40",
 };
 
-const getPetImage = (petId: number) => petImages[petId] || "/api/placeholder/40/40";
+const _getPetImage = (petId: number) =>
+  petImages[petId] || "/api/placeholder/40/40";
 
 export function GroomingCheckInOutSection() {
   const [isMounted, setIsMounted] = useState(false);
@@ -107,7 +105,7 @@ export function GroomingCheckInOutSection() {
   const [showIntakeForm, setShowIntakeForm] = useState(false);
 
   // For undo functionality
-  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const _undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -120,9 +118,8 @@ export function GroomingCheckInOutSection() {
   const [showCheckedOut, setShowCheckedOut] = useState(true);
 
   // Local state for data
-  const [appointmentsData, setAppointmentsData] = useState<GroomingAppointment[]>(
-    groomingAppointments,
-  );
+  const [appointmentsData, setAppointmentsData] =
+    useState<GroomingAppointment[]>(groomingAppointments);
 
   const unifiedData = useMemo(
     () => normalizeToUnified(appointmentsData),
@@ -182,7 +179,13 @@ export function GroomingCheckInOutSection() {
         apt.ownerPhone.includes(query) ||
         apt.stylistName.toLowerCase().includes(query),
     );
-  }, [searchQuery, scheduledArrivals, checkedInPets, readyForPickup, checkedOutToday]);
+  }, [
+    searchQuery,
+    scheduledArrivals,
+    checkedInPets,
+    readyForPickup,
+    checkedOutToday,
+  ]);
 
   const handleCheckIn = (apt: UnifiedGroomingAppointment) => {
     setSelectedAppointment(apt);
@@ -205,8 +208,10 @@ export function GroomingCheckInOutSection() {
     if (!selectedAppointment) return;
 
     const now = new Date().toISOString();
-    const previousStatus = selectedAppointment.status;
-    const previousData = appointmentsData.find((a) => a.id === selectedAppointment.id);
+    const _previousStatus = selectedAppointment.status;
+    const previousData = appointmentsData.find(
+      (a) => a.id === selectedAppointment.id,
+    );
 
     if (!previousData) return;
 
@@ -232,7 +237,9 @@ export function GroomingCheckInOutSection() {
           onClick: () => {
             if (previousData) {
               setAppointmentsData((prev) =>
-                prev.map((apt) => (apt.id === selectedAppointment.id ? previousData : apt)),
+                prev.map((apt) =>
+                  apt.id === selectedAppointment.id ? previousData : apt,
+                ),
               );
               toast.info("Action undone");
             }
@@ -256,49 +263,63 @@ export function GroomingCheckInOutSection() {
       );
 
       // Automatically deduct products from inventory
-      import("@/lib/grooming-inventory-deduction").then(({ deductProductsForAppointment }) => {
-        import("@/data/grooming").then(({ groomingAppointments }) => {
-          const originalAppointment = groomingAppointments.find(
-            (apt) => apt.id === selectedAppointment.id
-          );
-          
-          if (!originalAppointment) {
-            console.warn("Could not find original appointment for product deduction");
-            return;
-          }
-          
-          const deductionResult = deductProductsForAppointment(
-            originalAppointment,
-            selectedAppointment.stylistName,
-          );
+      import("@/lib/grooming-inventory-deduction").then(
+        ({ deductProductsForAppointment }) => {
+          import("@/data/grooming").then(({ groomingAppointments }) => {
+            const originalAppointment = groomingAppointments.find(
+              (apt) => apt.id === selectedAppointment.id,
+            );
 
-          if (deductionResult.success && deductionResult.deductions.length > 0) {
-            const productsDeducted = deductionResult.deductions
-              .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
-              .join(", ");
+            if (!originalAppointment) {
+              console.warn(
+                "Could not find original appointment for product deduction",
+              );
+              return;
+            }
 
-            // Check for low stock alerts
-            const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
-            if (lowStockProducts.length > 0) {
-              toast.warning("Products deducted - Low stock alert", {
-                description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+            const deductionResult = deductProductsForAppointment(
+              originalAppointment,
+              selectedAppointment.stylistName,
+            );
+
+            if (
+              deductionResult.success &&
+              deductionResult.deductions.length > 0
+            ) {
+              const productsDeducted = deductionResult.deductions
+                .map(
+                  (d) =>
+                    `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`,
+                )
+                .join(", ");
+
+              // Check for low stock alerts
+              const lowStockProducts = deductionResult.deductions.filter(
+                (d) => d.isNowLowStock,
+              );
+              if (lowStockProducts.length > 0) {
+                toast.warning("Products deducted - Low stock alert", {
+                  description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+                  duration: 8000,
+                });
+              } else {
+                toast.success("Products deducted from inventory", {
+                  description: productsDeducted,
+                  duration: 5000,
+                });
+              }
+            } else if (deductionResult.errors.length > 0) {
+              const errorMessages = deductionResult.errors
+                .map((e) => e.reason)
+                .join(", ");
+              toast.error("Inventory deduction failed", {
+                description: errorMessages,
                 duration: 8000,
               });
-            } else {
-              toast.success("Products deducted from inventory", {
-                description: productsDeducted,
-              duration: 5000,
-            });
-          }
-        } else if (deductionResult.errors.length > 0) {
-          const errorMessages = deductionResult.errors.map((e) => e.reason).join(", ");
-          toast.error("Inventory deduction failed", {
-            description: errorMessages,
-            duration: 8000,
+            }
           });
-        }
-        });
-      });
+        },
+      );
 
       toast.success(`${selectedAppointment.petName} - Checked Out`, {
         description: "Grooming appointment completed",
@@ -307,7 +328,9 @@ export function GroomingCheckInOutSection() {
           onClick: () => {
             if (previousData) {
               setAppointmentsData((prev) =>
-                prev.map((apt) => (apt.id === selectedAppointment.id ? previousData : apt)),
+                prev.map((apt) =>
+                  apt.id === selectedAppointment.id ? previousData : apt,
+                ),
               );
               toast.info("Action undone");
             }
@@ -375,7 +398,9 @@ export function GroomingCheckInOutSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Grooming Check-In / Check-Out</h2>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Grooming Check-In / Check-Out
+        </h2>
         <p className="text-muted-foreground">
           Manage grooming appointments check-in and check-out
         </p>
@@ -385,7 +410,7 @@ export function GroomingCheckInOutSection() {
       <Card>
         <CardContent className="pt-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2 transform" />
             <Input
               placeholder="Search by pet name, owner, phone, or stylist..."
               value={searchQuery}
@@ -397,7 +422,7 @@ export function GroomingCheckInOutSection() {
       </Card>
 
       {/* Filter Toggles */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant={showScheduled ? "default" : "outline"}
           size="sm"
@@ -442,10 +467,10 @@ export function GroomingCheckInOutSection() {
               {displayedScheduled.map((apt) => (
                 <div
                   key={apt.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -454,20 +479,20 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground h-6 w-6" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apt.petName}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           ({apt.petBreed})
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-4 mt-1">
+                      <div className="text-muted-foreground text-sm">
+                        <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {apt.ownerName}
@@ -500,7 +525,7 @@ export function GroomingCheckInOutSection() {
                       onClick={() => handleCheckIn(apt)}
                       className="gap-2"
                     >
-                      <LogIn className="h-4 w-4" />
+                      <LogIn className="size-4" />
                       Check In
                     </Button>
                     <Button
@@ -508,7 +533,7 @@ export function GroomingCheckInOutSection() {
                       variant="outline"
                       onClick={() => handleViewDetails(apt)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                   </div>
                 </div>
@@ -532,10 +557,10 @@ export function GroomingCheckInOutSection() {
               {displayedCheckedIn.map((apt) => (
                 <div
                   key={apt.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -544,20 +569,20 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground h-6 w-6" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apt.petName}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           ({apt.petBreed})
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-4 mt-1">
+                      <div className="text-muted-foreground text-sm">
+                        <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {apt.ownerName}
@@ -609,17 +634,19 @@ export function GroomingCheckInOutSection() {
                         onClick={async () => {
                           // Move to ready-for-pickup
                           // Find the full appointment in appointmentsData
-                          const fullAppointment = appointmentsData.find((a) => a.id === apt.id);
+                          const fullAppointment = appointmentsData.find(
+                            (a) => a.id === apt.id,
+                          );
                           if (!fullAppointment) {
                             toast.error("Appointment not found");
                             return;
                           }
-                          
+
                           const updatedAppointment: GroomingAppointment = {
                             ...fullAppointment,
                             status: "ready-for-pickup" as const,
                           };
-                          
+
                           setAppointmentsData((prev) =>
                             prev.map((a) =>
                               a.id === apt.id ? updatedAppointment : a,
@@ -627,14 +654,21 @@ export function GroomingCheckInOutSection() {
                           );
 
                           // Send pickup notifications
-                          const { sendPickupNotifications } = await import("@/lib/grooming-pickup-notifications");
+                          const { sendPickupNotifications } =
+                            await import("@/lib/grooming-pickup-notifications");
                           const settings = {
                             autoReadyForPickupSMS: true, // TODO: Get from settings
                             autoReadyForPickupEmail: true, // TODO: Get from settings
                           };
 
-                          sendPickupNotifications(updatedAppointment, settings).catch((error) => {
-                            console.error("Failed to send pickup notifications:", error);
+                          sendPickupNotifications(
+                            updatedAppointment,
+                            settings,
+                          ).catch((error) => {
+                            console.error(
+                              "Failed to send pickup notifications:",
+                              error,
+                            );
                           });
 
                           toast.success(`${apt.petName} - Ready for pickup`);
@@ -648,7 +682,7 @@ export function GroomingCheckInOutSection() {
                       variant="outline"
                       onClick={() => handleViewDetails(apt)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                   </div>
                 </div>
@@ -672,10 +706,10 @@ export function GroomingCheckInOutSection() {
               {displayedReady.map((apt) => (
                 <div
                   key={apt.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -684,20 +718,20 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground h-6 w-6" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apt.petName}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           ({apt.petBreed})
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-4 mt-1">
+                      <div className="text-muted-foreground text-sm">
+                        <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {apt.ownerName}
@@ -729,7 +763,7 @@ export function GroomingCheckInOutSection() {
                       onClick={() => handleCheckOut(apt)}
                       className="gap-2"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut className="size-4" />
                       Check Out
                     </Button>
                     <Button
@@ -737,7 +771,7 @@ export function GroomingCheckInOutSection() {
                       variant="outline"
                       onClick={() => handleViewDetails(apt)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                   </div>
                 </div>
@@ -761,10 +795,10 @@ export function GroomingCheckInOutSection() {
               {displayedCheckedOut.map((apt) => (
                 <div
                   key={apt.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted">
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-muted relative h-12 w-12 overflow-hidden rounded-full">
                       {apt.petPhotoUrl ? (
                         <Image
                           src={apt.petPhotoUrl}
@@ -773,20 +807,20 @@ export function GroomingCheckInOutSection() {
                           className="object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <PawPrint className="h-6 w-6 text-muted-foreground" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <PawPrint className="text-muted-foreground h-6 w-6" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{apt.petName}</h3>
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-muted-foreground text-sm">
                           ({apt.petBreed})
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-4 mt-1">
+                      <div className="text-muted-foreground text-sm">
+                        <div className="mt-1 flex items-center gap-4">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {apt.ownerName}
@@ -816,7 +850,7 @@ export function GroomingCheckInOutSection() {
                       variant="outline"
                       onClick={() => handleViewDetails(apt)}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="size-4" />
                     </Button>
                   </div>
                 </div>
@@ -857,7 +891,7 @@ export function GroomingCheckInOutSection() {
           {selectedAppointment && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted">
+                <div className="bg-muted relative h-16 w-16 overflow-hidden rounded-full">
                   {selectedAppointment.petPhotoUrl ? (
                     <Image
                       src={selectedAppointment.petPhotoUrl}
@@ -866,14 +900,16 @@ export function GroomingCheckInOutSection() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <PawPrint className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex h-full w-full items-center justify-center">
+                      <PawPrint className="text-muted-foreground h-8 w-8" />
                     </div>
                   )}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg">{selectedAppointment.petName}</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="text-lg font-semibold">
+                    {selectedAppointment.petName}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
                     {selectedAppointment.petBreed}
                   </p>
                 </div>
@@ -885,39 +921,58 @@ export function GroomingCheckInOutSection() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Phone:</span>
-                  <p className="font-medium">{selectedAppointment.ownerPhone}</p>
+                  <p className="font-medium">
+                    {selectedAppointment.ownerPhone}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Stylist:</span>
-                  <p className="font-medium">{selectedAppointment.stylistName}</p>
+                  <p className="font-medium">
+                    {selectedAppointment.stylistName}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Package:</span>
-                  <p className="font-medium">{selectedAppointment.packageName}</p>
+                  <p className="font-medium">
+                    {selectedAppointment.packageName}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Time:</span>
                   <p className="font-medium">
-                    {selectedAppointment.startTime} - {selectedAppointment.endTime}
+                    {selectedAppointment.startTime} -{" "}
+                    {selectedAppointment.endTime}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Price:</span>
-                  <p className="font-medium">${selectedAppointment.totalPrice.toFixed(2)}</p>
+                  <p className="font-medium">
+                    ${selectedAppointment.totalPrice.toFixed(2)}
+                  </p>
                 </div>
               </div>
               {selectedAppointment.specialInstructions && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Special Instructions:</span>
-                  <p className="text-sm mt-1">{selectedAppointment.specialInstructions}</p>
+                  <span className="text-muted-foreground text-sm">
+                    Special Instructions:
+                  </span>
+                  <p className="mt-1 text-sm">
+                    {selectedAppointment.specialInstructions}
+                  </p>
                 </div>
               )}
               {selectedAppointment.allergies.length > 0 && (
                 <div>
-                  <span className="text-sm text-muted-foreground">Allergies:</span>
-                  <div className="flex gap-2 mt-1">
+                  <span className="text-muted-foreground text-sm">
+                    Allergies:
+                  </span>
+                  <div className="mt-1 flex gap-2">
                     {selectedAppointment.allergies.map((allergy, idx) => (
-                      <Badge key={idx} variant="destructive" className="text-xs">
+                      <Badge
+                        key={idx}
+                        variant="destructive"
+                        className="text-xs"
+                      >
                         {allergy}
                       </Badge>
                     ))}
@@ -949,95 +1004,142 @@ export function GroomingCheckInOutSection() {
 
               {/* Price Adjustments - Show for checked-in or in-progress appointments */}
               {(checkInOutMode === "check-in" || checkInOutMode === "view") && (
-                  <div className="pt-4 border-t">
-                    <PriceAdjustmentForm
+                <div className="border-t pt-4">
+                  <PriceAdjustmentForm
+                    appointmentId={selectedAppointment.id}
+                    petName={selectedAppointment.petName}
+                    basePrice={
+                      appointmentsData.find(
+                        (a) => a.id === selectedAppointment.id,
+                      )?.basePrice || selectedAppointment.totalPrice
+                    }
+                    currentTotal={selectedAppointment.totalPrice}
+                    adjustments={
+                      appointmentsData.find(
+                        (a) => a.id === selectedAppointment.id,
+                      )?.priceAdjustments || []
+                    }
+                    onAddAdjustment={(adjustment) => {
+                      const appointment = appointmentsData.find(
+                        (a) => a.id === selectedAppointment.id,
+                      );
+                      if (!appointment) return;
+
+                      const newAdjustment: PriceAdjustment = {
+                        ...adjustment,
+                        id: `adj-${Date.now()}`,
+                        addedAt: new Date().toISOString(),
+                        notifiedAt: adjustment.customerNotified
+                          ? new Date().toISOString()
+                          : undefined,
+                      };
+
+                      const adjustments = [
+                        ...(appointment.priceAdjustments || []),
+                        newAdjustment,
+                      ];
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (appointment.basePrice || appointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                                basePrice:
+                                  apt.basePrice ||
+                                  apt.totalPrice - totalAdjustments,
+                              }
+                            : apt,
+                        ),
+                      );
+
+                      if (adjustment.customerNotified) {
+                        console.log(
+                          `Sending notification to ${appointment.ownerEmail} about $${adjustment.amount} charge`,
+                        );
+                      }
+                    }}
+                    onRemoveAdjustment={(adjustmentId) => {
+                      const appointment = appointmentsData.find(
+                        (a) => a.id === selectedAppointment.id,
+                      );
+                      if (!appointment) return;
+
+                      const adjustments = (
+                        appointment.priceAdjustments || []
+                      ).filter((adj) => adj.id !== adjustmentId);
+                      const totalAdjustments = adjustments.reduce(
+                        (sum, adj) => sum + adj.amount,
+                        0,
+                      );
+                      const newTotal =
+                        (appointment.basePrice || appointment.totalPrice) +
+                        totalAdjustments;
+
+                      setAppointmentsData((prev) =>
+                        prev.map((apt) =>
+                          apt.id === selectedAppointment.id
+                            ? {
+                                ...apt,
+                                priceAdjustments: adjustments,
+                                totalPrice: newTotal,
+                              }
+                            : apt,
+                        ),
+                      );
+                      toast.success("Price adjustment removed");
+                    }}
+                    readOnly={
+                      selectedAppointment.status === "completed" ||
+                      selectedAppointment.status === "cancelled" ||
+                      selectedAppointment.status === "no-show"
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Intake Form - Show for checked-in or in-progress appointments */}
+              {(checkInOutMode === "check-in" || checkInOutMode === "view") && (
+                <div className="border-t pt-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Intake Form</h3>
+                    {checkInOutMode === "check-in" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowIntakeForm(!showIntakeForm)}
+                      >
+                        {showIntakeForm ? "Hide" : "Show"} Intake Form
+                      </Button>
+                    )}
+                  </div>
+                  {(showIntakeForm || checkInOutMode === "view") && (
+                    <GroomingIntakeForm
                       appointmentId={selectedAppointment.id}
                       petName={selectedAppointment.petName}
-                      basePrice={
-                        appointmentsData.find((a) => a.id === selectedAppointment.id)
-                          ?.basePrice || selectedAppointment.totalPrice
-                      }
-                      currentTotal={selectedAppointment.totalPrice}
-                      adjustments={
-                        appointmentsData.find((a) => a.id === selectedAppointment.id)
-                          ?.priceAdjustments || []
-                      }
-                      onAddAdjustment={(adjustment) => {
-                        const appointment = appointmentsData.find(
+                      initialData={
+                        appointmentsData.find(
                           (a) => a.id === selectedAppointment.id,
-                        );
-                        if (!appointment) return;
-
-                        const newAdjustment: PriceAdjustment = {
-                          ...adjustment,
-                          id: `adj-${Date.now()}`,
-                          addedAt: new Date().toISOString(),
-                          notifiedAt: adjustment.customerNotified
-                            ? new Date().toISOString()
-                            : undefined,
-                        };
-
-                        const adjustments = [
-                          ...(appointment.priceAdjustments || []),
-                          newAdjustment,
-                        ];
-                        const totalAdjustments = adjustments.reduce(
-                          (sum, adj) => sum + adj.amount,
-                          0,
-                        );
-                        const newTotal =
-                          (appointment.basePrice || appointment.totalPrice) +
-                          totalAdjustments;
-
+                        )?.intake
+                      }
+                      onSave={(intake: GroomingIntake) => {
+                        // Update appointment data with intake
                         setAppointmentsData((prev) =>
                           prev.map((apt) =>
                             apt.id === selectedAppointment.id
-                              ? {
-                                  ...apt,
-                                  priceAdjustments: adjustments,
-                                  totalPrice: newTotal,
-                                  basePrice:
-                                    apt.basePrice || apt.totalPrice - totalAdjustments,
-                                }
+                              ? { ...apt, intake }
                               : apt,
                           ),
                         );
-
-                        if (adjustment.customerNotified) {
-                          console.log(
-                            `Sending notification to ${appointment.ownerEmail} about $${adjustment.amount} charge`,
-                          );
-                        }
-                      }}
-                      onRemoveAdjustment={(adjustmentId) => {
-                        const appointment = appointmentsData.find(
-                          (a) => a.id === selectedAppointment.id,
-                        );
-                        if (!appointment) return;
-
-                        const adjustments = (appointment.priceAdjustments || []).filter(
-                          (adj) => adj.id !== adjustmentId,
-                        );
-                        const totalAdjustments = adjustments.reduce(
-                          (sum, adj) => sum + adj.amount,
-                          0,
-                        );
-                        const newTotal =
-                          (appointment.basePrice || appointment.totalPrice) +
-                          totalAdjustments;
-
-                        setAppointmentsData((prev) =>
-                          prev.map((apt) =>
-                            apt.id === selectedAppointment.id
-                              ? {
-                                  ...apt,
-                                  priceAdjustments: adjustments,
-                                  totalPrice: newTotal,
-                                }
-                              : apt,
-                          ),
-                        );
-                        toast.success("Price adjustment removed");
+                        toast.success("Intake form saved");
                       }}
                       readOnly={
                         selectedAppointment.status === "completed" ||
@@ -1045,52 +1147,9 @@ export function GroomingCheckInOutSection() {
                         selectedAppointment.status === "no-show"
                       }
                     />
-                  </div>
-                )}
-
-              {/* Intake Form - Show for checked-in or in-progress appointments */}
-              {(checkInOutMode === "check-in" || checkInOutMode === "view") && (
-                  <div className="pt-4 border-t">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Intake Form</h3>
-                      {checkInOutMode === "check-in" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowIntakeForm(!showIntakeForm)}
-                        >
-                          {showIntakeForm ? "Hide" : "Show"} Intake Form
-                        </Button>
-                      )}
-                    </div>
-                    {(showIntakeForm || checkInOutMode === "view") && (
-                      <GroomingIntakeForm
-                        appointmentId={selectedAppointment.id}
-                        petName={selectedAppointment.petName}
-                        initialData={
-                          appointmentsData.find((a) => a.id === selectedAppointment.id)
-                            ?.intake
-                        }
-                        onSave={(intake: GroomingIntake) => {
-                          // Update appointment data with intake
-                          setAppointmentsData((prev) =>
-                            prev.map((apt) =>
-                              apt.id === selectedAppointment.id
-                                ? { ...apt, intake }
-                                : apt,
-                            ),
-                          );
-                          toast.success("Intake form saved");
-                        }}
-                        readOnly={
-                          selectedAppointment.status === "completed" ||
-                          selectedAppointment.status === "cancelled" ||
-                          selectedAppointment.status === "no-show"
-                        }
-                      />
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -1105,7 +1164,8 @@ export function GroomingCheckInOutSection() {
             >
               Cancel
             </Button>
-            {(checkInOutMode === "check-in" || checkInOutMode === "check-out") && (
+            {(checkInOutMode === "check-in" ||
+              checkInOutMode === "check-out") && (
               <Button onClick={confirmCheckInOut}>
                 {checkInOutMode === "check-in" ? "Check In" : "Check Out"}
               </Button>

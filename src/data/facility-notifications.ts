@@ -39,7 +39,7 @@ export interface FacilityNotification {
 }
 
 // Seed example notifications so staff see YipyyGo submissions on the dashboard
-let notifications: FacilityNotification[] = [
+const notifications: FacilityNotification[] = [
   {
     id: "fn-yipyygo-3",
     type: "yipyygo_submitted",
@@ -60,7 +60,11 @@ let notifications: FacilityNotification[] = [
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     facilityId: 11,
     bookingId: 4,
-    meta: { petName: "Luna", arrivalTime: "2024-03-13 07:30", bookingRef: "#4" },
+    meta: {
+      petName: "Luna",
+      arrivalTime: "2024-03-13 07:30",
+      bookingRef: "#4",
+    },
   },
 ];
 const listeners = new Set<() => void>();
@@ -69,18 +73,28 @@ function notifyListeners() {
   listeners.forEach((cb) => cb());
 }
 
-export function getFacilityNotifications(facilityId?: number): FacilityNotification[] {
+export function getFacilityNotifications(
+  facilityId?: number,
+): FacilityNotification[] {
   const list = facilityId
-    ? notifications.filter((n) => n.facilityId == null || n.facilityId === facilityId)
+    ? notifications.filter(
+        (n) => n.facilityId == null || n.facilityId === facilityId,
+      )
     : [...notifications];
-  return list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return list.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
 }
 
-export function getUnreadFacilityNotificationCount(facilityId?: number): number {
+export function getUnreadFacilityNotificationCount(
+  facilityId?: number,
+): number {
   return getFacilityNotifications(facilityId).filter((n) => !n.read).length;
 }
 
-export function addFacilityNotification(notification: Omit<FacilityNotification, "id" | "read" | "timestamp">): FacilityNotification {
+export function addFacilityNotification(
+  notification: Omit<FacilityNotification, "id" | "read" | "timestamp">,
+): FacilityNotification {
   const item: FacilityNotification = {
     ...notification,
     id: `fn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -101,14 +115,19 @@ export function markFacilityNotificationRead(id: string): void {
 }
 
 export function markAllFacilityNotificationsRead(facilityId?: number): void {
-  const scope = facilityId ? (n: FacilityNotification) => (n.facilityId == null || n.facilityId === facilityId) : () => true;
+  const scope = facilityId
+    ? (n: FacilityNotification) =>
+        n.facilityId == null || n.facilityId === facilityId
+    : () => true;
   notifications.forEach((n) => {
     if (scope(n)) n.read = true;
   });
   notifyListeners();
 }
 
-export function subscribeToFacilityNotifications(callback: () => void): () => void {
+export function subscribeToFacilityNotifications(
+  callback: () => void,
+): () => void {
   listeners.add(callback);
   return () => listeners.delete(callback);
 }
@@ -122,7 +141,8 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
   arrivalTime?: string;
   sendEmail?: boolean;
 }): void {
-  const { facilityId, bookingId, petName, clientName, arrivalTime, sendEmail } = params;
+  const { facilityId, bookingId, petName, clientName, arrivalTime, sendEmail } =
+    params;
   const bookingRef = `#${bookingId}`;
   addFacilityNotification({
     type: "yipyygo_submitted",
@@ -155,7 +175,8 @@ export function notifyStaffOnFormSubmission(params: {
   hasFiles: boolean;
   hasRedFlag: boolean;
 }): void {
-  const { facilityId, submissionId, formId, formName, hasFiles, hasRedFlag } = params;
+  const { facilityId, submissionId, formId, formName, hasFiles, hasRedFlag } =
+    params;
   const baseMeta = { submissionId, formId, formName, hasRedFlag, hasFiles };
 
   if (formsNotify?.newSubmission) {

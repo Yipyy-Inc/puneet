@@ -36,7 +36,7 @@ function HighlightedTemplate({ text }: { text: string }) {
         IS_VARIABLE.test(part) ? (
           <span
             key={i}
-            className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-1 py-0.5 rounded text-xs font-mono"
+            className="rounded-sm bg-amber-100 px-1 py-0.5 font-mono text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
           >
             {part}
           </span>
@@ -74,7 +74,7 @@ export function TemplatePreviewPanel({
   if (!template.trim()) {
     return (
       <Card className="border-dashed">
-        <CardContent className="py-6 text-center text-sm text-muted-foreground">
+        <CardContent className="text-muted-foreground py-6 text-center text-sm">
           {emptyMessage}
         </CardContent>
       </Card>
@@ -87,7 +87,7 @@ export function TemplatePreviewPanel({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm font-medium">Preview</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               Preview for {petName}&apos;s booking
             </p>
           </div>
@@ -95,7 +95,7 @@ export function TemplatePreviewPanel({
             <Button
               variant={mode === "preview" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 text-xs gap-1"
+              className="h-7 gap-1 text-xs"
               onClick={() => setMode("preview")}
             >
               <Eye className="h-3 w-3" />
@@ -104,7 +104,7 @@ export function TemplatePreviewPanel({
             <Button
               variant={mode === "template" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 text-xs gap-1"
+              className="h-7 gap-1 text-xs"
               onClick={() => setMode("template")}
             >
               <Code className="h-3 w-3" />
@@ -115,8 +115,8 @@ export function TemplatePreviewPanel({
       </CardHeader>
       <CardContent className="pt-2">
         {resolvedSubject !== undefined && (
-          <div className="mb-3 pb-2 border-b">
-            <p className="text-xs font-medium text-muted-foreground mb-0.5">
+          <div className="mb-3 border-b pb-2">
+            <p className="text-muted-foreground mb-0.5 text-xs font-medium">
               Subject
             </p>
             <p className="text-sm font-medium">
@@ -128,7 +128,7 @@ export function TemplatePreviewPanel({
             </p>
           </div>
         )}
-        <div className="text-sm leading-relaxed">
+        <div className="text-sm/relaxed">
           {mode === "preview" ? (
             <span className="whitespace-pre-wrap">{resolvedBody}</span>
           ) : (

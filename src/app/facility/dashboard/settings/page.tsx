@@ -98,7 +98,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -111,7 +111,7 @@ function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, email: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -123,7 +123,7 @@ function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, phone: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -135,7 +135,7 @@ function BusinessProfileCard() {
                   setLocalProfile({ ...localProfile, website: e.target.value })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
           </div>
@@ -153,7 +153,7 @@ function BusinessProfileCard() {
               }
               rows={3}
               readOnly={!isEditing}
-              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
             />
           </div>
 
@@ -173,7 +173,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
               <Input
                 placeholder="City"
@@ -185,7 +185,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
               <Input
                 placeholder="State"
@@ -197,7 +197,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
               <Input
                 placeholder="ZIP Code"
@@ -212,7 +212,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
           </div>
@@ -233,7 +233,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
               <Input
                 placeholder="Instagram URL"
@@ -248,7 +248,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
               <Input
                 placeholder="Twitter URL"
@@ -263,7 +263,7 @@ function BusinessProfileCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
           </div>
@@ -288,9 +288,9 @@ function BusinessHoursCard() {
             ]) => (
               <div
                 key={day}
-                className="flex items-center justify-between p-3 border rounded-lg"
+                className="flex items-center justify-between rounded-lg border p-3"
               >
-                <div className="flex items-center gap-4 flex-1">
+                <div className="flex flex-1 items-center gap-4">
                   <div className="w-32 font-medium capitalize">{day}</div>
                   <Switch
                     checked={schedule.isOpen}
@@ -313,7 +313,7 @@ function BusinessHoursCard() {
                             [day]: { ...schedule, openTime: e.target.value },
                           })
                         }
-                        className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        className={`w-32 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""} `}
                         readOnly={!isEditing}
                       />
                       <span>to</span>
@@ -326,7 +326,7 @@ function BusinessHoursCard() {
                             [day]: { ...schedule, closeTime: e.target.value },
                           })
                         }
-                        className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        className={`w-32 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""} `}
                         readOnly={!isEditing}
                       />
                     </div>
@@ -401,7 +401,7 @@ function ServiceDayBlockingCard() {
           <CalendarX className="h-5 w-5" />
           Service-Specific Day Blocking
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Block specific calendar days for one or more services (e.g. daycare
           closed on Christmas) without changing the regular weekly schedule. On
           blocked dates, customers cannot book and staff cannot create bookings
@@ -409,11 +409,11 @@ function ServiceDayBlockingCard() {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border p-4 space-y-4">
+        <div className="space-y-4 rounded-lg border p-4">
           <Label>Add block</Label>
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Label className="text-muted-foreground text-xs">Date</Label>
               <Input
                 type="date"
                 value={newDate}
@@ -421,7 +421,7 @@ function ServiceDayBlockingCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Services affected (per service, multiple, or all)
               </Label>
               <div className="flex flex-wrap items-center gap-2">
@@ -451,7 +451,7 @@ function ServiceDayBlockingCard() {
                     />
                     <Label
                       htmlFor={`block-svc-${opt.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="cursor-pointer text-sm font-normal"
                     >
                       {opt.label}
                     </Label>
@@ -461,7 +461,7 @@ function ServiceDayBlockingCard() {
             </div>
             {includesBoarding && (
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-muted-foreground text-xs">
                   Boarding block type
                 </Label>
                 <div className="flex flex-wrap gap-2">
@@ -497,14 +497,14 @@ function ServiceDayBlockingCard() {
                     Block check-out only
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Fully close = no check-in or check-out. Or block only check-in
                   or only check-out dates.
                 </p>
               </div>
             )}
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Closure message (customer-facing)
               </Label>
               <Input
@@ -513,7 +513,7 @@ function ServiceDayBlockingCard() {
                 placeholder="e.g. Closed for Christmas, Closed for staff training"
                 className="max-w-sm"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Shown when a customer hovers over or focuses the blocked date in
                 the booking calendar.
               </p>
@@ -523,7 +523,7 @@ function ServiceDayBlockingCard() {
               onClick={handleAdd}
               disabled={!newDate || newServices.length === 0}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add block
             </Button>
           </div>
@@ -531,7 +531,7 @@ function ServiceDayBlockingCard() {
         <div className="space-y-2">
           <Label>Blocked dates</Label>
           {serviceDateBlocks.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+            <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
               No service-specific blocks. Add a date and service(s) above.
             </p>
           ) : (
@@ -542,7 +542,7 @@ function ServiceDayBlockingCard() {
                 .map((block) => (
                   <li
                     key={block.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-3">
@@ -592,7 +592,7 @@ function ServiceDayBlockingCard() {
                         )}
                       </div>
                       {block.closureMessage && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           “{block.closureMessage}”
                         </p>
                       )}
@@ -603,7 +603,7 @@ function ServiceDayBlockingCard() {
                       size="icon"
                       onClick={() => handleRemove(block.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </li>
                 ))}
@@ -662,18 +662,18 @@ function OneDayScheduleOverrideCard() {
           <Clock className="h-5 w-5" />
           One-Day Schedule Time Override (Special Hours)
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Set custom opening and closing times for a specific date (e.g.
           Halloween 10:00 AM – 3:00 PM) without changing the regular weekly
           schedule. Choose per service, multiple services, or all services.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border p-4 space-y-4">
+        <div className="space-y-4 rounded-lg border p-4">
           <Label>Add override</Label>
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Label className="text-muted-foreground text-xs">Date</Label>
               <Input
                 type="date"
                 value={newDate}
@@ -681,7 +681,7 @@ function OneDayScheduleOverrideCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Services (optional — leave empty for all)
               </Label>
               <div className="flex flex-wrap items-center gap-2">
@@ -711,7 +711,7 @@ function OneDayScheduleOverrideCard() {
                     />
                     <Label
                       htmlFor={`sched-svc-${opt.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="cursor-pointer text-sm font-normal"
                     >
                       {opt.label}
                     </Label>
@@ -720,7 +720,7 @@ function OneDayScheduleOverrideCard() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Opening time
               </Label>
               <Input
@@ -730,7 +730,7 @@ function OneDayScheduleOverrideCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Closing time
               </Label>
               <Input
@@ -740,7 +740,7 @@ function OneDayScheduleOverrideCard() {
               />
             </div>
             <Button type="button" onClick={handleAdd} disabled={!newDate}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add override
             </Button>
           </div>
@@ -748,7 +748,7 @@ function OneDayScheduleOverrideCard() {
         <div className="space-y-2">
           <Label>Special hours</Label>
           {scheduleTimeOverrides.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+            <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
               No one-day overrides. Add a date and times above.
             </p>
           ) : (
@@ -759,10 +759,10 @@ function OneDayScheduleOverrideCard() {
                 .map((override) => (
                   <li
                     key={override.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">
                           {new Date(
                             override.date + "T12:00:00",
@@ -797,7 +797,7 @@ function OneDayScheduleOverrideCard() {
                           </Badge>
                         )}
                       </div>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-muted-foreground text-sm">
                         {override.openTime} – {override.closeTime}
                       </span>
                     </div>
@@ -807,7 +807,7 @@ function OneDayScheduleOverrideCard() {
                       size="icon"
                       onClick={() => handleRemove(override.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </li>
                 ))}
@@ -869,18 +869,18 @@ function DropOffPickUpOverrideCard() {
           <Timer className="h-5 w-5" />
           Drop-Off &amp; Pick-Up Time Overrides
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Override drop-off and pick-up windows for specific dates (e.g. holiday
           hours). Customers only see valid time options for each date. Apply
           overrides per service.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-lg border p-4 space-y-4">
+        <div className="space-y-4 rounded-lg border p-4">
           <Label>Add override</Label>
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Date</Label>
+              <Label className="text-muted-foreground text-xs">Date</Label>
               <Input
                 type="date"
                 value={newDate}
@@ -888,7 +888,7 @@ function DropOffPickUpOverrideCard() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">
+              <Label className="text-muted-foreground text-xs">
                 Services (per service, multiple, or all)
               </Label>
               <div className="flex flex-wrap items-center gap-2">
@@ -918,7 +918,7 @@ function DropOffPickUpOverrideCard() {
                     />
                     <Label
                       htmlFor={`dopo-svc-${opt.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="cursor-pointer text-sm font-normal"
                     >
                       {opt.label}
                     </Label>
@@ -926,9 +926,9 @@ function DropOffPickUpOverrideCard() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-muted-foreground text-xs">
                   Drop-off start
                 </Label>
                 <Input
@@ -938,7 +938,7 @@ function DropOffPickUpOverrideCard() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-muted-foreground text-xs">
                   Drop-off end
                 </Label>
                 <Input
@@ -948,7 +948,7 @@ function DropOffPickUpOverrideCard() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-muted-foreground text-xs">
                   Pick-up start
                 </Label>
                 <Input
@@ -958,7 +958,7 @@ function DropOffPickUpOverrideCard() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">
+                <Label className="text-muted-foreground text-xs">
                   Pick-up end
                 </Label>
                 <Input
@@ -973,7 +973,7 @@ function DropOffPickUpOverrideCard() {
               onClick={handleAdd}
               disabled={!newDate || newServices.length === 0}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add override
             </Button>
           </div>
@@ -981,7 +981,7 @@ function DropOffPickUpOverrideCard() {
         <div className="space-y-2">
           <Label>Overrides</Label>
           {dropOffPickUpOverrides.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 border rounded-lg text-center">
+            <p className="text-muted-foreground rounded-lg border py-4 text-center text-sm">
               No drop-off/pick-up overrides. Add a date and service(s) above.
             </p>
           ) : (
@@ -992,7 +992,7 @@ function DropOffPickUpOverrideCard() {
                 .map((override) => (
                   <li
                     key={override.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
@@ -1026,7 +1026,7 @@ function DropOffPickUpOverrideCard() {
                           )}
                         </div>
                       </div>
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-muted-foreground text-sm">
                         Drop-off {override.dropOffStart}–{override.dropOffEnd} ·
                         Pick-up {override.pickUpStart}–{override.pickUpEnd}
                       </span>
@@ -1037,7 +1037,7 @@ function DropOffPickUpOverrideCard() {
                       size="icon"
                       onClick={() => handleRemove(override.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </li>
                 ))}
@@ -1074,7 +1074,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1089,7 +1089,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1104,7 +1104,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1119,7 +1119,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1134,7 +1134,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1149,7 +1149,7 @@ function BookingRulesCard() {
                   })
                 }
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
           </div>
@@ -1166,14 +1166,14 @@ function BookingRulesCard() {
                 })
               }
               readOnly={!isEditing}
-              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <div className="font-medium">Require Deposit</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 Require deposit at booking
               </div>
             </div>
@@ -1186,10 +1186,10 @@ function BookingRulesCard() {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <div className="font-medium">Allow Overbooking</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 Accept bookings beyond capacity
               </div>
             </div>
@@ -1232,7 +1232,7 @@ function EvaluationSettingsCard() {
                 }
                 placeholder="e.g., Pet Evaluation"
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1247,7 +1247,7 @@ function EvaluationSettingsCard() {
                 }
                 placeholder="e.g., Pet Evaluation"
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
           </div>
@@ -1264,7 +1264,7 @@ function EvaluationSettingsCard() {
               rows={3}
               placeholder="Describe the evaluation process..."
               readOnly={!isEditing}
-              className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+              className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1282,7 +1282,7 @@ function EvaluationSettingsCard() {
                 }
                 placeholder="0 for free"
                 readOnly={!isEditing}
-                className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
             <div className="space-y-2">
@@ -1322,15 +1322,15 @@ function EvaluationSettingsCard() {
                   })
                 }
                 placeholder="e.g., 2.5"
-                className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                className={`w-32 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""} `}
                 readOnly={!isEditing}
               />
             </div>
           )}
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <div className="font-medium">Taxable</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 Apply tax to evaluation price
               </div>
             </div>
@@ -1365,7 +1365,7 @@ function EvaluationSettingsCard() {
                   })
                 }
                 placeholder="e.g., 8.25"
-                className={`w-32 ${!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                className={`w-32 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""} `}
                 readOnly={!isEditing}
               />
             </div>
@@ -1375,7 +1375,7 @@ function EvaluationSettingsCard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">Evaluation Scheduling Rules</div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   Configure duration options, time windows, and slot logic.
                 </div>
               </div>
@@ -1407,7 +1407,7 @@ function EvaluationSettingsCard() {
                   }}
                   placeholder="2, 4"
                   readOnly={!isEditing}
-                  className={!isEditing ? "bg-gray-100 cursor-not-allowed" : ""}
+                  className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
                 />
               </div>
               <div className="space-y-2">
@@ -1469,7 +1469,7 @@ function EvaluationSettingsCard() {
                       placeholder="Label"
                       readOnly={!isEditing}
                       className={
-                        !isEditing ? "bg-gray-100 cursor-not-allowed" : ""
+                        !isEditing ? "cursor-not-allowed bg-gray-100" : ""
                       }
                     />
                     <Input
@@ -1491,7 +1491,7 @@ function EvaluationSettingsCard() {
                       }}
                       readOnly={!isEditing}
                       className={
-                        !isEditing ? "bg-gray-100 cursor-not-allowed" : ""
+                        !isEditing ? "cursor-not-allowed bg-gray-100" : ""
                       }
                     />
                     <Input
@@ -1513,7 +1513,7 @@ function EvaluationSettingsCard() {
                       }}
                       readOnly={!isEditing}
                       className={
-                        !isEditing ? "bg-gray-100 cursor-not-allowed" : ""
+                        !isEditing ? "cursor-not-allowed bg-gray-100" : ""
                       }
                     />
                   </div>
@@ -1595,7 +1595,7 @@ function EvaluationSettingsCard() {
                     placeholder="09:00, 11:00, 13:00"
                     readOnly={!isEditing}
                     className={
-                      !isEditing ? "bg-gray-100 cursor-not-allowed" : ""
+                      !isEditing ? "cursor-not-allowed bg-gray-100" : ""
                     }
                   />
                 </div>
@@ -1735,7 +1735,7 @@ function ReportCardSettingsCard() {
 
         return (
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsList className="mb-4 grid w-full grid-cols-5">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="sections">Sections</TabsTrigger>
               <TabsTrigger value="feedback">Feedback</TabsTrigger>
@@ -1768,7 +1768,7 @@ function ReportCardSettingsCard() {
                         type="color"
                         value={brand.accentColor}
                         disabled={!isEditing}
-                        className="h-9 w-12 rounded border cursor-pointer disabled:cursor-not-allowed"
+                        className="h-9 w-12 cursor-pointer rounded-sm border disabled:cursor-not-allowed"
                         onChange={(e) =>
                           setLocalConfig({
                             ...localConfig,
@@ -1812,7 +1812,7 @@ function ReportCardSettingsCard() {
                 <Label className="text-base font-semibold">
                   Enabled Services
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Choose which services can have report cards.
                 </p>
                 <div className="grid grid-cols-2 gap-2 rounded-lg border p-3">
@@ -1906,7 +1906,7 @@ function ReportCardSettingsCard() {
                         <p className="text-sm font-medium">
                           {meta?.label ?? sectionId}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {meta?.description}
                         </p>
                       </div>
@@ -1997,7 +1997,7 @@ function ReportCardSettingsCard() {
                               });
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4" />
                           </Button>
                         )}
                       </div>
@@ -2027,7 +2027,7 @@ function ReportCardSettingsCard() {
                             setNewFeedbackOption("");
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-1" /> Add
+                          <Plus className="mr-1 size-4" /> Add
                         </Button>
                       </div>
                     )}
@@ -2039,7 +2039,7 @@ function ReportCardSettingsCard() {
                 <Label className="text-base font-semibold">
                   Custom Questions
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Create your own feedback questions that staff fill out per
                   report card.
                 </p>
@@ -2051,7 +2051,7 @@ function ReportCardSettingsCard() {
                     >
                       <div>
                         <p className="text-sm font-medium">{q.question}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="mt-1 flex items-center gap-2">
                           <Badge
                             variant="outline"
                             className="text-xs capitalize"
@@ -2064,7 +2064,7 @@ function ReportCardSettingsCard() {
                             </Badge>
                           )}
                           {q.type === "select" && q.options && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {q.options.length} options
                             </span>
                           )}
@@ -2083,7 +2083,7 @@ function ReportCardSettingsCard() {
                             })
                           }
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="size-4" />
                         </Button>
                       )}
                     </div>
@@ -2091,7 +2091,7 @@ function ReportCardSettingsCard() {
                 </div>
                 {isEditing && (
                   <Card>
-                    <CardContent className="p-4 space-y-3">
+                    <CardContent className="space-y-3 p-4">
                       <Label className="text-sm font-medium">
                         Add New Question
                       </Label>
@@ -2161,7 +2161,7 @@ function ReportCardSettingsCard() {
                           setNewOptionText("");
                         }}
                       >
-                        <Plus className="h-4 w-4 mr-1" /> Add Question
+                        <Plus className="mr-1 size-4" /> Add Question
                       </Button>
                     </CardContent>
                   </Card>
@@ -2175,13 +2175,13 @@ function ReportCardSettingsCard() {
                 <Label className="text-base font-semibold">
                   Pet Condition Categories
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Document health, coat, skin, and other observations on each
                   report card.
                 </p>
                 {petCondition.categories.map((cat) => (
                   <Card key={cat.id}>
-                    <CardHeader className="py-3 px-4">
+                    <CardHeader className="px-4 py-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-sm">{cat.label}</CardTitle>
                         {isEditing && (
@@ -2199,23 +2199,23 @@ function ReportCardSettingsCard() {
                               })
                             }
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4" />
                           </Button>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="px-4 pb-4 pt-0">
+                    <CardContent className="px-4 pt-0 pb-4">
                       <div className="flex flex-wrap gap-1.5">
                         {cat.options.map((opt, idx) => (
                           <Badge
                             key={idx}
                             variant="secondary"
-                            className="text-xs gap-1"
+                            className="gap-1 text-xs"
                           >
                             {opt}
                             {isEditing && (
                               <button
-                                className="ml-1 hover:text-destructive"
+                                className="hover:text-destructive ml-1"
                                 onClick={() => {
                                   const updatedCats =
                                     petCondition.categories.map((c) =>
@@ -2241,7 +2241,7 @@ function ReportCardSettingsCard() {
                         ))}
                       </div>
                       {isEditing && (
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="mt-2 flex items-center gap-2">
                           <Input
                             placeholder="New option..."
                             className="h-8 text-sm"
@@ -2319,7 +2319,7 @@ function ReportCardSettingsCard() {
                         setNewCategoryLabel("");
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-1" /> Add Category
+                      <Plus className="mr-1 size-4" /> Add Category
                     </Button>
                   </div>
                 )}
@@ -2363,7 +2363,7 @@ function ReportCardSettingsCard() {
                     }
                     className={
                       !isEditing || localConfig.autoSend.mode !== "scheduled"
-                        ? "bg-gray-100 cursor-not-allowed"
+                        ? "cursor-not-allowed bg-gray-100"
                         : ""
                     }
                     onChange={(e) =>
@@ -2409,7 +2409,7 @@ function ReportCardSettingsCard() {
                 <Label className="text-base font-semibold">
                   Review Booster
                 </Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Prompt happy customers to leave reviews on external platforms.
                 </p>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -2483,10 +2483,10 @@ function ReportCardSettingsCard() {
                 <div className="space-y-4">
                   {themeOptions.map((theme) => (
                     <Card key={theme.id}>
-                      <CardHeader className="py-3 px-4 cursor-pointer">
+                      <CardHeader className="cursor-pointer px-4 py-3">
                         <CardTitle className="text-sm">{theme.label}</CardTitle>
                       </CardHeader>
-                      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+                      <CardContent className="space-y-3 px-4 pt-0 pb-4">
                         {(
                           [
                             "todaysVibe",
@@ -2503,7 +2503,7 @@ function ReportCardSettingsCard() {
                             <Textarea
                               value={localConfig.templates[theme.id][field]}
                               readOnly={!isEditing}
-                              className="text-sm min-h-[60px]"
+                              className="min-h-[60px] text-sm"
                               onChange={(e) =>
                                 setLocalConfig({
                                   ...localConfig,
@@ -2560,10 +2560,10 @@ function FacilityBookingFlowCard() {
     >
       {(isEditing, localFlow, setLocalFlow) => (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <div className="font-medium">Evaluation Required</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 Require evaluation before any service booking.
               </div>
             </div>
@@ -2577,12 +2577,12 @@ function FacilityBookingFlowCard() {
           </div>
 
           {localFlow.evaluationRequired ? (
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <div className="font-medium">
                   Hide Services Until Evaluation Completed
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   Show only the Evaluation service until it is completed or
                   booked.
                 </div>
@@ -2681,25 +2681,25 @@ function NotificationSettingsCard() {
           {/* Group by category */}
           {["client", "staff", "system"].map((category) => (
             <div key={category} className="mb-6">
-              <h3 className="font-semibold mb-3 capitalize">
+              <h3 className="mb-3 font-semibold capitalize">
                 {category} Notifications
               </h3>
               <div className="space-y-3">
                 {localNotifications
                   .filter((n) => n.category === category)
                   .map((notif) => (
-                    <div key={notif.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
+                    <div key={notif.id} className="rounded-lg border p-4">
+                      <div className="mb-3 flex items-start justify-between">
                         <div>
                           <div className="font-medium">{notif.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-muted-foreground text-sm">
                             {notif.description}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <Mail className="text-muted-foreground size-4" />
                           <span className="text-sm">Email</span>
                           <Switch
                             checked={notif.email}
@@ -2716,7 +2716,7 @@ function NotificationSettingsCard() {
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <Phone className="text-muted-foreground size-4" />
                           <span className="text-sm">SMS</span>
                           <Switch
                             checked={notif.sms}
@@ -2733,7 +2733,7 @@ function NotificationSettingsCard() {
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <Bell className="h-4 w-4 text-muted-foreground" />
+                          <Bell className="text-muted-foreground size-4" />
                           <span className="text-sm">Push</span>
                           <Switch
                             checked={notif.push}
@@ -2816,7 +2816,7 @@ export default function SettingsPage() {
               <s>{row.original.oldValue}</s>
             </div>
           )}
-          <div className="text-green-600 font-medium">
+          <div className="font-medium text-green-600">
             {row.original.newValue}
           </div>
         </div>
@@ -2825,7 +2825,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -2840,44 +2840,44 @@ export default function SettingsPage() {
       <Tabs defaultValue="business" className="space-y-6">
         <TabsList className="grid w-full grid-cols-10 lg:flex lg:flex-wrap">
           <TabsTrigger value="business">
-            <Building2 className="h-4 w-4 mr-2" />
+            <Building2 className="mr-2 size-4" />
             Business
           </TabsTrigger>
           <TabsTrigger value="financial">
-            <DollarSign className="h-4 w-4 mr-2" />
+            <DollarSign className="mr-2 size-4" />
             Financial
           </TabsTrigger>
 
           <TabsTrigger value="notifications">
-            <Bell className="h-4 w-4 mr-2" />
+            <Bell className="mr-2 size-4" />
             Notifications
           </TabsTrigger>
           <TabsTrigger value="integrations">
-            <Plug className="h-4 w-4 mr-2" />
+            <Plug className="mr-2 size-4" />
             Integrations
           </TabsTrigger>
           <TabsTrigger value="mobile-app">
-            <Smartphone className="h-4 w-4 mr-2" />
+            <Smartphone className="mr-2 size-4" />
             Mobile App
           </TabsTrigger>
           <TabsTrigger value="subscription">
-            <CreditCard className="h-4 w-4 mr-2" />
+            <CreditCard className="mr-2 size-4" />
             Subscription
           </TabsTrigger>
           <TabsTrigger value="audit">
-            <History className="h-4 w-4 mr-2" />
+            <History className="mr-2 size-4" />
             Audit Log
           </TabsTrigger>
           <TabsTrigger value="yipyygo">
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="mr-2 size-4" />
             YipyyGo
           </TabsTrigger>
           <TabsTrigger value="form-requirements">
-            <Shield className="h-4 w-4 mr-2" />
+            <Shield className="mr-2 size-4" />
             Forms
           </TabsTrigger>
           <TabsTrigger value="tags-notes">
-            <Tag className="h-4 w-4 mr-2" />
+            <Tag className="mr-2 size-4" />
             Tags &amp; Notes
           </TabsTrigger>
         </TabsList>
@@ -2902,19 +2902,19 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {locations.map((location) => (
-                <div key={location.id} className="p-4 border rounded-lg">
+                <div key={location.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="font-semibold flex items-center gap-2">
+                      <div className="flex items-center gap-2 font-semibold">
                         {location.name}
                         {location.isActive && (
                           <Badge variant="default">Active</Badge>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-muted-foreground mt-1 text-sm">
                         {location.address}
                       </div>
-                      <div className="text-sm mt-2">
+                      <div className="mt-2 text-sm">
                         Phone: {location.phone} • Capacity: {location.capacity}{" "}
                         pets
                       </div>
@@ -2947,14 +2947,14 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {vaccinationRules.map((vax) => (
-                <div key={vax.id} className="p-4 border rounded-lg">
+                <div key={vax.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="font-semibold">{vax.vaccineName}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-muted-foreground mt-1 text-sm">
                         Expiry warning: {vax.expiryWarningDays} days before
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="mt-2 flex flex-wrap gap-1">
                         {vax.applicableServices.map((service, idx) => (
                           <Badge
                             key={idx}
@@ -2986,7 +2986,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {paymentGateways.map((gateway, idx) => (
-                <div key={idx} className="p-4 border rounded-lg space-y-3">
+                <div key={idx} className="space-y-3 rounded-lg border p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="font-semibold capitalize">
@@ -3033,7 +3033,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {taxRates.map((tax) => (
-                <div key={tax.id} className="p-4 border rounded-lg">
+                <div key={tax.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -3042,8 +3042,8 @@ export default function SettingsPage() {
                           <Badge variant="default">Default</Badge>
                         )}
                       </div>
-                      <div className="text-2xl font-bold mt-2">{tax.rate}%</div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="mt-2 text-2xl font-bold">{tax.rate}%</div>
+                      <div className="mt-2 flex flex-wrap gap-1">
                         {tax.applicableServices.map((service, idx) => (
                           <Badge
                             key={idx}
@@ -3107,7 +3107,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Format Preview</Label>
-                  <div className="p-2 border rounded bg-muted font-mono">
+                  <div className="bg-muted rounded-sm border p-2 font-mono">
                     {currencySettings.symbol}1
                     {currencySettings.thousandSeparator}234
                     {currencySettings.decimalSeparator}56
@@ -3121,15 +3121,15 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Financial Data Lock-down</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Prevent editing of financial records after a certain period
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <div className="font-medium">Enable Financial Lock-down</div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     Lock financial data after end of month
                   </div>
                 </div>
@@ -3138,7 +3138,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Lock Period (days after month end)</Label>
                 <Input type="number" defaultValue={7} />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Financial records will be locked 7 days after the month ends
                 </p>
               </div>
@@ -3154,7 +3154,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Notification Template Editor</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Customize email and SMS templates (linked to Communications →
                 Templates)
               </p>
@@ -3183,7 +3183,7 @@ export default function SettingsPage() {
                 .map((integration) => (
                   <div
                     key={integration.id}
-                    className="p-4 border rounded-lg space-y-3"
+                    className="space-y-3 rounded-lg border p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -3206,7 +3206,7 @@ export default function SettingsPage() {
                       />
                     </div>
                     {integration.isEnabled && (
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         Connected and operational
                       </div>
                     )}
@@ -3229,7 +3229,7 @@ export default function SettingsPage() {
                 .map((integration) => (
                   <div
                     key={integration.id}
-                    className="p-4 border rounded-lg space-y-3"
+                    className="space-y-3 rounded-lg border p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -3272,7 +3272,7 @@ export default function SettingsPage() {
                 <DollarSign className="h-5 w-5" />
                 Accounting Integration
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 QuickBooks Online integration (Phase 2)
               </p>
             </CardHeader>
@@ -3282,7 +3282,7 @@ export default function SettingsPage() {
                 .map((integration) => (
                   <div
                     key={integration.id}
-                    className="p-4 border rounded-lg space-y-3"
+                    className="space-y-3 rounded-lg border p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -3312,7 +3312,7 @@ export default function SettingsPage() {
                         {integration.isEnabled ? "Disconnect" : "Connect"}
                       </Button>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-muted-foreground text-sm">
                       Sync frequency: Daily
                     </div>
                   </div>
@@ -3334,7 +3334,7 @@ export default function SettingsPage() {
                 .map((integration) => (
                   <div
                     key={integration.id}
-                    className="p-4 border rounded-lg space-y-3"
+                    className="space-y-3 rounded-lg border p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -3391,12 +3391,12 @@ export default function SettingsPage() {
               <CardTitle>Current Subscription</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start justify-between p-6 bg-linear-to-br from-blue-50 to-purple-50 rounded-lg">
+              <div className="flex items-start justify-between rounded-lg bg-linear-to-br from-blue-50 to-purple-50 p-6">
                 <div>
                   <div className="text-2xl font-bold">
                     {subscription.planName}
                   </div>
-                  <div className="text-muted-foreground capitalize mt-1">
+                  <div className="text-muted-foreground mt-1 capitalize">
                     {subscription.billingCycle} billing
                   </div>
                   <div className="mt-4">
@@ -3416,11 +3416,11 @@ export default function SettingsPage() {
                   <div className="text-4xl font-bold">
                     ${subscription.price}
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     per{" "}
                     {subscription.billingCycle === "monthly" ? "month" : "year"}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-2">
+                  <div className="text-muted-foreground mt-2 text-xs">
                     Next billing:{" "}
                     {new Date(
                       subscription.nextBillingDate,
@@ -3457,13 +3457,13 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Module Add-ons</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Enable additional modules to extend functionality
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {addons.map((addon) => (
-                <div key={addon.id} className="p-4 border rounded-lg">
+                <div key={addon.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -3475,11 +3475,11 @@ export default function SettingsPage() {
                           <Badge variant="secondary">Active Add-on</Badge>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-muted-foreground mt-1 text-sm">
                         {addon.description}
                       </div>
                       {!addon.isIncludedInPlan && (
-                        <div className="text-sm font-medium mt-2">
+                        <div className="mt-2 text-sm font-medium">
                           ${addon.monthlyPrice}/month
                         </div>
                       )}
@@ -3511,12 +3511,12 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Audit Log</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Complete history of all setting changes
                   </p>
                 </div>
                 <Button variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 size-4" />
                   Export Log
                 </Button>
               </div>

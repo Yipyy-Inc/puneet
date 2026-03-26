@@ -122,11 +122,11 @@ export default function GroomingSettingsPage() {
           {isEditing ? (
             <>
               <Button variant="outline" onClick={handleReset}>
-                <RotateCcw className="mr-2 h-4 w-4" />
+                <RotateCcw className="mr-2 size-4" />
                 Cancel
               </Button>
               <Button onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-2 size-4" />
                 Save Changes
               </Button>
             </>
@@ -149,7 +149,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Grooming Service</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow customers to book grooming appointments
                 </p>
               </div>
@@ -165,7 +165,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Online Booking</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Customers can book appointments through the website
                 </p>
               </div>
@@ -181,7 +181,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Deposit</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Collect a deposit when booking
                 </p>
               </div>
@@ -288,7 +288,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Same-Day Booking</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Accept appointments for the current day
                 </p>
               </div>
@@ -434,14 +434,14 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Nail Trimming</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer nail trimming service
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 {settings.enableNailTrimming && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">$</span>
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       value={settings.nailTrimmingPrice}
@@ -469,14 +469,14 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Teeth Brushing</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer teeth brushing service
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 {settings.enableTeethBrushing && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">$</span>
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       value={settings.teethBrushingPrice}
@@ -504,14 +504,14 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Ear Cleaning</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer ear cleaning service
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 {settings.enableEarCleaning && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">$</span>
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       value={settings.earCleaningPrice}
@@ -539,14 +539,14 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>De-shedding Treatment</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer de-shedding treatment
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 {settings.enableDeShedding && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">$</span>
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       value={settings.deSheddingPrice}
@@ -574,14 +574,14 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Flea Treatment</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Offer flea treatment service
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 {settings.enableFleaTreatment && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">$</span>
+                    <span className="text-muted-foreground text-sm">$</span>
                     <Input
                       type="number"
                       value={settings.fleaTreatmentPrice}
@@ -620,7 +620,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Stylist Selection</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Let customers choose their preferred stylist
                 </p>
               </div>
@@ -636,7 +636,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Auto-Assign Stylist</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Automatically assign available stylist if none selected
                 </p>
               </div>
@@ -652,7 +652,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Show Stylist Availability</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Display stylist availability to customers
                 </p>
               </div>
@@ -679,16 +679,18 @@ export default function GroomingSettingsPage() {
                 disabled={!isEditing}
                 className="w-32"
               />
-              <p className="text-sm text-muted-foreground">
-                Maximum number of appointments a stylist can handle per day. Set to 0 for no limit (uses stylist capacity).
+              <p className="text-muted-foreground text-sm">
+                Maximum number of appointments a stylist can handle per day. Set
+                to 0 for no limit (uses stylist capacity).
               </p>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Allow Parallel Grooming</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow stylists to groom multiple dogs simultaneously (requires multiple grooming stations)
+                <p className="text-muted-foreground text-sm">
+                  Allow stylists to groom multiple dogs simultaneously (requires
+                  multiple grooming stations)
                 </p>
               </div>
               <Switch
@@ -714,14 +716,18 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Check-In Before Groom Starts</Label>
-                <p className="text-sm text-muted-foreground">
-                  Appointment must be checked in before status can change to "in-progress"
+                <p className="text-muted-foreground text-sm">
+                  Appointment must be checked in before status can change to
+                  &quot;in-progress&quot;
                 </p>
               </div>
               <Switch
                 checked={settings.requireCheckInBeforeGroom}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, requireCheckInBeforeGroom: checked })
+                  setSettings({
+                    ...settings,
+                    requireCheckInBeforeGroom: checked,
+                  })
                 }
                 disabled={!isEditing}
               />
@@ -730,32 +736,38 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Deposit Per Package</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow deposit requirement to be configured per package (overrides global deposit setting)
+                <p className="text-muted-foreground text-sm">
+                  Allow deposit requirement to be configured per package
+                  (overrides global deposit setting)
                 </p>
               </div>
               <Switch
                 checked={settings.requireDepositPerPackage}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, requireDepositPerPackage: checked })
+                  setSettings({
+                    ...settings,
+                    requireDepositPerPackage: checked,
+                  })
                 }
                 disabled={!isEditing}
               />
             </div>
             {settings.requireDepositPerPackage && (
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  When enabled, you can set deposit requirements individually for each package in the Packages page. 
-                  Package-specific deposits will override the global deposit setting.
+                  When enabled, you can set deposit requirements individually
+                  for each package in the Packages page. Package-specific
+                  deposits will override the global deposit setting.
                 </p>
               </div>
             )}
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Auto "Ready for Pickup" SMS</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically send SMS notification when appointment status changes to "ready-for-pickup"
+                <Label>Auto &quot;Ready for Pickup&quot; SMS</Label>
+                <p className="text-muted-foreground text-sm">
+                  Automatically send SMS notification when appointment status
+                  changes to &quot;ready-for-pickup&quot;
                 </p>
               </div>
               <Switch
@@ -767,18 +779,20 @@ export default function GroomingSettingsPage() {
               />
             </div>
             {settings.autoReadyForPickupSMS && (
-              <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/20">
                 <p className="text-sm text-green-800 dark:text-green-200">
-                  Customers will automatically receive an SMS when their pet's grooming is complete and ready for pickup.
+                  Customers will automatically receive an SMS when their
+                  pet&apos;s grooming is complete and ready for pickup.
                 </p>
               </div>
             )}
             <Separator />
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Auto "Ready for Pickup" Email</Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically send Email notification when appointment status changes to "ready-for-pickup"
+                <Label>Auto &quot;Ready for Pickup&quot; Email</Label>
+                <p className="text-muted-foreground text-sm">
+                  Automatically send Email notification when appointment status
+                  changes to &quot;ready-for-pickup&quot;
                 </p>
               </div>
               <Switch
@@ -790,9 +804,10 @@ export default function GroomingSettingsPage() {
               />
             </div>
             {settings.autoReadyForPickupEmail && (
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/20">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Customers will automatically receive an Email when their pet's grooming is complete and ready for pickup.
+                  Customers will automatically receive an Email when their
+                  pet&apos;s grooming is complete and ready for pickup.
                 </p>
               </div>
             )}
@@ -811,7 +826,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Require Vaccination Records</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Pets must have up-to-date vaccination records
                 </p>
               </div>
@@ -841,7 +856,7 @@ export default function GroomingSettingsPage() {
                 disabled={!isEditing}
                 className="w-32"
               />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Set to 0 for no limit
               </p>
             </div>
@@ -849,7 +864,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Accept Aggressive Pets</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Allow pets with known aggressive behavior
                 </p>
               </div>
@@ -874,7 +889,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Send Booking Confirmation</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Email confirmation when an appointment is booked
                 </p>
               </div>
@@ -890,7 +905,7 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Send Appointment Reminder</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Remind customers before their appointment
                 </p>
               </div>
@@ -923,8 +938,9 @@ export default function GroomingSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Send Completion Notification</Label>
-                <p className="text-sm text-muted-foreground">
-                  Email notification when grooming is complete and ready for pickup
+                <p className="text-muted-foreground text-sm">
+                  Email notification when grooming is complete and ready for
+                  pickup
                 </p>
               </div>
               <Switch
@@ -938,14 +954,15 @@ export default function GroomingSettingsPage() {
                 disabled={!isEditing}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Note: SMS notifications for "Ready for Pickup" are controlled separately in Operational Flow Controls.
+            <p className="text-muted-foreground text-xs">
+              Note: SMS notifications for &quot;Ready for Pickup&quot; are
+              controlled separately in Operational Flow Controls.
             </p>
             {settings.sendCompletionNotification && (
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Include Before/After Photos</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Attach photos showing the transformation
                   </p>
                 </div>

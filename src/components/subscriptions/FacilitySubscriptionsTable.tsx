@@ -182,12 +182,12 @@ export function FacilitySubscriptionsTable() {
           <div className="flex items-center gap-2">
             <div className="text-sm">
               <span
-                className={isHighUsage ? "text-orange-500 font-medium" : ""}
+                className={isHighUsage ? "font-medium text-orange-500" : ""}
               >
                 {Math.round(userPercent)}%
               </span>
             </div>
-            {isHighUsage && <TrendingUp className="h-4 w-4 text-orange-500" />}
+            {isHighUsage && <TrendingUp className="size-4 text-orange-500" />}
           </div>
         );
       },
@@ -226,7 +226,7 @@ export function FacilitySubscriptionsTable() {
               {formatDate(item.endDate)}
             </span>
             {isExpiringSoon && (
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <AlertTriangle className="size-4 text-orange-500" />
             )}
           </div>
         );
@@ -239,7 +239,7 @@ export function FacilitySubscriptionsTable() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -250,7 +250,7 @@ export function FacilitySubscriptionsTable() {
             setShowDetailsModal(true);
           }}
         >
-          <Eye className="mr-2 h-4 w-4" />
+          <Eye className="mr-2 size-4" />
           View Details
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -259,7 +259,7 @@ export function FacilitySubscriptionsTable() {
             setShowEditModal(true);
           }}
         >
-          <Edit className="mr-2 h-4 w-4" />
+          <Edit className="mr-2 size-4" />
           Edit Subscription
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -269,7 +269,7 @@ export function FacilitySubscriptionsTable() {
             setShowModulesModal(true);
           }}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
+          <RefreshCw className="mr-2 size-4" />
           Manage Modules
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -278,7 +278,7 @@ export function FacilitySubscriptionsTable() {
             setShowUpgradeModal(true);
           }}
         >
-          <TrendingUp className="mr-2 h-4 w-4" />
+          <TrendingUp className="mr-2 size-4" />
           Upgrade Tier
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -289,7 +289,7 @@ export function FacilitySubscriptionsTable() {
             setShowCancelModal(true);
           }}
         >
-          <Archive className="mr-2 h-4 w-4" />
+          <Archive className="mr-2 size-4" />
           Cancel Subscription
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -410,7 +410,7 @@ export function FacilitySubscriptionsTable() {
 
       {/* View Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -423,36 +423,36 @@ export function FacilitySubscriptionsTable() {
           {selectedSubscription && (
             <div className="space-y-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Facility</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Facility</p>
                   <p className="font-medium">
                     {selectedSubscription.facilityName}
                   </p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Tier</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Tier</p>
                   <Badge variant="outline">
                     {selectedSubscription.tierName}
                   </Badge>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">Status</p>
                   <Badge
                     className={getStatusColor(selectedSubscription.status)}
                   >
                     {selectedSubscription.status}
                   </Badge>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">
                     Billing Cycle
                   </p>
                   <p className="font-medium capitalize">
                     {selectedSubscription.billingCycle}
                   </p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">
                     Total Cost
                   </p>
                   <p className="font-medium">
@@ -462,15 +462,15 @@ export function FacilitySubscriptionsTable() {
                     )}
                   </p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">End Date</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-muted-foreground mb-1 text-sm">End Date</p>
                   <p className="font-medium">
                     {formatDate(selectedSubscription.endDate)}
                   </p>
                 </div>
               </div>
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-muted-foreground mb-2 text-sm">
                   Enabled Modules ({selectedSubscription.enabledModules.length})
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -558,7 +558,7 @@ export function FacilitySubscriptionsTable() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Current modules:{" "}
               {selectedSubscription?.enabledModules.length || 0}
             </p>
@@ -566,14 +566,14 @@ export function FacilitySubscriptionsTable() {
               {selectedSubscription?.enabledModules.map((module) => (
                 <div
                   key={module}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <span className="font-medium">{module}</span>
                   <Badge
                     variant="secondary"
                     className="bg-green-100 text-green-700"
                   >
-                    <CheckCircle className="h-3 w-3 mr-1" />
+                    <CheckCircle className="mr-1 h-3 w-3" />
                     Enabled
                   </Badge>
                 </div>
@@ -607,8 +607,8 @@ export function FacilitySubscriptionsTable() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-4 border rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Current Tier</p>
+            <div className="rounded-lg border p-4">
+              <p className="text-muted-foreground mb-1 text-sm">Current Tier</p>
               <Badge variant="outline">{selectedSubscription?.tierName}</Badge>
             </div>
             <div className="space-y-2">
@@ -633,7 +633,7 @@ export function FacilitySubscriptionsTable() {
               Cancel
             </Button>
             <Button onClick={handleUpgrade}>
-              <TrendingUp className="h-4 w-4 mr-2" />
+              <TrendingUp className="mr-2 size-4" />
               Upgrade Tier
             </Button>
           </DialogFooter>
@@ -644,7 +644,7 @@ export function FacilitySubscriptionsTable() {
       <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="text-destructive flex items-center gap-2">
               <Archive className="h-5 w-5" />
               Cancel Subscription
             </DialogTitle>
@@ -653,7 +653,7 @@ export function FacilitySubscriptionsTable() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <p className="text-sm text-red-800">
                 <strong>Warning:</strong> This action will cancel the
                 subscription. The facility will lose access to all premium

@@ -1,11 +1,18 @@
 /**
  * Payment Method Utilities
- * 
+ *
  * Helper functions for formatting and displaying payment methods
  */
 
 import { PaymentMethod, Transaction } from "@/data/retail";
-import { Smartphone, Printer, CreditCard, Banknote, Wallet, Gift } from "lucide-react";
+import {
+  Smartphone,
+  Printer,
+  CreditCard,
+  Banknote,
+  Wallet,
+  Gift,
+} from "lucide-react";
 
 export interface PaymentMethodInfo {
   label: string;
@@ -18,20 +25,22 @@ export interface PaymentMethodInfo {
  * Get formatted payment method label with transaction ID
  */
 export function getPaymentMethodLabel(
-  transaction: Transaction
+  transaction: Transaction,
 ): PaymentMethodInfo {
   const method = transaction.paymentMethod;
   const payments = transaction.payments || [];
-  
+
   // Handle split payments
   if (method === "split" && payments.length > 0) {
-    const methods = payments.map(p => getSinglePaymentMethodLabel(p.method, transaction)).join(" + ");
+    const methods = payments
+      .map((p) => getSinglePaymentMethodLabel(p.method, transaction))
+      .join(" + ");
     return {
       label: `Split: ${methods}`,
       icon: CreditCard,
     };
   }
-  
+
   return getSinglePaymentMethodLabel(method, transaction);
 }
 
@@ -40,7 +49,7 @@ export function getPaymentMethodLabel(
  */
 function getSinglePaymentMethodLabel(
   method: PaymentMethod,
-  transaction: Transaction
+  transaction: Transaction,
 ): PaymentMethodInfo {
   // Check for Yipyy Pay (iPhone)
   if (transaction.yipyyPayTransactionId) {
@@ -51,7 +60,7 @@ function getSinglePaymentMethodLabel(
       processor: "Yipyy Pay",
     };
   }
-  
+
   // Check for Clover Terminal
   if (transaction.cloverTransactionId) {
     return {
@@ -61,9 +70,13 @@ function getSinglePaymentMethodLabel(
       processor: "Clover / Fiserv",
     };
   }
-  
+
   // Check for Fiserv (online/saved card)
-  if (transaction.fiservTransactionId && !transaction.yipyyPayTransactionId && !transaction.cloverTransactionId) {
+  if (
+    transaction.fiservTransactionId &&
+    !transaction.yipyyPayTransactionId &&
+    !transaction.cloverTransactionId
+  ) {
     return {
       label: "Online Card (Saved)",
       icon: CreditCard,
@@ -71,7 +84,7 @@ function getSinglePaymentMethodLabel(
       processor: "Fiserv",
     };
   }
-  
+
   // Standard payment methods
   switch (method) {
     case "cash":
@@ -99,7 +112,9 @@ function getSinglePaymentMethodLabel(
       };
     default:
       return {
-        label: method.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+        label: method
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l) => l.toUpperCase()),
         icon: CreditCard,
       };
   }
@@ -124,10 +139,12 @@ export function formatTransactionTimestamp(timestamp: string): string {
  */
 export function getLocationName(locationId?: string): string {
   if (!locationId) return "Main Location";
-  
+
   // TODO: Get from actual location data
   // For now, return a default
-  return locationId === "loc-001" ? "Main Facility - Downtown" : 
-         locationId === "loc-002" ? "Branch - North Beach" : 
-         locationId || "Main Location";
+  return locationId === "loc-001"
+    ? "Main Facility - Downtown"
+    : locationId === "loc-002"
+      ? "Branch - North Beach"
+      : locationId || "Main Location";
 }

@@ -34,7 +34,10 @@ export function VariableInsertDropdown({
   disabled,
 }: VariableInsertDropdownProps) {
   const [open, setOpen] = useState(false);
-  const groups = useMemo(() => getGroupedVariablesForContext(context), [context]);
+  const groups = useMemo(
+    () => getGroupedVariablesForContext(context),
+    [context],
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -68,11 +71,11 @@ export function VariableInsertDropdown({
                     <div className="flex flex-col gap-0.5">
                       <div className="flex items-center gap-2">
                         <span className="text-sm">{v.label}</span>
-                        <code className="text-xs text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                        <code className="bg-muted text-muted-foreground rounded-sm px-1 py-0.5 text-xs">
                           {getVariableDisplayTag(v.key)}
                         </code>
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {v.description}
                       </span>
                     </div>

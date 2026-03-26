@@ -2,7 +2,7 @@ import { ComplianceTools } from "@/components/security-compliance/ComplianceTool
 
 export default function ComplianceToolsPage() {
   return (
-    <div className="flex-1 p-6 lg:p-8 bg-background bg-gradient-mesh min-h-screen">
+    <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       <ComplianceTools />
     </div>
   );

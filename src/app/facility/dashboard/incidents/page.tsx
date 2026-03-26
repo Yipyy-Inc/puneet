@@ -105,7 +105,7 @@ export default function IncidentsPage() {
           className="capitalize"
         >
           {row.original.severity === "critical" && (
-            <AlertTriangle className="h-3 w-3 mr-1 inline" />
+            <AlertTriangle className="mr-1 inline h-3 w-3" />
           )}
           {row.original.severity}
         </Badge>
@@ -126,10 +126,10 @@ export default function IncidentsPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.title}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             Pets: {row.original.petNames.join(", ")}
           </div>
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="mt-1 flex flex-wrap gap-1">
             {row.original.petIds.map((petId: number) => (
               <TagList
                 key={petId}
@@ -162,10 +162,10 @@ export default function IncidentsPage() {
       cell: ({ row }) => {
         const status = row.original.status;
         const icon = {
-          open: <AlertCircle className="h-3 w-3 mr-1 inline" />,
-          investigating: <Clock className="h-3 w-3 mr-1 inline" />,
-          resolved: <CheckCircle2 className="h-3 w-3 mr-1 inline" />,
-          closed: <XCircle className="h-3 w-3 mr-1 inline" />,
+          open: <AlertCircle className="mr-1 inline h-3 w-3" />,
+          investigating: <Clock className="mr-1 inline h-3 w-3" />,
+          resolved: <CheckCircle2 className="mr-1 inline h-3 w-3" />,
+          closed: <XCircle className="mr-1 inline h-3 w-3" />,
         }[status];
 
         return (
@@ -183,7 +183,7 @@ export default function IncidentsPage() {
         <div className="text-center">
           {row.original.managerNotified ? (
             <Badge variant="default">
-              <CheckCircle2 className="h-3 w-3 mr-1 inline" />
+              <CheckCircle2 className="mr-1 inline h-3 w-3" />
               Yes
             </Badge>
           ) : (
@@ -204,7 +204,7 @@ export default function IncidentsPage() {
             setShowDetailsModal(true);
           }}
         >
-          <Eye className="h-4 w-4 mr-2" />
+          <Eye className="mr-2 size-4" />
           View
         </Button>
       ),
@@ -226,7 +226,7 @@ export default function IncidentsPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.title}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {row.original.description}
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function IncidentsPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -283,13 +283,13 @@ export default function IncidentsPage() {
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 size-4" />
           Report Incident
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">
@@ -298,7 +298,7 @@ export default function IncidentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground mt-1">All time</p>
+            <p className="text-muted-foreground mt-1 text-xs">All time</p>
           </CardContent>
         </Card>
 
@@ -309,10 +309,10 @@ export default function IncidentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-destructive text-2xl font-bold">
               {stats.open}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               Require attention
             </p>
           </CardContent>
@@ -323,10 +323,10 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Critical</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">
+            <div className="text-destructive text-2xl font-bold">
               {stats.critical}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">High priority</p>
+            <p className="text-muted-foreground mt-1 text-xs">High priority</p>
           </CardContent>
         </Card>
 
@@ -336,7 +336,7 @@ export default function IncidentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.thisMonth}</div>
-            <p className="text-xs text-muted-foreground mt-1">New incidents</p>
+            <p className="text-muted-foreground mt-1 text-xs">New incidents</p>
           </CardContent>
         </Card>
       </div>
@@ -345,11 +345,11 @@ export default function IncidentsPage() {
       <Tabs defaultValue="incidents" className="space-y-4">
         <TabsList>
           <TabsTrigger value="incidents">
-            <AlertTriangle className="h-4 w-4 mr-2" />
+            <AlertTriangle className="mr-2 size-4" />
             All Incidents
           </TabsTrigger>
           <TabsTrigger value="tasks">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
+            <CheckCircle2 className="mr-2 size-4" />
             Follow-Up Tasks ({pendingTasks.length})
           </TabsTrigger>
         </TabsList>
@@ -362,7 +362,7 @@ export default function IncidentsPage() {
                 <CardTitle>Incident Reports</CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Filter className="text-muted-foreground size-4" />
                     <Select
                       value={filterStatus}
                       onValueChange={setFilterStatus}
@@ -416,7 +416,7 @@ export default function IncidentsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Pending Follow-Up Tasks</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Tasks assigned to staff for incident resolution
               </p>
             </CardHeader>
@@ -434,13 +434,13 @@ export default function IncidentsPage() {
 
       {/* Modals */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <CreateIncidentModal onClose={() => setShowCreateModal(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           {selectedIncident && (
             <IncidentDetailsModal
               incident={selectedIncident}

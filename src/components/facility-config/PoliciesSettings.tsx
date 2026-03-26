@@ -130,7 +130,7 @@ export function PoliciesSettings({
                   Policies & Requirements
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      <Info className="text-muted-foreground size-4 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
                       <div className="space-y-2">
@@ -149,9 +149,9 @@ export function PoliciesSettings({
                   </Tooltip>
                 </div>
                 {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="size-4" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="size-4" />
                 )}
               </CardTitle>
             </CardHeader>
@@ -161,12 +161,12 @@ export function PoliciesSettings({
               {/* Vaccination Requirements */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Shield className="h-5 w-5" />
                     Vaccination Requirements
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <Info className="text-muted-foreground size-4 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -183,7 +183,7 @@ export function PoliciesSettings({
                       size="sm"
                       onClick={() => setEditingVaccinations(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -193,11 +193,11 @@ export function PoliciesSettings({
                         size="sm"
                         onClick={handleCancelVaccinations}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveVaccinations}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save
                       </Button>
                     </div>
@@ -269,12 +269,12 @@ export function PoliciesSettings({
               {/* User Roles & Permissions */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Users className="h-5 w-5" />
                     User Roles & Permissions
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        <Info className="text-muted-foreground size-4 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
@@ -291,7 +291,7 @@ export function PoliciesSettings({
                       size="sm"
                       onClick={() => setEditingRoles(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -301,11 +301,11 @@ export function PoliciesSettings({
                         size="sm"
                         onClick={handleCancelRoles}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveRoles}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save
                       </Button>
                     </div>
@@ -315,7 +315,7 @@ export function PoliciesSettings({
                   {Object.entries(config.userRoles.defaultPermissions).map(
                     ([role, permissions]) => (
                       <div key={role} className="space-y-2">
-                        <Label className="capitalize font-medium">
+                        <Label className="font-medium capitalize">
                           {role} Permissions
                         </Label>
                         <div className="grid grid-cols-2 gap-4 pl-4">

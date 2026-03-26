@@ -1,6 +1,6 @@
 /**
  * Grooming Post-Booking Workflow
- * 
+ *
  * Handles all actions that occur after a grooming booking is confirmed:
  * - Immediate notifications (client, groomer)
  * - Recurring appointment scheduling
@@ -63,7 +63,7 @@ export interface ClientConfirmation {
  * Immediate post-booking actions
  */
 export async function handleImmediatePostBookingActions(
-  bookingData: GroomingBookingData
+  bookingData: GroomingBookingData,
 ): Promise<{
   clientConfirmation: ClientConfirmation;
   groomerNotifications: GroomerNotification[];
@@ -72,7 +72,10 @@ export async function handleImmediatePostBookingActions(
 }> {
   // 1. Send client confirmation with "Manage Booking" link
   const manageBookingLink = `/customer/bookings/${bookingData.id}`;
-  const clientConfirmation = await sendClientConfirmation(bookingData, manageBookingLink);
+  const clientConfirmation = await sendClientConfirmation(
+    bookingData,
+    manageBookingLink,
+  );
 
   // 2. Send groomer notification
   const groomerNotifications = await sendGroomerNotification(bookingData);
@@ -80,7 +83,8 @@ export async function handleImmediatePostBookingActions(
   // 3. Trigger YipyyGo if applicable (booking is confirmed)
   let yipyyGoTriggered = false;
   try {
-    const { processBookingConfirmationForYipyyGo } = await import("@/lib/yipyygo-trigger");
+    const { processBookingConfirmationForYipyyGo } =
+      await import("@/lib/yipyygo-trigger");
     const result = await processBookingConfirmationForYipyyGo({
       id: bookingData.id,
       clientId: bookingData.clientId,
@@ -118,7 +122,7 @@ export async function handleImmediatePostBookingActions(
  */
 async function sendClientConfirmation(
   bookingData: GroomingBookingData,
-  manageBookingLink: string
+  manageBookingLink: string,
 ): Promise<ClientConfirmation> {
   // TODO: Replace with actual API calls
   // In production, this would:
@@ -126,7 +130,7 @@ async function sendClientConfirmation(
   // 2. Send SMS with confirmation and link
   // 3. Generate .ics calendar file
 
-  const confirmationEmail = {
+  const _confirmationEmail = {
     to: bookingData.clientEmail,
     subject: `Booking Confirmed - ${bookingData.petName}'s ${bookingData.serviceCategory}`,
     body: `
@@ -136,12 +140,12 @@ Your grooming appointment has been confirmed!
 
 Pet: ${bookingData.petName}
 Service: ${bookingData.serviceCategory}${bookingData.serviceVariant ? ` (${bookingData.serviceVariant})` : ""}
-Date: ${bookingData.appointmentDate.toLocaleDateString("en-US", { 
-  weekday: "long", 
-  month: "long", 
-  day: "numeric", 
-  year: "numeric" 
-})}
+Date: ${bookingData.appointmentDate.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    })}
 Time: ${bookingData.appointmentTime}
 Location: ${bookingData.serviceLocation === "mobile" ? `Mobile van at ${bookingData.address}` : "Salon"}
 Duration: ${Math.floor(bookingData.duration / 60)} hours ${bookingData.duration % 60} minutes
@@ -162,7 +166,7 @@ ${bookingData.serviceLocation === "salon" ? "The Grooming Team" : "Mobile Groomi
     ],
   };
 
-  const confirmationSMS = {
+  const _confirmationSMS = {
     to: bookingData.clientPhone,
     message: `Hi ${bookingData.clientName}! Your grooming appointment for ${bookingData.petName} is confirmed for ${bookingData.appointmentDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${bookingData.appointmentTime}. Manage booking: ${manageBookingLink}`,
   };
@@ -186,7 +190,7 @@ ${bookingData.serviceLocation === "salon" ? "The Grooming Team" : "Mobile Groomi
  * Send groomer notification (app or SMS)
  */
 async function sendGroomerNotification(
-  bookingData: GroomingBookingData
+  bookingData: GroomingBookingData,
 ): Promise<GroomerNotification[]> {
   if (!bookingData.groomerId) {
     return []; // No specific groomer assigned
@@ -196,9 +200,8 @@ async function sendGroomerNotification(
     ? `Last visit: ${bookingData.lastVisitDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
     : "First visit";
 
-  const addOnsText = bookingData.addOns.length > 0
-    ? ` + ${bookingData.addOns.join(", ")}`
-    : "";
+  const addOnsText =
+    bookingData.addOns.length > 0 ? ` + ${bookingData.addOns.join(", ")}` : "";
 
   const notesText = bookingData.petNotes
     ? ` Notes: ${bookingData.petNotes}`
@@ -227,7 +230,7 @@ async function sendGroomerNotification(
  */
 async function scheduleRecurringAppointments(
   bookingData: GroomingBookingData,
-  count: number
+  count: number,
 ): Promise<GroomingBookingData[]> {
   if (!bookingData.recurringFrequency) {
     return [];
@@ -241,11 +244,17 @@ async function scheduleRecurringAppointments(
     nextDate.setDate(nextDate.getDate() + frequencyWeeks * 7 * i);
 
     // Check if we should stop based on end conditions
-    if (bookingData.recurringEndAfter === "occurrences" && bookingData.recurringOccurrences) {
+    if (
+      bookingData.recurringEndAfter === "occurrences" &&
+      bookingData.recurringOccurrences
+    ) {
       if (i >= bookingData.recurringOccurrences) {
         break;
       }
-    } else if (bookingData.recurringEndAfter === "date" && bookingData.recurringEndDate) {
+    } else if (
+      bookingData.recurringEndAfter === "date" &&
+      bookingData.recurringEndDate
+    ) {
       if (nextDate > bookingData.recurringEndDate) {
         break;
       }
@@ -301,7 +310,9 @@ END:VCALENDAR`;
 /**
  * Schedule 24-hour reminder
  */
-export async function schedule24HourReminder(bookingData: GroomingBookingData): Promise<void> {
+export async function schedule24HourReminder(
+  bookingData: GroomingBookingData,
+): Promise<void> {
   const reminderTime = new Date(bookingData.appointmentDate);
   reminderTime.setDate(reminderTime.getDate() - 1);
   reminderTime.setHours(9, 0, 0, 0); // 9 AM the day before
@@ -309,14 +320,18 @@ export async function schedule24HourReminder(bookingData: GroomingBookingData): 
   // TODO: Schedule reminder job/cron
   // In production, this would be handled by a job scheduler
 
-  const mobileArrivalText = bookingData.serviceLocation === "mobile"
-    ? " Van will arrive between 8:45-9:15 AM."
-    : "";
+  const mobileArrivalText =
+    bookingData.serviceLocation === "mobile"
+      ? " Van will arrive between 8:45-9:15 AM."
+      : "";
 
   const reminderMessage = `Hi ${bookingData.clientName}! Reminder: ${bookingData.petName}'s ${bookingData.serviceCategory} appointment is tomorrow at ${bookingData.appointmentTime}.${mobileArrivalText} Reply YES to confirm or RESCHEDULE to change.`;
 
   // TODO: Send SMS at scheduled time
-  console.log(`Scheduled 24-hour reminder for ${reminderTime.toISOString()}:`, reminderMessage);
+  console.log(
+    `Scheduled 24-hour reminder for ${reminderTime.toISOString()}:`,
+    reminderMessage,
+  );
 }
 
 /**
@@ -324,7 +339,7 @@ export async function schedule24HourReminder(bookingData: GroomingBookingData): 
  */
 export async function handleSalonCheckIn(
   bookingId: string,
-  clientId: number
+  clientId: number,
 ): Promise<void> {
   // TODO: Notify front desk
   // In production, this would send notification to facility staff
@@ -346,7 +361,7 @@ export async function handleSalonCheckIn(
 export async function handleMobileGroomerArrival(
   bookingId: string,
   clientId: number,
-  estimatedArrival: Date
+  estimatedArrival: Date,
 ): Promise<void> {
   // TODO: Send notification to client
   // Triggered when previous appointment is marked complete
@@ -368,19 +383,17 @@ export async function handleMobileGroomerArrival(
  * Triggered when customer leaves booking flow at Step 5 or later
  * In production, this would be scheduled via a backend job/cron
  */
-export async function scheduleAbandonedBookingReminder(
-  progress: {
-    petId: number;
-    serviceCategory?: string;
-    variant?: string;
-    addOns?: string[];
-    groomerId?: string;
-    groomerName?: string;
-    groomerTier?: string;
-    step: number;
-    timestamp: string;
-  }
-): Promise<void> {
+export async function scheduleAbandonedBookingReminder(progress: {
+  petId: number;
+  serviceCategory?: string;
+  variant?: string;
+  addOns?: string[];
+  groomerId?: string;
+  groomerName?: string;
+  groomerTier?: string;
+  step: number;
+  timestamp: string;
+}): Promise<void> {
   // TODO: In production, this would be handled by a backend job scheduler
   // For now, we'll just log it and simulate sending an email
 

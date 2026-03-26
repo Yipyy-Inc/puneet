@@ -75,14 +75,14 @@ export function RefundBookingModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="min-w-5xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
               Cannot Process Refund
             </DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="size-4" />
               <AlertDescription>
                 {booking.status === "cancelled"
                   ? "This booking has already been cancelled."
@@ -100,7 +100,7 @@ export function RefundBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
@@ -113,7 +113,7 @@ export function RefundBookingModal({
 
         <div className="grid gap-4 py-4">
           <Alert>
-            <AlertTriangle className="h-4 w-4" />
+            <AlertTriangle className="size-4" />
             <AlertTitle>Refund Processing</AlertTitle>
             <AlertDescription>
               This will process a refund for the booking. The booking status
@@ -135,7 +135,7 @@ export function RefundBookingModal({
           </div>
 
           {/* Payment Summary */}
-          <div className="bg-muted p-4 rounded-lg space-y-2">
+          <div className="bg-muted space-y-2 rounded-lg p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Original Payment:</span>
               <span>${booking.totalCost.toFixed(2)}</span>
@@ -164,7 +164,7 @@ export function RefundBookingModal({
               value={refundAmount}
               onChange={(e) => setRefundAmount(parseFloat(e.target.value) || 0)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Maximum refundable: $
               {(booking.totalCost - (booking.refundAmount || 0)).toFixed(2)}
             </p>
@@ -179,16 +179,16 @@ export function RefundBookingModal({
                 setRefundMethod(value as "card" | "store_credit")
               }
             >
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+              <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
                 <RadioGroupItem value="card" id="card-refund" />
                 <Label
                   htmlFor="card-refund"
-                  className="flex-1 cursor-pointer flex items-center gap-2"
+                  className="flex flex-1 cursor-pointer items-center gap-2"
                 >
-                  <CreditCard className="h-4 w-4" />
+                  <CreditCard className="size-4" />
                   <div>
                     <div className="font-medium">Original Payment Method</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Refund to{" "}
                       {booking.paymentMethod === "card" ? "card" : "cash"}
                     </div>
@@ -196,16 +196,16 @@ export function RefundBookingModal({
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-accent cursor-pointer">
+              <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-3">
                 <RadioGroupItem value="store_credit" id="store-credit" />
                 <Label
                   htmlFor="store-credit"
-                  className="flex-1 cursor-pointer flex items-center gap-2"
+                  className="flex flex-1 cursor-pointer items-center gap-2"
                 >
-                  <Wallet className="h-4 w-4" />
+                  <Wallet className="size-4" />
                   <div>
                     <div className="font-medium">Store Credit</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Issue store credit for future bookings
                     </div>
                   </div>
@@ -215,8 +215,8 @@ export function RefundBookingModal({
           </div>
 
           {/* Refund Summary */}
-          <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-            <div className="flex justify-between text-sm mb-1">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+            <div className="mb-1 flex justify-between text-sm">
               <span>Refund Amount:</span>
               <span className="font-semibold text-green-700">
                 ${refundAmount.toFixed(2)}
@@ -241,7 +241,7 @@ export function RefundBookingModal({
             onClick={handleConfirm}
             className="bg-green-600 hover:bg-green-700"
           >
-            <DollarSign className="mr-2 h-4 w-4" />
+            <DollarSign className="mr-2 size-4" />
             Process Refund
           </Button>
         </DialogFooter>

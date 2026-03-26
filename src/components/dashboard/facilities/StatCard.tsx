@@ -19,34 +19,32 @@ export function StatCard({
   trend,
 }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               {title}
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">{value}</h3>
               {trend && (
                 <span
-                  className={`inline-flex items-center text-xs font-medium ${
-                    trend.isPositive ? "text-success" : "text-destructive"
-                  }`}
+                  className={`inline-flex items-center text-xs font-medium ${trend.isPositive ? "text-success" : "text-destructive"} `}
                 >
                   <TrendingUp
-                    className={`h-3 w-3 mr-0.5 ${!trend.isPositive && "rotate-180"}`}
+                    className={`mr-0.5 h-3 w-3 ${!trend.isPositive && `rotate-180`} `}
                   />
                   {trend.value}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
             )}
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
             <Icon className="h-5 w-5 text-white" />

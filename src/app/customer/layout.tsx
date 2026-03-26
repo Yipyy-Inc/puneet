@@ -19,14 +19,14 @@ export default function CustomerLayout({
     <SettingsProviderWrapper>
       <CustomerFacilityProvider>
         {isAuthRoute ? (
-          <div className="min-h-screen flex flex-col">
+          <div className="flex min-h-screen flex-col">
             <main className="flex-1">{children}</main>
           </div>
         ) : (
           <SidebarProvider>
             <>
               <CustomerSidebar />
-              <SidebarInset className="flex flex-col min-h-screen">
+              <SidebarInset className="flex min-h-screen flex-col">
                 <CustomerHeader />
                 <main className="flex-1 overflow-x-hidden">{children}</main>
               </SidebarInset>
@@ -37,4 +37,3 @@ export default function CustomerLayout({
     </SettingsProviderWrapper>
   );
 }
-

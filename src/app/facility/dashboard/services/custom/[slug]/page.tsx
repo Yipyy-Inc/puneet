@@ -8,7 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/StatCard";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { getCategoryMeta, COLOR_HEX_MAP, PRICING_MODEL_LABELS } from "@/data/custom-services";
+import {
+  getCategoryMeta,
+  COLOR_HEX_MAP,
+  PRICING_MODEL_LABELS,
+} from "@/data/custom-services";
 import {
   CalendarDays,
   DollarSign,
@@ -70,17 +74,17 @@ export default function CustomServiceDashboardPage() {
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
   const { getModuleBySlug } = useCustomServices();
-  const module = getModuleBySlug(slug ?? "");
+  const serviceModule = getModuleBySlug(slug ?? "");
 
-  if (!module) return null;
+  if (!serviceModule) return null;
 
-  const catMeta = getCategoryMeta(module.category);
-  const basePath = `/facility/dashboard/services/custom/${module.slug}`;
+  const catMeta = getCategoryMeta(serviceModule.category);
+  const basePath = `/facility/dashboard/services/custom/${serviceModule.slug}`;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="animate-in fade-in space-y-6 duration-300">
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           title="Today's Bookings"
           value={3}
@@ -121,27 +125,28 @@ export default function CustomServiceDashboardPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                   <CalendarDays className="h-5 w-5" />
                   Today&apos;s Upcoming Bookings
                 </CardTitle>
                 <Link href={`${basePath}/bookings`}>
                   <Button variant="ghost" size="sm">
                     View All
-                    <ArrowRight className="h-4 w-4 ml-1" />
+                    <ArrowRight className="ml-1 size-4" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
             <CardContent>
               {MOCK_BOOKINGS.length === 0 ? (
-                <div className="text-center py-10">
-                  <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                    <CalendarDays className="h-6 w-6 text-muted-foreground" />
+                <div className="py-10 text-center">
+                  <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl">
+                    <CalendarDays className="text-muted-foreground h-6 w-6" />
                   </div>
                   <p className="font-medium">No bookings yet today</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Bookings for {module.name} will appear here as they come in.
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Bookings for {serviceModule.name} will appear here as they
+                    come in.
                   </p>
                   <Button variant="outline" size="sm" className="mt-3">
                     <Plus className="h-3.5 w-3.5" />
@@ -155,15 +160,17 @@ export default function CustomServiceDashboardPage() {
                     return (
                       <div
                         key={booking.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        className="bg-card hover:bg-muted/50 flex flex-col justify-between gap-2 rounded-lg border p-3 transition-colors sm:flex-row sm:items-center"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-10 h-10 shrink-0 rounded-full bg-primary/10">
-                            <PawPrint className="h-5 w-5 text-primary" />
+                          <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                            <PawPrint className="text-primary h-5 w-5" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium truncate">{booking.petName}</p>
-                            <p className="text-xs text-muted-foreground truncate">
+                            <p className="truncate font-medium">
+                              {booking.petName}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
                               {booking.client}
                             </p>
                           </div>
@@ -171,14 +178,14 @@ export default function CustomServiceDashboardPage() {
                         <div className="flex items-center gap-3 pl-[52px] sm:pl-0">
                           <div className="text-sm sm:text-right">
                             <p className="font-medium">{booking.time}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               {booking.duration}
                             </p>
                           </div>
                           <Badge variant={statusCfg.variant}>
                             {statusCfg.label}
                           </Badge>
-                          <span className="text-sm font-semibold ml-auto sm:ml-0 sm:w-12 sm:text-right">
+                          <span className="ml-auto text-sm font-semibold sm:ml-0 sm:w-12 sm:text-right">
                             ${booking.amount}
                           </span>
                         </div>
@@ -195,7 +202,10 @@ export default function CustomServiceDashboardPage() {
         <div>
           <Card
             className="border-l-4"
-            style={{ borderLeftColor: COLOR_HEX_MAP[module.iconColor] ?? undefined }}
+            style={{
+              borderLeftColor:
+                COLOR_HEX_MAP[serviceModule.iconColor] ?? undefined,
+            }}
           >
             <CardHeader>
               <CardTitle className="text-lg font-semibold">
@@ -204,7 +214,7 @@ export default function CustomServiceDashboardPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Button className="w-full justify-start gap-2">
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 New Booking
               </Button>
               <Link href={`${basePath}/bookings`} className="block">
@@ -212,17 +222,17 @@ export default function CustomServiceDashboardPage() {
                   variant="outline"
                   className="w-full justify-start gap-2"
                 >
-                  <CalendarDays className="h-4 w-4" />
+                  <CalendarDays className="size-4" />
                   View All Bookings
                 </Button>
               </Link>
-              {module.checkInOut.enabled && (
+              {serviceModule.checkInOut.enabled && (
                 <Link href={`${basePath}/check-in`} className="block">
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-2"
                   >
-                    <Clock className="h-4 w-4" />
+                    <Clock className="size-4" />
                     Check-In Panel
                   </Button>
                 </Link>
@@ -232,7 +242,7 @@ export default function CustomServiceDashboardPage() {
                   variant="outline"
                   className="w-full justify-start gap-2"
                 >
-                  <TrendingUp className="h-4 w-4" />
+                  <TrendingUp className="size-4" />
                   Manage Settings
                 </Button>
               </Link>
@@ -242,35 +252,44 @@ export default function CustomServiceDashboardPage() {
           {/* Module Info */}
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              <CardTitle className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                 Module Info
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Category</span>
-                <Badge className={cn("text-xs capitalize", catMeta?.badgeClass)}>
+                <Badge
+                  className={cn("text-xs capitalize", catMeta?.badgeClass)}
+                >
                   <span className={catMeta?.textClass}>
-                    {catMeta?.name ?? module.category.replace(/_/g, " ")}
+                    {catMeta?.name ?? serviceModule.category.replace(/_/g, " ")}
                   </span>
                 </Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Pricing Model</span>
                 <span className="font-medium">
-                  {PRICING_MODEL_LABELS[module.pricing.model]}
+                  {PRICING_MODEL_LABELS[serviceModule.pricing.model]}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Base Price</span>
                 <span className="font-medium">
-                  ${module.pricing.basePrice}
+                  ${serviceModule.pricing.basePrice}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Online Booking</span>
-                <Badge variant={module.onlineBooking.enabled ? "default" : "secondary"} className="text-xs">
-                  {module.onlineBooking.enabled ? "On" : "Off"}
+                <Badge
+                  variant={
+                    serviceModule.onlineBooking.enabled
+                      ? "default"
+                      : "secondary"
+                  }
+                  className="text-xs"
+                >
+                  {serviceModule.onlineBooking.enabled ? "On" : "Off"}
                 </Badge>
               </div>
             </CardContent>

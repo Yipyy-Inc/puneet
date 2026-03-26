@@ -2,12 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 
@@ -64,10 +71,10 @@ export default function LoginPage() {
     try {
       // TODO: Replace with actual Google OAuth implementation
       const googleUser = await signInWithGoogle();
-      
+
       // Check if customer exists with same email
       const existingCustomer = await checkExistingCustomer(googleUser.email);
-      
+
       if (existingCustomer) {
         // Link Google account to existing customer if not already linked
         await linkGoogleAccount(googleUser);
@@ -77,7 +84,7 @@ export default function LoginPage() {
         await createAccountWithGoogle(googleUser);
         toast.success("Account created and signed in!");
       }
-      
+
       router.push("/customer/dashboard");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in with Google");
@@ -87,7 +94,7 @@ export default function LoginPage() {
   };
 
   // Placeholder functions - replace with actual API calls
-  const login = async (email: string, password: string) => {
+  const login = async (_email: string, _password: string) => {
     // TODO: API call to login
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
@@ -98,33 +105,37 @@ export default function LoginPage() {
     return { email: "user@example.com", name: "User Name" };
   };
 
-  const checkExistingCustomer = async (email: string) => {
+  const checkExistingCustomer = async (_email: string) => {
     // TODO: API call to check if customer exists
     await new Promise((resolve) => setTimeout(resolve, 500));
     return false; // Mock: no existing customer
   };
 
-  const linkGoogleAccount = async (googleUser: any) => {
+  const linkGoogleAccount = async (_googleUser: any) => {
     // TODO: API call to link Google account
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
-  const createAccountWithGoogle = async (googleUser: any) => {
+  const createAccountWithGoogle = async (_googleUser: any) => {
     // TODO: API call to create account with Google
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+    <div className="from-background via-muted/20 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <img src="/yipyy-transparent.png" alt="Yipyy" className="h-12" />
+          <div className="mb-4 flex justify-center">
+            <Image
+              src="/yipyy-transparent.png"
+              alt="Yipyy"
+              width={120}
+              height={48}
+              className="h-12 w-auto"
+            />
           </div>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
-            Sign in to your account to continue
-          </CardDescription>
+          <CardDescription>Sign in to your account to continue</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
@@ -134,7 +145,7 @@ export default function LoginPage() {
             onClick={handleGoogleLogin}
             disabled={isLoading}
           >
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+            <svg className="mr-2 size-4" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -160,7 +171,9 @@ export default function LoginPage() {
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-card text-muted-foreground px-2">
+                Or continue with
+              </span>
             </div>
           </div>
 
@@ -168,7 +181,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="email"
                   type="email"
@@ -182,7 +195,7 @@ export default function LoginPage() {
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
+                <p className="text-destructive text-sm">{errors.email}</p>
               )}
             </div>
 
@@ -191,13 +204,13 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/customer/auth/forgot-password"
-                  className="text-sm text-primary hover:underline"
+                  className="text-primary text-sm hover:underline"
                 >
                   Forgot password?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
@@ -206,30 +219,30 @@ export default function LoginPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="pl-9 pr-9"
+                  className="px-9"
                   aria-invalid={errors.password ? "true" : "false"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="size-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="size-4" />
                   )}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
+                <p className="text-destructive text-sm">{errors.password}</p>
               )}
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Signing in...
                 </>
               ) : (
@@ -238,11 +251,11 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+          <p className="text-muted-foreground text-center text-sm">
+            Don&apos;t have an account?{" "}
             <Link
               href="/customer/auth/signup"
-              className="text-primary hover:underline font-medium"
+              className="text-primary font-medium hover:underline"
             >
               Sign up
             </Link>

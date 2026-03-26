@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,7 +77,10 @@ export function BookingModal({
   booking,
 }: NewBookingModalProps) {
   const { daycare, boarding, grooming, training, bookingFlow } = useSettings();
-  const configs = { daycare, boarding, grooming, training };
+  const configs = useMemo(
+    () => ({ daycare, boarding, grooming, training }),
+    [daycare, boarding, grooming, training],
+  );
   const { getModuleBySlug } = useCustomServices();
 
   // Staff options for assignment
@@ -273,7 +276,9 @@ export function BookingModal({
   const petHasExpiredEvaluation = useCallback((pet: Pet) => {
     const evals: Evaluation[] = pet.evaluations ?? [];
     return evals.some(
-      (e) => (e.status === "passed" && e.isExpired === true) || e.status === "outdated",
+      (e) =>
+        (e.status === "passed" && e.isExpired === true) ||
+        e.status === "outdated",
     );
   }, []);
 
@@ -299,34 +304,33 @@ export function BookingModal({
     return selectedPets.every((pet) => petHasValidEvaluation(pet));
   }, [bookingFlow, selectedPets, petHasValidEvaluation]);
 
-  useEffect(() => {
-    if (!selectedService || selectedService === "evaluation") return;
-    if (bookingFlow.hiddenServices.includes(selectedService)) {
-      setSelectedService("");
-      return;
-    }
+  // Derive effective service: reset if hidden, force evaluation if locked
+  const effectiveService = useMemo(() => {
+    if (!selectedService || selectedService === "evaluation")
+      return selectedService;
+    if (bookingFlow.hiddenServices.includes(selectedService)) return "";
     if (
       bookingFlow.evaluationRequired &&
       bookingFlow.hideServicesUntilEvaluationCompleted &&
       !canAccessLockedServices
     ) {
-      setSelectedService("evaluation");
+      return "evaluation";
     }
-  }, [
-    bookingFlow,
-    selectedService,
-    canAccessLockedServices,
-    setSelectedService,
-  ]);
+    return selectedService;
+  }, [bookingFlow, selectedService, canAccessLockedServices]);
+
+  if (effectiveService !== selectedService) {
+    setSelectedService(effectiveService);
+  }
 
   const requiresEvaluationForService = useCallback(
     (serviceId: string) => {
       if (serviceId === "evaluation") return false;
       if (bookingFlow.evaluationRequired) return true;
-      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId)) return true;
-      const config = configs[
-        serviceId as "daycare" | "boarding" | "grooming" | "training"
-      ];
+      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId))
+        return true;
+      const config =
+        configs[serviceId as "daycare" | "boarding" | "grooming" | "training"];
       return config?.settings.evaluation.enabled ?? false;
     },
     [bookingFlow, configs],
@@ -335,10 +339,10 @@ export function BookingModal({
   const isEvaluationOptionalForService = useCallback(
     (serviceId: string) => {
       if (bookingFlow.evaluationRequired) return false;
-      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId)) return false;
-      const config = configs[
-        serviceId as "daycare" | "boarding" | "grooming" | "training"
-      ];
+      if (bookingFlow.servicesRequiringEvaluation.includes(serviceId))
+        return false;
+      const config =
+        configs[serviceId as "daycare" | "boarding" | "grooming" | "training"];
       return config?.settings.evaluation.optional ?? false;
     },
     [bookingFlow, configs],
@@ -406,8 +410,12 @@ export function BookingModal({
           return false;
         // If any selected pet has an expired or failed evaluation, lock services (except booking a new evaluation)
         if (selectedService !== "evaluation") {
-          const hasExpired = selectedPets.some((pet) => petHasExpiredEvaluation(pet));
-          const hasFailed = selectedPets.some((pet) => petHasFailedEvaluation(pet));
+          const hasExpired = selectedPets.some((pet) =>
+            petHasExpiredEvaluation(pet),
+          );
+          const hasFailed = selectedPets.some((pet) =>
+            petHasFailedEvaluation(pet),
+          );
           if (hasExpired || hasFailed) return false;
         }
         if (serviceRequiresEvaluation && !isEvaluationOptional) {
@@ -424,8 +432,12 @@ export function BookingModal({
           selectedService === "evaluation"
         ) {
           if (selectedService !== "evaluation") {
-            const hasExpired = selectedPets.some((pet) => petHasExpiredEvaluation(pet));
-            const hasFailed = selectedPets.some((pet) => petHasFailedEvaluation(pet));
+            const hasExpired = selectedPets.some((pet) =>
+              petHasExpiredEvaluation(pet),
+            );
+            const hasFailed = selectedPets.some((pet) =>
+              petHasFailedEvaluation(pet),
+            );
             if (hasExpired || hasFailed) return false;
           }
           return isSubStepComplete(currentSubStep);
@@ -434,8 +446,12 @@ export function BookingModal({
         return !!startDate;
       case "confirm":
         if (selectedService !== "evaluation") {
-          const hasExpired = selectedPets.some((pet) => petHasExpiredEvaluation(pet));
-          const hasFailed = selectedPets.some((pet) => petHasFailedEvaluation(pet));
+          const hasExpired = selectedPets.some((pet) =>
+            petHasExpiredEvaluation(pet),
+          );
+          const hasFailed = selectedPets.some((pet) =>
+            petHasFailedEvaluation(pet),
+          );
           if (hasExpired || hasFailed) return false;
         }
         return true;
@@ -450,11 +466,13 @@ export function BookingModal({
     selectedPetIds,
     selectedService,
     startDate,
-    checkInTime,
     isSubStepComplete,
     serviceRequiresEvaluation,
     isEvaluationOptional,
     selectedPets,
+    petHasExpiredEvaluation,
+    petHasFailedEvaluation,
+    petHasValidEvaluation,
   ]);
 
   const handleNext = () => {
@@ -522,9 +540,7 @@ export function BookingModal({
       const petsNeedingEvaluation = selectedPets.filter((pet) => {
         const hasValidEval =
           pet.evaluations?.some(
-            (e) =>
-              e.status === "passed" &&
-              e.isExpired !== true,
+            (e) => e.status === "passed" && e.isExpired !== true,
           ) ?? false;
         return !hasValidEval;
       });
@@ -720,7 +736,9 @@ export function BookingModal({
         // Handle both string[] (grooming) and ExtraService[] (daycare/boarding) types
         if (typeof service === "string") {
           // For string type (grooming), use the string as service name
-          const petId = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
+          const petId = Array.isArray(booking.petId)
+            ? booking.petId[0]
+            : booking.petId;
           taskList.push({
             id: `service-${service}-${petId}-${index}`,
             bookingId: booking.id,
@@ -748,8 +766,9 @@ export function BookingModal({
             time: null,
             details: `Quantity: ${service.quantity}`,
             assignedStaff:
-              taskAssignments[`service-${service.serviceId}-${service.petId}`] ||
-              undefined,
+              taskAssignments[
+                `service-${service.serviceId}-${service.petId}`
+              ] || undefined,
             completionStatus: "pending",
             assignable:
               isFutureBooking &&
@@ -790,7 +809,8 @@ export function BookingModal({
     );
 
     const latestEvaluation = (() => {
-      const evals = (pet as unknown as { evaluations?: any[] })?.evaluations ?? [];
+      const evals =
+        (pet as unknown as { evaluations?: any[] })?.evaluations ?? [];
       if (evals.length === 0) return null;
       return [...evals].sort((a, b) => {
         const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
@@ -800,7 +820,8 @@ export function BookingModal({
     })();
 
     const evalExpired =
-      latestEvaluation?.isExpired === true || latestEvaluation?.status === "outdated";
+      latestEvaluation?.isExpired === true ||
+      latestEvaluation?.status === "outdated";
     const evalOutcome =
       latestEvaluation?.status === "passed"
         ? "PASS"
@@ -815,13 +836,14 @@ export function BookingModal({
       !isEvaluationOptionalForService(booking.service);
 
     const evalCompleted =
-      latestEvaluation?.status === "passed" || latestEvaluation?.status === "failed";
+      latestEvaluation?.status === "passed" ||
+      latestEvaluation?.status === "failed";
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="min-w-4xl w-[90vw] h-[85vh] overflow-hidden flex flex-col p-0">
+        <DialogContent className="flex h-[85vh] w-[90vw] min-w-4xl flex-col overflow-hidden p-0">
           <DialogTitle className="sr-only">Booking Details</DialogTitle>
-          <div className="p-6 border-b">
+          <div className="border-b p-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">Booking #{booking.id}</h2>
@@ -835,8 +857,8 @@ export function BookingModal({
             </div>
           </div>
 
-          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-2 mx-6 mt-4">
+          <Tabs defaultValue="details" className="flex min-h-0 flex-1 flex-col">
+            <TabsList className="mx-6 mt-4 grid w-full grid-cols-2">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
             </TabsList>
@@ -935,7 +957,8 @@ export function BookingModal({
                 </Card>
 
                 {/* Evaluation (staff) */}
-                {(requiresEvalForBooking || booking.service === "evaluation") && (
+                {(requiresEvalForBooking ||
+                  booking.service === "evaluation") && (
                   <Card>
                     <CardHeader>
                       <CardTitle>Evaluation</CardTitle>
@@ -943,7 +966,7 @@ export function BookingModal({
                     <CardContent className="space-y-3">
                       {!latestEvaluation ? (
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             No evaluation result
                           </span>
                           <Badge variant="destructive">Missing</Badge>
@@ -951,7 +974,7 @@ export function BookingModal({
                       ) : (
                         <>
                           <div className="flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-muted-foreground text-sm">
                               Latest outcome
                             </div>
                             <div className="flex items-center gap-2">
@@ -968,21 +991,30 @@ export function BookingModal({
                               </Badge>
                               {(latestEvaluation.status === "passed" ||
                                 latestEvaluation.status === "outdated") && (
-                                <Badge variant={evalExpired ? "destructive" : "secondary"}>
+                                <Badge
+                                  variant={
+                                    evalExpired ? "destructive" : "secondary"
+                                  }
+                                >
                                   {evalExpired ? "Expired" : "Valid"}
                                 </Badge>
                               )}
                             </div>
                           </div>
 
-                          {(latestEvaluation.evaluatedAt || latestEvaluation.evaluatedBy) && (
+                          {(latestEvaluation.evaluatedAt ||
+                            latestEvaluation.evaluatedBy) && (
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <div className="text-muted-foreground">Evaluated at</div>
+                                <div className="text-muted-foreground">
+                                  Evaluated at
+                                </div>
                                 <div>{latestEvaluation.evaluatedAt || "—"}</div>
                               </div>
                               <div>
-                                <div className="text-muted-foreground">Evaluator</div>
+                                <div className="text-muted-foreground">
+                                  Evaluator
+                                </div>
                                 <div>{latestEvaluation.evaluatedBy || "—"}</div>
                               </div>
                             </div>
@@ -991,7 +1023,9 @@ export function BookingModal({
                           {/* Staff-only notes / failure reason */}
                           {latestEvaluation.notes && (
                             <div className="text-sm">
-                              <div className="text-muted-foreground">Notes (staff)</div>
+                              <div className="text-muted-foreground">
+                                Notes (staff)
+                              </div>
                               <div>{latestEvaluation.notes}</div>
                             </div>
                           )}
@@ -999,20 +1033,26 @@ export function BookingModal({
                       )}
 
                       {/* Staff reminders */}
-                      {requiresEvalForBooking && booking.status === "completed" && !evalCompleted && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Evaluation result missing</AlertTitle>
-                          <AlertDescription>
-                            Evaluation is required but has not been completed before checkout.
-                          </AlertDescription>
-                        </Alert>
-                      )}
                       {requiresEvalForBooking &&
-                        (evalOutcome === "FAIL" || evalExpired || evalOutcome === "MISSING") && (
+                        booking.status === "completed" &&
+                        !evalCompleted && (
+                          <Alert variant="destructive">
+                            <AlertTitle>Evaluation result missing</AlertTitle>
+                            <AlertDescription>
+                              Evaluation is required but has not been completed
+                              before checkout.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      {requiresEvalForBooking &&
+                        (evalOutcome === "FAIL" ||
+                          evalExpired ||
+                          evalOutcome === "MISSING") && (
                           <Alert variant="destructive">
                             <AlertTitle>Services locked</AlertTitle>
                             <AlertDescription>
-                              Customer must book a new evaluation to unlock services.
+                              Customer must book a new evaluation to unlock
+                              services.
                             </AlertDescription>
                           </Alert>
                         )}
@@ -1056,7 +1096,7 @@ export function BookingModal({
                           <label className="text-sm font-medium">
                             Selected Dates
                           </label>
-                          <div className="flex flex-wrap gap-2 mt-1">
+                          <div className="mt-1 flex flex-wrap gap-2">
                             {booking.daycareSelectedDates.map((date) => (
                               <Badge key={date} variant="secondary">
                                 {date}
@@ -1086,8 +1126,8 @@ export function BookingModal({
                 {tasks.length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16">
-                      <Check className="h-16 w-16 text-muted-foreground/50 mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Tasks</h3>
+                      <Check className="text-muted-foreground/50 mb-4 h-16 w-16" />
+                      <h3 className="mb-2 text-lg font-semibold">No Tasks</h3>
                       <p className="text-muted-foreground text-center">
                         This booking does not have any scheduled tasks.
                       </p>
@@ -1099,13 +1139,13 @@ export function BookingModal({
                       <Card key={task.id}>
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded-lg">
+                            <div className="bg-muted rounded-lg p-2">
                               {React.createElement(getTaskIcon(task.type), {
-                                className: "h-4 w-4",
+                                className: "size-4",
                               })}
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center justify-between mb-2">
+                              <div className="mb-2 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium">{task.title}</h4>
                                   <Badge
@@ -1135,11 +1175,11 @@ export function BookingModal({
                                 )}
                               </div>
                               {task.time && (
-                                <p className="text-sm text-muted-foreground mb-1">
+                                <p className="text-muted-foreground mb-1 text-sm">
                                   Time: {task.time}
                                 </p>
                               )}
-                              <p className="text-sm mb-2">{task.details}</p>
+                              <p className="mb-2 text-sm">{task.details}</p>
                               {task.assignable && (
                                 <div className="flex items-center gap-2">
                                   <label className="text-sm font-medium">
@@ -1187,13 +1227,13 @@ export function BookingModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0 [&>button]:hidden">
+      <DialogContent className="flex h-[90vh] w-[95vw] min-w-7xl flex-col overflow-hidden p-0 [&>button]:hidden">
         <DialogTitle className="sr-only">New Booking</DialogTitle>
-        <div className="flex-1 flex min-h-0">
+        <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
-          <div className="w-80 border-r bg-muted/30 flex flex-col">
+          <div className="bg-muted/30 flex w-80 flex-col border-r">
             {/* Title in Sidebar */}
-            <div className="p-4 border-b bg-background">
+            <div className="bg-background border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Plus className="h-5 w-5" />
                 {(() => {
@@ -1216,7 +1256,7 @@ export function BookingModal({
                   }
                 })()}
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {(() => {
                   const preSelectedClient = clients.find(
                     (c) => c.id === preSelectedClientId,
@@ -1239,7 +1279,7 @@ export function BookingModal({
               </p>
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-4 space-y-2">
+              <div className="space-y-2 p-4">
                 {displayedSteps.map((step, idx) => {
                   const isActive = currentStep === idx;
                   let isCompleted = currentStep > idx;
@@ -1260,23 +1300,23 @@ export function BookingModal({
                   return (
                     <div key={step.id}>
                       <div
-                        className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        className={`w-full rounded-lg border p-3 text-left transition-all ${
                           isActive
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            ? `border-primary bg-primary text-primary-foreground shadow-sm`
                             : isCompleted
-                              ? "bg-background border-border"
-                              : "bg-muted/50 border-dashed border-muted-foreground/30 opacity-60"
-                        }`}
+                              ? "border-border bg-background"
+                              : `border-muted-foreground/30 bg-muted/50 border-dashed opacity-60`
+                        } `}
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold ${
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                               isActive
                                 ? "bg-primary-foreground text-primary"
                                 : isCompleted
                                   ? "bg-primary text-primary-foreground"
-                                  : "bg-muted-foreground/20 text-muted-foreground"
-                            }`}
+                                  : `bg-muted-foreground/20 text-muted-foreground`
+                            } `}
                           >
                             {isCompleted ? (
                               <Check className="h-3 w-3" />
@@ -1284,15 +1324,15 @@ export function BookingModal({
                               idx + 1
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p
-                              className={`font-medium text-sm mb-0.5 ${
+                              className={`mb-0.5 text-sm font-medium ${
                                 isActive
                                   ? ""
                                   : isCompleted
                                     ? ""
                                     : "text-muted-foreground"
-                              }`}
+                              } `}
                             >
                               {step.title}
                             </p>
@@ -1301,7 +1341,7 @@ export function BookingModal({
                                 isActive
                                   ? "text-primary-foreground/80"
                                   : "text-muted-foreground"
-                              }`}
+                              } `}
                             >
                               {step.description}
                             </p>
@@ -1311,7 +1351,7 @@ export function BookingModal({
 
                       {/* Sub-steps for Details step when daycare/boarding */}
                       {showSubSteps && (
-                        <div className="ml-6 mt-2 pl-4 border-l-2 border-primary/30 space-y-1">
+                        <div className="border-primary/30 mt-2 ml-6 space-y-1 border-l-2 pl-4">
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
                             const isSubCompleted = isSubStepComplete(subIdx);
@@ -1321,23 +1361,23 @@ export function BookingModal({
                             return (
                               <div
                                 key={subStep.id}
-                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
+                                className={`w-full rounded-md px-3 py-2 text-left text-sm transition-all ${
                                   isSubActive
                                     ? "bg-primary/20 text-primary font-medium"
                                     : isVisitedAndCompleted
                                       ? "text-foreground"
                                       : "text-muted-foreground"
-                                }`}
+                                } `}
                               >
                                 <div className="flex items-center gap-2">
                                   <div
-                                    className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
+                                    className={`flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
                                       isSubActive
                                         ? "bg-primary text-primary-foreground"
                                         : isVisitedAndCompleted
                                           ? "bg-primary text-primary-foreground"
-                                          : "bg-muted-foreground/20 text-muted-foreground"
-                                    }`}
+                                          : `bg-muted-foreground/20 text-muted-foreground`
+                                    } `}
                                   >
                                     {isVisitedAndCompleted ? (
                                       <Check className="h-2.5 w-2.5" />
@@ -1359,7 +1399,7 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Price Summary at Bottom */}
-            <div className="p-6 border-t bg-background">
+            <div className="bg-background border-t p-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>Total Price</span>
@@ -1370,9 +1410,9 @@ export function BookingModal({
           </div>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex flex-col min-w-0 overflow-scroll">
+          <div className="flex min-w-0 flex-1 flex-col overflow-scroll">
             <ScrollArea className="flex-1">
-              <div className="p-4 border-b bg-background">
+              <div className="bg-background border-b p-4">
                 <h2 className="text-lg font-semibold">
                   {displayedSteps[currentStep]?.title}
                 </h2>
@@ -1380,7 +1420,7 @@ export function BookingModal({
                   (selectedService === "daycare" ||
                     selectedService === "boarding" ||
                     selectedService === "evaluation") && (
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-sm">
                       {currentSubSteps[currentSubStep]?.title}
                     </p>
                   )}
@@ -1479,7 +1519,7 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Navigation Buttons */}
-            <div className="p-4 border-t bg-background flex justify-between">
+            <div className="bg-background flex justify-between border-t p-4">
               <Button
                 type="button"
                 variant="outline"

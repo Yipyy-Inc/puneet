@@ -88,11 +88,11 @@ export default function DaycareSettingsPage() {
                     size="sm"
                     onClick={() => handleCancel("basic")}
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-2 size-4" />
                     Cancel
                   </Button>
                   <Button size="sm" onClick={() => handleSave("basic")}>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="mr-2 size-4" />
                     Save
                   </Button>
                 </div>
@@ -102,7 +102,7 @@ export default function DaycareSettingsPage() {
                   size="sm"
                   onClick={() => setIsEditingBasic(true)}
                 >
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-2 size-4" />
                   Edit
                 </Button>
               )}
@@ -174,11 +174,11 @@ export default function DaycareSettingsPage() {
                     size="sm"
                     onClick={() => handleCancel("pricing")}
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-2 size-4" />
                     Cancel
                   </Button>
                   <Button size="sm" onClick={() => handleSave("pricing")}>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="mr-2 size-4" />
                     Save
                   </Button>
                 </div>
@@ -188,7 +188,7 @@ export default function DaycareSettingsPage() {
                   size="sm"
                   onClick={() => setIsEditingPricing(true)}
                 >
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-2 size-4" />
                   Edit
                 </Button>
               )}
@@ -228,11 +228,11 @@ export default function DaycareSettingsPage() {
                     size="sm"
                     onClick={() => handleCancel("media")}
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-2 size-4" />
                     Cancel
                   </Button>
                   <Button size="sm" onClick={() => handleSave("media")}>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="mr-2 size-4" />
                     Save
                   </Button>
                 </div>
@@ -242,7 +242,7 @@ export default function DaycareSettingsPage() {
                   size="sm"
                   onClick={() => setIsEditingMedia(true)}
                 >
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-2 size-4" />
                   Edit
                 </Button>
               )}
@@ -264,7 +264,7 @@ export default function DaycareSettingsPage() {
               {formData.bannerImage && (
                 <div className="space-y-2">
                   <Label>Preview</Label>
-                  <div className="relative w-full h-48 rounded-lg overflow-hidden border bg-muted">
+                  <div className="bg-muted relative h-48 w-full overflow-hidden rounded-lg border">
                     <Image
                       src={formData.bannerImage}
                       alt="Banner preview"
@@ -276,7 +276,7 @@ export default function DaycareSettingsPage() {
                       }}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Image preview - actual display may vary
                   </p>
                 </div>
@@ -302,11 +302,11 @@ export default function DaycareSettingsPage() {
                     size="sm"
                     onClick={() => handleCancel("evaluation")}
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <X className="mr-2 size-4" />
                     Cancel
                   </Button>
                   <Button size="sm" onClick={() => handleSave("evaluation")}>
-                    <Save className="mr-2 h-4 w-4" />
+                    <Save className="mr-2 size-4" />
                     Save
                   </Button>
                 </div>
@@ -316,7 +316,7 @@ export default function DaycareSettingsPage() {
                   size="sm"
                   onClick={() => setIsEditingEvaluation(true)}
                 >
-                  <Edit className="mr-2 h-4 w-4" />
+                  <Edit className="mr-2 size-4" />
                   Edit
                 </Button>
               )}
@@ -326,7 +326,7 @@ export default function DaycareSettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Enable Evaluation</Label>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Require evaluation for daycare bookings
                 </p>
               </div>
@@ -347,7 +347,7 @@ export default function DaycareSettingsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Optional Evaluation</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Make evaluation optional for clients
                     </p>
                   </div>
@@ -362,8 +362,8 @@ export default function DaycareSettingsPage() {
                     disabled={!isEditingEvaluation}
                   />
                 </div>
-                <div className="mt-4 p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
+                <div className="bg-muted mt-4 rounded-lg p-3">
+                  <p className="text-muted-foreground text-sm">
                     Evaluation details (name, price, duration, etc.) are
                     configured globally in{" "}
                     <a

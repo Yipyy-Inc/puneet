@@ -327,8 +327,8 @@ export default function CareSheetsPage() {
       {/* Header Controls */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="space-y-2 flex-1 min-w-[200px]">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="min-w-[200px] flex-1 space-y-2">
               <Label>Select Pet</Label>
               <Select
                 value={selectedGuestId}
@@ -341,7 +341,7 @@ export default function CareSheetsPage() {
                   {currentGuests.map((guest) => (
                     <SelectItem key={guest.id} value={guest.id}>
                       <div className="flex items-center gap-2">
-                        <PawPrint className="h-4 w-4" />
+                        <PawPrint className="size-4" />
                         {guest.petName} - {guest.kennelName}
                       </div>
                     </SelectItem>
@@ -359,7 +359,7 @@ export default function CareSheetsPage() {
               />
             </div>
             <Button variant="outline" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
+              <Printer className="mr-2 size-4" />
               Print Sheet
             </Button>
           </div>
@@ -370,13 +370,13 @@ export default function CareSheetsPage() {
       {selectedGuest && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
               <PawPrint className="h-5 w-5" />
               {selectedGuest.petName} - Daily Care Sheet
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
               <div>
                 <p className="text-muted-foreground">Breed</p>
                 <p className="font-medium">{selectedGuest.petBreed}</p>
@@ -399,7 +399,7 @@ export default function CareSheetsPage() {
               </div>
             </div>
             {selectedGuest.allergies.length > 0 && (
-              <div className="mt-3 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 dark:border-red-800 dark:bg-red-900/20">
                 <p className="text-sm text-red-700 dark:text-red-400">
                   <strong>Allergies:</strong>{" "}
                   {selectedGuest.allergies.join(", ")}
@@ -407,7 +407,7 @@ export default function CareSheetsPage() {
               </div>
             )}
             {selectedGuest.medications.length > 0 && (
-              <div className="mt-3 p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+              <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50 p-2 dark:border-purple-800 dark:bg-purple-900/20">
                 <p className="text-sm text-purple-700 dark:text-purple-400">
                   <strong>Medications:</strong>{" "}
                   {selectedGuest.medications
@@ -423,7 +423,7 @@ export default function CareSheetsPage() {
       {/* Quick Add Buttons */}
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => openLogModal("feeding")}>
-          <Utensils className="h-4 w-4 mr-2" />
+          <Utensils className="mr-2 size-4" />
           Log Feeding
         </Button>
         <Button
@@ -431,19 +431,19 @@ export default function CareSheetsPage() {
           variant="secondary"
           disabled={!selectedGuest?.medications.length}
         >
-          <Pill className="h-4 w-4 mr-2" />
+          <Pill className="mr-2 size-4" />
           Log Medication
         </Button>
         <Button onClick={() => openLogModal("potty")} variant="outline">
-          <Droplets className="h-4 w-4 mr-2" />
+          <Droplets className="mr-2 size-4" />
           Log Potty
         </Button>
         <Button onClick={() => openLogModal("walk")} variant="outline">
-          <Footprints className="h-4 w-4 mr-2" />
+          <Footprints className="mr-2 size-4" />
           Log Walk
         </Button>
         <Button onClick={() => openLogModal("playtime")} variant="outline">
-          <PlayCircle className="h-4 w-4 mr-2" />
+          <PlayCircle className="mr-2 size-4" />
           Log Playtime
         </Button>
       </div>
@@ -452,7 +452,7 @@ export default function CareSheetsPage() {
       <Tabs defaultValue="feedings" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="feedings" className="flex items-center gap-1">
-            <Utensils className="h-4 w-4" />
+            <Utensils className="size-4" />
             <span className="hidden sm:inline">Feedings</span>
             {currentCareSheet && (
               <Badge variant="secondary" className="ml-1">
@@ -461,7 +461,7 @@ export default function CareSheetsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="medications" className="flex items-center gap-1">
-            <Pill className="h-4 w-4" />
+            <Pill className="size-4" />
             <span className="hidden sm:inline">Meds</span>
             {currentCareSheet && (
               <Badge variant="secondary" className="ml-1">
@@ -470,7 +470,7 @@ export default function CareSheetsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="potty" className="flex items-center gap-1">
-            <Droplets className="h-4 w-4" />
+            <Droplets className="size-4" />
             <span className="hidden sm:inline">Potty</span>
             {currentCareSheet && (
               <Badge variant="secondary" className="ml-1">
@@ -479,7 +479,7 @@ export default function CareSheetsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="walks" className="flex items-center gap-1">
-            <Footprints className="h-4 w-4" />
+            <Footprints className="size-4" />
             <span className="hidden sm:inline">Walks</span>
             {currentCareSheet && (
               <Badge variant="secondary" className="ml-1">
@@ -488,7 +488,7 @@ export default function CareSheetsPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="playtime" className="flex items-center gap-1">
-            <PlayCircle className="h-4 w-4" />
+            <PlayCircle className="size-4" />
             <span className="hidden sm:inline">Play</span>
             {currentCareSheet && (
               <Badge variant="secondary" className="ml-1">
@@ -502,15 +502,15 @@ export default function CareSheetsPage() {
         <TabsContent value="feedings">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Utensils className="h-5 w-5" />
                 Feeding Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.feedings.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Utensils className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Utensils className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>No feedings logged yet</p>
                 </div>
               ) : (
@@ -518,15 +518,15 @@ export default function CareSheetsPage() {
                   {currentCareSheet.feedings.map((feeding) => (
                     <div
                       key={feeding.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                          <Clock className="h-5 w-5 text-primary" />
+                        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                          <Clock className="text-primary h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-medium">{feeding.actualTime}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {feeding.foodType} - {feeding.amount}
                           </p>
                         </div>
@@ -544,7 +544,7 @@ export default function CareSheetsPage() {
                           {getAppetiteLabel(feeding.appetiteStatus)}
                         </Badge>
                         <Badge variant="outline">
-                          <User className="h-3 w-3 mr-1" />
+                          <User className="mr-1 h-3 w-3" />
                           {feeding.fedByInitials}
                         </Badge>
                       </div>
@@ -560,15 +560,15 @@ export default function CareSheetsPage() {
         <TabsContent value="medications">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Pill className="h-5 w-5" />
                 Medication Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.medications.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Pill className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Pill className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>No medications logged yet</p>
                 </div>
               ) : (
@@ -576,15 +576,15 @@ export default function CareSheetsPage() {
                   {currentCareSheet.medications.map((med) => (
                     <div
                       key={med.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
                           <CheckCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
                           <p className="font-medium">{med.medicationName}</p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {med.dosage} at {med.givenTime}
                           </p>
                         </div>
@@ -592,12 +592,12 @@ export default function CareSheetsPage() {
                       <div className="flex items-center gap-3">
                         {med.photoProofUrl && (
                           <Badge variant="outline">
-                            <Camera className="h-3 w-3 mr-1" />
+                            <Camera className="mr-1 h-3 w-3" />
                             Photo
                           </Badge>
                         )}
                         <Badge variant="outline">
-                          <User className="h-3 w-3 mr-1" />
+                          <User className="mr-1 h-3 w-3" />
                           {med.givenByInitials}
                         </Badge>
                       </div>
@@ -613,15 +613,15 @@ export default function CareSheetsPage() {
         <TabsContent value="potty">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Droplets className="h-5 w-5" />
                 Potty Breaks
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.pottyBreaks.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Droplets className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Droplets className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>No potty breaks logged yet</p>
                 </div>
               ) : (
@@ -629,15 +629,15 @@ export default function CareSheetsPage() {
                   {currentCareSheet.pottyBreaks.map((potty) => (
                     <div
                       key={potty.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
                           <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
                           <p className="font-medium">{potty.time}</p>
-                          <p className="text-sm text-muted-foreground capitalize">
+                          <p className="text-muted-foreground text-sm capitalize">
                             {potty.type} - {potty.location}
                           </p>
                         </div>
@@ -647,7 +647,7 @@ export default function CareSheetsPage() {
                           <Badge variant="destructive">Accident</Badge>
                         )}
                         <Badge variant="outline">
-                          <User className="h-3 w-3 mr-1" />
+                          <User className="mr-1 h-3 w-3" />
                           {potty.staffInitials}
                         </Badge>
                       </div>
@@ -663,15 +663,15 @@ export default function CareSheetsPage() {
         <TabsContent value="walks">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Footprints className="h-5 w-5" />
                 Walk Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.walks.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Footprints className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Footprints className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>No walks logged yet</p>
                 </div>
               ) : (
@@ -679,24 +679,24 @@ export default function CareSheetsPage() {
                   {currentCareSheet.walks.map((walk) => (
                     <div
                       key={walk.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
                           <Footprints className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
                           <p className="font-medium">
                             {walk.startTime} - {walk.endTime}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             {walk.duration} minutes
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">
-                          <User className="h-3 w-3 mr-1" />
+                          <User className="mr-1 h-3 w-3" />
                           {walk.staffInitials}
                         </Badge>
                       </div>
@@ -712,15 +712,15 @@ export default function CareSheetsPage() {
         <TabsContent value="playtime">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <PlayCircle className="h-5 w-5" />
                 Playtime Log
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!currentCareSheet?.playtime.length ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <PlayCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <PlayCircle className="mx-auto mb-3 h-12 w-12 opacity-50" />
                   <p>No playtime logged yet</p>
                 </div>
               ) : (
@@ -728,17 +728,17 @@ export default function CareSheetsPage() {
                   {currentCareSheet.playtime.map((play) => (
                     <div
                       key={play.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      className="bg-card flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                           <PlayCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
                           <p className="font-medium">
                             {play.startTime} - {play.endTime}
                           </p>
-                          <p className="text-sm text-muted-foreground capitalize">
+                          <p className="text-muted-foreground text-sm capitalize">
                             {play.type} play
                             {play.notes && ` - ${play.notes}`}
                           </p>
@@ -753,7 +753,7 @@ export default function CareSheetsPage() {
                           {play.type === "group" ? "Group" : "Solo"}
                         </Badge>
                         <Badge variant="outline">
-                          <User className="h-3 w-3 mr-1" />
+                          <User className="mr-1 h-3 w-3" />
                           {play.staffInitials}
                         </Badge>
                       </div>
@@ -960,7 +960,7 @@ export default function CareSheetsPage() {
                       photoProof: e.target.checked,
                     })
                   }
-                  className="rounded"
+                  className="rounded-sm"
                 />
                 <Label htmlFor="photoProof">Photo proof taken</Label>
               </div>
@@ -1045,7 +1045,7 @@ export default function CareSheetsPage() {
                       hadAccident: e.target.checked,
                     })
                   }
-                  className="rounded"
+                  className="rounded-sm"
                 />
                 <Label htmlFor="accident">Had accident</Label>
               </div>
@@ -1211,7 +1211,7 @@ export default function CareSheetsPage() {
               Cancel
             </Button>
             <Button onClick={handleSaveLog}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Save Log
             </Button>
           </DialogFooter>

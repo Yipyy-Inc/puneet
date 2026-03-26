@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -62,12 +63,16 @@ export function ServiceCard({
         }
       }}
       className={cn(
-        "relative flex flex-col min-h-[340px] border-2 rounded-xl transition-all overflow-hidden text-left",
-        disabled && "opacity-50 cursor-not-allowed",
+        `relative flex min-h-[340px] flex-col overflow-hidden rounded-xl border-2 text-left transition-all`,
+        disabled && "cursor-not-allowed opacity-50",
         !disabled && "cursor-pointer",
-        selected && !disabled && "border-primary bg-primary/5 ring-2 ring-primary shadow-md",
-        !selected && !disabled && "hover:border-primary/50 hover:shadow border-border",
-        className
+        selected &&
+          !disabled &&
+          "border-primary bg-primary/5 ring-primary shadow-md ring-2",
+        !selected &&
+          !disabled &&
+          `border-border hover:border-primary/50 hover:shadow-sm`,
+        className,
       )}
     >
       {badge && (
@@ -77,47 +82,52 @@ export function ServiceCard({
           </Badge>
         </div>
       )}
-      <div className="w-full h-44 shrink-0 bg-muted">
+      <div className="bg-muted relative h-44 w-full shrink-0">
         {service.image ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <Image
             src={service.image}
             alt={name}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
+            unoptimized
           />
         ) : Icon ? (
           <div
             className={cn(
-              "w-full h-full flex items-center justify-center",
-              selected && !disabled ? "bg-primary text-primary-foreground" : "bg-muted"
+              "flex h-full w-full items-center justify-center",
+              selected && !disabled
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted",
             )}
           >
             <Icon className="h-14 w-14" />
           </div>
         ) : null}
       </div>
-      <div className="p-5 flex flex-col flex-1 space-y-3">
+      <div className="flex flex-1 flex-col space-y-3 p-5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-tight">{name}</h3>
+          <h3 className="text-lg/tight font-semibold">{name}</h3>
           {selected && !disabled && (
-            <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+            <CheckCircle className="text-primary mt-0.5 h-5 w-5 shrink-0" />
           )}
         </div>
         {description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+          <p className="text-muted-foreground line-clamp-2 text-sm">
+            {description}
+          </p>
         )}
         {included.length > 0 && (
-          <ul className="text-xs text-muted-foreground space-y-1 mt-1">
+          <ul className="text-muted-foreground mt-1 space-y-1 text-xs">
             {included.slice(0, maxIncluded).map((item, i) => (
               <li key={i} className="flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                <CheckCircle className="text-primary h-3.5 w-3.5 shrink-0" />
                 {item}
               </li>
             ))}
           </ul>
         )}
         <div className="mt-auto pt-2">
-          <p className="font-bold text-primary text-lg">
+          <p className="text-primary text-lg font-bold">
             {price === 0 ? "Free" : `From $${price}`}
           </p>
         </div>

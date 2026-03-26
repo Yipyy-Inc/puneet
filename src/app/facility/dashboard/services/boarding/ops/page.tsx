@@ -47,17 +47,18 @@ export default function BoardingOpsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Boarding Ops</h2>
-          <p className="text-sm text-muted-foreground">
-            Staff-only workflow: requests, eligibility checks, assignments, payments, and PreCheck.
+          <p className="text-muted-foreground text-sm">
+            Staff-only workflow: requests, eligibility checks, assignments,
+            payments, and PreCheck.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">
-            <Bell className="h-4 w-4 mr-2" />
+            <Bell className="mr-2 size-4" />
             Notifications
           </Button>
           <Button>
-            <ClipboardList className="h-4 w-4 mr-2" />
+            <ClipboardList className="mr-2 size-4" />
             Create request
           </Button>
         </div>
@@ -86,7 +87,9 @@ export default function BoardingOpsPage() {
         </Card>
         <Card className="border-warning/40">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">PreCheck missing</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              PreCheck missing
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <div className="text-2xl font-bold">{counts.preCheckMissing}</div>
@@ -106,10 +109,11 @@ export default function BoardingOpsPage() {
 
       {(counts.preCheckMissing > 0 || counts.corrections > 0) && (
         <Alert className="border-warning/40 bg-warning/5">
-          <AlertTriangle className="h-4 w-4" />
+          <AlertTriangle className="size-4" />
           <AlertTitle>PreCheck attention needed</AlertTitle>
           <AlertDescription>
-            Some bookings are missing PreCheck or need corrections. Staff can manually fill and approve or request customer updates.
+            Some bookings are missing PreCheck or need corrections. Staff can
+            manually fill and approve or request customer updates.
           </AlertDescription>
         </Alert>
       )}
@@ -118,11 +122,13 @@ export default function BoardingOpsPage() {
         <TabsList className="flex flex-wrap">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             Requests
-            {counts.pending > 0 && <Badge variant="warning">{counts.pending}</Badge>}
+            {counts.pending > 0 && (
+              <Badge variant="warning">{counts.pending}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="eligibility" className="flex items-center gap-2">
             Eligibility
-            <ShieldAlert className="h-4 w-4" />
+            <ShieldAlert className="size-4" />
           </TabsTrigger>
         </TabsList>
 
@@ -149,10 +155,13 @@ export default function BoardingOpsPage() {
         <TabsContent value="eligibility" className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Eligibility (per request)</CardTitle>
+              <CardTitle className="text-base">
+                Eligibility (per request)
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Open a request to see detailed eligibility reasons and evaluation indicators per pet.
+            <CardContent className="text-muted-foreground text-sm">
+              Open a request to see detailed eligibility reasons and evaluation
+              indicators per pet.
             </CardContent>
           </Card>
         </TabsContent>
@@ -167,4 +176,3 @@ export default function BoardingOpsPage() {
     </div>
   );
 }
-

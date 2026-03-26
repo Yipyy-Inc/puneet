@@ -75,8 +75,8 @@ export default function CustomerPetsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -87,7 +87,7 @@ export default function CustomerPetsPage() {
           </div>
           <Button asChild>
             <Link href="/customer/pets/add">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Add Pet
             </Link>
           </Button>
@@ -95,7 +95,7 @@ export default function CustomerPetsPage() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search pets by name, breed, or type..."
             value={searchQuery}
@@ -111,22 +111,22 @@ export default function CustomerPetsPage() {
               <div className="text-center">
                 {customerPets.length === 0 ? (
                   <>
-                    <Dog className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No pets yet</h3>
+                    <Dog className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
+                    <h3 className="mb-2 text-lg font-semibold">No pets yet</h3>
                     <p className="text-muted-foreground mb-4">
                       Add your first pet to get started with bookings
                     </p>
                     <Button asChild>
                       <Link href="/customer/pets/add">
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="mr-2 size-4" />
                         Add Your First Pet
                       </Link>
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">
+                    <Search className="text-muted-foreground mx-auto mb-4 h-16 w-16 opacity-50" />
+                    <h3 className="mb-2 text-lg font-semibold">
                       No pets found
                     </h3>
                     <p className="text-muted-foreground">
@@ -146,7 +146,7 @@ export default function CustomerPetsPage() {
               return (
                 <Card
                   key={pet.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  className="cursor-pointer transition-shadow hover:shadow-lg"
                   onClick={() =>
                     (window.location.href = `/customer/pets/${pet.id}`)
                   }
@@ -154,17 +154,17 @@ export default function CustomerPetsPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
                           {pet.imageUrl ? (
                             <Image
                               src={pet.imageUrl}
                               alt={pet.name}
                               width={64}
                               height={64}
-                              className="w-full h-full object-cover rounded-lg"
+                              className="h-full w-full rounded-lg object-cover"
                             />
                           ) : (
-                            <PetIcon className="h-8 w-8 text-primary" />
+                            <PetIcon className="text-primary h-8 w-8" />
                           )}
                         </div>
                         <div>
@@ -201,7 +201,7 @@ export default function CustomerPetsPage() {
 
                     {pet.allergies && pet.allergies !== "None" && (
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <AlertTriangle className="text-destructive size-4" />
                         <Badge variant="destructive" className="text-xs">
                           Allergies: {pet.allergies}
                         </Badge>
@@ -225,7 +225,7 @@ export default function CustomerPetsPage() {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Total Stays</p>
-                        <p className="font-semibold text-lg">
+                        <p className="text-lg font-semibold">
                           {stats.totalStays}
                         </p>
                       </div>

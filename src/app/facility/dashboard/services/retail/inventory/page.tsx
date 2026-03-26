@@ -17,7 +17,6 @@ import {
   Eye,
   ShoppingCart,
   FileText,
-  CheckSquare,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,13 +54,11 @@ import {
   lowStockAlerts,
   getLowStockProducts,
   getInventoryValue,
-  suppliers,
   getActiveSuppliers,
   type InventoryMovement,
   type LowStockAlert,
   type Product,
   type ProductVariant,
-  type PurchaseOrderItem,
 } from "@/data/retail";
 
 type InventoryMovementWithRecord = InventoryMovement & Record<string, unknown>;
@@ -78,7 +75,7 @@ export default function InventoryPage() {
   const [selectedAlert, setSelectedAlert] = useState<LowStockAlert | null>(
     null,
   );
-  const [selectedAlertsForReorder, setSelectedAlertsForReorder] = useState<
+  const [_selectedAlertsForReorder, setSelectedAlertsForReorder] = useState<
     Set<string>
   >(new Set());
   const [reorderItems, setReorderItems] = useState<
@@ -153,7 +150,7 @@ export default function InventoryPage() {
       // Find the product/variant to get cost and max stock
       let product: Product | undefined;
       let variant: ProductVariant | undefined;
-      
+
       if (alert.variantId) {
         product = products.find((p) => p.id === alert.productId);
         variant = product?.variants.find((v) => v.id === alert.variantId);
@@ -161,13 +158,14 @@ export default function InventoryPage() {
         product = products.find((p) => p.id === alert.productId);
       }
 
-      const maxStock = variant?.maxStock || product?.maxStock || alert.minStock * 3;
+      const maxStock =
+        variant?.maxStock || product?.maxStock || alert.minStock * 3;
       const unitCost = variant?.costPrice || product?.baseCostPrice || 0;
-      
+
       // Suggested quantity: enough to reach max stock (or at least min stock * 2)
       const suggestedQuantity = Math.max(
         maxStock - alert.currentStock,
-        alert.minStock * 2 - alert.currentStock
+        alert.minStock * 2 - alert.currentStock,
       );
 
       return {
@@ -204,8 +202,8 @@ export default function InventoryPage() {
   const handleToggleReorderItem = (alertId: string) => {
     setReorderItems((prev) =>
       prev.map((item) =>
-        item.alertId === alertId ? { ...item, selected: !item.selected } : item
-      )
+        item.alertId === alertId ? { ...item, selected: !item.selected } : item,
+      ),
     );
     setSelectedAlertsForReorder((prev) => {
       const newSet = new Set(prev);
@@ -223,8 +221,8 @@ export default function InventoryPage() {
       prev.map((item) =>
         item.alertId === alertId
           ? { ...item, suggestedQuantity: Math.max(1, quantity) }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -233,13 +231,14 @@ export default function InventoryPage() {
     const variant = alert.variantId
       ? product?.variants.find((v) => v.id === alert.variantId)
       : undefined;
-    const maxStock = variant?.maxStock || product?.maxStock || alert.minStock * 3;
+    const maxStock =
+      variant?.maxStock || product?.maxStock || alert.minStock * 3;
     const unitCost = variant?.costPrice || product?.baseCostPrice || 0;
     const suggestedQuantity = Math.max(
       maxStock - alert.currentStock,
-      alert.minStock * 2 - alert.currentStock
+      alert.minStock * 2 - alert.currentStock,
     );
-    
+
     const newItem = {
       alertId: alert.id,
       productId: alert.productId,
@@ -274,15 +273,15 @@ export default function InventoryPage() {
   const getMovementTypeIcon = (type: string) => {
     switch (type) {
       case "sale":
-        return <ArrowDownRight className="h-4 w-4 text-red-500" />;
+        return <ArrowDownRight className="size-4 text-red-500" />;
       case "purchase":
-        return <ArrowUpRight className="h-4 w-4 text-green-500" />;
+        return <ArrowUpRight className="size-4 text-green-500" />;
       case "adjustment":
-        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+        return <RefreshCw className="size-4 text-blue-500" />;
       case "return":
-        return <ArrowUpRight className="h-4 w-4 text-orange-500" />;
+        return <ArrowUpRight className="size-4 text-orange-500" />;
       case "transfer":
-        return <RefreshCw className="h-4 w-4 text-purple-500" />;
+        return <RefreshCw className="size-4 text-purple-500" />;
       default:
         return null;
     }
@@ -308,11 +307,11 @@ export default function InventoryPage() {
   const getAlertStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="size-4 text-yellow-500" />;
       case "acknowledged":
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="size-4 text-blue-500" />;
       case "resolved":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+        return <CheckCircle2 className="size-4 text-green-500" />;
       default:
         return null;
     }
@@ -328,7 +327,7 @@ export default function InventoryPage() {
         return (
           <div>
             <div className="font-medium">{formatDate(dateString)}</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {formatTime(dateString)}
             </div>
           </div>
@@ -344,7 +343,7 @@ export default function InventoryPage() {
         <div>
           <div className="font-medium">{item.productName}</div>
           {item.variantName && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {item.variantName}
             </div>
           )}
@@ -387,8 +386,8 @@ export default function InventoryPage() {
           <span
             className={
               qty > 0
-                ? "text-green-600 font-medium"
-                : "text-red-600 font-medium"
+                ? "font-medium text-green-600"
+                : "font-medium text-red-600"
             }
           >
             {qty > 0 ? `+${qty}` : qty}
@@ -434,7 +433,7 @@ export default function InventoryPage() {
         <div>
           <div className="font-medium">{item.productName}</div>
           {item.variantName && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {item.variantName}
             </div>
           )}
@@ -451,7 +450,7 @@ export default function InventoryPage() {
       label: "Current Stock",
       defaultVisible: true,
       render: (item) => (
-        <span className="text-red-600 font-medium">{item.currentStock}</span>
+        <span className="font-medium text-red-600">{item.currentStock}</span>
       ),
     },
     {
@@ -539,13 +538,13 @@ export default function InventoryPage() {
             <CardTitle className="text-sm font-medium">
               Inventory Value (Retail)
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               ${inventoryValue.retail.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Cost: ${inventoryValue.cost.toFixed(2)}
             </p>
           </CardContent>
@@ -553,7 +552,7 @@ export default function InventoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -564,7 +563,7 @@ export default function InventoryPage() {
               ).toFixed(1)}
               %
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Potential profit: $
               {(inventoryValue.retail - inventoryValue.cost).toFixed(2)}
             </p>
@@ -583,7 +582,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground">Need reordering</p>
+            <p className="text-muted-foreground text-xs">Need reordering</p>
           </CardContent>
         </Card>
         <Card>
@@ -599,7 +598,7 @@ export default function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingAlerts.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Unacknowledged alerts
             </p>
           </CardContent>
@@ -616,15 +615,15 @@ export default function InventoryPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="overview" className="gap-2">
-              <Warehouse className="h-4 w-4" />
+              <Warehouse className="size-4" />
               Overview
             </TabsTrigger>
             <TabsTrigger value="movements" className="gap-2">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
               Movement Log
             </TabsTrigger>
             <TabsTrigger value="alerts" className="gap-2">
-              <AlertTriangle className="h-4 w-4" />
+              <AlertTriangle className="size-4" />
               Alerts
               {pendingAlerts.length > 0 && (
                 <Badge
@@ -638,7 +637,7 @@ export default function InventoryPage() {
           </TabsList>
 
           <Button onClick={() => setIsAdjustmentModalOpen(true)}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="mr-2 size-4" />
             Adjust Stock
           </Button>
         </div>
@@ -656,7 +655,7 @@ export default function InventoryPage() {
               </CardHeader>
               <CardContent>
                 {lowStockItems.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
+                  <p className="text-muted-foreground py-4 text-center">
                     All items are well stocked!
                   </p>
                 ) : (
@@ -674,15 +673,15 @@ export default function InventoryPage() {
                       return (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-2 rounded-lg border"
+                          className="flex items-center justify-between rounded-lg border p-2"
                         >
                           <div>
-                            <p className="font-medium text-sm">
+                            <p className="text-sm font-medium">
                               {isVariant
                                 ? `${product?.name} - ${(item as ProductVariant).name}`
                                 : (item as Product).name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               SKU:{" "}
                               {isVariant
                                 ? (item as ProductVariant).sku
@@ -696,7 +695,7 @@ export default function InventoryPage() {
                                 : (item as Product).stock}{" "}
                               left
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-muted-foreground text-xs">
                               Min:{" "}
                               {isVariant
                                 ? (item as ProductVariant).minStock
@@ -707,7 +706,7 @@ export default function InventoryPage() {
                       );
                     })}
                     {lowStockItems.length > 5 && (
-                      <p className="text-sm text-muted-foreground text-center">
+                      <p className="text-muted-foreground text-center text-sm">
                         +{lowStockItems.length - 5} more items
                       </p>
                     )}
@@ -729,15 +728,15 @@ export default function InventoryPage() {
                   {inventoryMovements.slice(0, 5).map((movement) => (
                     <div
                       key={movement.id}
-                      className="flex items-center justify-between p-2 rounded-lg border"
+                      className="flex items-center justify-between rounded-lg border p-2"
                     >
                       <div className="flex items-center gap-2">
                         {getMovementTypeIcon(movement.movementType)}
                         <div>
-                          <p className="font-medium text-sm">
+                          <p className="text-sm font-medium">
                             {movement.productName}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {movement.reason}
                           </p>
                         </div>
@@ -754,7 +753,7 @@ export default function InventoryPage() {
                             ? `+${movement.quantity}`
                             : movement.quantity}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {formatDate(movement.createdAt)}
                         </p>
                       </div>
@@ -778,7 +777,7 @@ export default function InventoryPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -791,16 +790,16 @@ export default function InventoryPage() {
 
         {/* Alerts Tab */}
         <TabsContent value="alerts" className="mt-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Low Stock Alerts</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {pendingAlerts.length} pending alerts need attention
               </p>
             </div>
             {pendingAlerts.length > 0 && (
               <Button onClick={handleGenerateReorderList}>
-                <ShoppingCart className="h-4 w-4 mr-2" />
+                <ShoppingCart className="mr-2 size-4" />
                 Generate Reorder List
               </Button>
             )}
@@ -815,7 +814,7 @@ export default function InventoryPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -825,7 +824,7 @@ export default function InventoryPage() {
                       setIsAlertDetailModalOpen(true);
                     }}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className="mr-2 size-4" />
                     View Details
                   </DropdownMenuItem>
                   {item.status === "pending" && (
@@ -834,14 +833,16 @@ export default function InventoryPage() {
                         handleAcknowledgeAlert(item as LowStockAlert)
                       }
                     >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      <CheckCircle2 className="mr-2 size-4" />
                       Acknowledge
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
-                    onClick={() => handleAddSingleAlertToReorder(item as LowStockAlert)}
+                    onClick={() =>
+                      handleAddSingleAlertToReorder(item as LowStockAlert)
+                    }
                   >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <ShoppingCart className="mr-2 size-4" />
                     Add to Reorder List
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -952,28 +953,28 @@ export default function InventoryPage() {
           {selectedAlert && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold">{selectedAlert.productName}</h3>
                   {selectedAlert.variantName && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       {selectedAlert.variantName}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 p-4 rounded-lg bg-muted">
+              <div className="bg-muted grid grid-cols-2 gap-4 rounded-lg p-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Stock</p>
+                  <p className="text-muted-foreground text-sm">Current Stock</p>
                   <p className="text-2xl font-bold text-red-600">
                     {selectedAlert.currentStock}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Minimum Stock</p>
+                  <p className="text-muted-foreground text-sm">Minimum Stock</p>
                   <p className="text-2xl font-bold">{selectedAlert.minStock}</p>
                 </div>
               </div>
@@ -985,9 +986,7 @@ export default function InventoryPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Alert Created:</span>
-                  <span>
-                    {formatDate(selectedAlert.createdAt)}
-                  </span>
+                  <span>{formatDate(selectedAlert.createdAt)}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Status:</span>
@@ -1008,8 +1007,8 @@ export default function InventoryPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Acknowledged:</span>
                     <span>
-                      {formatDate(selectedAlert.acknowledgedAt)}{" "}
-                      by {selectedAlert.acknowledgedBy}
+                      {formatDate(selectedAlert.acknowledgedAt)} by{" "}
+                      {selectedAlert.acknowledgedBy}
                     </span>
                   </div>
                 )}
@@ -1037,7 +1036,7 @@ export default function InventoryPage() {
                 }
               }}
             >
-              <ShoppingCart className="h-4 w-4 mr-2" />
+              <ShoppingCart className="mr-2 size-4" />
               Create Purchase Order
             </Button>
           </DialogFooter>
@@ -1049,7 +1048,7 @@ export default function InventoryPage() {
         open={isReorderListModalOpen}
         onOpenChange={setIsReorderListModalOpen}
       >
-        <DialogContent className="w-[98vw] max-w-none sm:max-w-none max-h-[95vh] overflow-y-auto">
+        <DialogContent className="max-h-[95vh] w-[98vw] max-w-none overflow-y-auto sm:max-w-none">
           <DialogHeader>
             <DialogTitle>Reorder List</DialogTitle>
             <DialogDescription>
@@ -1059,7 +1058,7 @@ export default function InventoryPage() {
 
           <div className="space-y-4 py-4">
             {reorderItems.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-muted-foreground py-8 text-center">
                 No items in reorder list
               </p>
             ) : (
@@ -1071,10 +1070,10 @@ export default function InventoryPage() {
                       size="sm"
                       onClick={() => {
                         setReorderItems((prev) =>
-                          prev.map((item) => ({ ...item, selected: true }))
+                          prev.map((item) => ({ ...item, selected: true })),
                         );
                         setSelectedAlertsForReorder(
-                          new Set(reorderItems.map((item) => item.alertId))
+                          new Set(reorderItems.map((item) => item.alertId)),
                         );
                       }}
                     >
@@ -1085,7 +1084,7 @@ export default function InventoryPage() {
                       size="sm"
                       onClick={() => {
                         setReorderItems((prev) =>
-                          prev.map((item) => ({ ...item, selected: false }))
+                          prev.map((item) => ({ ...item, selected: false })),
                         );
                         setSelectedAlertsForReorder(new Set());
                       }}
@@ -1093,31 +1092,35 @@ export default function InventoryPage() {
                       Deselect All
                     </Button>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {reorderItems.filter((item) => item.selected).length} of{" "}
                     {reorderItems.length} selected
                   </div>
                 </div>
 
-                <div className="space-y-2 border rounded-lg divide-y">
+                <div className="space-y-2 divide-y rounded-lg border">
                   {reorderItems.map((item) => (
                     <div
                       key={item.alertId}
                       className={`p-4 ${
-                        item.selected ? "bg-blue-50 border-blue-200" : "bg-background"
-                      }`}
+                        item.selected
+                          ? "border-blue-200 bg-blue-50"
+                          : "bg-background"
+                      } `}
                     >
                       <div className="flex items-start gap-4">
                         <div className="flex items-center pt-1">
                           <input
                             type="checkbox"
                             checked={item.selected}
-                            onChange={() => handleToggleReorderItem(item.alertId)}
-                            className="rounded h-4 w-4"
+                            onChange={() =>
+                              handleToggleReorderItem(item.alertId)
+                            }
+                            className="size-4 rounded-sm"
                           />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="mb-1 flex items-center gap-2">
                             <p className="font-medium">{item.productName}</p>
                             {item.variantName && (
                               <Badge variant="outline" className="text-xs">
@@ -1125,24 +1128,31 @@ export default function InventoryPage() {
                               </Badge>
                             )}
                           </div>
-                          <div className="grid grid-cols-4 gap-4 text-sm text-muted-foreground mb-2">
+                          <div className="text-muted-foreground mb-2 grid grid-cols-4 gap-4 text-sm">
                             <div>
-                              <span className="font-medium">SKU:</span> {item.sku}
+                              <span className="font-medium">SKU:</span>{" "}
+                              {item.sku}
                             </div>
                             <div>
                               <span className="font-medium">Current:</span>{" "}
-                              <span className="text-red-600">{item.currentStock}</span>
+                              <span className="text-red-600">
+                                {item.currentStock}
+                              </span>
                             </div>
                             <div>
-                              <span className="font-medium">Min:</span> {item.minStock}
+                              <span className="font-medium">Min:</span>{" "}
+                              {item.minStock}
                             </div>
                             <div>
-                              <span className="font-medium">Max:</span> {item.maxStock}
+                              <span className="font-medium">Max:</span>{" "}
+                              {item.maxStock}
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <Label className="text-sm">Reorder Quantity:</Label>
+                              <Label className="text-sm">
+                                Reorder Quantity:
+                              </Label>
                               <Input
                                 type="number"
                                 min="1"
@@ -1150,27 +1160,33 @@ export default function InventoryPage() {
                                 onChange={(e) =>
                                   handleUpdateReorderQuantity(
                                     item.alertId,
-                                    parseInt(e.target.value) || 1
+                                    parseInt(e.target.value) || 1,
                                   )
                                 }
-                                className="w-24 h-8"
+                                className="h-8 w-24"
                                 disabled={!item.selected}
                               />
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-muted-foreground text-xs">
                                 (Suggested: {item.suggestedQuantity})
                               </span>
                             </div>
                             <div className="text-sm">
-                              <span className="text-muted-foreground">Unit Cost:</span>{" "}
+                              <span className="text-muted-foreground">
+                                Unit Cost:
+                              </span>{" "}
                               <span className="font-medium">
                                 ${item.unitCost.toFixed(2)}
                               </span>
                             </div>
                             <div className="text-sm">
-                              <span className="text-muted-foreground">Total:</span>{" "}
+                              <span className="text-muted-foreground">
+                                Total:
+                              </span>{" "}
                               <span className="font-medium">
                                 $
-                                {(item.suggestedQuantity * item.unitCost).toFixed(2)}
+                                {(
+                                  item.suggestedQuantity * item.unitCost
+                                ).toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -1181,18 +1197,18 @@ export default function InventoryPage() {
                           className="h-8 w-8"
                           onClick={() => {
                             setReorderItems((prev) =>
-                              prev.filter((i) => i.alertId !== item.alertId)
+                              prev.filter((i) => i.alertId !== item.alertId),
                             );
                           }}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="p-4 rounded-lg bg-muted space-y-2">
+                <div className="bg-muted space-y-2 rounded-lg p-4">
                   <div className="flex justify-between text-sm">
                     <span>Total Items:</span>
                     <span className="font-medium">
@@ -1207,7 +1223,7 @@ export default function InventoryPage() {
                         .reduce((sum, item) => sum + item.suggestedQuantity, 0)}
                     </span>
                   </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  <div className="flex justify-between border-t pt-2 text-lg font-bold">
                     <span>Estimated Total Cost:</span>
                     <span>
                       $
@@ -1216,7 +1232,7 @@ export default function InventoryPage() {
                         .reduce(
                           (sum, item) =>
                             sum + item.suggestedQuantity * item.unitCost,
-                          0
+                          0,
                         )
                         .toFixed(2)}
                     </span>
@@ -1244,7 +1260,7 @@ export default function InventoryPage() {
                 reorderItems.filter((item) => item.selected).length === 0
               }
             >
-              <FileText className="h-4 w-4 mr-2" />
+              <FileText className="mr-2 size-4" />
               Create Purchase Order
             </Button>
           </DialogFooter>
@@ -1253,7 +1269,7 @@ export default function InventoryPage() {
 
       {/* Create Purchase Order Modal */}
       <Dialog open={isCreatePOModalOpen} onOpenChange={setIsCreatePOModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Purchase Order</DialogTitle>
             <DialogDescription>
@@ -1296,7 +1312,7 @@ export default function InventoryPage() {
 
             <div className="space-y-2">
               <Label>Order Items</Label>
-              <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+              <div className="max-h-64 divide-y overflow-y-auto rounded-lg border">
                 {reorderItems
                   .filter((item) => item.selected)
                   .map((item) => (
@@ -1305,21 +1321,24 @@ export default function InventoryPage() {
                         <div>
                           <p className="font-medium">{item.productName}</p>
                           {item.variantName && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {item.variantName}
                             </p>
                           )}
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             SKU: {item.sku}
                           </p>
                         </div>
                         <div className="text-right">
                           <p>
-                            {item.suggestedQuantity} × ${item.unitCost.toFixed(2)}
+                            {item.suggestedQuantity} × $
+                            {item.unitCost.toFixed(2)}
                           </p>
                           <p className="font-medium">
                             $
-                            {(item.suggestedQuantity * item.unitCost).toFixed(2)}
+                            {(item.suggestedQuantity * item.unitCost).toFixed(
+                              2,
+                            )}
                           </p>
                         </div>
                       </div>
@@ -1328,7 +1347,7 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-muted space-y-2">
+            <div className="bg-muted space-y-2 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>
@@ -1338,7 +1357,7 @@ export default function InventoryPage() {
                     .reduce(
                       (sum, item) =>
                         sum + item.suggestedQuantity * item.unitCost,
-                      0
+                      0,
                     )
                     .toFixed(2)}
                 </span>
@@ -1351,7 +1370,7 @@ export default function InventoryPage() {
                 <span>Shipping</span>
                 <span>$0.00</span>
               </div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <div className="flex justify-between border-t pt-2 text-lg font-bold">
                 <span>Total</span>
                 <span>
                   $
@@ -1360,7 +1379,7 @@ export default function InventoryPage() {
                     .reduce(
                       (sum, item) =>
                         sum + item.suggestedQuantity * item.unitCost,
-                      0
+                      0,
                     )
                     .toFixed(2)}
                 </span>
@@ -1371,7 +1390,9 @@ export default function InventoryPage() {
               <Label>Notes (Optional)</Label>
               <Textarea
                 value={poForm.notes}
-                onChange={(e) => setPoForm({ ...poForm, notes: e.target.value })}
+                onChange={(e) =>
+                  setPoForm({ ...poForm, notes: e.target.value })
+                }
                 placeholder="Any special instructions or notes..."
                 rows={3}
               />
@@ -1393,9 +1414,11 @@ export default function InventoryPage() {
             <Button
               onClick={() => {
                 // In a real app, this would create the purchase order
-                const selectedItems = reorderItems.filter((item) => item.selected);
+                const selectedItems = reorderItems.filter(
+                  (item) => item.selected,
+                );
                 alert(
-                  `Purchase order created successfully with ${selectedItems.length} items!`
+                  `Purchase order created successfully with ${selectedItems.length} items!`,
                 );
                 setIsCreatePOModalOpen(false);
                 setReorderItems([]);

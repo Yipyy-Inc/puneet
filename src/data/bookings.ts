@@ -193,7 +193,13 @@ export const bookings: Booking[] = [
             label: "Morning Feed",
             time: "08:00",
             components: [
-              { id: "comp1", type: "kibble", name: "Dry Food", amount: "1", unit: "cups" },
+              {
+                id: "comp1",
+                type: "kibble",
+                name: "Dry Food",
+                amount: "1",
+                unit: "cups",
+              },
             ],
           },
           {
@@ -201,7 +207,13 @@ export const bookings: Booking[] = [
             label: "Evening Feed",
             time: "18:00",
             components: [
-              { id: "comp2", type: "wet_food", name: "Wet Food", amount: "1", unit: "cups" },
+              {
+                id: "comp2",
+                type: "wet_food",
+                name: "Wet Food",
+                amount: "1",
+                unit: "cups",
+              },
             ],
           },
         ],
@@ -266,7 +278,13 @@ export const bookings: Booking[] = [
             label: "Breakfast",
             time: "07:30",
             components: [
-              { id: "comp3", type: "kibble", name: "Premium Dry Food", amount: "2", unit: "cups" },
+              {
+                id: "comp3",
+                type: "kibble",
+                name: "Premium Dry Food",
+                amount: "2",
+                unit: "cups",
+              },
             ],
           },
           {
@@ -274,7 +292,13 @@ export const bookings: Booking[] = [
             label: "Dinner",
             time: "19:00",
             components: [
-              { id: "comp4", type: "wet_food", name: "Wet Food", amount: "2", unit: "cups" },
+              {
+                id: "comp4",
+                type: "wet_food",
+                name: "Wet Food",
+                amount: "2",
+                unit: "cups",
+              },
             ],
           },
         ],
@@ -326,7 +350,13 @@ export const bookings: Booking[] = [
             label: "Morning Meal",
             time: "08:00",
             components: [
-              { id: "comp5", type: "kibble", name: "Dry Food", amount: "0.5", unit: "cups" },
+              {
+                id: "comp5",
+                type: "kibble",
+                name: "Dry Food",
+                amount: "0.5",
+                unit: "cups",
+              },
             ],
           },
           {
@@ -334,7 +364,13 @@ export const bookings: Booking[] = [
             label: "Evening Meal",
             time: "18:00",
             components: [
-              { id: "comp6", type: "wet_food", name: "Wet Food", amount: "0.5", unit: "cups" },
+              {
+                id: "comp6",
+                type: "wet_food",
+                name: "Wet Food",
+                amount: "0.5",
+                unit: "cups",
+              },
             ],
           },
         ],
@@ -380,7 +416,13 @@ export const bookings: Booking[] = [
             label: "Breakfast",
             time: "08:00",
             components: [
-              { id: "comp7", type: "kibble", name: "Grain-Free Dry Food", amount: "2", unit: "cups" },
+              {
+                id: "comp7",
+                type: "kibble",
+                name: "Grain-Free Dry Food",
+                amount: "2",
+                unit: "cups",
+              },
             ],
           },
           {
@@ -388,7 +430,13 @@ export const bookings: Booking[] = [
             label: "Dinner",
             time: "18:00",
             components: [
-              { id: "comp8", type: "wet_food", name: "Grain-Free Wet Food", amount: "2", unit: "cups" },
+              {
+                id: "comp8",
+                type: "wet_food",
+                name: "Grain-Free Wet Food",
+                amount: "2",
+                unit: "cups",
+              },
             ],
           },
         ],
@@ -454,7 +502,13 @@ export const bookings: Booking[] = [
             label: "Morning Feed",
             time: "08:00",
             components: [
-              { id: "comp9", type: "kibble", name: "Dry Food", amount: "1", unit: "cups" },
+              {
+                id: "comp9",
+                type: "kibble",
+                name: "Dry Food",
+                amount: "1",
+                unit: "cups",
+              },
             ],
           },
           {
@@ -462,7 +516,13 @@ export const bookings: Booking[] = [
             label: "Evening Feed",
             time: "18:00",
             components: [
-              { id: "comp10", type: "wet_food", name: "Wet Food", amount: "1", unit: "cups" },
+              {
+                id: "comp10",
+                type: "wet_food",
+                name: "Wet Food",
+                amount: "1",
+                unit: "cups",
+              },
             ],
           },
         ],
@@ -527,8 +587,12 @@ export const bookings: Booking[] = [
     facilityId: 11,
     service: "grooming",
     serviceType: "mobile",
-    startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0], // 7 days from now
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0], // 7 days from now
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0],
     checkInTime: "10:00",
     checkOutTime: "11:30",
     status: "confirmed",

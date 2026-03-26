@@ -1,10 +1,10 @@
 /**
  * Payment Audit Logging
- * 
+ *
  * Functions for logging payment-related actions for audit trail
  */
 
-export type AuditActionType = 
+export type AuditActionType =
   | "payment_capture"
   | "refund"
   | "void"
@@ -38,7 +38,7 @@ export interface PaymentAuditLog {
 }
 
 // In-memory storage for audit logs (in production, this would be a database)
-let auditLogs: PaymentAuditLog[] = [];
+const auditLogs: PaymentAuditLog[] = [];
 
 /**
  * Create an audit log entry
@@ -62,7 +62,7 @@ export function logPaymentAction(
     reason?: string;
     notes?: string;
     metadata?: Record<string, unknown>;
-  }
+  },
 ): PaymentAuditLog {
   const log: PaymentAuditLog = {
     id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -89,7 +89,7 @@ export function logPaymentAction(
   };
 
   auditLogs.push(log);
-  
+
   // In production, this would save to a database
   // For now, we'll keep it in memory and optionally persist to localStorage
   if (typeof window !== "undefined") {
@@ -119,7 +119,7 @@ export function getAuditLogs(
     endDate?: Date;
     staffId?: string;
     transactionId?: string;
-  }
+  },
 ): PaymentAuditLog[] {
   let logs = auditLogs.filter((log) => log.facilityId === facilityId);
 
@@ -129,10 +129,12 @@ export function getAuditLogs(
       const stored = localStorage.getItem("payment_audit_logs");
       if (stored) {
         const storedLogs = JSON.parse(stored) as PaymentAuditLog[];
-        logs = [...logs, ...storedLogs].filter((log) => log.facilityId === facilityId);
+        logs = [...logs, ...storedLogs].filter(
+          (log) => log.facilityId === facilityId,
+        );
         // Remove duplicates
         const uniqueLogs = Array.from(
-          new Map(logs.map((log) => [log.id, log])).values()
+          new Map(logs.map((log) => [log.id, log])).values(),
         );
         logs = uniqueLogs;
       }
@@ -148,13 +150,11 @@ export function getAuditLogs(
     }
     if (filters.startDate) {
       logs = logs.filter(
-        (log) => new Date(log.timestamp) >= filters.startDate!
+        (log) => new Date(log.timestamp) >= filters.startDate!,
       );
     }
     if (filters.endDate) {
-      logs = logs.filter(
-        (log) => new Date(log.timestamp) <= filters.endDate!
-      );
+      logs = logs.filter((log) => new Date(log.timestamp) <= filters.endDate!);
     }
     if (filters.staffId) {
       logs = logs.filter((log) => log.staffId === filters.staffId);
@@ -166,15 +166,17 @@ export function getAuditLogs(
 
   // Sort by timestamp (newest first)
   return logs.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );
 }
 
 /**
  * Get audit logs for a specific transaction
  */
-export function getTransactionAuditLogs(transactionId: string): PaymentAuditLog[] {
+export function getTransactionAuditLogs(
+  transactionId: string,
+): PaymentAuditLog[] {
   return getAuditLogs(0, { transactionId }).filter(
-    (log) => log.transactionId === transactionId
+    (log) => log.transactionId === transactionId,
   );
 }

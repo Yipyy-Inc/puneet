@@ -255,13 +255,13 @@ export function CreateAdminUserModal({
 
   return (
     <Dialog open={open} onOpenChange={resetAndClose}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         {showSuccess ? (
           <div className="py-12 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">
+            <h3 className="mb-2 text-xl font-semibold">
               User Created Successfully
             </h3>
             <p className="text-muted-foreground">
@@ -286,29 +286,29 @@ export function CreateAdminUserModal({
             {/* Step Indicator */}
             <div className="flex items-center justify-center gap-2 py-2">
               <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
                   step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"
-                }`}
+                } `}
               >
-                <User className="h-4 w-4" />
+                <User className="size-4" />
                 <span className="text-sm font-medium">Basic Info</span>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="text-muted-foreground size-4" />
               <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
                   step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"
-                }`}
+                } `}
               >
-                <Shield className="h-4 w-4" />
+                <Shield className="size-4" />
                 <span className="text-sm font-medium">Role & Access</span>
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronRight className="text-muted-foreground size-4" />
               <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 ${
                   step === 3 ? "bg-primary text-primary-foreground" : "bg-muted"
-                }`}
+                } `}
               >
-                <MapPin className="h-4 w-4" />
+                <MapPin className="size-4" />
                 <span className="text-sm font-medium">Areas</span>
               </div>
             </div>
@@ -331,7 +331,7 @@ export function CreateAdminUserModal({
                     aria-invalid={!!errors.name}
                   />
                   {errors.name && (
-                    <p className="text-sm text-destructive">{errors.name}</p>
+                    <p className="text-destructive text-sm">{errors.name}</p>
                   )}
                 </div>
 
@@ -340,7 +340,7 @@ export function CreateAdminUserModal({
                     Email Address <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="email"
                       type="email"
@@ -355,14 +355,14 @@ export function CreateAdminUserModal({
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
+                    <p className="text-destructive text-sm">{errors.email}</p>
                   )}
                 </div>
 
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
                       id="phone"
                       type="tel"
@@ -381,7 +381,7 @@ export function CreateAdminUserModal({
                     Department <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                    <Building className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
                     <Select
                       value={formData.department}
                       onValueChange={(value) => {
@@ -403,7 +403,7 @@ export function CreateAdminUserModal({
                     </Select>
                   </div>
                   {errors.department && (
-                    <p className="text-sm text-destructive">
+                    <p className="text-destructive text-sm">
                       {errors.department}
                     </p>
                   )}
@@ -438,13 +438,13 @@ export function CreateAdminUserModal({
                     </SelectContent>
                   </Select>
                   {errors.role && (
-                    <p className="text-sm text-destructive">{errors.role}</p>
+                    <p className="text-destructive text-sm">{errors.role}</p>
                   )}
                 </div>
 
                 {formData.role && (
-                  <div className="p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm font-medium mb-2">
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="mb-2 text-sm font-medium">
                       Role Permissions:
                     </p>
                     <div className="flex flex-wrap gap-1">
@@ -477,7 +477,7 @@ export function CreateAdminUserModal({
                     Access Level <span className="text-destructive">*</span>
                   </Label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                    <Key className="text-muted-foreground absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2" />
                     <Select
                       value={formData.accessLevel}
                       onValueChange={(value) => {
@@ -507,12 +507,12 @@ export function CreateAdminUserModal({
                     </Select>
                   </div>
                   {errors.accessLevel && (
-                    <p className="text-sm text-destructive">
+                    <p className="text-destructive text-sm">
                       {errors.accessLevel}
                     </p>
                   )}
                   {formData.accessLevel && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-muted-foreground mt-1 text-xs">
                       {
                         accessLevelDescriptions[
                           formData.accessLevel as AccessLevel
@@ -527,18 +527,18 @@ export function CreateAdminUserModal({
             {/* Step 3: Responsibility Areas */}
             {step === 3 && (
               <div className="py-4">
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-muted-foreground mb-4 text-sm">
                   Select the areas this user will be responsible for (optional)
                 </p>
-                <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
+                <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto">
                   {responsibilityOptions.map((area) => (
                     <div
                       key={area}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 transition-colors ${
                         formData.responsibilityAreas.includes(area)
-                          ? "bg-primary/10 border-primary"
+                          ? "border-primary bg-primary/10"
                           : "hover:bg-muted/50"
-                      }`}
+                      } `}
                       onClick={() => handleResponsibilityToggle(area)}
                     >
                       <Checkbox
@@ -550,8 +550,8 @@ export function CreateAdminUserModal({
                   ))}
                 </div>
                 {formData.responsibilityAreas.length > 0 && (
-                  <div className="mt-4 p-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm font-medium mb-2">
+                  <div className="bg-muted/30 mt-4 rounded-lg p-3">
+                    <p className="mb-2 text-sm font-medium">
                       Selected Areas ({formData.responsibilityAreas.length}):
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -578,24 +578,24 @@ export function CreateAdminUserModal({
                   </Button>
                   <Button type="button" onClick={handleNext}>
                     Next
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                    <ChevronRight className="ml-2 size-4" />
                   </Button>
                 </>
               ) : step === 2 ? (
                 <>
                   <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    <ChevronLeft className="mr-2 size-4" />
                     Back
                   </Button>
                   <Button type="button" onClick={handleNext}>
                     Next
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                    <ChevronRight className="ml-2 size-4" />
                   </Button>
                 </>
               ) : (
                 <>
                   <Button type="button" variant="outline" onClick={handleBack}>
-                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    <ChevronLeft className="mr-2 size-4" />
                     Back
                   </Button>
                   <Button
@@ -605,12 +605,12 @@ export function CreateAdminUserModal({
                   >
                     {isSubmitting ? (
                       <>
-                        <span className="animate-spin mr-2">⏳</span>
+                        <span className="mr-2 animate-spin">⏳</span>
                         Creating...
                       </>
                     ) : (
                       <>
-                        <UserPlus className="mr-2 h-4 w-4" />
+                        <UserPlus className="mr-2 size-4" />
                         {"Add User"}
                       </>
                     )}

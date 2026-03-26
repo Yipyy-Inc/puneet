@@ -103,11 +103,11 @@ export function AlertsNotifications() {
       label: "Alert Details",
       render: (item: SystemAlert) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.title}</div>
-          <div className="text-xs text-muted-foreground line-clamp-1">
+          <div className="truncate font-medium">{item.title}</div>
+          <div className="text-muted-foreground line-clamp-1 text-xs">
             {item.description}
           </div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.alertType}
           </Badge>
         </div>
@@ -131,9 +131,9 @@ export function AlertsNotifications() {
       key: "impact",
       label: "Impact",
       render: (item: SystemAlert) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div className="font-medium">{item.impactedUsers} users</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.affectedServices.length} service(s)
           </div>
         </div>
@@ -145,7 +145,7 @@ export function AlertsNotifications() {
       render: (item: SystemAlert) => (
         <div className="space-y-1">
           {getAlertStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(item.triggeredAt).toLocaleString()}
           </div>
         </div>
@@ -156,16 +156,16 @@ export function AlertsNotifications() {
   const alertActions = (item: SystemAlert) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Eye className="h-4 w-4" />
+        <Eye className="size-4" />
       </Button>
       {item.status === "New" && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Check className="h-4 w-4" />
+          <Check className="size-4" />
         </Button>
       )}
       {(item.status === "Acknowledged" || item.status === "New") && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Play className="h-4 w-4" />
+          <Play className="size-4" />
         </Button>
       )}
     </div>
@@ -178,9 +178,9 @@ export function AlertsNotifications() {
       label: "Alert Name",
       render: (item: AlertConfiguration) => (
         <div className="min-w-0">
-          <div className="font-medium truncate">{item.alertName}</div>
-          <div className="text-xs text-muted-foreground">{item.metric}</div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <div className="truncate font-medium">{item.alertName}</div>
+          <div className="text-muted-foreground text-xs">{item.metric}</div>
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.alertType}
           </Badge>
         </div>
@@ -190,11 +190,11 @@ export function AlertsNotifications() {
       key: "condition",
       label: "Condition",
       render: (item: AlertConfiguration) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div className="font-mono">
             {item.condition} {item.threshold}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             for {item.duration}min
           </div>
         </div>
@@ -213,7 +213,7 @@ export function AlertsNotifications() {
           {item.channels.slice(0, 2).map((channel) => {
             const Icon = getChannelIcon(channel);
             return (
-              <Badge key={channel} variant="outline" className="text-xs gap-1">
+              <Badge key={channel} variant="outline" className="gap-1 text-xs">
                 <Icon className="h-3 w-3" />
                 {channel}
               </Badge>
@@ -233,7 +233,7 @@ export function AlertsNotifications() {
       render: (item: AlertConfiguration) => (
         <div className="space-y-1">
           <Switch checked={item.enabled} disabled />
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.triggerCount} triggers
           </div>
         </div>
@@ -244,11 +244,11 @@ export function AlertsNotifications() {
   const configActions = (item: AlertConfiguration) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
       {item.enabled && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Eye className="h-4 w-4" />
+          <Eye className="size-4" />
         </Button>
       )}
     </div>
@@ -263,11 +263,11 @@ export function AlertsNotifications() {
         const Icon = getChannelIcon(item.channelType);
         return (
           <div className="min-w-0">
-            <div className="font-medium flex items-center gap-2">
-              <Icon className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 font-medium">
+              <Icon className="text-muted-foreground size-4" />
               {item.channelName}
             </div>
-            <Badge variant="outline" className="text-xs mt-1">
+            <Badge variant="outline" className="mt-1 text-xs">
               {item.channelType}
             </Badge>
           </div>
@@ -280,7 +280,7 @@ export function AlertsNotifications() {
       render: (item: NotificationChannel) => (
         <div className="space-y-1">
           {getChannelStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.deliveryRate}% delivery
           </div>
         </div>
@@ -297,9 +297,9 @@ export function AlertsNotifications() {
       key: "usage",
       label: "Usage (24h)",
       render: (item: NotificationChannel) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div className="font-medium">{item.alertsSent24h} alerts</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Last: {new Date(item.lastUsed).toLocaleString()}
           </div>
         </div>
@@ -310,11 +310,11 @@ export function AlertsNotifications() {
   const channelActions = (item: NotificationChannel) => (
     <div className="flex gap-1">
       <Button variant="ghost" size="icon" className="h-8 w-8">
-        <Settings className="h-4 w-4" />
+        <Settings className="size-4" />
       </Button>
       {item.status === "Active" && (
         <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Zap className="h-4 w-4" />
+          <Zap className="size-4" />
         </Button>
       )}
     </div>
@@ -339,7 +339,7 @@ export function AlertsNotifications() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">Alerts & Notifications</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Monitor system alerts and configure notification channels
           </p>
         </div>
@@ -347,84 +347,84 @@ export function AlertsNotifications() {
 
       {/* Alert Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Alerts
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {activeAlerts}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Require attention
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
                 <Bell className="h-6 w-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Critical
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {criticalAlerts}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   High priority alerts
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-red-500/20 to-red-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-red-500/20 to-red-600/20">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Users Impacted
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {totalImpacted}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Across all alerts
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
                 <Users className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Rules
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {activeConfigs}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Monitoring configurations
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
                 <Settings className="h-6 w-6 text-blue-600" />
               </div>
             </div>
@@ -442,13 +442,13 @@ export function AlertsNotifications() {
 
         {/* System Alerts Tab */}
         <TabsContent value="alerts" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <AlertTriangle className="h-5 w-5" />
                 System Alerts
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Critical errors, performance issues, and capacity warnings
               </p>
             </CardHeader>
@@ -467,13 +467,13 @@ export function AlertsNotifications() {
           value="configuration"
           className="space-y-6 overflow-x-hidden"
         >
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Settings className="h-5 w-5" />
                 Alert Configuration
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Configure alert thresholds, notification channels, and
                 escalation rules
               </p>
@@ -490,13 +490,13 @@ export function AlertsNotifications() {
 
         {/* Notification Channels Tab */}
         <TabsContent value="channels" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Bell className="h-5 w-5" />
                 Notification Channels
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Manage email, SMS, Slack, PagerDuty, and webhook integrations
               </p>
             </CardHeader>

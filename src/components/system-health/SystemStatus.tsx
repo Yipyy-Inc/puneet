@@ -138,7 +138,7 @@ export function SystemStatus() {
       Stable: "text-blue-600",
     };
     const Icon = icons[trend] || Minus;
-    return <Icon className={`h-4 w-4 ${colors[trend]}`} />;
+    return <Icon className={`size-4 ${colors[trend]} `} />;
   };
 
   // Server Status Columns
@@ -148,11 +148,11 @@ export function SystemStatus() {
       label: "Server",
       render: (item: ServerStatus) => (
         <div className="min-w-0">
-          <div className="font-medium flex items-center gap-2">
-            <Server className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 font-medium">
+            <Server className="text-muted-foreground size-4" />
             {item.serverName}
           </div>
-          <div className="text-xs text-muted-foreground">{item.region}</div>
+          <div className="text-muted-foreground text-xs">{item.region}</div>
         </div>
       ),
     },
@@ -162,7 +162,7 @@ export function SystemStatus() {
       render: (item: ServerStatus) => (
         <div className="space-y-1">
           {getServerStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">{item.uptime}</div>
+          <div className="text-muted-foreground text-xs">{item.uptime}</div>
         </div>
       ),
     },
@@ -186,9 +186,9 @@ export function SystemStatus() {
       key: "performance",
       label: "Performance",
       render: (item: ServerStatus) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div>{item.responseTime}ms</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.requestsPerMinute} req/min
           </div>
         </div>
@@ -203,11 +203,11 @@ export function SystemStatus() {
       label: "Database",
       render: (item: DatabaseMetric) => (
         <div className="min-w-0">
-          <div className="font-medium flex items-center gap-2">
-            <Database className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 font-medium">
+            <Database className="text-muted-foreground size-4" />
             {item.databaseName}
           </div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.type}
           </Badge>
         </div>
@@ -222,9 +222,9 @@ export function SystemStatus() {
       key: "performance",
       label: "Performance",
       render: (item: DatabaseMetric) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div>{item.queryPerformance.avgQueryTime}ms avg</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.queryPerformance.slowQueries} slow queries
           </div>
         </div>
@@ -251,14 +251,14 @@ export function SystemStatus() {
       label: "Endpoint",
       render: (item: APIEndpoint) => (
         <div className="min-w-0">
-          <div className="font-medium font-mono text-sm truncate">
+          <div className="truncate font-mono text-sm font-medium">
             {item.endpoint}
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="mt-1 flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
               {item.method}
             </Badge>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {item.service}
             </span>
           </div>
@@ -271,7 +271,7 @@ export function SystemStatus() {
       render: (item: APIEndpoint) => (
         <div className="space-y-1">
           {getAPIStatusBadge(item.status)}
-          <div className="text-xs text-muted-foreground">{item.uptime}%</div>
+          <div className="text-muted-foreground text-xs">{item.uptime}%</div>
         </div>
       ),
     },
@@ -279,9 +279,9 @@ export function SystemStatus() {
       key: "performance",
       label: "Performance",
       render: (item: APIEndpoint) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div>{item.avgResponseTime}ms</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {item.errorRate}% error
           </div>
         </div>
@@ -297,7 +297,7 @@ export function SystemStatus() {
       render: (item: ServiceUptime) => (
         <div className="min-w-0">
           <div className="font-medium">{item.serviceName}</div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.category}
           </Badge>
         </div>
@@ -312,9 +312,9 @@ export function SystemStatus() {
       key: "uptime",
       label: "Uptime",
       render: (item: ServiceUptime) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div>24h: {item.uptime24h}%</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             7d: {item.uptime7d}%
           </div>
         </div>
@@ -346,7 +346,7 @@ export function SystemStatus() {
       render: (item: PerformanceMetric) => (
         <div className="min-w-0">
           <div className="font-medium">{item.metricName}</div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.category}
           </Badge>
         </div>
@@ -356,11 +356,11 @@ export function SystemStatus() {
       key: "value",
       label: "Current / Avg",
       render: (item: PerformanceMetric) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div className="font-medium">
             {item.currentValue} {item.unit}
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Avg: {item.averageValue} {item.unit}
           </div>
         </div>
@@ -395,7 +395,7 @@ export function SystemStatus() {
       render: (item: ResourceUtilization) => (
         <div className="min-w-0">
           <div className="font-medium">{item.resourceName}</div>
-          <Badge variant="outline" className="text-xs mt-1">
+          <Badge variant="outline" className="mt-1 text-xs">
             {item.resourceType}
           </Badge>
         </div>
@@ -411,7 +411,7 @@ export function SystemStatus() {
             {item.unit}
           </div>
           <Progress value={item.current} className="h-2" />
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Peak: {item.peak}
             {item.unit}
           </div>
@@ -441,7 +441,7 @@ export function SystemStatus() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold">System Status</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Monitor system health, performance, and resource utilization
           </p>
         </div>
@@ -449,39 +449,39 @@ export function SystemStatus() {
 
       {/* Health Dashboard Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   System Health
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {healthDashboardStats.overallHealth}%
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   All systems operational
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-green-500/20 to-green-600/20">
                 <Activity className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Servers Online
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {healthDashboardStats.serversOnline}/
                   {healthDashboardStats.totalServers}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {(
                     (healthDashboardStats.serversOnline /
                       healthDashboardStats.totalServers) *
@@ -490,49 +490,49 @@ export function SystemStatus() {
                   % availability
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-blue-500/20 to-blue-600/20">
                 <Server className="h-6 w-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Response Time
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {healthDashboardStats.avgResponseTime}ms
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   Average across all endpoints
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-500/20 to-purple-600/20">
                 <Zap className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardContent className="p-5">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+                <p className="text-muted-foreground mb-1 text-sm font-medium">
                   Active Incidents
                 </p>
                 <h3 className="text-2xl font-bold tracking-tight">
                   {healthDashboardStats.activeIncidents}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {healthDashboardStats.criticalAlerts} critical
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20 flex items-center justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-orange-500/20 to-orange-600/20">
                 <AlertCircle className="h-6 w-6 text-orange-600" />
               </div>
             </div>
@@ -542,7 +542,7 @@ export function SystemStatus() {
 
       {/* System Metrics Charts */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               System Uptime (7 Days)
@@ -577,7 +577,7 @@ export function SystemStatus() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">
               Error Rate Trend
@@ -624,13 +624,13 @@ export function SystemStatus() {
 
         {/* Servers Tab */}
         <TabsContent value="servers" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Server className="h-5 w-5" />
                 Server Status Monitoring
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Real-time server health and resource utilization
               </p>
             </CardHeader>
@@ -639,13 +639,13 @@ export function SystemStatus() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Gauge className="h-5 w-5" />
                 Resource Utilization
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Monitor and forecast resource usage
               </p>
             </CardHeader>
@@ -660,13 +660,13 @@ export function SystemStatus() {
 
         {/* Databases Tab */}
         <TabsContent value="databases" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Database className="h-5 w-5" />
                 Database Performance
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Monitor database health, performance, and storage
               </p>
             </CardHeader>
@@ -678,13 +678,13 @@ export function SystemStatus() {
 
         {/* APIs Tab */}
         <TabsContent value="apis" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Link className="h-5 w-5" />
                 API Availability
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Track API endpoint health and performance metrics
               </p>
             </CardHeader>
@@ -693,13 +693,13 @@ export function SystemStatus() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <BarChart3 className="h-5 w-5" />
                 Performance Metrics
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Response time, error rates, and throughput monitoring
               </p>
             </CardHeader>
@@ -714,13 +714,13 @@ export function SystemStatus() {
 
         {/* Services Tab */}
         <TabsContent value="services" className="space-y-6 overflow-x-hidden">
-          <Card className="border-0 shadow-card">
+          <Card className="shadow-card border-0">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Globe className="h-5 w-5" />
                 Service Uptime Tracking
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Monitor service availability and incident history
               </p>
             </CardHeader>

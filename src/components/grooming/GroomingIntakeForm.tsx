@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,13 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  Camera,
-  X,
-  AlertTriangle,
-  FileText,
-  CheckCircle,
-} from "lucide-react";
+import { Camera, X, AlertTriangle, FileText, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { GroomingIntake } from "@/data/grooming";
 
@@ -36,7 +31,7 @@ interface GroomingIntakeFormProps {
 }
 
 export function GroomingIntakeForm({
-  appointmentId,
+  appointmentId: _appointmentId,
   petName,
   initialData,
   onSave,
@@ -131,7 +126,7 @@ export function GroomingIntakeForm({
             Intake Form
             {initialData.completedAt && (
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                <CheckCircle className="h-3 w-3 mr-1" />
+                <CheckCircle className="mr-1 h-3 w-3" />
                 Completed
               </Badge>
             )}
@@ -154,8 +149,10 @@ export function GroomingIntakeForm({
           )}
           {initialData.allergies.length > 0 && (
             <div>
-              <Label className="text-sm font-medium">Allergies / Sensitivities</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <Label className="text-sm font-medium">
+                Allergies / Sensitivities
+              </Label>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {initialData.allergies.map((allergy, idx) => (
                   <Badge key={idx} variant="destructive">
                     {allergy}
@@ -166,7 +163,9 @@ export function GroomingIntakeForm({
           )}
           {initialData.specialInstructions && (
             <div>
-              <Label className="text-sm font-medium">Special Instructions</Label>
+              <Label className="text-sm font-medium">
+                Special Instructions
+              </Label>
               <p className="mt-1 text-sm whitespace-pre-wrap">
                 {initialData.specialInstructions}
               </p>
@@ -175,13 +174,17 @@ export function GroomingIntakeForm({
           {initialData.beforePhotos.length > 0 && (
             <div>
               <Label className="text-sm font-medium">Before Photos</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 {initialData.beforePhotos.map((photo, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border">
-                    <img
+                  <div
+                    key={idx}
+                    className="relative aspect-square overflow-hidden rounded-lg border"
+                  >
+                    <Image
                       src={photo}
                       alt={`Before photo ${idx + 1}`}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
                     />
                   </div>
                 ))}
@@ -197,7 +200,7 @@ export function GroomingIntakeForm({
             </div>
           )}
           {initialData.completedBy && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               Completed by {initialData.completedBy} on{" "}
               {new Date(initialData.completedAt!).toLocaleString()}
             </div>
@@ -212,7 +215,7 @@ export function GroomingIntakeForm({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-        Intake Form - {petName}
+          Intake Form - {petName}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -235,9 +238,10 @@ export function GroomingIntakeForm({
               <SelectItem value="severely-matted">Severely Matted</SelectItem>
             </SelectContent>
           </Select>
-          {(coatCondition === "matted" || coatCondition === "severely-matted") && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900">
-              <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+          {(coatCondition === "matted" ||
+            coatCondition === "severely-matted") && (
+            <div className="flex items-start gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-900 dark:bg-yellow-950/20">
+              <AlertTriangle className="mt-0.5 size-4 text-yellow-600" />
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 Matting detected. Consider applying a matting fee and inform the
                 owner.
@@ -285,7 +289,7 @@ export function GroomingIntakeForm({
             </Button>
           </div>
           {allergies.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {allergies.map((allergy, idx) => (
                 <Badge
                   key={idx}
@@ -297,7 +301,7 @@ export function GroomingIntakeForm({
                     <button
                       type="button"
                       onClick={() => handleRemoveAllergy(allergy)}
-                      className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      className="hover:bg-destructive/20 ml-1 rounded-full p-0.5"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -330,18 +334,19 @@ export function GroomingIntakeForm({
             {beforePhotos.map((photo, idx) => (
               <div
                 key={idx}
-                className="relative aspect-square rounded-lg overflow-hidden border group"
+                className="group relative aspect-square overflow-hidden rounded-lg border"
               >
-                <img
+                <Image
                   src={photo}
                   alt={`Before photo ${idx + 1}`}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
                 {!readOnly && (
                   <button
                     type="button"
                     onClick={() => handleRemovePhoto(idx)}
-                    className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="bg-destructive text-destructive-foreground absolute top-1 right-1 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -349,7 +354,7 @@ export function GroomingIntakeForm({
               </div>
             ))}
             {!readOnly && (
-              <label className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+              <label className="hover:bg-muted flex aspect-square cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-colors">
                 <input
                   type="file"
                   accept="image/*"
@@ -358,8 +363,10 @@ export function GroomingIntakeForm({
                   className="hidden"
                 />
                 <div className="text-center">
-                  <Camera className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                  <span className="text-xs text-muted-foreground">Add Photo</span>
+                  <Camera className="text-muted-foreground mx-auto mb-1 h-6 w-6" />
+                  <span className="text-muted-foreground text-xs">
+                    Add Photo
+                  </span>
                 </div>
               </label>
             )}
@@ -373,7 +380,7 @@ export function GroomingIntakeForm({
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="matting-fee-warning">Matting Fee Warning</Label>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 Enable if matting requires additional fee
               </p>
             </div>
@@ -393,12 +400,14 @@ export function GroomingIntakeForm({
                 min="0"
                 step="0.01"
                 value={mattingFeeAmount}
-                onChange={(e) => setMattingFeeAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  setMattingFeeAmount(parseFloat(e.target.value) || 0)
+                }
                 disabled={readOnly}
                 placeholder="0.00"
               />
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900">
-                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+              <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-900 dark:bg-orange-950/20">
+                <AlertTriangle className="mt-0.5 size-4 text-orange-600" />
                 <p className="text-sm text-orange-800 dark:text-orange-200">
                   Owner will be notified of the additional matting fee before
                   grooming begins.
@@ -410,7 +419,7 @@ export function GroomingIntakeForm({
 
         {/* Action Buttons */}
         {!readOnly && (
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex justify-end gap-2 border-t pt-4">
             {onCancel && (
               <Button variant="outline" onClick={onCancel}>
                 Cancel

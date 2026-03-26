@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import Image from "next/image";
 import { Check } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +73,8 @@ export function ServiceStep({
       if (serviceId === "boarding" && "boarding" in approvals)
         return Boolean((approvals as any).boarding);
       const customApproved: unknown = (approvals as any).customApproved;
-      if (Array.isArray(customApproved)) return customApproved.includes(serviceId);
+      if (Array.isArray(customApproved))
+        return customApproved.includes(serviceId);
       const custom: unknown = (approvals as any).custom;
       if (Array.isArray(custom)) return custom.includes(serviceId);
     }
@@ -81,7 +83,8 @@ export function ServiceStep({
     if (Array.isArray(approvals)) return approvals.includes(serviceId);
 
     // string modes (rare)
-    if (approvals === "both") return serviceId === "daycare" || serviceId === "boarding";
+    if (approvals === "both")
+      return serviceId === "daycare" || serviceId === "boarding";
     if (approvals === "daycare") return serviceId === "daycare";
     if (approvals === "boarding") return serviceId === "boarding";
 
@@ -101,128 +104,136 @@ export function ServiceStep({
     <div className="space-y-4">
       <Label className="text-base">Select a service</Label>
       <div className="grid grid-cols-2 gap-4">
-        {allCategories.filter((service) => {
-          if (service.id === "evaluation") return true;
-          if (bookingFlow.hiddenServices.includes(service.id)) return false;
-          if (
-            bookingFlow.evaluationRequired &&
-            bookingFlow.hideServicesUntilEvaluationCompleted
-          ) {
-            if (selectedPets.length === 0) return false;
-            return selectedPets.every((pet) => hasValidEvaluation(pet));
-          }
-          return true;
-        }).map((service) => {
-          const Icon = service.icon;
-          const config = configs[service.id as keyof typeof configs];
-          // Special handling for evaluation service
-          const isEvaluation = service.id === "evaluation";
-          const evaluationDisabled = false; // Evaluation is always available
-          const requiresEvaluation =
-            !isEvaluation &&
-            (bookingFlow.evaluationRequired ||
-              bookingFlow.servicesRequiringEvaluation.includes(service.id) ||
-              ((config?.settings.evaluation.enabled ?? false) &&
-                !(config?.settings.evaluation.optional ?? false)));
-          const hasPetContext = selectedPets.length > 0;
-          const isLockedByEvaluation =
-            requiresEvaluation && hasPetContext
-              ? selectedPets.some((p) => !isPetUnlockedForService(p, service.id))
-              : false;
+        {allCategories
+          .filter((service) => {
+            if (service.id === "evaluation") return true;
+            if (bookingFlow.hiddenServices.includes(service.id)) return false;
+            if (
+              bookingFlow.evaluationRequired &&
+              bookingFlow.hideServicesUntilEvaluationCompleted
+            ) {
+              if (selectedPets.length === 0) return false;
+              return selectedPets.every((pet) => hasValidEvaluation(pet));
+            }
+            return true;
+          })
+          .map((service) => {
+            const Icon = service.icon;
+            const config = configs[service.id as keyof typeof configs];
+            // Special handling for evaluation service
+            const isEvaluation = service.id === "evaluation";
+            const evaluationDisabled = false; // Evaluation is always available
+            const requiresEvaluation =
+              !isEvaluation &&
+              (bookingFlow.evaluationRequired ||
+                bookingFlow.servicesRequiringEvaluation.includes(service.id) ||
+                ((config?.settings.evaluation.enabled ?? false) &&
+                  !(config?.settings.evaluation.optional ?? false)));
+            const hasPetContext = selectedPets.length > 0;
+            const isLockedByEvaluation =
+              requiresEvaluation && hasPetContext
+                ? selectedPets.some(
+                    (p) => !isPetUnlockedForService(p, service.id),
+                  )
+                : false;
 
-          const isDisabled = isEvaluation
-            ? evaluationDisabled
-            : (config?.status.disabled ?? false) || isLockedByEvaluation;
-          return (
-            <div
-              key={service.id}
-              className={`relative border rounded-lg transition-colors overflow-hidden ${
-                isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-              } ${
-                selectedService === service.id && !isDisabled
-                  ? "border-primary bg-primary/5"
-                  : !isDisabled
-                    ? "hover:border-primary/50"
-                    : ""
-              }`}
-              onClick={() => {
-                if (!isDisabled) {
-                  setSelectedService(service.id);
-                  setServiceType("");
-                  setCurrentSubStep(0);
-                }
-              }}
-            >
-              {isLockedByEvaluation && (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge variant="destructive" className="text-xs">
-                    Locked
-                  </Badge>
-                </div>
-              )}
-              {config?.bannerImage ? (
-                <div className="w-full h-32">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={config.bannerImage}
-                    alt={config.clientFacingName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : service.image ? (
-                <div className="w-full h-32">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={service.image}
-                    alt={service.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div
-                  className={`w-full h-32 flex items-center justify-center ${
-                    selectedService === service.id && !isDisabled
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  }`}
-                >
-                  <Icon className="h-12 w-12" />
-                </div>
-              )}
-              <div className="p-4 space-y-3">
-                <div className="text-center">
-                  <p className="font-medium">
-                    {isEvaluation
-                      ? evaluationConfig.customerName
-                      : config?.clientFacingName || service.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isEvaluation
-                      ? evaluationConfig.description
-                      : config?.slogan || service.description}
-                  </p>
-                  {config && !isEvaluation && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {isLockedByEvaluation
-                        ? "Evaluation required (expired, failed, or not approved)"
-                        : isDisabled
-                          ? config.status.reason
-                          : config.description}
+            const isDisabled = isEvaluation
+              ? evaluationDisabled
+              : (config?.status.disabled ?? false) || isLockedByEvaluation;
+            return (
+              <div
+                key={service.id}
+                className={`relative overflow-hidden rounded-lg border transition-colors ${
+                  isDisabled
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer"
+                } ${
+                  selectedService === service.id && !isDisabled
+                    ? "border-primary bg-primary/5"
+                    : !isDisabled
+                      ? "hover:border-primary/50"
+                      : ""
+                } `}
+                onClick={() => {
+                  if (!isDisabled) {
+                    setSelectedService(service.id);
+                    setServiceType("");
+                    setCurrentSubStep(0);
+                  }
+                }}
+              >
+                {isLockedByEvaluation && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <Badge variant="destructive" className="text-xs">
+                      Locked
+                    </Badge>
+                  </div>
+                )}
+                {config?.bannerImage ? (
+                  <div className="relative h-32 w-full">
+                    <Image
+                      src={config.bannerImage}
+                      alt={config.clientFacingName}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : service.image ? (
+                  <div className="relative h-32 w-full">
+                    <Image
+                      src={service.image}
+                      alt={service.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`flex h-32 w-full items-center justify-center ${
+                      selectedService === service.id && !isDisabled
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    } `}
+                  >
+                    <Icon className="h-12 w-12" />
+                  </div>
+                )}
+                <div className="space-y-3 p-4">
+                  <div className="text-center">
+                    <p className="font-medium">
+                      {isEvaluation
+                        ? evaluationConfig.customerName
+                        : config?.clientFacingName || service.name}
                     </p>
-                  )}
-                  <p className="font-semibold text-primary">
-                    {isEvaluation
-                      ? `$${evaluationConfig.price}`
-                      : `From $${config?.basePrice || service.basePrice}`}
-                  </p>
+                    <p className="text-muted-foreground text-sm">
+                      {isEvaluation
+                        ? evaluationConfig.description
+                        : config?.slogan || service.description}
+                    </p>
+                    {config && !isEvaluation && (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {isLockedByEvaluation
+                          ? "Evaluation required (expired, failed, or not approved)"
+                          : isDisabled
+                            ? config.status.reason
+                            : config.description}
+                      </p>
+                    )}
+                    <p className="text-primary font-semibold">
+                      {isEvaluation
+                        ? `$${evaluationConfig.price}`
+                        : `From $${config?.basePrice || service.basePrice}`}
+                    </p>
+                  </div>
                 </div>
+                {selectedService === service.id && !isDisabled && (
+                  <Check className="text-primary absolute top-2 right-2 h-5 w-5" />
+                )}
               </div>
-              {selectedService === service.id && !isDisabled && (
-                <Check className="absolute top-2 right-2 h-5 w-5 text-primary" />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

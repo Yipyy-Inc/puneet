@@ -51,9 +51,9 @@ export function HeaderDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 px-3">
-          <Globe className="h-4 w-4 text-muted-foreground mr-2" />
+          <Globe className="text-muted-foreground mr-2 size-4" />
           <span className="text-sm font-medium">{locale.toUpperCase()}</span>
-          <Settings className="h-4 w-4 text-muted-foreground ml-2" />
+          <Settings className="text-muted-foreground ml-2 size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">

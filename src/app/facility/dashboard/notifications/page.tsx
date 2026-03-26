@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 
 export default function FacilityNotificationsPage() {
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4 p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-muted-foreground" />
+          <Bell className="text-muted-foreground h-5 w-5" />
           <h1 className="text-lg font-semibold">Notifications</h1>
         </div>
         <Button
@@ -19,7 +19,9 @@ export default function FacilityNotificationsPage() {
           onClick={() => {
             // Frontend-only testing helper:
             // increment unread alerts so the badge updates on next poll/focus.
-            const current = Number(localStorage.getItem("unread_alerts_count") ?? "0");
+            const current = Number(
+              localStorage.getItem("unread_alerts_count") ?? "0",
+            );
             localStorage.setItem("unread_alerts_count", String(current + 1));
             window.dispatchEvent(
               new StorageEvent("storage", { key: "unread_alerts_count" }),
@@ -27,10 +29,9 @@ export default function FacilityNotificationsPage() {
           }}
           aria-label="Add unread alert"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="size-4" />
         </Button>
       </div>
     </div>
   );
 }
-

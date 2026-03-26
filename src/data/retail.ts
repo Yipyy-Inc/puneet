@@ -1,7 +1,13 @@
 // Retail / POS module mock data
 
 export type ProductStatus = "active" | "inactive" | "discontinued";
-export type VariantType = "size" | "color" | "flavor" | "weight" | "design" | "custom";
+export type VariantType =
+  | "size"
+  | "color"
+  | "flavor"
+  | "weight"
+  | "design"
+  | "custom";
 export type OrderStatus =
   | "pending"
   | "ordered"
@@ -10,10 +16,30 @@ export type OrderStatus =
   | "received"
   | "cancelled";
 export type TransactionStatus = "completed" | "refunded" | "voided";
-export type PaymentMethod = "cash" | "credit" | "debit" | "split" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay" | "store_credit" | "gift_card" | "custom";
-export type RefundMethod = "original_payment" | "store_credit" | "gift_card" | "cash" | "custom";
+export type PaymentMethod =
+  | "cash"
+  | "credit"
+  | "debit"
+  | "split"
+  | "add_to_booking"
+  | "charge_to_account"
+  | "charge_to_active_stay"
+  | "store_credit"
+  | "gift_card"
+  | "custom";
+export type RefundMethod =
+  | "original_payment"
+  | "store_credit"
+  | "gift_card"
+  | "cash"
+  | "custom";
 export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
-export type ReturnReason = "defective" | "wrong_item" | "not_as_described" | "customer_request" | "other";
+export type ReturnReason =
+  | "defective"
+  | "wrong_item"
+  | "not_as_described"
+  | "customer_request"
+  | "other";
 export type MovementType =
   | "sale"
   | "purchase"
@@ -123,35 +149,40 @@ export interface CartItem {
   serviceId?: string; // For services (daycare, boarding, grooming, training, etc.)
   packageId?: string; // For packages
   membershipId?: string; // For memberships
-  
+
   // Item details
   productName: string;
   variantId?: string;
   variantName?: string;
   sku: string;
-  
+
   // Service-specific (if itemType is "service")
   serviceType?: string; // "daycare" | "boarding" | "grooming" | "training" | etc.
   serviceDate?: string; // Date for service
   serviceDuration?: number; // Duration in minutes
-  
+
   // Package/Membership-specific
   packageDetails?: string; // Package description
   membershipPlanId?: string; // Membership plan ID
-  
+
   // Pricing
   quantity: number;
   unitPrice: number;
   discount: number;
   discountType: "fixed" | "percent";
   total: number;
-  
+
   // Comp/Free items
   isComp?: boolean; // Employee comp / free item
   compReason?: string; // Reason for comp (manager only)
 }
 
-export type CartDiscountType = "percent" | "fixed" | "promo_code" | "account_discount" | "employee_discount";
+export type CartDiscountType =
+  | "percent"
+  | "fixed"
+  | "promo_code"
+  | "account_discount"
+  | "employee_discount";
 
 export interface CartDiscount {
   type: CartDiscountType;
@@ -1833,37 +1864,37 @@ export const accountDiscounts: AccountDiscount[] = [
 // Helper functions for discounts
 export function getPromoCodeByCode(code: string): PromoCode | null {
   const promo = promoCodes.find(
-    (p) => p.code.toUpperCase() === code.toUpperCase() && p.isActive
+    (p) => p.code.toUpperCase() === code.toUpperCase() && p.isActive,
   );
   if (!promo) return null;
-  
+
   // Check if still valid
   const now = new Date();
   const validFrom = new Date(promo.validFrom);
   const validTo = new Date(promo.validTo);
-  
+
   if (now < validFrom || now > validTo) return null;
   if (promo.usageLimit && promo.usageCount >= promo.usageLimit) return null;
-  
+
   return promo;
 }
 
 export function getAccountDiscount(customerId: string): AccountDiscount | null {
   const discount = accountDiscounts.find(
-    (d) => d.customerId === String(customerId) && d.isActive
+    (d) => d.customerId === String(customerId) && d.isActive,
   );
   if (!discount) return null;
-  
+
   // Check if still valid
   const now = new Date();
   const validFrom = new Date(discount.validFrom);
   if (now < validFrom) return null;
-  
+
   if (discount.validTo) {
     const validTo = new Date(discount.validTo);
     if (now > validTo) return null;
   }
-  
+
   return discount;
 }
 
@@ -1913,27 +1944,27 @@ export function getTransactionById(transactionId: string): Transaction | null {
 
 export function getAllTransactions(): Transaction[] {
   return transactions.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 }
 
 export function createReturn(
-  returnData: Omit<Return, "id" | "returnNumber" | "createdAt">
+  returnData: Omit<Return, "id" | "returnNumber" | "createdAt">,
 ): Return {
   const id = `ret-${Date.now()}`;
   const today = getDateString(0);
   const count = returns.filter((r) => r.createdAt.startsWith(today)).length + 1;
   const returnNumber = `RET-${today.replace(/-/g, "")}-${String(count).padStart(3, "0")}`;
-  
+
   const newReturn: Return = {
     ...returnData,
     id,
     returnNumber,
     createdAt: new Date().toISOString().slice(0, 19),
   };
-  
+
   returns.push(newReturn);
-  
+
   // Update transaction to include return
   const transaction = getTransactionById(returnData.transactionId);
   if (transaction) {
@@ -1942,34 +1973,34 @@ export function createReturn(
     }
     transaction.returns.push(newReturn);
   }
-  
+
   return newReturn;
 }
 
 export function createStoreCredit(
-  creditData: Omit<StoreCredit, "id" | "createdAt" | "updatedAt">
+  creditData: Omit<StoreCredit, "id" | "createdAt" | "updatedAt">,
 ): StoreCredit {
   const id = `sc-${Date.now()}`;
   const now = new Date().toISOString().slice(0, 19);
-  
+
   const newCredit: StoreCredit = {
     ...creditData,
     id,
     createdAt: now,
     updatedAt: now,
   };
-  
+
   storeCredits.push(newCredit);
   return newCredit;
 }
 
 export function createGiftCard(
-  cardData: Omit<GiftCard, "id" | "cardNumber" | "createdAt" | "updatedAt">
+  cardData: Omit<GiftCard, "id" | "cardNumber" | "createdAt" | "updatedAt">,
 ): GiftCard {
   const id = `gc-${Date.now()}`;
   const cardNumber = `GC-${Date.now().toString().slice(-10)}`;
   const now = new Date().toISOString().slice(0, 19);
-  
+
   const newCard: GiftCard = {
     ...cardData,
     id,
@@ -1977,7 +2008,7 @@ export function createGiftCard(
     createdAt: now,
     updatedAt: now,
   };
-  
+
   giftCards.push(newCard);
   return newCard;
 }
@@ -1990,7 +2021,7 @@ export function getStoreCreditBalance(customerId: string): number {
 
 export function getGiftCardBalance(cardNumber: string): number {
   const card = giftCards.find(
-    (gc) => gc.cardNumber === cardNumber && gc.isActive
+    (gc) => gc.cardNumber === cardNumber && gc.isActive,
   );
   return card?.balance || 0;
 }

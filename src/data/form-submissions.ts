@@ -78,9 +78,9 @@ export interface AnswerRecord {
   signatureMetadata?: import("./forms-phase2-types").SignatureMetadata;
 }
 
-let submissionRecords: SubmissionRecord[] = [];
-let answerRecords: AnswerRecord[] = [];
-let submissions: FormSubmission[] = []; // legacy list for getSubmissionsByFacility that returns FormSubmission[]
+const submissionRecords: SubmissionRecord[] = [];
+const answerRecords: AnswerRecord[] = [];
+const submissions: FormSubmission[] = []; // legacy list for getSubmissionsByFacility that returns FormSubmission[]
 
 function generateId(): string {
   return `sub-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -88,7 +88,7 @@ function generateId(): string {
 
 /** Create submission (backward compat: formId + answers record; creates SubmissionRecord + AnswerRecords) */
 export function createSubmission(
-  input: Omit<FormSubmission, "id" | "status" | "createdAt">
+  input: Omit<FormSubmission, "id" | "status" | "createdAt">,
 ): FormSubmission {
   const now = new Date().toISOString();
   const id = generateId();
@@ -102,7 +102,8 @@ export function createSubmission(
 
   const record: SubmissionRecord = {
     id,
-    formVersionId: (input as unknown as { formVersionId?: string }).formVersionId ?? "",
+    formVersionId:
+      (input as unknown as { formVersionId?: string }).formVersionId ?? "",
     formId: input.formId,
     facilityId: input.facilityId,
     status: "unread",
@@ -132,7 +133,10 @@ export function createSubmission(
 export function getSubmissionsByFacility(facilityId: number): FormSubmission[] {
   return submissions
     .filter((s) => s.facilityId === facilityId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 }
 
 export interface SubmissionListFilters {
@@ -151,14 +155,19 @@ export interface SubmissionWithRecord {
 /** List submissions with their records for inbox; supports filters */
 export function getSubmissionsWithRecords(
   facilityId: number,
-  filters?: SubmissionListFilters
+  filters?: SubmissionListFilters,
 ): SubmissionWithRecord[] {
   const list: SubmissionWithRecord[] = [];
   for (const sub of submissions) {
     if (sub.facilityId !== facilityId) continue;
     const rec = submissionRecords.find((r) => r.id === sub.id);
     if (!rec) continue;
-    if (filters?.status && filters.status !== "all" && rec.status !== filters.status) continue;
+    if (
+      filters?.status &&
+      filters.status !== "all" &&
+      rec.status !== filters.status
+    )
+      continue;
     if (filters?.formId && sub.formId !== filters.formId) continue;
     if (filters?.locationId && rec.locationId !== filters.locationId) continue;
     const subDate = sub.createdAt.slice(0, 10);
@@ -166,14 +175,22 @@ export function getSubmissionsWithRecords(
     if (filters?.dateTo && subDate > filters.dateTo) continue;
     list.push({ submission: sub, record: rec });
   }
-  list.sort((a, b) => new Date(b.submission.createdAt).getTime() - new Date(a.submission.createdAt).getTime());
+  list.sort(
+    (a, b) =>
+      new Date(b.submission.createdAt).getTime() -
+      new Date(a.submission.createdAt).getTime(),
+  );
   return list;
 }
 
 /** Check if submission has file uploads in answers */
 export function submissionHasFiles(submissionId: string): boolean {
   const answers = answerRecords.filter((a) => a.submissionId === submissionId);
-  return answers.some((a) => a.attachments?.length || (typeof a.value === "object" && a.value !== null));
+  return answers.some(
+    (a) =>
+      a.attachments?.length ||
+      (typeof a.value === "object" && a.value !== null),
+  );
 }
 
 export function getSubmission(id: string): FormSubmission | undefined {
@@ -191,7 +208,9 @@ export function getAnswersForSubmission(submissionId: string): AnswerRecord[] {
 }
 
 /** Build answers as record (fieldId -> value) */
-export function getAnswersRecord(submissionId: string): Record<string, unknown> {
+export function getAnswersRecord(
+  submissionId: string,
+): Record<string, unknown> {
   const list = getAnswersForSubmission(submissionId);
   const out: Record<string, unknown> = {};
   list.forEach((a) => {
@@ -203,24 +222,34 @@ export function getAnswersRecord(submissionId: string): Record<string, unknown> 
 export function getSubmissionsByForm(formId: string): FormSubmission[] {
   return submissions
     .filter((s) => s.formId === formId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 }
 
 /** Submissions linked to a specific pet (for customer portal Forms tab) */
-export function getSubmissionsForPet(facilityId: number, petId: number): FormSubmission[] {
+export function getSubmissionsForPet(
+  facilityId: number,
+  petId: number,
+): FormSubmission[] {
   return submissions
     .filter(
       (s) =>
         s.facilityId === facilityId &&
-        (s.petIds?.includes(petId) || submissionRecords.find((r) => r.id === s.id)?.relatedPetId === petId)
+        (s.petIds?.includes(petId) ||
+          submissionRecords.find((r) => r.id === s.id)?.relatedPetId === petId),
     )
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 }
 
 export function updateSubmissionStatus(
   id: string,
   status: FormSubmission["status"],
-  processedBy?: string
+  processedBy?: string,
 ): FormSubmission | null {
   const sub = submissions.find((s) => s.id === id);
   if (!sub) return null;
@@ -229,7 +258,12 @@ export function updateSubmissionStatus(
   if (processedBy) sub.processedBy = processedBy;
   const rec = submissionRecords.find((s) => s.id === id);
   if (rec) {
-    rec.status = status === "new" ? "unread" : status === "processed" || status === "merged" ? "processed" : "read";
+    rec.status =
+      status === "new"
+        ? "unread"
+        : status === "processed" || status === "merged"
+          ? "processed"
+          : "read";
   }
   return sub;
 }
@@ -237,7 +271,7 @@ export function updateSubmissionStatus(
 /** Update submission record status (new model); syncs legacy submission status */
 export function updateSubmissionRecordStatus(
   id: string,
-  status: SubmissionStatus
+  status: SubmissionStatus,
 ): SubmissionRecord | null {
   const rec = submissionRecords.find((s) => s.id === id);
   if (!rec) return null;
@@ -266,7 +300,7 @@ export function linkSubmissionToCustomer(
     staffUserId?: string | number;
     staffUserName?: string;
     mappingResults?: MappingResult[];
-  }
+  },
 ): FormSubmission | null {
   const sub = submissions.find((s) => s.id === id);
   if (!sub) return null;
@@ -347,7 +381,10 @@ export function applyFieldMappings(
       label = mapping.target.replace("medical.", "");
     } else if (mapping.target.startsWith("notes")) {
       group = "notes";
-      label = mapping.target === "notes" ? "General notes" : mapping.target.replace("notes.", "") + " notes";
+      label =
+        mapping.target === "notes"
+          ? "General notes"
+          : mapping.target.replace("notes.", "") + " notes";
     } else if (mapping.target.startsWith("tags.")) {
       group = "tags";
       label = mapping.target.replace("tags.", "") + " tag";
@@ -358,7 +395,8 @@ export function applyFieldMappings(
 
     // Check for attachments
     const answerRec = answerRecords.find(
-      (a) => a.submissionId === submissionId && a.fieldId === mapping.questionId
+      (a) =>
+        a.submissionId === submissionId && a.fieldId === mapping.questionId,
     );
 
     results.push({
@@ -367,7 +405,7 @@ export function applyFieldMappings(
       label,
       questionLabel,
       value: answer,
-      hasAttachment: !!(answerRec?.attachments?.length),
+      hasAttachment: !!answerRec?.attachments?.length,
     });
   }
 
@@ -380,7 +418,11 @@ export function getMappingResultsByGroup(
   formFieldMappings: { questionId: string; target: string }[],
   formQuestions: { id: string; label: string; type?: string }[],
 ): Record<string, MappingResult[]> {
-  const results = applyFieldMappings(submissionId, formFieldMappings, formQuestions);
+  const results = applyFieldMappings(
+    submissionId,
+    formFieldMappings,
+    formQuestions,
+  );
   const grouped: Record<string, MappingResult[]> = {};
   for (const r of results) {
     const key = r.group;
@@ -494,7 +536,11 @@ const seedRecords: SubmissionRecord[] = [
 ];
 const seedAnswers: AnswerRecord[] = [
   { submissionId: "sub-seed-1", fieldId: "q1", value: "Jamie Rivera" },
-  { submissionId: "sub-seed-1", fieldId: "q2", value: "jamie.rivera@example.com" },
+  {
+    submissionId: "sub-seed-1",
+    fieldId: "q2",
+    value: "jamie.rivera@example.com",
+  },
   { submissionId: "sub-seed-1", fieldId: "q3", value: "Google search" },
   { submissionId: "sub-seed-2", fieldId: "q1", value: "Alice Johnson" },
   { submissionId: "sub-seed-2", fieldId: "q2", value: "alice@example.com" },
@@ -504,8 +550,17 @@ const seedAnswers: AnswerRecord[] = [
   { submissionId: "sub-seed-3", fieldId: "q3", value: "Website" },
   { submissionId: "sub-seed-4", fieldId: "q1", value: "Sam Wilson" },
   { submissionId: "sub-seed-4", fieldId: "q2", value: "sam@example.com" },
-  { submissionId: "sub-seed-4", fieldId: "q3", value: "Vaccination record attached" },
-  { submissionId: "sub-seed-4", fieldId: "q4", value: "vaccine-record.pdf", attachments: ["vaccine-record.pdf"] },
+  {
+    submissionId: "sub-seed-4",
+    fieldId: "q3",
+    value: "Vaccination record attached",
+  },
+  {
+    submissionId: "sub-seed-4",
+    fieldId: "q4",
+    value: "vaccine-record.pdf",
+    attachments: ["vaccine-record.pdf"],
+  },
 ];
 submissions.push(...seedSubs);
 submissionRecords.push(...seedRecords);

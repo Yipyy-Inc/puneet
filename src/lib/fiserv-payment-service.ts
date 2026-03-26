@@ -1,32 +1,35 @@
 /**
  * Fiserv Payment Service
- * 
+ *
  * Service layer for processing payments through Fiserv API
  * Handles tokenization, charges, refunds, and card management
  */
 
 import {
-  FiservPaymentConfig,
   FiservPaymentRequest,
   FiservPaymentResponse,
   FiservRefundRequest,
   FiservRefundResponse,
-  TokenizedCard,
   getFiservConfig,
   addTokenizedCard,
 } from "@/data/fiserv-payments";
 
 // Re-export types for convenience
-export type { FiservPaymentRequest, FiservPaymentResponse, FiservRefundRequest, FiservRefundResponse };
+export type {
+  FiservPaymentRequest,
+  FiservPaymentResponse,
+  FiservRefundRequest,
+  FiservRefundResponse,
+};
 
 /**
  * Process a payment through Fiserv
  */
 export async function processFiservPayment(
-  request: FiservPaymentRequest
+  request: FiservPaymentRequest,
 ): Promise<FiservPaymentResponse> {
   const config = getFiservConfig(request.facilityId);
-  
+
   if (!config) {
     return {
       success: false,
@@ -44,7 +47,10 @@ export async function processFiservPayment(
   }
 
   // Check if payment method is enabled
-  if (request.paymentSource === "new_card" || request.paymentSource === "tokenized_card") {
+  if (
+    request.paymentSource === "new_card" ||
+    request.paymentSource === "tokenized_card"
+  ) {
     if (!config.enabledPaymentMethods.card) {
       return {
         success: false,
@@ -96,7 +102,7 @@ export async function processFiservPayment(
   if (request.paymentSource === "new_card" && request.newCard?.saveToAccount) {
     // Tokenize and save card
     fiservToken = `fiserv_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     const newTokenizedCard = addTokenizedCard({
       facilityId: request.facilityId,
       clientId: request.clientId,
@@ -115,7 +121,10 @@ export async function processFiservPayment(
     });
 
     tokenizedCardId = newTokenizedCard.id;
-  } else if (request.paymentSource === "tokenized_card" && request.tokenizedCardId) {
+  } else if (
+    request.paymentSource === "tokenized_card" &&
+    request.tokenizedCardId
+  ) {
     // Use existing tokenized card
     tokenizedCardId = request.tokenizedCardId;
     // In production, retrieve fiservToken from database
@@ -129,7 +138,10 @@ export async function processFiservPayment(
   if (request.paymentSource === "new_card" && request.newCard) {
     cardBrand = detectCardBrand(request.newCard.number);
     cardLast4 = request.newCard.number.slice(-4);
-  } else if (request.paymentSource === "tokenized_card" && request.tokenizedCardId) {
+  } else if (
+    request.paymentSource === "tokenized_card" &&
+    request.tokenizedCardId
+  ) {
     // In production, retrieve from database
     cardBrand = "visa"; // Mock
     cardLast4 = "4242"; // Mock
@@ -155,10 +167,10 @@ export async function processFiservPayment(
  * Process a refund through Fiserv
  */
 export async function processFiservRefund(
-  request: FiservRefundRequest
+  request: FiservRefundRequest,
 ): Promise<FiservRefundResponse> {
   const config = getFiservConfig(request.facilityId);
-  
+
   if (!config) {
     return {
       success: false,
@@ -212,16 +224,18 @@ export async function processFiservRefund(
 /**
  * Detect card brand from card number
  */
-function detectCardBrand(cardNumber: string): "visa" | "mastercard" | "amex" | "discover" | "jcb" | "diners" | "unknown" {
+function detectCardBrand(
+  cardNumber: string,
+): "visa" | "mastercard" | "amex" | "discover" | "jcb" | "diners" | "unknown" {
   const cleaned = cardNumber.replace(/\s/g, "");
-  
+
   if (/^4/.test(cleaned)) return "visa";
   if (/^5[1-5]/.test(cleaned)) return "mastercard";
   if (/^3[47]/.test(cleaned)) return "amex";
   if (/^6(?:011|5)/.test(cleaned)) return "discover";
   if (/^35/.test(cleaned)) return "jcb";
   if (/^3[0689]/.test(cleaned)) return "diners";
-  
+
   return "unknown";
 }
 
@@ -230,7 +244,7 @@ function detectCardBrand(cardNumber: string): "visa" | "mastercard" | "amex" | "
  */
 export function validateCardNumber(cardNumber: string): boolean {
   const cleaned = cardNumber.replace(/\s/g, "");
-  
+
   if (!/^\d{13,19}$/.test(cleaned)) {
     return false;
   }

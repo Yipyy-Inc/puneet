@@ -164,7 +164,7 @@ export function AutomationRuleModal({
                 <SelectItem key={option.value} value={option.value}>
                   <div>
                     <div>{option.label}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       {option.desc}
                     </div>
                   </div>
@@ -173,7 +173,7 @@ export function AutomationRuleModal({
             </SelectContent>
           </Select>
           {selectedTrigger && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {selectedTrigger.desc}
             </p>
           )}
@@ -224,7 +224,7 @@ export function AutomationRuleModal({
         {/* Variable chips for selected template */}
         {usedVariables.length > 0 && (
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">
+            <Label className="text-muted-foreground text-sm">
               Variables used in template
             </Label>
             <div className="flex flex-wrap gap-1.5">
@@ -249,7 +249,7 @@ export function AutomationRuleModal({
         {/* Schedule Settings */}
         {(showHoursBefore || showDaysBeforeExpiry) && (
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <Label className="text-base">Schedule Settings</Label>
 
               {showHoursBefore && (
@@ -269,7 +269,7 @@ export function AutomationRuleModal({
                       })
                     }
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Message will be sent {formData.hoursBefore} hours before the
                     appointment
                   </p>
@@ -293,7 +293,7 @@ export function AutomationRuleModal({
                       })
                     }
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Warning sent {formData.daysBeforeExpiry} days before
                     vaccination expires
                   </p>
@@ -314,7 +314,7 @@ export function AutomationRuleModal({
           />
           <label
             htmlFor="enabled"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
             Enable this automation rule
           </label>
@@ -324,10 +324,10 @@ export function AutomationRuleModal({
         {rule && rule.stats && (
           <Card>
             <CardContent className="pt-6">
-              <Label className="text-base mb-4 block">Statistics</Label>
+              <Label className="mb-4 block text-base">Statistics</Label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     Total Sent
                   </div>
                   <div className="text-2xl font-bold">
@@ -335,7 +335,7 @@ export function AutomationRuleModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     Last Triggered
                   </div>
                   <div className="text-sm font-medium">
@@ -358,7 +358,7 @@ export function AutomationRuleModal({
           onClick={handleSave}
           disabled={!formData.name || !formData.templateId}
         >
-          <Zap className="h-4 w-4 mr-2" />
+          <Zap className="mr-2 size-4" />
           {rule ? "Update" : "Create"} Rule
         </Button>
       </DialogFooter>

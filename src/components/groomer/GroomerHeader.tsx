@@ -9,7 +9,9 @@ import { useRouter } from "next/navigation";
 export function GroomerHeader() {
   const router = useRouter();
   const userId = getCurrentUserId();
-  const groomer = userId ? stylists.find((s) => s.id === userId) : stylists[0] || null;
+  const groomer = userId
+    ? stylists.find((s) => s.id === userId)
+    : stylists[0] || null;
 
   const handleLogout = () => {
     // Clear user ID
@@ -20,9 +22,9 @@ export function GroomerHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-6">
+    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-6 backdrop-blur-sm">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-linear-to-br from-pink-500 to-rose-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-pink-500 to-rose-500">
           <Scissors className="h-5 w-5 text-white" />
         </div>
         <div>

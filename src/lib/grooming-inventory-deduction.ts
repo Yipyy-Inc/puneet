@@ -1,14 +1,12 @@
 /**
  * Automatic Inventory Deduction for Grooming Services
- * 
+ *
  * When a grooming appointment is completed, this module automatically
  * deducts the configured products from inventory based on the package used.
  */
 
 import type {
   GroomingAppointment,
-  GroomingPackage,
-  GroomingProduct,
   ProductUsage,
   ProductUsageLog,
 } from "@/data/grooming";
@@ -47,7 +45,9 @@ export function deductProductsForAppointment(
   };
 
   // Find the package used for this appointment
-  const packageUsed = groomingPackages.find((pkg) => pkg.id === appointment.packageId);
+  const packageUsed = groomingPackages.find(
+    (pkg) => pkg.id === appointment.packageId,
+  );
 
   if (!packageUsed) {
     result.success = false;
@@ -103,7 +103,6 @@ export function deductProductsForAppointment(
     }
 
     // Deduct the product
-    const previousStock = product.currentStock;
     product.currentStock = Math.max(0, product.currentStock - quantityToDeduct);
     const remainingStock = product.currentStock;
     const isNowLowStock = remainingStock <= product.minStock;
@@ -139,9 +138,7 @@ export function deductProductsForAppointment(
 /**
  * Check if products are available for a package before booking
  */
-export function checkProductAvailability(
-  packageId: string,
-): {
+export function checkProductAvailability(packageId: string): {
   available: boolean;
   unavailableProducts: Array<{
     productId: string;

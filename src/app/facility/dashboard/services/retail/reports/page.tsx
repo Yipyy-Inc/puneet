@@ -21,16 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BarChart3,
   TrendingUp,
   DollarSign,
   Package,
-  Users,
   ShoppingBag,
   Download,
-  Calendar,
-  Award,
-  Percent,
 } from "lucide-react";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import {
@@ -40,20 +35,24 @@ import {
   getSalesByStaff,
   getSalesByCategory,
   getSalesLinkedToServices,
-  type SalesByPeriod,
   type TopProduct,
-  type ProfitMarginReport,
   type SalesByStaff,
   type SalesByCategory,
   type SalesLinkedToServices,
 } from "@/lib/retail-reports";
 import { getAllTransactions, type Transaction } from "@/data/retail";
-import { 
-  getPaymentMethodLabel, 
+import {
+  getPaymentMethodLabel,
   formatTransactionTimestamp,
   getLocationName,
 } from "@/lib/payment-method-utils";
-import { Smartphone, Printer, CreditCard, Banknote, Wallet, Gift, MapPin, Clock, User as UserIcon, Link as LinkIcon } from "lucide-react";
+import {
+  CreditCard,
+  MapPin,
+  Clock,
+  User as UserIcon,
+  Link as LinkIcon,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -69,7 +68,7 @@ import {
 
 export default function RetailReportsPage() {
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d" | "custom">(
-    "30d"
+    "30d",
   );
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
   const [customStartDate, setCustomStartDate] = useState<string>("");
@@ -85,7 +84,9 @@ export default function RetailReportsPage() {
     let start: Date;
 
     if (dateRange === "custom") {
-      start = customStartDate ? new Date(customStartDate) : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+      start = customStartDate
+        ? new Date(customStartDate)
+        : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       const customEnd = customEndDate ? new Date(customEndDate) : end;
       return { startDate: start, endDate: customEnd };
     }
@@ -98,44 +99,45 @@ export default function RetailReportsPage() {
   // Fetch report data
   const salesByPeriod = useMemo(
     () => getSalesByPeriod(period, startDate, endDate),
-    [period, startDate, endDate]
+    [period, startDate, endDate],
   );
 
   const topProducts = useMemo(
-    () => getTopProducts(topProductsLimit, topProductsSortBy, startDate, endDate),
-    [topProductsLimit, topProductsSortBy, startDate, endDate]
+    () =>
+      getTopProducts(topProductsLimit, topProductsSortBy, startDate, endDate),
+    [topProductsLimit, topProductsSortBy, startDate, endDate],
   );
 
   const profitMarginReport = useMemo(
     () => getProfitMarginReport(period, startDate, endDate),
-    [period, startDate, endDate]
+    [period, startDate, endDate],
   );
 
   const salesByStaff = useMemo(
     () => getSalesByStaff(startDate, endDate),
-    [startDate, endDate]
+    [startDate, endDate],
   );
 
   const salesByCategory = useMemo(
     () => getSalesByCategory(startDate, endDate),
-    [startDate, endDate]
+    [startDate, endDate],
   );
 
   const salesLinkedToServices = useMemo(
     () => getSalesLinkedToServices(startDate, endDate),
-    [startDate, endDate]
+    [startDate, endDate],
   );
 
   // Calculate totals
   const totalSales = salesByPeriod.reduce((sum, item) => sum + item.sales, 0);
   const totalTransactions = salesByPeriod.reduce(
     (sum, item) => sum + item.transactions,
-    0
+    0,
   );
   const totalItems = salesByPeriod.reduce((sum, item) => sum + item.items, 0);
   const totalProfit = profitMarginReport.reduce(
     (sum, item) => sum + item.profit,
-    0
+    0,
   );
   const averageProfitMargin =
     profitMarginReport.length > 0
@@ -153,11 +155,11 @@ export default function RetailReportsPage() {
         <div>
           <div className="font-medium">{item.productName}</div>
           {item.variantName && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {item.variantName}
             </div>
           )}
-          <div className="text-xs text-muted-foreground">SKU: {item.sku}</div>
+          <div className="text-muted-foreground text-xs">SKU: {item.sku}</div>
         </div>
       ),
     },
@@ -186,9 +188,7 @@ export default function RetailReportsPage() {
       label: "Profit",
       defaultVisible: true,
       render: (item) => (
-        <span
-          className={item.profit >= 0 ? "text-green-600" : "text-red-600"}
-        >
+        <span className={item.profit >= 0 ? "text-green-600" : "text-red-600"}>
           ${item.profit.toFixed(2)}
         </span>
       ),
@@ -325,7 +325,7 @@ export default function RetailReportsPage() {
           </p>
         </div>
         <Button>
-          <Download className="h-4 w-4 mr-2" />
+          <Download className="mr-2 size-4" />
           Export All Reports
         </Button>
       </div>
@@ -407,11 +407,11 @@ export default function RetailReportsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalSales.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {totalTransactions} transactions
             </p>
           </CardContent>
@@ -419,35 +419,40 @@ export default function RetailReportsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalItems}</div>
-            <p className="text-xs text-muted-foreground">Total units</p>
+            <p className="text-muted-foreground text-xs">Total units</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalProfit.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {averageProfitMargin.toFixed(1)}% avg margin
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Transaction</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">
+              Avg Transaction
+            </CardTitle>
+            <ShoppingBag className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalTransactions > 0 ? (totalSales / totalTransactions).toFixed(2) : "0.00"}
+              $
+              {totalTransactions > 0
+                ? (totalSales / totalTransactions).toFixed(2)
+                : "0.00"}
             </div>
-            <p className="text-xs text-muted-foreground">Per transaction</p>
+            <p className="text-muted-foreground text-xs">Per transaction</p>
           </CardContent>
         </Card>
       </div>
@@ -468,7 +473,9 @@ export default function RetailReportsPage() {
         <TabsContent value="sales" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Sales by {period.charAt(0).toUpperCase() + period.slice(1)}</CardTitle>
+              <CardTitle>
+                Sales by {period.charAt(0).toUpperCase() + period.slice(1)}
+              </CardTitle>
               <CardDescription>
                 Revenue and transaction trends over time
               </CardDescription>
@@ -495,7 +502,7 @@ export default function RetailReportsPage() {
                   <YAxis />
                   <Tooltip
                     formatter={(value: unknown) => {
-                      const numValue = typeof value === 'number' ? value : 0;
+                      const numValue = typeof value === "number" ? value : 0;
                       return `$${numValue.toFixed(2)}`;
                     }}
                   />
@@ -548,7 +555,9 @@ export default function RetailReportsPage() {
                   </Select>
                   <Select
                     value={String(topProductsLimit)}
-                    onValueChange={(value) => setTopProductsLimit(Number(value))}
+                    onValueChange={(value) =>
+                      setTopProductsLimit(Number(value))
+                    }
                   >
                     <SelectTrigger className="w-20">
                       <SelectValue />
@@ -604,7 +613,7 @@ export default function RetailReportsPage() {
                   <YAxis />
                   <Tooltip
                     formatter={(value: unknown) => {
-                      const numValue = typeof value === 'number' ? value : 0;
+                      const numValue = typeof value === "number" ? value : 0;
                       return `$${numValue.toFixed(2)}`;
                     }}
                   />
@@ -664,12 +673,13 @@ export default function RetailReportsPage() {
             <CardHeader>
               <CardTitle>Sales Linked to Services</CardTitle>
               <CardDescription>
-                Retail items sold as add-ons to services (grooming, boarding, etc.)
+                Retail items sold as add-ons to services (grooming, boarding,
+                etc.)
               </CardDescription>
             </CardHeader>
             <CardContent>
               {salesLinkedToServices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-muted-foreground py-8 text-center">
                   No sales linked to services in this period
                 </div>
               ) : (
@@ -690,14 +700,12 @@ export default function RetailReportsPage() {
             <CardHeader>
               <CardTitle>Transaction Reconciliation</CardTitle>
               <CardDescription>
-                Detailed transaction report with payment methods, processor IDs, staff, location, and timestamps
+                Detailed transaction report with payment methods, processor IDs,
+                staff, location, and timestamps
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ReconciliationTable 
-                startDate={startDate} 
-                endDate={endDate} 
-              />
+              <ReconciliationTable startDate={startDate} endDate={endDate} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -707,19 +715,28 @@ export default function RetailReportsPage() {
 }
 
 // Reconciliation Table Component
-function ReconciliationTable({ 
-  startDate, 
-  endDate 
-}: { 
-  startDate: Date; 
+function ReconciliationTable({
+  startDate,
+  endDate,
+}: {
+  startDate: Date;
   endDate: Date;
 }) {
   const transactions = useMemo(() => {
     const all = getAllTransactions();
-    return all.filter((txn) => {
-      const txnDate = new Date(txn.createdAt);
-      return txnDate >= startDate && txnDate <= endDate && txn.status === "completed";
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return all
+      .filter((txn) => {
+        const txnDate = new Date(txn.createdAt);
+        return (
+          txnDate >= startDate &&
+          txnDate <= endDate &&
+          txn.status === "completed"
+        );
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
   }, [startDate, endDate]);
 
   const reconciliationColumns: ColumnDef<Transaction>[] = [
@@ -741,7 +758,7 @@ function ReconciliationTable({
         return (
           <div className="flex flex-col">
             <span>{formatTransactionTimestamp(txn.createdAt)}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {new Date(txn.createdAt).toLocaleTimeString("en-US", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -762,11 +779,11 @@ function ReconciliationTable({
         const PaymentIcon = paymentInfo.icon;
         return (
           <div className="flex items-center gap-2">
-            <PaymentIcon className="h-4 w-4 text-muted-foreground" />
+            <PaymentIcon className="text-muted-foreground size-4" />
             <div className="flex flex-col">
               <span className="font-medium">{paymentInfo.label}</span>
               {paymentInfo.processor && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {paymentInfo.processor}
                 </span>
               )}
@@ -781,22 +798,32 @@ function ReconciliationTable({
       defaultVisible: true,
       render: (item) => {
         const txn = item as Transaction;
-        const transactionId = txn.yipyyPayTransactionId || 
-                             txn.cloverTransactionId || 
-                             txn.fiservTransactionId;
-        if (!transactionId) return <span className="text-muted-foreground">—</span>;
+        const transactionId =
+          txn.yipyyPayTransactionId ||
+          txn.cloverTransactionId ||
+          txn.fiservTransactionId;
+        if (!transactionId)
+          return <span className="text-muted-foreground">—</span>;
         return (
           <div className="flex flex-col">
             <span className="font-mono text-xs">{transactionId}</span>
             {txn.yipyyPayTransactionId && (
-              <Badge variant="outline" className="text-xs w-fit mt-1">Yipyy Pay</Badge>
+              <Badge variant="outline" className="mt-1 w-fit text-xs">
+                Yipyy Pay
+              </Badge>
             )}
             {txn.cloverTransactionId && (
-              <Badge variant="outline" className="text-xs w-fit mt-1">Clover</Badge>
+              <Badge variant="outline" className="mt-1 w-fit text-xs">
+                Clover
+              </Badge>
             )}
-            {txn.fiservTransactionId && !txn.yipyyPayTransactionId && !txn.cloverTransactionId && (
-              <Badge variant="outline" className="text-xs w-fit mt-1">Fiserv</Badge>
-            )}
+            {txn.fiservTransactionId &&
+              !txn.yipyyPayTransactionId &&
+              !txn.cloverTransactionId && (
+                <Badge variant="outline" className="mt-1 w-fit text-xs">
+                  Fiserv
+                </Badge>
+              )}
           </div>
         );
       },
@@ -812,7 +839,9 @@ function ReconciliationTable({
           <div className="flex flex-col">
             <span className="font-medium">{txn.cashierName || "Unknown"}</span>
             {txn.cashierId && (
-              <span className="text-xs text-muted-foreground">ID: {txn.cashierId}</span>
+              <span className="text-muted-foreground text-xs">
+                ID: {txn.cashierId}
+              </span>
             )}
           </div>
         );
@@ -828,7 +857,7 @@ function ReconciliationTable({
         const locationName = getLocationName(txn.locationId);
         return (
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <MapPin className="text-muted-foreground size-4" />
             <span>{locationName}</span>
           </div>
         );
@@ -857,12 +886,12 @@ function ReconciliationTable({
               <span className="font-medium">Booking #{txn.bookingId}</span>
             )}
             {txn.bookingService && (
-              <span className="text-xs text-muted-foreground capitalize">
+              <span className="text-muted-foreground text-xs capitalize">
                 {txn.bookingService}
               </span>
             )}
             {txn.petName && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 Pet: {txn.petName}
               </span>
             )}

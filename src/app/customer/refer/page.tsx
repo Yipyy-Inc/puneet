@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
+import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useHydrated } from "@/hooks/use-hydrated";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,27 +24,20 @@ import {
   Gift,
   TrendingUp,
   Clock,
-  CheckCircle,
   UserPlus,
-  ExternalLink,
   Info,
   Mail,
   MessageSquare,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { referralCodes, type ReferralCode } from "@/data/marketing";
+import { referralCodes } from "@/data/marketing";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
 import { clients } from "@/data/clients";
-import { bookings } from "@/data/bookings";
-import { payments } from "@/data/payments";
 import {
   getReferralRelationshipsByReferrer,
   getReferralStats,
-  type ReferralRelationship,
 } from "@/data/referral-tracking";
-import { LoyaltyModuleGuard } from "@/components/loyalty/LoyaltyModuleGuard";
-import { ConditionalLoyaltyFeature } from "@/components/loyalty/ConditionalLoyaltyFeature";
 import { useCustomerLoyaltyAccess } from "@/hooks/use-loyalty-config";
 // QR Code will be generated using an external service or canvas
 
@@ -58,17 +59,11 @@ interface ReferralTracking {
 export default function CustomerReferPage() {
   const { selectedFacility } = useCustomerFacility();
   const { canViewReferrals } = useCustomerLoyaltyAccess();
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHydrated();
   const [copiedLink, setCopiedLink] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
-  const [dismissedRewardNotifications, setDismissedRewardNotifications] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  // Get customer data
-  const customer = useMemo(() => clients.find((c) => c.id === MOCK_CUSTOMER_ID), []);
+  const [dismissedRewardNotifications, setDismissedRewardNotifications] =
+    useState<Set<number>>(new Set());
 
   // Get facility loyalty config
   const loyaltyConfig = useMemo(() => {
@@ -109,7 +104,7 @@ export default function CustomerReferPage() {
     return referralRelationships.map((rel) => {
       // Find customer info
       const friend = clients.find((c) => c.id === rel.referredCustomerId);
-      
+
       // Determine status
       let status: ReferralTracking["status"] = "pending";
       if (rel.status === "completed") {
@@ -124,7 +119,10 @@ export default function CustomerReferPage() {
       let rewardStatus: ReferralTracking["rewardStatus"] = "not_eligible";
       if (rel.referrerRewardStatus === "issued") {
         rewardStatus = "earned";
-      } else if (rel.referrerRewardStatus === "pending" || rel.referrerRewardStatus === "eligible") {
+      } else if (
+        rel.referrerRewardStatus === "pending" ||
+        rel.referrerRewardStatus === "eligible"
+      ) {
         rewardStatus = "pending";
       }
 
@@ -146,7 +144,9 @@ export default function CustomerReferPage() {
   const referralStats = useMemo(() => {
     return {
       totalSent: referralStatsData.totalReferrals,
-      signedUp: referralStatsData.activeReferrals + referralStatsData.completedReferrals,
+      signedUp:
+        referralStatsData.activeReferrals +
+        referralStatsData.completedReferrals,
       booked: referralStatsData.completedReferrals,
       rewardsEarned: referralStatsData.rewardsEarned,
       rewardsPending: referralStatsData.rewardsPending,
@@ -166,7 +166,7 @@ export default function CustomerReferPage() {
       setCopiedLink(true);
       toast.success("Referral link copied to clipboard!");
       setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy link");
     }
   };
@@ -184,11 +184,15 @@ export default function CustomerReferPage() {
       url: referralUrl,
     };
 
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare(shareData)
+    ) {
       try {
         await navigator.share(shareData);
         toast.success("Shared successfully!");
-      } catch (err) {
+      } catch {
         // User cancelled or error occurred
         handleCopyLink();
       }
@@ -206,7 +210,7 @@ export default function CustomerReferPage() {
     }
     const smsBody = encodeURIComponent(
       `Hey! I love ${selectedFacility?.name || "this pet care place"} and thought you would too. ` +
-      `Use my referral link to get ${referralProgram?.refereeReward.description || "a special reward"}: ${referralUrl}`
+        `Use my referral link to get ${referralProgram?.refereeReward.description || "a special reward"}: ${referralUrl}`,
     );
     window.location.href = `sms:?body=${smsBody}`;
     toast.success("Opening SMS app...");
@@ -219,14 +223,14 @@ export default function CustomerReferPage() {
       return;
     }
     const subject = encodeURIComponent(
-      `Join me at ${selectedFacility?.name || "this great pet care place"}!`
+      `Join me at ${selectedFacility?.name || "this great pet care place"}!`,
     );
     const body = encodeURIComponent(
       `Hi!\n\n` +
-      `I've been using ${selectedFacility?.name || "this pet care facility"} for my pets and I think you'd love it too!\n\n` +
-      `Sign up using my referral link and you'll get ${referralProgram?.refereeReward.description || "a special reward"}:\n` +
-      `${referralUrl}\n\n` +
-      `See you there!`
+        `I've been using ${selectedFacility?.name || "this pet care facility"} for my pets and I think you'd love it too!\n\n` +
+        `Sign up using my referral link and you'll get ${referralProgram?.refereeReward.description || "a special reward"}:\n` +
+        `${referralUrl}\n\n` +
+        `See you there!`,
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
     toast.success("Opening email app...");
@@ -238,7 +242,7 @@ export default function CustomerReferPage() {
       .filter(
         (r) =>
           r.rewardStatus === "earned" &&
-          !dismissedRewardNotifications.has(r.id)
+          !dismissedRewardNotifications.has(r.id),
       )
       .map((r) => ({
         id: r.id,
@@ -310,7 +314,7 @@ export default function CustomerReferPage() {
   if (!isMounted) {
     return (
       <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex min-h-[400px] items-center justify-center">
           <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
@@ -318,7 +322,7 @@ export default function CustomerReferPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Refer a Friend</h1>
@@ -331,12 +335,12 @@ export default function CustomerReferPage() {
       {earnedRewardNotifications.map((notification) => (
         <div
           key={notification.id}
-          className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20"
+          className="flex items-center justify-between rounded-lg border border-green-500/20 bg-green-500/10 p-4"
         >
           <div className="flex items-center gap-3">
-            <Gift className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+            <Gift className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
             <div>
-              <p className="font-semibold text-sm text-green-700 dark:text-green-300">
+              <p className="text-sm font-semibold text-green-700 dark:text-green-300">
                 Reward Earned!
               </p>
               <p className="text-sm text-green-600 dark:text-green-400">
@@ -344,7 +348,16 @@ export default function CustomerReferPage() {
                 {typeof notification.rewardAmount === "number"
                   ? `$${notification.rewardAmount}`
                   : notification.rewardAmount}{" "}
-                {notification.rewardType === "free_service" ? "free service" : notification.rewardType === "gift_card" ? "gift card" : notification.rewardType === "free_add_on" ? "free add-on" : notification.rewardType === "discount_code" ? "discount code" : notification.rewardType} for referring {notification.friendName}!
+                {notification.rewardType === "free_service"
+                  ? "free service"
+                  : notification.rewardType === "gift_card"
+                    ? "gift card"
+                    : notification.rewardType === "free_add_on"
+                      ? "free add-on"
+                      : notification.rewardType === "discount_code"
+                        ? "discount code"
+                        : notification.rewardType}{" "}
+                for referring {notification.friendName}!
               </p>
             </div>
           </div>
@@ -352,10 +365,10 @@ export default function CustomerReferPage() {
             variant="ghost"
             size="icon"
             aria-label="Dismiss notification"
-            className="shrink-0 text-green-600 dark:text-green-400 hover:text-green-700 hover:bg-green-500/20"
+            className="shrink-0 text-green-600 hover:bg-green-500/20 hover:text-green-700 dark:text-green-400"
             onClick={() => handleDismissRewardNotification(notification.id)}
           >
-            <X className="h-4 w-4" />
+            <X className="size-4" />
           </Button>
         </div>
       ))}
@@ -364,7 +377,7 @@ export default function CustomerReferPage() {
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
               Total Referrals
             </CardTitle>
           </CardHeader>
@@ -374,7 +387,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
               Friends Signed Up
             </CardTitle>
           </CardHeader>
@@ -384,7 +397,7 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
               Friends Booked
             </CardTitle>
           </CardHeader>
@@ -394,22 +407,26 @@ export default function CustomerReferPage() {
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
               Rewards Earned
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{referralStats.rewardsEarned}</div>
+            <div className="text-2xl font-bold">
+              {referralStats.rewardsEarned}
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
               Rewards Pending
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{referralStats.rewardsPending}</div>
+            <div className="text-2xl font-bold">
+              {referralStats.rewardsPending}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -430,7 +447,9 @@ export default function CustomerReferPage() {
             {referralCode ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="referral-link">Your Unique Referral Link</Label>
+                  <Label htmlFor="referral-link">
+                    Your Unique Referral Link
+                  </Label>
                   <div className="flex gap-2">
                     <Input
                       id="referral-link"
@@ -445,9 +464,9 @@ export default function CustomerReferPage() {
                       className="shrink-0"
                     >
                       {copiedLink ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="size-4 text-green-500" />
                       ) : (
-                        <Copy className="h-4 w-4" />
+                        <Copy className="size-4" />
                       )}
                     </Button>
                   </div>
@@ -455,55 +474,63 @@ export default function CustomerReferPage() {
 
                 <div className="grid grid-cols-2 gap-2">
                   <Button onClick={handleShare} variant="default">
-                    <Share2 className="h-4 w-4 mr-2" />
+                    <Share2 className="mr-2 size-4" />
                     Share
                   </Button>
                   <Button onClick={handleShareSMS} variant="outline">
-                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <MessageSquare className="mr-2 size-4" />
                     SMS
                   </Button>
                   <Button onClick={handleShareEmail} variant="outline">
-                    <Mail className="h-4 w-4 mr-2" />
+                    <Mail className="mr-2 size-4" />
                     Email
                   </Button>
                   <Button
                     onClick={() => setShowQRCode(!showQRCode)}
                     variant="outline"
                   >
-                    <QrCode className="h-4 w-4 mr-2" />
+                    <QrCode className="mr-2 size-4" />
                     QR Code
                   </Button>
                 </div>
 
                 {showQRCode && referralUrl && (
-                  <div className="flex flex-col items-center p-4 bg-muted rounded-lg">
-                    <div className="w-[200px] h-[200px] bg-white p-4 rounded-lg border-2 border-border flex items-center justify-center">
-                      <img
+                  <div className="bg-muted flex flex-col items-center rounded-lg p-4">
+                    <div className="border-border flex h-[200px] w-[200px] items-center justify-center rounded-lg border-2 bg-white p-4">
+                      <Image
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralUrl)}`}
                         alt="QR Code"
-                        className="w-full h-full"
+                        width={200}
+                        height={200}
+                        className="h-full w-full"
+                        unoptimized
                       />
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-muted-foreground mt-2 text-sm">
                       Scan to share your referral link
                     </p>
                   </div>
                 )}
 
-                <div className="pt-2 border-t">
-                  <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="border-t pt-2">
+                  <div className="text-muted-foreground flex items-start gap-2 text-sm">
+                    <Info className="mt-0.5 size-4 shrink-0" />
                     <p>
-                      Your referral code: <span className="font-mono font-semibold text-foreground">{referralCode.code}</span>
+                      Your referral code:{" "}
+                      <span className="text-foreground font-mono font-semibold">
+                        {referralCode.code}
+                      </span>
                     </p>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <div className="text-muted-foreground py-8 text-center">
+                <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
                 <p>No referral code available</p>
-                <p className="text-xs mt-1">Contact support to get your referral code</p>
+                <p className="mt-1 text-xs">
+                  Contact support to get your referral code
+                </p>
               </div>
             )}
           </CardContent>
@@ -524,24 +551,27 @@ export default function CustomerReferPage() {
             {referralProgram ? (
               <>
                 <div className="space-y-3">
-                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="border-primary/20 bg-primary/10 rounded-lg border p-4">
                     <div className="flex items-start gap-3">
-                      <Gift className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                      <Gift className="text-primary mt-0.5 h-5 w-5 shrink-0" />
                       <div className="flex-1">
-                        <div className="font-semibold text-sm mb-1">You Get:</div>
+                        <div className="mb-1 text-sm font-semibold">
+                          You Get:
+                        </div>
                         <div className="text-sm">
                           {referralProgram.referrerReward.type === "points" && (
-                            <span className="font-semibold text-primary">
+                            <span className="text-primary font-semibold">
                               {referralProgram.referrerReward.value} points
                             </span>
                           )}
                           {referralProgram.referrerReward.type === "credit" && (
-                            <span className="font-semibold text-primary">
+                            <span className="text-primary font-semibold">
                               ${referralProgram.referrerReward.value} credit
                             </span>
                           )}
-                          {referralProgram.referrerReward.type === "discount" && (
-                            <span className="font-semibold text-primary">
+                          {referralProgram.referrerReward.type ===
+                            "discount" && (
+                            <span className="text-primary font-semibold">
                               {referralProgram.referrerReward.value}% discount
                             </span>
                           )}
@@ -553,11 +583,13 @@ export default function CustomerReferPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
                     <div className="flex items-start gap-3">
-                      <UserPlus className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                      <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
                       <div className="flex-1">
-                        <div className="font-semibold text-sm mb-1">Your Friend Gets:</div>
+                        <div className="mb-1 text-sm font-semibold">
+                          Your Friend Gets:
+                        </div>
                         <div className="text-sm">
                           {referralProgram.refereeReward.type === "points" && (
                             <span className="font-semibold text-green-600 dark:text-green-400">
@@ -569,9 +601,11 @@ export default function CustomerReferPage() {
                               ${referralProgram.refereeReward.value} credit
                             </span>
                           )}
-                          {referralProgram.refereeReward.type === "discount" && (
+                          {referralProgram.refereeReward.type ===
+                            "discount" && (
                             <span className="font-semibold text-green-600 dark:text-green-400">
-                              {referralProgram.refereeReward.value}% off first booking
+                              {referralProgram.refereeReward.value}% off first
+                              booking
                             </span>
                           )}
                           <span className="text-muted-foreground ml-2">
@@ -584,12 +618,13 @@ export default function CustomerReferPage() {
                 </div>
 
                 {referralProgram.requirements && (
-                  <div className="pt-3 border-t space-y-2">
-                    <div className="font-semibold text-sm">Requirements:</div>
-                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <div className="space-y-2 border-t pt-3">
+                    <div className="text-sm font-semibold">Requirements:</div>
+                    <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
                       {referralProgram.requirements.minimumPurchase && (
                         <li>
-                          Friend must make a minimum purchase of ${referralProgram.requirements.minimumPurchase}
+                          Friend must make a minimum purchase of $
+                          {referralProgram.requirements.minimumPurchase}
                         </li>
                       )}
                       {referralProgram.requirements.firstBookingOnly && (
@@ -597,7 +632,8 @@ export default function CustomerReferPage() {
                       )}
                       {referralProgram.requirements.serviceTypes && (
                         <li>
-                          Applies to: {referralProgram.requirements.serviceTypes.join(", ")}
+                          Applies to:{" "}
+                          {referralProgram.requirements.serviceTypes.join(", ")}
                         </li>
                       )}
                     </ul>
@@ -605,28 +641,33 @@ export default function CustomerReferPage() {
                 )}
 
                 {referralProgram.tracking?.expirationDays && (
-                  <div className="pt-3 border-t">
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="border-t pt-3">
+                    <div className="text-muted-foreground flex items-start gap-2 text-sm">
+                      <Clock className="mt-0.5 size-4 shrink-0" />
                       <p>
-                        Referral code expires in {referralProgram.tracking.expirationDays} days
+                        Referral code expires in{" "}
+                        {referralProgram.tracking.expirationDays} days
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div className="pt-3 border-t">
+                <div className="border-t pt-3">
                   <div className="flex items-start gap-2 text-sm">
-                    <Info className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                    <Info className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                     <div className="text-muted-foreground">
-                      <p className="font-semibold text-foreground mb-1">When Reward Triggers:</p>
+                      <p className="text-foreground mb-1 font-semibold">
+                        When Reward Triggers:
+                      </p>
                       <p>
                         {referralProgram.requirements?.firstBookingOnly
                           ? "After your friend completes their first booking"
                           : "After your friend completes a qualifying booking"}
                         {referralProgram.requirements?.minimumPurchase && (
                           <span>
-                            {" "}with a minimum purchase of ${referralProgram.requirements.minimumPurchase}
+                            {" "}
+                            with a minimum purchase of $
+                            {referralProgram.requirements.minimumPurchase}
                           </span>
                         )}
                       </p>
@@ -635,10 +676,12 @@ export default function CustomerReferPage() {
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <div className="text-muted-foreground py-8 text-center">
+                <Gift className="mx-auto mb-2 h-12 w-12 opacity-50" />
                 <p>Referral program not configured</p>
-                <p className="text-xs mt-1">Contact the facility for more information</p>
+                <p className="mt-1 text-xs">
+                  Contact the facility for more information
+                </p>
               </div>
             )}
           </CardContent>
@@ -662,16 +705,16 @@ export default function CustomerReferPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Friend
                     </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Reward
                     </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">
+                    <th className="text-muted-foreground px-4 py-3 text-left text-sm font-semibold">
                       Details
                     </th>
                   </tr>
@@ -680,26 +723,28 @@ export default function CustomerReferPage() {
                   {referralTracking.map((referral, index) => (
                     <tr
                       key={index}
-                      className="border-b hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 border-b transition-colors"
                     >
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-3">
                         <div>
-                          <div className="font-medium text-sm">{referral.friendName}</div>
+                          <div className="text-sm font-medium">
+                            {referral.friendName}
+                          </div>
                           {referral.friendEmail && (
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               {referral.friendEmail}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-3">
                         {getStatusBadge(referral.status)}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-3">
                         <div className="space-y-1">
                           {getRewardStatusBadge(referral.rewardStatus)}
                           {referral.rewardAmount && (
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                               {typeof referral.rewardAmount === "number"
                                 ? `$${referral.rewardAmount}`
                                 : referral.rewardAmount}
@@ -707,16 +752,20 @@ export default function CustomerReferPage() {
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3 text-sm">
                         <div className="space-y-1">
                           {referral.signedUpDate && (
-                            <div>Signed up: {formatDate(referral.signedUpDate)}</div>
+                            <div>
+                              Signed up: {formatDate(referral.signedUpDate)}
+                            </div>
                           )}
                           {referral.bookedDate && (
                             <div>Booked: {formatDate(referral.bookedDate)}</div>
                           )}
                           {referral.completedDate && (
-                            <div>Completed: {formatDate(referral.completedDate)}</div>
+                            <div>
+                              Completed: {formatDate(referral.completedDate)}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -726,10 +775,12 @@ export default function CustomerReferPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <div className="text-muted-foreground py-8 text-center">
+              <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
               <p>No referrals yet</p>
-              <p className="text-xs mt-1">Share your referral link to start earning rewards!</p>
+              <p className="mt-1 text-xs">
+                Share your referral link to start earning rewards!
+              </p>
             </div>
           )}
         </CardContent>

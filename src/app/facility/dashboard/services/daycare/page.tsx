@@ -75,36 +75,36 @@ export default function DaycareDashboardPage() {
               {Math.round(capacityPercentage)}%
             </span>
           </div>
-          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted">
+          <div className="bg-muted relative h-4 w-full overflow-hidden rounded-full">
             <div
-              className={`h-full transition-all ${getCapacityColor(capacityPercentage)}`}
+              className={`h-full transition-all ${getCapacityColor(capacityPercentage)} `}
               style={{ width: `${capacityPercentage}%` }}
             />
           </div>
 
           {/* Capacity by Size */}
           <div className="grid grid-cols-4 gap-4 pt-2">
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{checkedInBySize.small}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Small / {daycareCapacity.smallDogs}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{checkedInBySize.medium}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Medium / {daycareCapacity.mediumDogs}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{checkedInBySize.large}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Large / {daycareCapacity.largeDogs}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{checkedInBySize.giant}</p>
-              <p className="text-xs text-muted-foreground">Giant / 5</p>
+              <p className="text-muted-foreground text-xs">Giant / 5</p>
             </div>
           </div>
         </CardContent>
@@ -145,15 +145,15 @@ export default function DaycareDashboardPage() {
       {/* Currently Checked In */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Users className="h-5 w-5" />
             Currently Checked In
           </CardTitle>
         </CardHeader>
         <CardContent>
           {checkedInPets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <PawPrint className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <div className="text-muted-foreground py-8 text-center">
+              <PawPrint className="mx-auto mb-3 h-12 w-12 opacity-50" />
               <p>No pets currently checked in</p>
             </div>
           ) : (
@@ -168,14 +168,14 @@ export default function DaycareDashboardPage() {
                 return (
                   <div
                     key={pet.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="bg-card hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-3 transition-colors"
                   >
-                    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
-                      <PawPrint className="h-5 w-5 text-primary" />
+                    <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                      <PawPrint className="text-primary h-5 w-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{pet.petName}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{pet.petName}</p>
+                      <p className="text-muted-foreground truncate text-xs">
                         {pet.petBreed} • {pet.ownerName}
                       </p>
                     </div>
@@ -192,8 +192,8 @@ export default function DaycareDashboardPage() {
                       >
                         {pet.rateType.replace("-", " ")}
                       </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        <Clock className="h-3 w-3 inline mr-1" />
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        <Clock className="mr-1 inline h-3 w-3" />
                         {hoursElapsed}h elapsed
                       </p>
                     </div>
@@ -208,7 +208,7 @@ export default function DaycareDashboardPage() {
       {/* Upcoming Pickups */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <AlertCircle className="h-5 w-5" />
             Upcoming Pickups
           </CardTitle>
@@ -233,22 +233,22 @@ export default function DaycareDashboardPage() {
                 return (
                   <div
                     key={pet.id}
-                    className="flex items-center justify-between p-3 rounded-lg border"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
-                        <PawPrint className="h-4 w-4" />
+                      <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-full">
+                        <PawPrint className="size-4" />
                       </div>
                       <div>
                         <p className="font-medium">{pet.petName}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           Owner: {pet.ownerName}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formattedTime}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {pet.ownerPhone}
                       </p>
                     </div>

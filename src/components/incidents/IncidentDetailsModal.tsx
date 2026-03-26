@@ -128,13 +128,13 @@ export function IncidentDetailsModal({
   const getStatusIcon = (stat: string) => {
     switch (stat) {
       case "open":
-        return <AlertCircle className="h-4 w-4" />;
+        return <AlertCircle className="size-4" />;
       case "investigating":
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="size-4" />;
       case "resolved":
-        return <CheckCircle2 className="h-4 w-4" />;
+        return <CheckCircle2 className="size-4" />;
       case "closed":
-        return <XCircle className="h-4 w-4" />;
+        return <XCircle className="size-4" />;
       default:
         return null;
     }
@@ -166,14 +166,14 @@ export function IncidentDetailsModal({
         <div className="flex items-center justify-between">
           <div>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <AlertTriangle className="text-destructive h-5 w-5" />
               Incident Report: {incident.id}
             </DialogTitle>
             <DialogDescription>{incident.title}</DialogDescription>
           </div>
           <Badge
             variant="outline"
-            className={`text-base px-3 py-1 ${getSeverityColor(incident.severity)}`}
+            className={`px-3 py-1 text-base ${getSeverityColor(incident.severity)} `}
           >
             {incident.severity.toUpperCase()} SEVERITY
           </Badge>
@@ -186,7 +186,7 @@ export function IncidentDetailsModal({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-base mb-2 block">Incident Status</Label>
+                <Label className="mb-2 block text-base">Incident Status</Label>
                 <div className="flex items-center gap-2">
                   {getStatusIcon(status)}
                   <span className="font-semibold capitalize">{status}</span>
@@ -206,15 +206,15 @@ export function IncidentDetailsModal({
                 </Select>
                 {status !== "closed" && (
                   <Button variant="default" onClick={handleCloseIncident}>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    <CheckCircle2 className="mr-2 size-4" />
                     Close Incident
                   </Button>
                 )}
               </div>
             </div>
             {status === "closed" && incident.closedBy && (
-              <div className="mt-3 p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
+              <div className="bg-muted mt-3 rounded-lg p-3">
+                <p className="text-muted-foreground text-sm">
                   Closed by <strong>{incident.closedBy}</strong> on{" "}
                   {incident.closedDate
                     ? new Date(incident.closedDate).toLocaleString()
@@ -241,18 +241,18 @@ export function IncidentDetailsModal({
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-muted-foreground">
+                    <Label className="text-muted-foreground text-sm">
                       Type
                     </Label>
-                    <div className="font-medium capitalize mt-1">
+                    <div className="mt-1 font-medium capitalize">
                       {incident.type}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">
+                    <Label className="text-muted-foreground text-sm">
                       Severity
                     </Label>
                     <div className="mt-1">
@@ -265,20 +265,20 @@ export function IncidentDetailsModal({
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">
+                    <Label className="text-muted-foreground text-sm">
                       Incident Date
                     </Label>
-                    <div className="font-medium mt-1 flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
+                    <div className="mt-1 flex items-center gap-2 font-medium">
+                      <Calendar className="size-4" />
                       {new Date(incident.incidentDate).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">
+                    <Label className="text-muted-foreground text-sm">
                       Reported By
                     </Label>
-                    <div className="font-medium mt-1 flex items-center gap-2">
-                      <User className="h-4 w-4" />
+                    <div className="mt-1 flex items-center gap-2 font-medium">
+                      <User className="size-4" />
                       {incident.reportedBy}
                     </div>
                   </div>
@@ -287,12 +287,12 @@ export function IncidentDetailsModal({
             </Card>
 
             <Card>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div>
-                  <Label className="text-sm text-muted-foreground">
+                  <Label className="text-muted-foreground text-sm">
                     Pets Involved
                   </Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {incident.petNames.map((name: string, idx: number) => (
                       <Badge key={idx} variant="default">
                         {name}
@@ -303,10 +303,10 @@ export function IncidentDetailsModal({
 
                 {incident.staffInvolved.length > 0 && (
                   <div>
-                    <Label className="text-sm text-muted-foreground">
+                    <Label className="text-muted-foreground text-sm">
                       Staff Involved
                     </Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       {incident.staffInvolved.map(
                         (staff: string, idx: number) => (
                           <Badge key={idx} variant="secondary">
@@ -322,7 +322,7 @@ export function IncidentDetailsModal({
 
             <Card>
               <CardContent className="pt-6">
-                <Label className="text-base mb-3 block">Description</Label>
+                <Label className="mb-3 block text-base">Description</Label>
                 <p className="text-sm whitespace-pre-wrap">
                   {incident.description}
                 </p>
@@ -332,11 +332,11 @@ export function IncidentDetailsModal({
             {/* Manager Notifications */}
             <Card>
               <CardContent className="pt-6">
-                <Label className="text-base mb-3 block">Notifications</Label>
+                <Label className="mb-3 block text-base">Notifications</Label>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="size-4 text-green-600" />
                       <span className="text-sm font-medium">
                         Manager Notified
                       </span>
@@ -358,12 +358,12 @@ export function IncidentDetailsModal({
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div className="bg-muted flex items-center justify-between rounded-lg p-3">
                     <div className="flex items-center gap-2">
                       {incident.clientNotified ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <CheckCircle2 className="size-4 text-green-600" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                        <XCircle className="text-muted-foreground size-4" />
                       )}
                       <span className="text-sm font-medium">
                         Client Notified
@@ -371,7 +371,7 @@ export function IncidentDetailsModal({
                     </div>
                     {incident.clientNotified &&
                       incident.clientNotificationDate && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {new Date(
                             incident.clientNotificationDate,
                           ).toLocaleString()}
@@ -387,20 +387,20 @@ export function IncidentDetailsModal({
           <TabsContent value="notes" className="space-y-4">
             {/* Internal Notes */}
             <Card>
-              <CardContent className="pt-6 space-y-3">
+              <CardContent className="space-y-3 pt-6">
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Internal Notes</Label>
                   <Badge variant="secondary">
-                    <EyeOff className="h-3 w-3 mr-1" />
+                    <EyeOff className="mr-1 h-3 w-3" />
                     Staff Only
                   </Badge>
                 </div>
-                <div className="p-4 bg-muted rounded-lg">
+                <div className="bg-muted rounded-lg p-4">
                   <p className="text-sm whitespace-pre-wrap">
                     {incident.internalNotes}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   These notes are for internal use only and are not visible to
                   clients
                 </p>
@@ -409,20 +409,20 @@ export function IncidentDetailsModal({
 
             {/* Client-Facing Notes */}
             <Card>
-              <CardContent className="pt-6 space-y-3">
+              <CardContent className="space-y-3 pt-6">
                 <div className="flex items-center justify-between">
                   <Label className="text-base">Client-Facing Notes</Label>
                   <Badge variant="default">
-                    <Eye className="h-3 w-3 mr-1" />
+                    <Eye className="mr-1 h-3 w-3" />
                     Client Visible
                   </Badge>
                 </div>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                   <p className="text-sm whitespace-pre-wrap">
                     {incident.clientFacingNotes}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   This version is shared with clients when they&apos;re notified
                 </p>
               </CardContent>
@@ -430,7 +430,7 @@ export function IncidentDetailsModal({
 
             {/* Structured Notes */}
             <Card>
-              <CardContent className="pt-6 space-y-3">
+              <CardContent className="space-y-3 pt-6">
                 <Label className="text-base">Structured Notes</Label>
                 <NotesList
                   category="incident"
@@ -447,8 +447,8 @@ export function IncidentDetailsModal({
                 {incident.photos.map((photo) => (
                   <Card key={photo.id}>
                     <CardContent className="pt-6">
-                      <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-3">
-                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      <div className="bg-muted mb-3 flex aspect-video items-center justify-center rounded-lg">
+                        <ImageIcon className="text-muted-foreground h-12 w-12" />
                       </div>
                       <div className="space-y-2">
                         <div className="text-sm font-medium">
@@ -457,12 +457,12 @@ export function IncidentDetailsModal({
                         <div className="flex items-center gap-2">
                           {photo.isClientVisible ? (
                             <Badge variant="default" className="text-xs">
-                              <Eye className="h-3 w-3 mr-1" />
+                              <Eye className="mr-1 h-3 w-3" />
                               Client Visible
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="text-xs">
-                              <EyeOff className="h-3 w-3 mr-1" />
+                              <EyeOff className="mr-1 h-3 w-3" />
                               Internal Only
                             </Badge>
                           )}
@@ -474,8 +474,8 @@ export function IncidentDetailsModal({
               </div>
             ) : (
               <Card>
-                <CardContent className="pt-6 text-center text-muted-foreground">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <CardContent className="text-muted-foreground pt-6 text-center">
+                  <ImageIcon className="mx-auto mb-2 h-12 w-12 opacity-20" />
                   <p>No photos attached to this incident</p>
                 </CardContent>
               </Card>
@@ -491,14 +491,14 @@ export function IncidentDetailsModal({
                 size="sm"
                 onClick={() => setShowAddTask(!showAddTask)}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 Add Task
               </Button>
             </div>
 
             {showAddTask && (
               <Card>
-                <CardContent className="pt-6 space-y-4">
+                <CardContent className="space-y-4 pt-6">
                   <Input
                     placeholder="Task title"
                     value={newTask.title}
@@ -562,14 +562,14 @@ export function IncidentDetailsModal({
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckSquare className="h-4 w-4" />
+                          <div className="mb-2 flex items-center gap-2">
+                            <CheckSquare className="size-4" />
                             <span className="font-medium">{task.title}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-3">
+                          <p className="text-muted-foreground mb-3 text-sm">
                             {task.description}
                           </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="text-muted-foreground flex items-center gap-4 text-xs">
                             <div>
                               Assigned to: <strong>{task.assignedTo}</strong>
                             </div>
@@ -578,7 +578,7 @@ export function IncidentDetailsModal({
                             </div>
                           </div>
                           {task.completedDate && (
-                            <div className="mt-2 p-2 bg-green-50 rounded text-xs">
+                            <div className="mt-2 rounded-sm bg-green-50 p-2 text-xs">
                               ✓ Completed by <strong>{task.completedBy}</strong>{" "}
                               on {new Date(task.completedDate).toLocaleString()}
                               {task.notes && (
@@ -606,8 +606,8 @@ export function IncidentDetailsModal({
               </div>
             ) : (
               <Card>
-                <CardContent className="pt-6 text-center text-muted-foreground">
-                  <CheckSquare className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                <CardContent className="text-muted-foreground pt-6 text-center">
+                  <CheckSquare className="mx-auto mb-2 h-12 w-12 opacity-20" />
                   <p>No follow-up tasks for this incident</p>
                 </CardContent>
               </Card>

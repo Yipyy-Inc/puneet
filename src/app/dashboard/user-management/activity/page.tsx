@@ -125,7 +125,7 @@ export default function ActivityTrackingPage() {
       render: (log) => (
         <div>
           <div className="font-medium">{log.userName}</div>
-          <div className="text-xs text-muted-foreground">{log.userEmail}</div>
+          <div className="text-muted-foreground text-xs">{log.userEmail}</div>
         </div>
       ),
     },
@@ -155,7 +155,7 @@ export default function ActivityTrackingPage() {
       icon: FileText,
       defaultVisible: true,
       render: (log) => (
-        <div className="max-w-[200px] truncate text-muted-foreground text-sm">
+        <div className="text-muted-foreground max-w-[200px] truncate text-sm">
           {log.details}
         </div>
       ),
@@ -175,7 +175,7 @@ export default function ActivityTrackingPage() {
       render: (log) => (
         <div className="text-sm">
           <div>{new Date(log.timestamp).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(log.timestamp).toLocaleTimeString()}
           </div>
         </div>
@@ -192,7 +192,7 @@ export default function ActivityTrackingPage() {
       render: (log) => (
         <div>
           <div className="font-medium">{log.userName}</div>
-          <div className="text-xs text-muted-foreground">{log.userEmail}</div>
+          <div className="text-muted-foreground text-xs">{log.userEmail}</div>
         </div>
       ),
     },
@@ -211,7 +211,7 @@ export default function ActivityTrackingPage() {
       render: (log) => (
         <div className="text-sm">
           <div>{new Date(log.date).toLocaleDateString()}</div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             {new Date(log.date).toLocaleTimeString()}
           </div>
         </div>
@@ -223,7 +223,7 @@ export default function ActivityTrackingPage() {
       icon: Globe,
       defaultVisible: true,
       render: (log) => (
-        <code className="text-xs bg-muted px-2 py-1 rounded">{log.ip}</code>
+        <code className="bg-muted rounded-sm px-2 py-1 text-xs">{log.ip}</code>
       ),
     },
     {
@@ -335,9 +335,9 @@ export default function ActivityTrackingPage() {
                   .map((log, index) => (
                     <div
                       key={`${log.id}-${index}`}
-                      className="flex items-start gap-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg"
+                      className="flex items-start gap-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/20"
                     >
-                      <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                      <div className="rounded-lg bg-red-100 p-2 dark:bg-red-900">
                         <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
                       </div>
                       <div className="flex-1">
@@ -349,10 +349,10 @@ export default function ActivityTrackingPage() {
                           </div>
                           <StatusBadge type="severity" value={log.severity} />
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-sm">
                           {log.details}
                         </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {log.userName}
@@ -367,7 +367,7 @@ export default function ActivityTrackingPage() {
                   ))}
                 {allActivityLogs.filter((log) => log.severity === "high")
                   .length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-muted-foreground py-8 text-center">
                     No sensitive actions recorded
                   </div>
                 )}
@@ -381,8 +381,8 @@ export default function ActivityTrackingPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-muted/50 backdrop-blur-sm border-b">
+    <div className="flex h-full flex-col">
+      <div className="bg-muted/50 sticky top-0 z-10 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -397,14 +397,14 @@ export default function ActivityTrackingPage() {
               variant="outline"
               onClick={() => exportActivityToCSV(allActivityLogs)}
             >
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-2 size-4" />
               {"Export Audit Log"}
             </Button>
           </div>
         </div>
 
         {/* Tabs Navigation */}
-        <nav className="px-6 flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -414,14 +414,14 @@ export default function ActivityTrackingPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? "bg-background border-b-2 border-primary text-primary"
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 {tab.name}
               </button>
             );
@@ -430,7 +430,7 @@ export default function ActivityTrackingPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 space-y-6 p-6">
         {/* Stats Section */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -438,11 +438,11 @@ export default function ActivityTrackingPage() {
               <CardTitle className="text-sm font-medium">
                 Total Actions
               </CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <Activity className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{allActivityLogs.length}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Across all admin users
               </p>
             </CardContent>
@@ -452,13 +452,13 @@ export default function ActivityTrackingPage() {
               <CardTitle className="text-sm font-medium">
                 {"Sensitive Actions"}
               </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <AlertTriangle className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">
                 {highSeverityCount}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 High severity actions
               </p>
             </CardContent>
@@ -468,13 +468,13 @@ export default function ActivityTrackingPage() {
               <CardTitle className="text-sm font-medium">
                 Today&apos;s Logins
               </CardTitle>
-              <History className="h-4 w-4 text-muted-foreground" />
+              <History className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
                 {todayLogins}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Login sessions today
               </p>
             </CardContent>
@@ -484,11 +484,11 @@ export default function ActivityTrackingPage() {
               <CardTitle className="text-sm font-medium">
                 Unique Locations
               </CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
+              <Globe className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{uniqueLocations}</div>
-              <p className="text-xs text-muted-foreground">Access locations</p>
+              <p className="text-muted-foreground text-xs">Access locations</p>
             </CardContent>
           </Card>
         </div>

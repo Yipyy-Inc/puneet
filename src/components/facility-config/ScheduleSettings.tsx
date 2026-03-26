@@ -96,7 +96,7 @@ export function ScheduleSettings({
                   Check-in/Out Times & Operating Hours
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      <Info className="text-muted-foreground size-4 cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-sm">
                       <div className="space-y-2">
@@ -115,9 +115,9 @@ export function ScheduleSettings({
                   </Tooltip>
                 </div>
                 {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="size-4" />
                 ) : (
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="size-4" />
                 )}
               </CardTitle>
             </CardHeader>
@@ -136,7 +136,7 @@ export function ScheduleSettings({
                       size="sm"
                       onClick={() => setEditingCheckInOut(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -146,11 +146,11 @@ export function ScheduleSettings({
                         size="sm"
                         onClick={handleCancelCheckInOut}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveCheckInOut}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save Changes
                       </Button>
                     </div>
@@ -159,12 +159,12 @@ export function ScheduleSettings({
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Check-in Times</Label>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="mt-2 grid grid-cols-2 gap-4">
                       {Object.entries(
                         config.checkInOutTimes.defaultSchedules.checkIn,
                       ).map(([service, time]) => (
                         <div key={service}>
-                          <Label className="capitalize text-sm">
+                          <Label className="text-sm capitalize">
                             {service}
                           </Label>
                           <Input
@@ -197,12 +197,12 @@ export function ScheduleSettings({
 
                   <div>
                     <Label>Check-out Times</Label>
-                    <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div className="mt-2 grid grid-cols-2 gap-4">
                       {Object.entries(
                         config.checkInOutTimes.defaultSchedules.checkOut,
                       ).map(([service, time]) => (
                         <div key={service}>
-                          <Label className="capitalize text-sm">
+                          <Label className="text-sm capitalize">
                             {service}
                           </Label>
                           <Input
@@ -243,7 +243,7 @@ export function ScheduleSettings({
                       size="sm"
                       onClick={() => setEditingOperatingHours(true)}
                     >
-                      <Edit className="mr-2 h-4 w-4" />
+                      <Edit className="mr-2 size-4" />
                       Edit
                     </Button>
                   ) : (
@@ -253,11 +253,11 @@ export function ScheduleSettings({
                         size="sm"
                         onClick={handleCancelOperatingHours}
                       >
-                        <X className="mr-2 h-4 w-4" />
+                        <X className="mr-2 size-4" />
                         Cancel
                       </Button>
                       <Button size="sm" onClick={handleSaveOperatingHours}>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         Save Changes
                       </Button>
                     </div>
@@ -289,7 +289,7 @@ export function ScheduleSettings({
                               }))
                             }
                           />
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             to
                           </span>
                           <Input

@@ -77,7 +77,7 @@ export default function StaffPerformancePage() {
       render: (staff) => (
         <div className="flex flex-col">
           <span className="font-medium">{staff.staffName}</span>
-          <span className="text-xs text-muted-foreground">{staff.role}</span>
+          <span className="text-muted-foreground text-xs">{staff.role}</span>
         </div>
       ),
     },
@@ -93,7 +93,7 @@ export default function StaffPerformancePage() {
       icon: CheckCircle2,
       defaultVisible: true,
       render: (staff) => (
-        <span className="text-green-600 font-medium">
+        <span className="font-medium text-green-600">
           {staff.tasksCompleted}
         </span>
       ),
@@ -116,11 +116,11 @@ export default function StaffPerformancePage() {
       defaultVisible: true,
       render: (staff) => (
         <div className="flex items-center gap-2">
-          <Progress value={staff.completionRate} className="w-20 h-2" />
+          <Progress value={staff.completionRate} className="h-2 w-20" />
           <span
             className={
               staff.completionRate >= 90
-                ? "text-green-600 font-medium"
+                ? "font-medium text-green-600"
                 : staff.completionRate >= 75
                   ? "text-yellow-600"
                   : "text-red-600"
@@ -195,11 +195,11 @@ export default function StaffPerformancePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <Target className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalTasks}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {totalCompleted} completed
             </p>
           </CardContent>
@@ -209,7 +209,7 @@ export default function StaffPerformancePage() {
             <CardTitle className="text-sm font-medium">
               Avg Completion Rate
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <TrendingUp className="size-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -223,13 +223,13 @@ export default function StaffPerformancePage() {
             <CardTitle className="text-sm font-medium">
               Photo Compliance
             </CardTitle>
-            <Camera className="h-4 w-4 text-muted-foreground" />
+            <Camera className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {avgPhotoCompliance.toFixed(1)}%
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Average across all staff
             </p>
           </CardContent>
@@ -237,11 +237,11 @@ export default function StaffPerformancePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Staff Tracked</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{staffPerformance.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Active staff members
             </p>
           </CardContent>
@@ -261,22 +261,22 @@ export default function StaffPerformancePage() {
             {topPerformers.map((performer, index) => (
               <div
                 key={performer.staffId}
-                className="flex items-center gap-4 p-4 border rounded-lg"
+                className="flex items-center gap-4 rounded-lg border p-4"
               >
                 <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
                     index === 0
                       ? "bg-yellow-100 text-yellow-700"
                       : index === 1
                         ? "bg-gray-100 text-gray-700"
                         : "bg-orange-100 text-orange-700"
-                  }`}
+                  } `}
                 >
                   <span className="font-bold">#{index + 1}</span>
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">{performer.staffName}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {performer.role}
                   </p>
                 </div>
@@ -284,7 +284,7 @@ export default function StaffPerformancePage() {
                   <p className="text-lg font-bold text-green-600">
                     {performer.completionRate.toFixed(1)}%
                   </p>
-                  <p className="text-xs text-muted-foreground">completion</p>
+                  <p className="text-muted-foreground text-xs">completion</p>
                 </div>
               </div>
             ))}
@@ -324,20 +324,20 @@ export default function StaffPerformancePage() {
                 .map((staff) => (
                   <div
                     key={staff.staffId}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
                       <p className="font-medium">{staff.staffName}</p>
-                      <div className="flex gap-2 mt-1">
+                      <div className="mt-1 flex gap-2">
                         {staff.completionRate < 85 && (
                           <Badge variant="outline" className="text-xs">
-                            <TrendingDown className="h-3 w-3 mr-1 text-red-500" />
+                            <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
                             Low completion
                           </Badge>
                         )}
                         {staff.photoProofCompliance < 90 && (
                           <Badge variant="outline" className="text-xs">
-                            <Camera className="h-3 w-3 mr-1 text-orange-500" />
+                            <Camera className="mr-1 h-3 w-3 text-orange-500" />
                             Photo compliance
                           </Badge>
                         )}
@@ -348,7 +348,7 @@ export default function StaffPerformancePage() {
               {staffPerformance.filter(
                 (s) => s.completionRate < 85 || s.photoProofCompliance < 90,
               ).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="text-muted-foreground py-4 text-center text-sm">
                   All staff members are performing well! 🎉
                 </p>
               )}
@@ -368,11 +368,11 @@ export default function StaffPerformancePage() {
                 .map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div>
-                      <p className="font-medium text-sm">{task.templateName}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm font-medium">{task.templateName}</p>
+                      <p className="text-muted-foreground text-xs">
                         by {task.completedByName}
                       </p>
                     </div>
@@ -381,11 +381,11 @@ export default function StaffPerformancePage() {
                         variant="secondary"
                         className="bg-green-100 text-green-800"
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
                         Completed
                       </Badge>
                       {task.completedAt && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-muted-foreground mt-1 text-xs">
                           {new Date(task.completedAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",

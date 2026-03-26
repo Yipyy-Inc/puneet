@@ -23,9 +23,9 @@ export function StaffHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-4 sm:px-6">
+    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-indigo-500">
           <Calendar className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -34,7 +34,7 @@ export function StaffHeader() {
       </div>
       <div className="flex items-center gap-2 sm:gap-4">
         {staffMember && (
-          <div className="hidden sm:block text-sm">
+          <div className="hidden text-sm sm:block">
             <span className="text-muted-foreground">Welcome, </span>
             <span className="font-medium">{staffMember.name}</span>
           </div>

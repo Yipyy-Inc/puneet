@@ -91,20 +91,20 @@ export function StatusBadge({
     if (!showIcon) return null;
     if (type === "status") {
       return value === "active" ? (
-        <CheckCircle className="w-3 h-3 mr-1" />
+        <CheckCircle className="mr-1 h-3 w-3" />
       ) : (
-        <XCircle className="w-3 h-3 mr-1" />
+        <XCircle className="mr-1 h-3 w-3" />
       );
     }
     if (type === "plan") {
-      if (value === "Enterprise") return <Crown className="w-3 h-3 mr-1" />;
-      return <CreditCard className="w-3 h-3 mr-1" />;
+      if (value === "Enterprise") return <Crown className="mr-1 h-3 w-3" />;
+      return <CreditCard className="mr-1 h-3 w-3" />;
     }
     if (type === "adminRole") {
-      return <Shield className="w-3 h-3 mr-1" />;
+      return <Shield className="mr-1 h-3 w-3" />;
     }
     if (type === "accessLevel") {
-      return <Key className="w-3 h-3 mr-1" />;
+      return <Key className="mr-1 h-3 w-3" />;
     }
     return null;
   };

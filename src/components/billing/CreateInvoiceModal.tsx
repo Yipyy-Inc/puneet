@@ -193,7 +193,7 @@ export function CreateInvoiceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -253,7 +253,7 @@ export function CreateInvoiceModal({
                 size="sm"
                 onClick={addItem}
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="mr-1 size-4" />
                 Add Item
               </Button>
             </div>
@@ -319,7 +319,7 @@ export function CreateInvoiceModal({
                           onClick={() => removeItem(item.id)}
                           disabled={items.length === 1}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="size-4" />
                         </Button>
                       </div>
                     </div>
@@ -450,7 +450,7 @@ export function CreateInvoiceModal({
                     <span className="font-medium">${taxAmount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2 border-t">
+                <div className="flex justify-between border-t pt-2">
                   <span className="font-bold">Total:</span>
                   <span className="text-2xl font-bold">
                     ${total.toFixed(2)}
@@ -466,7 +466,7 @@ export function CreateInvoiceModal({
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="mr-2 size-4" />
             Create Invoice
           </Button>
         </DialogFooter>

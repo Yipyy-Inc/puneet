@@ -72,7 +72,7 @@ export function DataTable<T extends object>({
       {/* Search */}
       {searchColumn && (
         <div className="relative max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
           <Input
             placeholder={searchPlaceholder}
             className="pl-8"
@@ -83,7 +83,7 @@ export function DataTable<T extends object>({
       )}
 
       {/* Table */}
-      <div className="rounded-md border overflow-x-auto">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -99,7 +99,7 @@ export function DataTable<T extends object>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="text-center py-8 text-muted-foreground"
+                  className="text-muted-foreground py-8 text-center"
                 >
                   No data found
                 </TableCell>
@@ -123,7 +123,7 @@ export function DataTable<T extends object>({
 
       {/* Results count */}
       {searchTerm && (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           Showing {filteredData.length} of {data.length} results
         </div>
       )}

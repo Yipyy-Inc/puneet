@@ -39,7 +39,10 @@ interface EmailTemplateModalProps {
 
 const BRAND_TEXT_COLOR = getContrastTextColor(facilityBranding.primaryColor);
 
-export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProps) {
+export function EmailTemplateModal({
+  template,
+  onClose,
+}: EmailTemplateModalProps) {
   const [formData, setFormData] = useState({
     name: template?.name || "",
     subject: template?.subject || "",
@@ -77,7 +80,11 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
     },
     [activeField],
   );
-  const insertVariable = useInsertAtCursor(activeRef, activeValue, setActiveValue);
+  const insertVariable = useInsertAtCursor(
+    activeRef,
+    activeValue,
+    setActiveValue,
+  );
 
   return (
     <>
@@ -86,7 +93,8 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
           {template ? "Edit Email Template" : "Create Email Template"}
         </DialogTitle>
         <DialogDescription>
-          Create reusable email templates with dynamic variables and branded preview
+          Create reusable email templates with dynamic variables and branded
+          preview
         </DialogDescription>
       </DialogHeader>
 
@@ -95,7 +103,7 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
           {!previewMode ? (
             <>
               {/* Name + Use Case row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Template Name *</Label>
                   <Input
@@ -108,7 +116,10 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                 </div>
                 <div className="space-y-2">
                   <Label>Use Case</Label>
-                  <Select value={formData.useCase} onValueChange={(v) => update("useCase", v)}>
+                  <Select
+                    value={formData.useCase}
+                    onValueChange={(v) => update("useCase", v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select use case..." />
                     </SelectTrigger>
@@ -126,7 +137,10 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               {/* Category */}
               <div className="space-y-2">
                 <Label>Category *</Label>
-                <Select value={formData.category} onValueChange={(v) => update("category", v)}>
+                <Select
+                  value={formData.category}
+                  onValueChange={(v) => update("category", v)}
+                >
                   <SelectTrigger aria-required="true">
                     <SelectValue />
                   </SelectTrigger>
@@ -179,19 +193,23 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                 <CollapsibleTrigger asChild>
                   <Button variant="outline" className="w-full justify-between">
                     <span className="flex items-center gap-2">
-                      <Gift className="h-4 w-4" />
+                      <Gift className="size-4" />
                       Offer / Promotion Section
                     </span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${offerOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown
+                      className={`size-4 transition-transform ${offerOpen ? `rotate-180` : ""} `}
+                    />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-3 pt-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label className="text-sm">Offer Headline</Label>
                       <Input
                         value={formData.offerHeadline}
-                        onChange={(e) => update("offerHeadline", e.target.value)}
+                        onChange={(e) =>
+                          update("offerHeadline", e.target.value)
+                        }
                         placeholder="e.g., Welcome Offer"
                       />
                     </div>
@@ -209,7 +227,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                     <Label className="text-sm">Offer Description</Label>
                     <Input
                       value={formData.offerDescription}
-                      onChange={(e) => update("offerDescription", e.target.value)}
+                      onChange={(e) =>
+                        update("offerDescription", e.target.value)
+                      }
                       placeholder="e.g., 10% off your first booking"
                     />
                   </div>
@@ -218,7 +238,9 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                     <Input
                       type="number"
                       value={formData.offerExpiryDays}
-                      onChange={(e) => update("offerExpiryDays", e.target.value)}
+                      onChange={(e) =>
+                        update("offerExpiryDays", e.target.value)
+                      }
                       placeholder="e.g., 30"
                       className="w-32"
                     />
@@ -228,12 +250,12 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
 
               {/* CTA Button Section */}
               <Card>
-                <CardContent className="pt-4 space-y-3">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                <CardContent className="space-y-3 pt-4">
+                  <Label className="flex items-center gap-1.5 text-sm font-medium">
                     <MousePointerClick className="h-3.5 w-3.5" />
                     Call-to-Action Button
                   </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label className="text-xs">Button Text</Label>
                       <Input
@@ -261,49 +283,69 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                 className="h-2"
                 style={{ backgroundColor: facilityBranding.primaryColor }}
               />
-              <CardContent className="pt-4 space-y-4">
+              <CardContent className="space-y-4 pt-4">
                 {/* Logo */}
-                <div className="flex items-center gap-3 pb-3 border-b">
+                <div className="flex items-center gap-3 border-b pb-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold"
-                    style={{ backgroundColor: facilityBranding.primaryColor, color: BRAND_TEXT_COLOR }}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold"
+                    style={{
+                      backgroundColor: facilityBranding.primaryColor,
+                      color: BRAND_TEXT_COLOR,
+                    }}
                   >
                     {facilityBranding.fromName.charAt(0)}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{facilityBranding.fromName}</div>
-                    <div className="text-xs text-muted-foreground">{facilityBranding.replyToEmail}</div>
+                    <div className="text-sm font-medium">
+                      {facilityBranding.fromName}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
+                      {facilityBranding.replyToEmail}
+                    </div>
                   </div>
                 </div>
 
                 {/* Subject */}
                 <div>
-                  <Label className="text-xs text-muted-foreground">Subject</Label>
-                  <div className="font-semibold">{formData.subject || "(no subject)"}</div>
+                  <Label className="text-muted-foreground text-xs">
+                    Subject
+                  </Label>
+                  <div className="font-semibold">
+                    {formData.subject || "(no subject)"}
+                  </div>
                 </div>
 
                 {/* Body */}
-                <div className="whitespace-pre-wrap text-sm leading-relaxed py-2">
+                <div className="py-2 text-sm/relaxed whitespace-pre-wrap">
                   {formData.body || "(empty body)"}
                 </div>
 
                 {/* Offer section */}
                 {formData.offerHeadline && (
                   <div
-                    className="rounded-lg p-4 text-center space-y-1"
-                    style={{ backgroundColor: hexToRgba(facilityBranding.primaryColor, 0.06) }}
+                    className="space-y-1 rounded-lg p-4 text-center"
+                    style={{
+                      backgroundColor: hexToRgba(
+                        facilityBranding.primaryColor,
+                        0.06,
+                      ),
+                    }}
                   >
-                    <div className="font-bold text-base">{formData.offerHeadline}</div>
+                    <div className="text-base font-bold">
+                      {formData.offerHeadline}
+                    </div>
                     {formData.offerDescription && (
-                      <div className="text-sm text-muted-foreground">{formData.offerDescription}</div>
+                      <div className="text-muted-foreground text-sm">
+                        {formData.offerDescription}
+                      </div>
                     )}
                     {formData.offerCode && (
-                      <div className="inline-block mt-2 px-4 py-1.5 bg-background border-2 border-dashed rounded font-mono font-bold text-sm">
+                      <div className="bg-background mt-2 inline-block rounded-sm border-2 border-dashed px-4 py-1.5 font-mono text-sm font-bold">
                         {formData.offerCode}
                       </div>
                     )}
                     {formData.offerExpiryDays && (
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="text-muted-foreground mt-1 text-xs">
                         Valid for {formData.offerExpiryDays} days
                       </div>
                     )}
@@ -312,10 +354,13 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
 
                 {/* CTA Button */}
                 {formData.buttonText && (
-                  <div className="text-center py-2">
+                  <div className="py-2 text-center">
                     <span
-                      className="inline-block px-8 py-3 rounded-lg font-semibold text-sm"
-                      style={{ backgroundColor: facilityBranding.primaryColor, color: BRAND_TEXT_COLOR }}
+                      className="inline-block rounded-lg px-8 py-3 text-sm font-semibold"
+                      style={{
+                        backgroundColor: facilityBranding.primaryColor,
+                        color: BRAND_TEXT_COLOR,
+                      }}
                     >
                       {formData.buttonText}
                     </span>
@@ -323,19 +368,24 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
                 )}
 
                 {/* Footer */}
-                <div className="border-t pt-4 space-y-2">
-                  <div className="text-xs text-muted-foreground text-center">
+                <div className="space-y-2 border-t pt-4">
+                  <div className="text-muted-foreground text-center text-xs">
                     {facilityBranding.footerText}
                   </div>
                   <div className="flex justify-center gap-3">
                     {facilityBranding.socialLinks.map((link) => (
-                      <span key={link.platform} className="text-xs text-muted-foreground capitalize">
+                      <span
+                        key={link.platform}
+                        className="text-muted-foreground text-xs capitalize"
+                      >
                         {link.platform}
                       </span>
                     ))}
                   </div>
                   <div className="text-center">
-                    <span className="text-xs text-primary underline">Unsubscribe</span>
+                    <span className="text-primary text-xs underline">
+                      Unsubscribe
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -345,9 +395,12 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
       </ScrollArea>
 
       <DialogFooter>
-        <div className="flex items-center justify-between w-full">
-          <Button variant="outline" onClick={() => setPreviewMode(!previewMode)}>
-            <Eye className="h-4 w-4 mr-2" />
+        <div className="flex w-full items-center justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setPreviewMode(!previewMode)}
+          >
+            <Eye className="mr-2 size-4" />
             {previewMode ? "Edit" : "Preview"}
           </Button>
           <div className="flex gap-2">
@@ -358,7 +411,7 @@ export function EmailTemplateModal({ template, onClose }: EmailTemplateModalProp
               onClick={handleSave}
               disabled={!formData.name || !formData.subject || !formData.body}
             >
-              <Mail className="h-4 w-4 mr-2" />
+              <Mail className="mr-2 size-4" />
               Save Template
             </Button>
           </div>

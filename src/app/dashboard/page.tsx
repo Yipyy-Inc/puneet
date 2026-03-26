@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { facilities } from "@/data/facilities";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -167,33 +174,33 @@ function SystemHealthCard({ overallHealth }: { overallHealth: number }) {
   const getStatusIcon = (status: "operational" | "degraded" | "down") => {
     switch (status) {
       case "operational":
-        return <CheckCircle2 className="h-3.5 w-3.5 text-success" />;
+        return <CheckCircle2 className="text-success h-3.5 w-3.5" />;
       case "degraded":
-        return <AlertCircle className="h-3.5 w-3.5 text-warning" />;
+        return <AlertCircle className="text-warning h-3.5 w-3.5" />;
       case "down":
-        return <XCircle className="h-3.5 w-3.5 text-destructive" />;
+        return <XCircle className="text-destructive h-3.5 w-3.5" />;
     }
   };
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
+        <div className="mb-3 flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               System Health
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">
                 {overallHealth}%
               </h3>
-              <span className="inline-flex items-center text-xs font-medium text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center text-xs font-medium">
                 Operational
               </span>
             </div>
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={{
               background: "linear-gradient(135deg, #fb923c 0%, #f97316 100%)",
             }}
@@ -205,14 +212,14 @@ function SystemHealthCard({ overallHealth }: { overallHealth: number }) {
           {moduleHealthData.map((module) => (
             <div
               key={module.name}
-              className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+              className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-md px-2 py-1 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <module.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <module.icon className="text-muted-foreground h-3.5 w-3.5" />
                 <span className="text-xs font-medium">{module.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-muted-foreground text-[10px]">
                   {module.uptime}%
                 </span>
                 {getStatusIcon(module.status)}
@@ -233,28 +240,28 @@ function ActiveFacilitiesCard({
   totalFacilities: number;
 }) {
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
+        <div className="mb-3 flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               Active Facilities
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">
                 {activeFacilities}
               </h3>
-              <span className="inline-flex items-center text-xs font-medium text-success">
-                <TrendingUp className="h-3 w-3 mr-0.5" />
+              <span className="text-success inline-flex items-center text-xs font-medium">
+                <TrendingUp className="mr-0.5 h-3 w-3" />
                 +2 new
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               of {totalFacilities} total
             </p>
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={{
               background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
             }}
@@ -263,21 +270,21 @@ function ActiveFacilitiesCard({
           </div>
         </div>
         <div className="space-y-1.5">
-          <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">
+          <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
             Latest Activity
           </p>
           {facilityActivityData.map((facility) => (
             <div
               key={facility.name}
-              className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+              className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-md px-2 py-1 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-                <span className="text-xs font-medium truncate max-w-[120px]">
+                <div className="bg-success h-1.5 w-1.5 animate-pulse rounded-full" />
+                <span className="max-w-[120px] truncate text-xs font-medium">
                   {facility.name}
                 </span>
               </div>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-muted-foreground text-[10px]">
                 {facility.lastActivity}
               </span>
             </div>
@@ -293,40 +300,36 @@ function ReservationsCard({
 }: {
   totalReservations: number;
 }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useHydrated();
 
   // Format number only on client to avoid hydration issues
-  const formattedNumber = isMounted 
+  const formattedNumber = isMounted
     ? totalReservations.toLocaleString("en-US")
     : totalReservations.toString();
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
+        <div className="mb-3 flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               Total Reservations
             </p>
             <div className="flex items-baseline gap-2">
               <h3 className="text-2xl font-bold tracking-tight">
                 {formattedNumber}
               </h3>
-              <span className="inline-flex items-center text-xs font-medium text-success">
-                <TrendingUp className="h-3 w-3 mr-0.5" />
+              <span className="text-success inline-flex items-center text-xs font-medium">
+                <TrendingUp className="mr-0.5 h-3 w-3" />
                 +8.2%
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               vs last month 7,660
             </p>
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={{
               background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
             }}
@@ -335,24 +338,24 @@ function ReservationsCard({
           </div>
         </div>
         <div className="space-y-1.5">
-          <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">
+          <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
             Top Facilities
           </p>
           {topFacilitiesByReservations.map((facility) => (
             <div
               key={facility.name}
-              className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+              className="bg-muted/50 hover:bg-muted flex items-center justify-between rounded-md px-2 py-1 transition-colors"
             >
-              <span className="text-xs font-medium truncate max-w-[120px]">
+              <span className="max-w-[120px] truncate text-xs font-medium">
                 {facility.name}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-medium">
-                  {isMounted 
+                  {isMounted
                     ? facility.reservations.toLocaleString("en-US")
                     : facility.reservations.toString()}
                 </span>
-                <span className="text-[10px] text-success">
+                <span className="text-success text-[10px]">
                   {facility.trend}
                 </span>
               </div>
@@ -386,11 +389,11 @@ function StatCard({
   chart,
 }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden border-0 shadow-card hover:shadow-elevated transition-all duration-300 group">
+    <Card className="hover:shadow-elevated group shadow-card relative overflow-hidden border-0 transition-all duration-300">
       <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
+            <p className="text-muted-foreground mb-1 text-sm font-medium">
               {title}
             </p>
             <div className="flex items-baseline gap-2">
@@ -402,22 +405,22 @@ function StatCard({
                     : changeType === "down"
                       ? "text-destructive"
                       : "text-muted-foreground"
-                }`}
+                } `}
               >
                 {changeType === "up" ? (
-                  <TrendingUp className="h-3 w-3 mr-0.5" />
+                  <TrendingUp className="mr-0.5 h-3 w-3" />
                 ) : changeType === "down" ? (
-                  <TrendingDown className="h-3 w-3 mr-0.5" />
+                  <TrendingDown className="mr-0.5 h-3 w-3" />
                 ) : null}
                 {change}
               </span>
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
             )}
           </div>
           <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl transition-transform duration-300 group-hover:scale-110"
+            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
             style={iconBgStyle}
           >
             <Icon className="h-5 w-5 text-white" />
@@ -531,11 +534,11 @@ export default function DashboardPage() {
   const topPerformers = sortedByRevenue.slice(0, 5);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 bg-background bg-gradient-mesh min-h-screen">
+    <div className="bg-gradient-mesh bg-background min-h-screen flex-1 p-6 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-foreground text-2xl font-bold tracking-tight lg:text-3xl">
             {"Dashboard"}
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -547,7 +550,7 @@ export default function DashboardPage() {
             value={timeRange}
             onValueChange={(v) => setTimeRange(v as typeof timeRange)}
           >
-            <SelectTrigger className="w-36 h-10 rounded-xl border-border/50 bg-card shadow-sm">
+            <SelectTrigger className="border-border/50 bg-card h-10 w-36 rounded-xl shadow-sm">
               <SelectValue placeholder="Time range" />
             </SelectTrigger>
             <SelectContent>
@@ -561,7 +564,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Revenue"
           value={`$${(metrics.totalRevenue / 1000).toFixed(0)}K`}
@@ -588,7 +591,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Portal Switcher - Quick Actions */}
-      <Card className="mb-8 border-0 shadow-card">
+      <Card className="shadow-card mb-8 border-0">
         <CardHeader>
           <CardTitle>Portal Switcher</CardTitle>
           <CardDescription>
@@ -603,7 +606,7 @@ export default function DashboardPage() {
               onClick={switchToFacility}
               disabled={isPending}
             >
-              <Building2 className="mr-2 h-4 w-4" />
+              <Building2 className="mr-2 size-4" />
               Switch to Facility
             </Button>
             <Button
@@ -612,7 +615,7 @@ export default function DashboardPage() {
               onClick={switchToCustomer}
               disabled={isPending}
             >
-              <User className="mr-2 h-4 w-4" />
+              <User className="mr-2 size-4" />
               Switch to Customer
             </Button>
             <Button
@@ -626,7 +629,7 @@ export default function DashboardPage() {
               }}
               disabled={isPending}
             >
-              <Shield className="mr-2 h-4 w-4" />
+              <Shield className="mr-2 size-4" />
               Switch to Admin
             </Button>
           </div>
@@ -634,21 +637,21 @@ export default function DashboardPage() {
       </Card>
 
       {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3 mb-8">
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
         {/* Revenue Chart - Takes 2 columns */}
-        <Card className="lg:col-span-2 border-0 shadow-card">
+        <Card className="shadow-card border-0 lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-semibold">
                 Revenue Overview
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5 text-sm">
                 Monthly revenue and profit trends
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Select defaultValue="monthly">
-                <SelectTrigger className="w-28 h-8 text-xs rounded-lg">
+                <SelectTrigger className="h-8 w-28 rounded-lg text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -658,23 +661,23 @@ export default function DashboardPage() {
                 </SelectContent>
               </Select>
               <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-6 mb-4">
+            <div className="mb-4 flex items-center gap-6">
               <div>
                 <p className="text-2xl font-bold">$788K</p>
-                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-muted-foreground text-xs">Total Revenue</p>
               </div>
-              <div className="h-8 w-px bg-border" />
+              <div className="bg-border h-8 w-px" />
               <div>
-                <p className="text-2xl font-bold text-success">$551K</p>
-                <p className="text-xs text-muted-foreground">Total Profit</p>
+                <p className="text-success text-2xl font-bold">$551K</p>
+                <p className="text-muted-foreground text-xs">Total Profit</p>
               </div>
-              <div className="flex items-center gap-1 ml-auto text-sm text-success">
-                <TrendingUp className="h-4 w-4" />
+              <div className="text-success ml-auto flex items-center gap-1 text-sm">
+                <TrendingUp className="size-4" />
                 <span className="font-medium">+18.2%</span>
                 <span className="text-muted-foreground">vs last year</span>
               </div>
@@ -730,7 +733,7 @@ export default function DashboardPage() {
                         "0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 8px 32px -4px rgba(0, 0, 0, 0.1)",
                     }}
                     formatter={(value: unknown) => [
-                      `$${typeof value === 'number' ? (value || 0).toLocaleString() : '0'}`,
+                      `$${typeof value === "number" ? (value || 0).toLocaleString() : "0"}`,
                     ]}
                   />
                   <Legend
@@ -761,18 +764,18 @@ export default function DashboardPage() {
         </Card>
 
         {/* Activity Donut Chart */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-semibold">
                 Reservation Status
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5 text-sm">
                 Current month breakdown
               </p>
             </div>
             <Select defaultValue="monthly">
-              <SelectTrigger className="w-24 h-8 text-xs rounded-lg">
+              <SelectTrigger className="h-8 w-24 rounded-lg text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -803,19 +806,19 @@ export default function DashboardPage() {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-3xl font-bold">786</p>
-                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-muted-foreground text-xs">Total</p>
               </div>
             </div>
-            <div className="flex justify-center gap-6 mt-4">
+            <div className="mt-4 flex justify-center gap-6">
               {activityData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div
-                    className="w-2.5 h-2.5 rounded-full"
+                    className="h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                   <div>
                     <p className="text-sm font-semibold">{item.value}</p>
-                    <p className="text-xs text-muted-foreground">{item.name}</p>
+                    <p className="text-muted-foreground text-xs">{item.name}</p>
                   </div>
                 </div>
               ))}
@@ -825,21 +828,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Second Row */}
-      <div className="grid gap-6 lg:grid-cols-2 mb-8">
+      <div className="mb-8 grid gap-6 lg:grid-cols-2">
         {/* Reservations Chart */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-lg font-semibold">
                 Reservation Trends
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5 text-sm">
                 <span className="text-success font-medium">+178%</span> growth
                 this year
               </p>
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </CardHeader>
           <CardContent>
@@ -883,18 +886,18 @@ export default function DashboardPage() {
         </Card>
 
         {/* Top Performers */}
-        <Card className="border-0 shadow-card">
+        <Card className="shadow-card border-0">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="text-lg font-semibold">
                 Top Performers
               </CardTitle>
-              <p className="text-sm text-muted-foreground mt-0.5">By revenue</p>
+              <p className="text-muted-foreground mt-0.5 text-sm">By revenue</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="gap-1">
               <Link href="/dashboard/facilities">
                 View All
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="size-4" />
               </Link>
             </Button>
           </CardHeader>
@@ -903,10 +906,10 @@ export default function DashboardPage() {
               {topPerformers.slice(0, 5).map((facility, index) => (
                 <div
                   key={facility.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors"
+                  className="hover:bg-muted/30 flex items-center gap-3 rounded-lg p-2 transition-colors"
                 >
                   <div
-                    className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${
                       index === 0
                         ? "bg-amber-100 text-amber-700"
                         : index === 1
@@ -914,20 +917,20 @@ export default function DashboardPage() {
                           : index === 2
                             ? "bg-orange-100 text-orange-700"
                             : "bg-muted text-muted-foreground"
-                    }`}
+                    } `}
                   >
                     {index + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
                       {facility.name}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       {facility.clients} clients
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-sm">
+                    <p className="text-sm font-semibold">
                       ${(facility.revenue / 1000).toFixed(1)}K
                     </p>
                     <div
@@ -935,7 +938,7 @@ export default function DashboardPage() {
                         facility.growth > 0
                           ? "text-success"
                           : "text-destructive"
-                      }`}
+                      } `}
                     >
                       {facility.growth > 0 ? (
                         <TrendingUp className="h-3 w-3" />
@@ -955,12 +958,12 @@ export default function DashboardPage() {
 
       {/* Facility Cards Grid */}
       <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">All Facilities</h2>
           <Button variant="ghost" size="sm" asChild className="gap-1">
             <Link href="/dashboard/facilities">
               View All {facilities.length}
-              <ArrowUpRight className="h-4 w-4" />
+              <ArrowUpRight className="size-4" />
             </Link>
           </Button>
         </div>
@@ -968,37 +971,37 @@ export default function DashboardPage() {
           {facilityPerformance.slice(0, 8).map((facility) => (
             <Card
               key={facility.id}
-              className="border-0 shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer group"
+              className="hover:shadow-elevated group shadow-card cursor-pointer border-0 transition-all duration-300"
             >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm truncate leading-tight group-hover:text-primary transition-colors">
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="group-hover:text-primary truncate text-sm/tight font-semibold transition-colors">
                       {facility.name}
                     </h3>
-                    <div className="flex items-center gap-1.5 mt-1.5">
+                    <div className="mt-1.5 flex items-center gap-1.5">
                       <Badge
                         variant={
                           facility.status === "active" ? "default" : "secondary"
                         }
-                        className="text-[10px] px-1.5 py-0"
+                        className="px-1.5 py-0 text-[10px]"
                       >
                         {facility.status}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className="text-[10px] px-1.5 py-0"
+                        className="px-1.5 py-0 text-[10px]"
                       >
                         {facility.plan}
                       </Badge>
                     </div>
                   </div>
                   <div
-                    className={`flex items-center justify-center w-7 h-7 rounded-lg ${
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${
                       facility.growth > 0
                         ? "bg-success/10 text-success"
                         : "bg-destructive/10 text-destructive"
-                    }`}
+                    } `}
                   >
                     {facility.growth > 0 ? (
                       <TrendingUp className="h-3.5 w-3.5" />
@@ -1010,29 +1013,37 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div>
                     <p className="text-muted-foreground">Revenue</p>
-                    <p className="font-semibold mt-0.5">
+                    <p className="mt-0.5 font-semibold">
                       ${(facility.revenue / 1000).toFixed(1)}K
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Occupancy</p>
-                    <p className="font-semibold mt-0.5">
+                    <p className="mt-0.5 font-semibold">
                       {facility.occupancy}%
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Growth</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="mt-0.5 flex items-center gap-1">
+                      <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
                         <div
-                          className={`h-full rounded-full ${facility.growth > 0 ? "bg-success" : "bg-destructive"}`}
+                          className={`h-full rounded-full ${
+                            facility.growth > 0
+                              ? `bg-success`
+                              : `bg-destructive`
+                          } `}
                           style={{
                             width: `${Math.min(Math.abs(facility.growth) * 3, 100)}%`,
                           }}
                         />
                       </div>
                       <span
-                        className={`font-semibold ${facility.growth > 0 ? "text-success" : "text-destructive"}`}
+                        className={`font-semibold ${
+                          facility.growth > 0
+                            ? `text-success`
+                            : `text-destructive`
+                        } `}
                       >
                         {facility.growth > 0 ? "+" : ""}
                         {facility.growth}%
@@ -1040,7 +1051,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                <div className="border-border/50 text-muted-foreground mt-3 flex items-center justify-between border-t pt-3 text-xs">
                   <span>
                     {facility.staff} staff • {facility.clients} clients
                   </span>

@@ -245,8 +245,8 @@ export default function CustomerBookingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -257,7 +257,7 @@ export default function CustomerBookingsPage() {
           </div>
           <Button asChild variant="default" size="lg">
             <Link href="/customer/bookings/new">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 size-4" />
               Book a Service
             </Link>
           </Button>
@@ -268,13 +268,13 @@ export default function CustomerBookingsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {upcomingBookings.length}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Confirmed bookings
               </p>
             </CardContent>
@@ -283,13 +283,13 @@ export default function CustomerBookingsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {pastBookings.filter((b) => b.status === "completed").length}
               </div>
-              <p className="text-xs text-muted-foreground">Past bookings</p>
+              <p className="text-muted-foreground text-xs">Past bookings</p>
             </CardContent>
           </Card>
         </div>
@@ -326,22 +326,22 @@ export default function CustomerBookingsPage() {
                           href={`/customer/bookings/${booking.id}`}
                           className="block"
                         >
-                          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                          <Card className="cursor-pointer transition-shadow hover:shadow-lg">
                             <CardContent className="p-6">
                               <div className="flex items-start gap-4">
                                 {/* Pet Photo */}
-                                <div className="flex-shrink-0">
+                                <div className="shrink-0">
                                   {pet?.imageUrl ? (
                                     <Image
                                       src={pet.imageUrl}
                                       alt={pet.name}
                                       width={64}
                                       height={64}
-                                      className="w-16 h-16 rounded-lg object-cover"
+                                      className="h-16 w-16 rounded-lg object-cover"
                                     />
                                   ) : (
-                                    <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                                      <PetIcon className="h-8 w-8 text-primary" />
+                                    <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
+                                      <PetIcon className="text-primary h-8 w-8" />
                                     </div>
                                   )}
                                 </div>
@@ -350,12 +350,12 @@ export default function CustomerBookingsPage() {
                                 <div className="flex-1 space-y-3">
                                   <div className="flex items-start justify-between">
                                     <div>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <ServiceIcon className="h-5 w-5 text-muted-foreground" />
-                                        <h3 className="font-semibold text-lg capitalize">
+                                      <div className="mb-1 flex items-center gap-2">
+                                        <ServiceIcon className="text-muted-foreground h-5 w-5" />
+                                        <h3 className="text-lg font-semibold capitalize">
                                           {booking.service}
                                           {booking.serviceType && (
-                                            <span className="text-muted-foreground font-normal ml-2">
+                                            <span className="text-muted-foreground ml-2 font-normal">
                                               •{" "}
                                               {booking.serviceType.replace(
                                                 /_/g,
@@ -365,7 +365,7 @@ export default function CustomerBookingsPage() {
                                           )}
                                         </h3>
                                       </div>
-                                      <p className="text-sm text-muted-foreground">
+                                      <p className="text-muted-foreground text-sm">
                                         {pet?.name || "Pet"}
                                       </p>
                                     </div>
@@ -377,7 +377,7 @@ export default function CustomerBookingsPage() {
                                           variant="outline"
                                           className="text-xs"
                                         >
-                                          <Clock className="h-3 w-3 mr-1" />
+                                          <Clock className="mr-1 size-3" />
                                           Response in ~24h
                                         </Badge>
                                       )}
@@ -406,7 +406,7 @@ export default function CustomerBookingsPage() {
                                         {sharedNotes.map((note) => (
                                           <blockquote
                                             key={note.id}
-                                            className="text-xs bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded p-2"
+                                            className="rounded-sm border border-blue-200 bg-blue-50 p-2 text-xs dark:border-blue-800 dark:bg-blue-950/20"
                                             aria-label={`Staff note from ${note.createdBy}`}
                                           >
                                             <span className="font-medium">
@@ -419,9 +419,9 @@ export default function CustomerBookingsPage() {
                                     );
                                   })()}
 
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                                     <div className="flex items-center gap-2">
-                                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                                      <Calendar className="text-muted-foreground size-4" />
                                       <div>
                                         <p className="text-muted-foreground">
                                           Date
@@ -432,7 +432,7 @@ export default function CustomerBookingsPage() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <Clock className="h-4 w-4 text-muted-foreground" />
+                                      <Clock className="text-muted-foreground size-4" />
                                       <div>
                                         <p className="text-muted-foreground">
                                           Time
@@ -445,7 +445,7 @@ export default function CustomerBookingsPage() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                                      <MapPin className="text-muted-foreground size-4" />
                                       <div>
                                         <p className="text-muted-foreground">
                                           Location
@@ -456,7 +456,7 @@ export default function CustomerBookingsPage() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                      <DollarSign className="text-muted-foreground size-4" />
                                       <div>
                                         <p className="text-muted-foreground">
                                           Total
@@ -470,7 +470,7 @@ export default function CustomerBookingsPage() {
 
                                   {/* Actions - stop propagation so clicking buttons doesn't navigate */}
                                   <div
-                                    className="flex items-center gap-2 pt-2 border-t"
+                                    className="flex items-center gap-2 border-t pt-2"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {(booking.status === "confirmed" ||
@@ -484,7 +484,7 @@ export default function CustomerBookingsPage() {
                                             handleRescheduleBooking();
                                           }}
                                         >
-                                          <Edit className="h-4 w-4 mr-2" />
+                                          <Edit className="mr-2 size-4" />
                                           Reschedule
                                         </Button>
                                         <Button
@@ -496,7 +496,7 @@ export default function CustomerBookingsPage() {
                                           }}
                                           className="text-destructive hover:text-destructive"
                                         >
-                                          <X className="h-4 w-4 mr-2" />
+                                          <X className="mr-2 size-4" />
                                           Cancel
                                         </Button>
                                       </>
@@ -511,14 +511,14 @@ export default function CustomerBookingsPage() {
                                             "/customer/messages";
                                         }}
                                       >
-                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        <MessageSquare className="mr-2 size-4" />
                                         Message Facility
                                       </Button>
                                     )}
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" size="sm">
-                                          <Download className="h-4 w-4 mr-2" />
+                                          <Download className="mr-2 size-4" />
                                           More
                                         </Button>
                                       </DropdownMenuTrigger>
@@ -526,7 +526,7 @@ export default function CustomerBookingsPage() {
                                         <DropdownMenuItem
                                           onClick={() => handleAddNote(booking)}
                                         >
-                                          <MessageSquare className="h-4 w-4 mr-2" />
+                                          <MessageSquare className="mr-2 size-4" />
                                           Add Note/Message
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
@@ -534,7 +534,7 @@ export default function CustomerBookingsPage() {
                                             handleAddToCalendar(booking)
                                           }
                                         >
-                                          <CalendarIcon className="h-4 w-4 mr-2" />
+                                          <CalendarIcon className="mr-2 size-4" />
                                           Add to Calendar
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
@@ -549,9 +549,9 @@ export default function CustomerBookingsPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
+                  <div className="py-12 text-center">
+                    <Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <h3 className="mb-2 text-lg font-semibold">
                       No upcoming bookings
                     </h3>
                     <p className="text-muted-foreground mb-4">
@@ -559,7 +559,7 @@ export default function CustomerBookingsPage() {
                     </p>
                     <Button asChild>
                       <Link href="/customer/bookings/new">
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="mr-2 size-4" />
                         Book a Service
                       </Link>
                     </Button>
@@ -580,41 +580,41 @@ export default function CustomerBookingsPage() {
                           href={`/customer/bookings/${booking.id}`}
                           className="block"
                         >
-                          <Card className="opacity-75 hover:opacity-90 transition-opacity cursor-pointer">
+                          <Card className="cursor-pointer opacity-75 transition-opacity hover:opacity-90">
                             <CardContent className="p-6">
                               <div className="flex items-start gap-4">
-                                <div className="flex-shrink-0">
+                                <div className="shrink-0">
                                   {pet?.imageUrl ? (
                                     <Image
                                       src={pet.imageUrl}
                                       alt={pet.name}
                                       width={64}
                                       height={64}
-                                      className="w-16 h-16 rounded-lg object-cover"
+                                      className="h-16 w-16 rounded-lg object-cover"
                                     />
                                   ) : (
-                                    <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                                      <PetIcon className="h-8 w-8 text-primary" />
+                                    <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
+                                      <PetIcon className="text-primary h-8 w-8" />
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex-1 space-y-2">
                                   <div className="flex items-start justify-between">
                                     <div>
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <ServiceIcon className="h-5 w-5 text-muted-foreground" />
+                                      <div className="mb-1 flex items-center gap-2">
+                                        <ServiceIcon className="text-muted-foreground h-5 w-5" />
                                         <h3 className="font-semibold capitalize">
                                           {booking.service}
                                         </h3>
                                       </div>
-                                      <p className="text-sm text-muted-foreground">
+                                      <p className="text-muted-foreground text-sm">
                                         {pet?.name || "Pet"} •{" "}
                                         {formatDate(booking.startDate)}
                                       </p>
                                     </div>
                                     {getStatusBadge(booking.status)}
                                   </div>
-                                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="text-muted-foreground flex items-center gap-4 text-sm">
                                     <span>${booking.totalCost.toFixed(2)}</span>
                                     {booking.checkInTime && (
                                       <span>{booking.checkInTime}</span>
@@ -629,9 +629,9 @@ export default function CustomerBookingsPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
+                  <div className="py-12 text-center">
+                    <Clock className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <h3 className="mb-2 text-lg font-semibold">
                       No past bookings
                     </h3>
                     <p className="text-muted-foreground">

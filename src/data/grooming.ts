@@ -796,7 +796,8 @@ export const groomingAppointments: GroomingAppointment[] = [
         id: "adj-001",
         amount: 25,
         reason: "matting-fee",
-        description: "Severe matting on back and legs required extra 30 minutes",
+        description:
+          "Severe matting on back and legs required extra 30 minutes",
         addedBy: "Jessica Martinez",
         addedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         customerNotified: true,

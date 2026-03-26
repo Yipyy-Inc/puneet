@@ -3,20 +3,43 @@
 import { use, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Heart, ChevronDown, ShieldAlert, AlertTriangle, Ban, CheckCircle, Shield } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { playdateAlertLogs, getAlertStatusVariant, formatAlertChannel } from "@/data/marketing";
+import {
+  ArrowLeft,
+  FileText,
+  Heart,
+  ChevronDown,
+  ShieldAlert,
+  AlertTriangle,
+  Ban,
+} from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  playdateAlertLogs,
+  getAlertStatusVariant,
+  formatAlertChannel,
+} from "@/data/marketing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
-import { getYipyyGoForm, getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
+import {
+  getYipyyGoForm,
+  getYipyyGoDisplayStatusForBooking,
+} from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { YipyyGoStaffReviewModal } from "@/components/yipyygo/YipyyGoStaffReviewModal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { checkFormRequirements, getStageLabel, type RequirementStage } from "@/lib/form-requirements";
+import {
+  checkFormRequirements,
+  getStageLabel,
+  type RequirementStage,
+} from "@/lib/form-requirements";
 
 export default function FacilityBookingDetailPage({
   params,
@@ -29,12 +52,12 @@ export default function FacilityBookingDetailPage({
 
   const booking = useMemo(
     () => initialBookings.find((b) => b.id === bookingId),
-    [bookingId]
+    [bookingId],
   );
 
   const client = useMemo(
     () => (booking ? clients.find((c) => c.id === booking.clientId) : null),
-    [booking]
+    [booking],
   );
 
   const pet = useMemo(() => {
@@ -45,14 +68,17 @@ export default function FacilityBookingDetailPage({
 
   const yipyyGoConfig = useMemo(
     () => (booking ? getYipyyGoConfig(booking.facilityId) : null),
-    [booking]
+    [booking],
   );
 
   const petIdForForm = useMemo(() => {
     if (!booking) return undefined;
     return Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
   }, [booking]);
-  const yipyyGoForm = useMemo(() => getYipyyGoForm(bookingId, petIdForForm), [bookingId, petIdForForm]);
+  const yipyyGoForm = useMemo(
+    () => getYipyyGoForm(bookingId, petIdForForm),
+    [bookingId, petIdForForm],
+  );
   const yipyyGoStatus = useMemo(
     () =>
       booking
@@ -61,13 +87,18 @@ export default function FacilityBookingDetailPage({
             service: booking.service,
           })
         : "not_sent",
-    [bookingId, booking]
+    [bookingId, booking],
   );
 
-  const serviceType = booking?.service?.toLowerCase() as "daycare" | "boarding" | "grooming" | "training";
+  const serviceType = booking?.service?.toLowerCase() as
+    | "daycare"
+    | "boarding"
+    | "grooming"
+    | "training";
   const yipyyGoEnabled =
     yipyyGoConfig?.enabled &&
-    yipyyGoConfig?.serviceConfigs?.find((s) => s.serviceType === serviceType)?.enabled;
+    yipyyGoConfig?.serviceConfigs?.find((s) => s.serviceType === serviceType)
+      ?.enabled;
 
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
@@ -82,26 +113,11 @@ export default function FacilityBookingDetailPage({
     return () => window.removeEventListener("hashchange", open);
   }, []);
 
-  if (!booking) {
-    return (
-      <div className="p-6">
-        <p className="text-muted-foreground">Booking not found.</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.push("/facility/dashboard/bookings")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Bookings
-        </Button>
-      </div>
-    );
-  }
-
-  const canReview =
-    yipyyGoEnabled &&
-    (yipyyGoStatus === "submitted" || yipyyGoStatus === "needs_review" || yipyyGoStatus === "approved");
-
   const bookingAlerts = useMemo(() => {
     const petId = pet?.id ?? -1;
     const all = playdateAlertLogs.filter(
-      (a) => a.triggerBookingId === `bk-${bookingId}` || a.triggerPetId === petId
+      (a) =>
+        a.triggerBookingId === `bk-${bookingId}` || a.triggerPetId === petId,
     );
     const sent = all.filter((a) => a.status === "sent");
     const suppressed = all.filter((a) => a.status !== "sent");
@@ -117,11 +133,17 @@ export default function FacilityBookingDetailPage({
 
     // Determine relevant stage based on booking status
     let stage: RequirementStage = "before_booking";
-    if (booking.status === "request_submitted" || booking.status === "waitlisted") {
+    if (
+      booking.status === "request_submitted" ||
+      booking.status === "waitlisted"
+    ) {
       stage = "before_approval";
     } else if (booking.status === "confirmed") {
       stage = "before_checkin";
-    } else if (booking.status === "completed" || booking.status === "cancelled") {
+    } else if (
+      booking.status === "completed" ||
+      booking.status === "cancelled"
+    ) {
       return null; // No requirement checks for completed/cancelled
     }
 
@@ -130,12 +152,34 @@ export default function FacilityBookingDetailPage({
     return { ...check, stage };
   }, [booking]);
 
+  if (!booking) {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">Booking not found.</p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => router.push("/facility/dashboard/bookings")}
+        >
+          <ArrowLeft className="mr-2 size-4" />
+          Back to Bookings
+        </Button>
+      </div>
+    );
+  }
+
+  const canReview =
+    yipyyGoEnabled &&
+    (yipyyGoStatus === "submitted" ||
+      yipyyGoStatus === "needs_review" ||
+      yipyyGoStatus === "approved");
+
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/facility/dashboard/bookings">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
           </Link>
         </Button>
         <div>
@@ -148,41 +192,75 @@ export default function FacilityBookingDetailPage({
 
       {/* 7.1 Form Requirements Banner */}
       {formRequirementsCheck && (
-        <Card className={formRequirementsCheck.hasBlocker ? "border-red-300 bg-red-50/50" : "border-amber-300 bg-amber-50/50"}>
+        <Card
+          className={
+            formRequirementsCheck.hasBlocker
+              ? "border-red-300 bg-red-50/50"
+              : "border-amber-300 bg-amber-50/50"
+          }
+        >
           <CardContent className="py-4">
             <div className="flex items-start gap-3">
               {formRequirementsCheck.hasBlocker ? (
-                <ShieldAlert className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
               )}
-              <div className="flex-1 min-w-0">
-                <h3 className={`text-sm font-semibold ${formRequirementsCheck.hasBlocker ? "text-red-800" : "text-amber-800"}`}>
-                  {formRequirementsCheck.hasBlocker ? "Incomplete Requirements" : "Missing Recommended Forms"}
+              <div className="min-w-0 flex-1">
+                <h3
+                  className={`text-sm font-semibold ${
+                    formRequirementsCheck.hasBlocker
+                      ? `text-red-800`
+                      : `text-amber-800`
+                  } `}
+                >
+                  {formRequirementsCheck.hasBlocker
+                    ? "Incomplete Requirements"
+                    : "Missing Recommended Forms"}
                 </h3>
-                <p className={`text-xs mt-0.5 ${formRequirementsCheck.hasBlocker ? "text-red-700" : "text-amber-700"}`}>
-                  {formRequirementsCheck.missing.length} form{formRequirementsCheck.missing.length !== 1 ? "s" : ""} required{" "}
-                  <span className="font-medium lowercase">{getStageLabel(formRequirementsCheck.stage)}</span>
-                  {" "}· {formRequirementsCheck.totalCompleted}/{formRequirementsCheck.totalRequired} completed
+                <p
+                  className={`mt-0.5 text-xs ${
+                    formRequirementsCheck.hasBlocker
+                      ? `text-red-700`
+                      : `text-amber-700`
+                  } `}
+                >
+                  {formRequirementsCheck.missing.length} form
+                  {formRequirementsCheck.missing.length !== 1 ? "s" : ""}{" "}
+                  required{" "}
+                  <span className="font-medium lowercase">
+                    {getStageLabel(formRequirementsCheck.stage)}
+                  </span>{" "}
+                  · {formRequirementsCheck.totalCompleted}/
+                  {formRequirementsCheck.totalRequired} completed
                 </p>
                 <div className="mt-2 space-y-1.5">
                   {formRequirementsCheck.missing.map((m) => (
-                    <div key={m.formId} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={m.formId}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       {m.enforcement === "block" ? (
-                        <Ban className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                        <Ban className="h-3.5 w-3.5 shrink-0 text-red-500" />
                       ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                       )}
-                      <span className={m.enforcement === "block" ? "text-red-800" : "text-amber-800"}>
+                      <span
+                        className={
+                          m.enforcement === "block"
+                            ? "text-red-800"
+                            : "text-amber-800"
+                        }
+                      >
                         {m.formName}
                       </span>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] h-4 px-1.5 ${
+                        className={`h-4 px-1.5 text-[10px] ${
                           m.enforcement === "block"
-                            ? "bg-red-100 text-red-700 border-red-200"
-                            : "bg-amber-100 text-amber-700 border-amber-200"
-                        }`}
+                            ? "border-red-200 bg-red-100 text-red-700"
+                            : "border-amber-200 bg-amber-100 text-amber-700"
+                        } `}
                       >
                         {m.enforcement === "block" ? "Required" : "Recommended"}
                       </Badge>
@@ -190,8 +268,9 @@ export default function FacilityBookingDetailPage({
                   ))}
                 </div>
                 {formRequirementsCheck.hasBlocker && (
-                  <p className="text-xs text-red-600 mt-2 font-medium">
-                    This booking cannot proceed until all required forms are submitted.
+                  <p className="mt-2 text-xs font-medium text-red-600">
+                    This booking cannot proceed until all required forms are
+                    submitted.
                   </p>
                 )}
               </div>
@@ -219,11 +298,15 @@ export default function FacilityBookingDetailPage({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Dates</span>
-              <span>{booking.startDate} – {booking.endDate}</span>
+              <span>
+                {booking.startDate} – {booking.endDate}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Time</span>
-              <span>{booking.checkInTime ?? "—"} – {booking.checkOutTime ?? "—"}</span>
+              <span>
+                {booking.checkInTime ?? "—"} – {booking.checkOutTime ?? "—"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total</span>
@@ -236,7 +319,7 @@ export default function FacilityBookingDetailPage({
           <Card id="yipyygo">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
+                <FileText className="text-primary size-4" />
                 YipyyGo Pre-Check-In
               </CardTitle>
             </CardHeader>
@@ -246,12 +329,17 @@ export default function FacilityBookingDetailPage({
               </div>
               {(canReview || (yipyyGoEnabled && !yipyyGoForm)) && (
                 <Button onClick={() => setReviewModalOpen(true)}>
-                  {yipyyGoStatus === "approved" ? "View form" : yipyyGoForm ? "Review form" : "Review / complete"}
+                  {yipyyGoStatus === "approved"
+                    ? "View form"
+                    : yipyyGoForm
+                      ? "Review form"
+                      : "Review / complete"}
                 </Button>
               )}
               {yipyyGoEnabled && !yipyyGoForm && (
-                <p className="text-sm text-muted-foreground">
-                  No form submitted yet. You can mark as manually completed from the review screen.
+                <p className="text-muted-foreground text-sm">
+                  No form submitted yet. You can mark as manually completed from
+                  the review screen.
                 </p>
               )}
             </CardContent>
@@ -263,26 +351,41 @@ export default function FacilityBookingDetailPage({
       {bookingAlerts.all.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Heart className="h-4 w-4" />
-              Playdate Alerts Sent: {bookingAlerts.sent.length} owner{bookingAlerts.sent.length !== 1 ? "s" : ""} notified
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Heart className="size-4" />
+              Playdate Alerts Sent: {bookingAlerts.sent.length} owner
+              {bookingAlerts.sent.length !== 1 ? "s" : ""} notified
             </CardTitle>
           </CardHeader>
           <CardContent>
             <Collapsible>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between mb-2">
-                  <span>View {bookingAlerts.all.length} alert{bookingAlerts.all.length !== 1 ? "s" : ""}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mb-2 w-full justify-between"
+                >
+                  <span>
+                    View {bookingAlerts.all.length} alert
+                    {bookingAlerts.all.length !== 1 ? "s" : ""}
+                  </span>
                   <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-2">
                   {bookingAlerts.all.map((alert) => (
-                    <div key={alert.id} className="flex items-center justify-between p-2.5 rounded-lg border text-sm">
+                    <div
+                      key={alert.id}
+                      className="flex items-center justify-between rounded-lg border p-2.5 text-sm"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{alert.recipientCustomerName}</span>
-                        <span className="text-muted-foreground">({alert.recipientPetName})</span>
+                        <span className="font-medium">
+                          {alert.recipientCustomerName}
+                        </span>
+                        <span className="text-muted-foreground">
+                          ({alert.recipientPetName})
+                        </span>
                         <Badge variant="outline" className="text-xs capitalize">
                           {formatAlertChannel(alert.channel)}
                         </Badge>
@@ -293,9 +396,15 @@ export default function FacilityBookingDetailPage({
                     </div>
                   ))}
                   {bookingAlerts.suppressed.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {bookingAlerts.suppressed.length} alert{bookingAlerts.suppressed.length !== 1 ? "s" : ""} suppressed
-                      ({bookingAlerts.suppressed.map((a) => a.reasonSuppressed).filter(Boolean).join("; ")})
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {bookingAlerts.suppressed.length} alert
+                      {bookingAlerts.suppressed.length !== 1 ? "s" : ""}{" "}
+                      suppressed (
+                      {bookingAlerts.suppressed
+                        .map((a) => a.reasonSuppressed)
+                        .filter(Boolean)
+                        .join("; ")}
+                      )
                     </p>
                   )}
                 </div>

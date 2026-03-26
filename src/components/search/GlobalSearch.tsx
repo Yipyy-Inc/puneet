@@ -5,7 +5,11 @@ import { Search, Loader2, Plus, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -59,7 +63,8 @@ function useDebouncedValue<T>(value: T, delayMs: number) {
 }
 
 function groupLabel(entityType: GlobalSearchEntityType) {
-  if (entityType === "pet" || entityType === "customer") return "Pets / Customers";
+  if (entityType === "pet" || entityType === "customer")
+    return "Pets / Customers";
   if (entityType === "booking") return "Bookings";
   return "Invoices";
 }
@@ -90,7 +95,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   ) {
     return (
       <div className={cn("relative w-full max-w-xl", className)}>
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
           ref={ref}
           value={value}
@@ -101,7 +106,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           aria-label="Global search"
         />
         {showShortcutHint && (
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground border rounded px-1.5 py-0.5 bg-background/60">
+          <kbd className="bg-background/60 text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 rounded-sm border px-1.5 py-0.5 text-[10px]">
             /
           </kbd>
         )}
@@ -124,7 +129,7 @@ export function ResultItem({ item, onSelect }: ResultItemProps) {
     >
       <div className="min-w-0">
         <div className="truncate font-medium">{item.primaryText}</div>
-        <div className="truncate text-xs text-muted-foreground">
+        <div className="text-muted-foreground truncate text-xs">
           {item.secondaryText}
         </div>
       </div>
@@ -171,14 +176,14 @@ export function ResultsDropdown({
     <PopoverContent
       align="start"
       sideOffset={8}
-      className="w-[var(--radix-popover-trigger-width)] p-0"
+      className="w-(--radix-popover-trigger-width) p-0"
       // Prevent cmdk focus loss on click (popover handles click-outside)
       onOpenAutoFocus={(e) => e.preventDefault()}
     >
       <Command shouldFilter={false}>
         <CommandList>
           {loading && (
-            <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 px-3 py-3 text-sm">
               <Loader2 className="size-4 animate-spin" />
               Searching…
             </div>
@@ -198,10 +203,9 @@ export function ResultsDropdown({
                 </CommandGroup>
               )}
 
-              {(grouped["Pets / Customers"].length > 0 &&
-                (grouped.Bookings.length > 0 || grouped.Invoices.length > 0)) && (
-                <CommandSeparator />
-              )}
+              {grouped["Pets / Customers"].length > 0 &&
+                (grouped.Bookings.length > 0 ||
+                  grouped.Invoices.length > 0) && <CommandSeparator />}
 
               {grouped.Bookings.length > 0 && (
                 <CommandGroup heading="Bookings">
@@ -215,7 +219,7 @@ export function ResultsDropdown({
                 </CommandGroup>
               )}
 
-              {(grouped.Bookings.length > 0 && grouped.Invoices.length > 0) && (
+              {grouped.Bookings.length > 0 && grouped.Invoices.length > 0 && (
                 <CommandSeparator />
               )}
 
@@ -252,7 +256,10 @@ export function ResultsDropdown({
                 <>
                   <CommandSeparator />
                   <CommandGroup heading="Actions">
-                    <CommandItem value="View all results" onSelect={() => onNavigate(viewAllHref)}>
+                    <CommandItem
+                      value="View all results"
+                      onSelect={() => onNavigate(viewAllHref)}
+                    >
                       <ArrowRight className="size-4" />
                       View all results
                     </CommandItem>
@@ -339,7 +346,9 @@ export function GlobalSearch({
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         const json = (await res.json()) as GlobalSearchResponse;
         setData({
-          results: Array.isArray(json.results) ? json.results.slice(0, limit) : [],
+          results: Array.isArray(json.results)
+            ? json.results.slice(0, limit)
+            : [],
           hasMore: Boolean(json.hasMore),
         });
       } catch (err) {
@@ -396,4 +405,3 @@ export function GlobalSearch({
     </Popover>
   );
 }
-

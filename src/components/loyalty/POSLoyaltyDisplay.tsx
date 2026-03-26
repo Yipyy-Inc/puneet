@@ -41,7 +41,7 @@ export function POSLoyaltyDisplay({
           {(customerTier || customerPoints !== undefined) && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-primary" />
+                <Star className="text-primary size-4" />
                 <span className="text-sm font-medium">Loyalty Status</span>
               </div>
               <div className="flex items-center gap-2">
@@ -64,22 +64,20 @@ export function POSLoyaltyDisplay({
 
           {/* Points Earned This Transaction */}
           {pointsEarned && pointsEarned > 0 && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+            <div className="flex items-center justify-between rounded-lg border border-green-500/20 bg-green-500/10 p-2">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                <TrendingUp className="size-4 text-green-600 dark:text-green-400" />
                 <span className="text-sm font-medium">Points Earned</span>
               </div>
-              <Badge className="bg-green-500">
-                +{pointsEarned} pts
-              </Badge>
+              <Badge className="bg-green-500">+{pointsEarned} pts</Badge>
             </div>
           )}
 
           {/* Reward Applied */}
           {rewardApplied && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <div className="flex items-center justify-between rounded-lg border border-blue-500/20 bg-blue-500/10 p-2">
               <div className="flex items-center gap-2">
-                <Gift className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <Gift className="size-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium">Reward Applied</span>
               </div>
               <div className="text-right">
@@ -90,7 +88,10 @@ export function POSLoyaltyDisplay({
                 )}
                 {rewardApplied.type === "credit" && (
                   <Badge className="bg-blue-500">
-                    ${typeof rewardApplied.value === "number" ? rewardApplied.value.toFixed(2) : rewardApplied.value}
+                    $
+                    {typeof rewardApplied.value === "number"
+                      ? rewardApplied.value.toFixed(2)
+                      : rewardApplied.value}
                   </Badge>
                 )}
               </div>
@@ -98,17 +99,21 @@ export function POSLoyaltyDisplay({
           )}
 
           {/* Tier Discount */}
-          {customerTier?.discountPercentage && customerTier.discountPercentage > 0 && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                <span className="text-sm font-medium">Tier Discount</span>
+          {customerTier?.discountPercentage &&
+            customerTier.discountPercentage > 0 && (
+              <div className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-purple-500/10 p-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm font-medium">Tier Discount</span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="border-purple-500 text-purple-600 dark:text-purple-400"
+                >
+                  {customerTier.discountPercentage}% off
+                </Badge>
               </div>
-              <Badge variant="outline" className="border-purple-500 text-purple-600 dark:text-purple-400">
-                {customerTier.discountPercentage}% off
-              </Badge>
-            </div>
-          )}
+            )}
 
           {/* Redeem Reward Button */}
           {onRedeemReward && customerPoints && customerPoints > 0 && (
@@ -118,7 +123,7 @@ export function POSLoyaltyDisplay({
               className="w-full"
               onClick={onRedeemReward}
             >
-              <Gift className="h-4 w-4 mr-2" />
+              <Gift className="mr-2 size-4" />
               Redeem Rewards
             </Button>
           )}

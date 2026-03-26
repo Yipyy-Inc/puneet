@@ -23,7 +23,8 @@ const PRICING_MODELS: {
   {
     value: "duration_based",
     label: "Duration Based",
-    description: "Price varies by session length. Set tiers per duration option.",
+    description:
+      "Price varies by session length. Set tiers per duration option.",
   },
   {
     value: "per_pet",
@@ -48,7 +49,8 @@ const PRICING_MODELS: {
   {
     value: "addon_only",
     label: "Add-On Only",
-    description: "No standalone price — priced as an add-on to another service.",
+    description:
+      "No standalone price — priced as an add-on to another service.",
   },
 ];
 
@@ -74,20 +76,28 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
     });
   }, [pricing.durationTiers, updatePricing]);
 
-  const removeDurationTier = useCallback((index: number) => {
-    updatePricing({
-      durationTiers: (pricing.durationTiers ?? []).filter((_, i) => i !== index),
-    });
-  }, [pricing.durationTiers, updatePricing]);
+  const removeDurationTier = useCallback(
+    (index: number) => {
+      updatePricing({
+        durationTiers: (pricing.durationTiers ?? []).filter(
+          (_, i) => i !== index,
+        ),
+      });
+    },
+    [pricing.durationTiers, updatePricing],
+  );
 
-  const updateDurationTier = useCallback((
-    index: number,
-    updates: Partial<{ durationMinutes: number; price: number }>,
-  ) => {
-    const next = [...(pricing.durationTiers ?? [])];
-    next[index] = { ...next[index], ...updates };
-    updatePricing({ durationTiers: next });
-  }, [pricing.durationTiers, updatePricing]);
+  const updateDurationTier = useCallback(
+    (
+      index: number,
+      updates: Partial<{ durationMinutes: number; price: number }>,
+    ) => {
+      const next = [...(pricing.durationTiers ?? [])];
+      next[index] = { ...next[index], ...updates };
+      updatePricing({ durationTiers: next });
+    },
+    [pricing.durationTiers, updatePricing],
+  );
 
   const addPeakRule = useCallback(() => {
     const existing = pricing.peakPricingRules ?? [];
@@ -104,13 +114,16 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
     });
   }, [pricing.peakPricingRules, updatePricing]);
 
-  const removePeakRule = useCallback((id: string) => {
-    updatePricing({
-      peakPricingRules: (pricing.peakPricingRules ?? []).filter(
-        (r) => r.id !== id,
-      ),
-    });
-  }, [pricing.peakPricingRules, updatePricing]);
+  const removePeakRule = useCallback(
+    (id: string) => {
+      updatePricing({
+        peakPricingRules: (pricing.peakPricingRules ?? []).filter(
+          (r) => r.id !== id,
+        ),
+      });
+    },
+    [pricing.peakPricingRules, updatePricing],
+  );
 
   return (
     <div className="space-y-6">
@@ -118,11 +131,15 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
       <div className="space-y-3">
         <div>
           <Label className="text-sm font-semibold">Pricing Model</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-muted-foreground mt-0.5 text-xs">
             How this service is charged.
           </p>
         </div>
-        <div role="radiogroup" aria-label="Pricing model" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div
+          role="radiogroup"
+          aria-label="Pricing model"
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
           {PRICING_MODELS.map((model) => (
             <button
               key={model.value}
@@ -131,15 +148,15 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
               aria-checked={pricing.model === model.value}
               onClick={() => updatePricing({ model: model.value })}
               className={cn(
-                "flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all",
+                `flex items-start gap-3 rounded-xl border-2 p-3 text-left transition-all`,
                 pricing.model === model.value
                   ? "border-primary bg-primary/5"
-                  : "border-border hover:border-border/80 hover:bg-accent/30",
+                  : `border-border hover:border-border/80 hover:bg-accent/30`,
               )}
             >
               <DollarSign
                 className={cn(
-                  "h-4 w-4 shrink-0 mt-0.5",
+                  "mt-0.5 size-4 shrink-0",
                   pricing.model === model.value
                     ? "text-primary"
                     : "text-muted-foreground",
@@ -148,7 +165,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
               <div>
                 <p
                   className={cn(
-                    "text-sm font-semibold leading-tight",
+                    "text-sm/tight font-semibold",
                     pricing.model === model.value
                       ? "text-primary"
                       : "text-foreground",
@@ -156,7 +173,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 >
                   {model.label}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {model.description}
                 </p>
               </div>
@@ -173,7 +190,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
           <Label htmlFor="base-price">
             Base Price ($)
             {pricing.model === "duration_based" && (
-              <span className="text-muted-foreground font-normal ml-1 text-xs">
+              <span className="text-muted-foreground ml-1 text-xs font-normal">
                 (fallback if no duration tier matches)
               </span>
             )}
@@ -197,7 +214,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
       {pricing.model === "duration_based" && (
         <div className="space-y-2">
           <Label className="text-sm font-semibold">Duration Tiers</Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Set the price for each available duration.
           </p>
           {(pricing.durationTiers ?? []).map((tier, i) => (
@@ -215,15 +232,19 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 className="w-24"
                 placeholder="60"
               />
-              <span className="text-xs text-muted-foreground shrink-0">min →</span>
-              <span className="text-xs text-muted-foreground shrink-0">$</span>
+              <span className="text-muted-foreground shrink-0 text-xs">
+                min →
+              </span>
+              <span className="text-muted-foreground shrink-0 text-xs">$</span>
               <Input
                 type="number"
                 min={0}
                 step={0.5}
                 value={tier.price}
                 onChange={(e) =>
-                  updateDurationTier(i, { price: parseFloat(e.target.value) || 0 })
+                  updateDurationTier(i, {
+                    price: parseFloat(e.target.value) || 0,
+                  })
                 }
                 className="w-28"
                 placeholder="0.00"
@@ -234,7 +255,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 size="icon-sm"
                 onClick={() => removeDurationTier(i)}
               >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Trash2 className="text-destructive h-3.5 w-3.5" />
               </Button>
             </div>
           ))}
@@ -254,7 +275,7 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
       {pricing.model === "dynamic" && (
         <div className="space-y-2">
           <Label className="text-sm font-semibold">Peak Pricing Rules</Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Adjustments applied on top of the base price for specific periods.
           </p>
           {(pricing.peakPricingRules ?? []).map((rule) => (
@@ -284,18 +305,23 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
                 className="w-20"
                 placeholder="10"
               />
-              <span className="text-xs text-muted-foreground shrink-0">%</span>
+              <span className="text-muted-foreground shrink-0 text-xs">%</span>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => removePeakRule(rule.id)}
               >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Trash2 className="text-destructive h-3.5 w-3.5" />
               </Button>
             </div>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={addPeakRule}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addPeakRule}
+          >
             <Plus className="h-3.5 w-3.5" />
             Add Rule
           </Button>
@@ -308,12 +334,15 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
       <div className="space-y-3">
         <Label className="text-sm font-semibold">Tax & Billing Options</Label>
         <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="taxable" className="text-sm font-medium cursor-pointer">
+              <Label
+                htmlFor="taxable"
+                className="cursor-pointer text-sm font-medium"
+              >
                 Taxable
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Sales tax is applied to this service.
               </p>
             </div>
@@ -323,12 +352,15 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
               onCheckedChange={(taxable) => updatePricing({ taxable })}
             />
           </div>
-          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="tip-allowed" className="text-sm font-medium cursor-pointer">
+              <Label
+                htmlFor="tip-allowed"
+                className="cursor-pointer text-sm font-medium"
+              >
                 Tips Allowed
               </Label>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Clients can add a gratuity tip when paying.
               </p>
             </div>
@@ -338,16 +370,17 @@ export function PricingStep({ data, onChange }: PricingStepProps) {
               onCheckedChange={(tipAllowed) => updatePricing({ tipAllowed })}
             />
           </div>
-          <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+          <div className="border-border bg-card flex items-center justify-between rounded-xl border p-4">
             <div className="space-y-0.5">
               <Label
                 htmlFor="membership-discount"
-                className="text-sm font-medium cursor-pointer"
+                className="cursor-pointer text-sm font-medium"
               >
                 Membership Discount Eligible
               </Label>
-              <p className="text-xs text-muted-foreground">
-                Clients with active memberships can use their discount on this service.
+              <p className="text-muted-foreground text-xs">
+                Clients with active memberships can use their discount on this
+                service.
               </p>
             </div>
             <Switch

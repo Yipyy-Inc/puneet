@@ -30,7 +30,7 @@ import Image from "next/image";
 function SidebarLogo() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center justify-center w-10 h-10">
+      <div className="flex h-10 w-10 items-center justify-center">
         <Image
           src="/yipyy-transparent.png"
           alt="Yipyy Logo"
@@ -39,10 +39,10 @@ function SidebarLogo() {
         />
       </div>
       <div className="flex flex-col">
-        <span className="text-base font-bold text-foreground tracking-tight">
+        <span className="text-foreground text-base font-bold tracking-tight">
           Puneet
         </span>
-        <span className="text-[11px] font-medium text-muted-foreground -mt-0.5">
+        <span className="text-muted-foreground -mt-0.5 text-[11px] font-medium">
           Platform Admin
         </span>
       </div>

@@ -1,16 +1,14 @@
 /**
  * YipyyGo Triggering Logic
- * 
+ *
  * Handles when and how to trigger YipyyGo pre-check-in forms
  * based on booking confirmation and facility configuration.
  */
 
-import type { Booking } from "@/lib/types";
 import type {
   YipyyGoConfig,
   ServiceType,
   DeliveryChannel,
-  TimingConfig,
 } from "@/data/yipyygo-config";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 
@@ -63,7 +61,7 @@ export interface BookingForYipyyGo {
  */
 export function shouldTriggerYipyyGo(
   booking: BookingForYipyyGo,
-  facilityId: number
+  facilityId: number,
 ): YipyyGoTriggerResult {
   // Get facility YipyyGo configuration
   const config = getYipyyGoConfig(facilityId);
@@ -89,7 +87,7 @@ export function shouldTriggerYipyyGo(
   // Check if service is eligible
   const serviceType = mapBookingServiceToYipyyGoService(booking.service);
   const serviceConfig = config.serviceConfigs.find(
-    (sc) => sc.serviceType === serviceType
+    (sc) => sc.serviceType === serviceType,
   );
 
   if (!serviceConfig || !serviceConfig.enabled) {
@@ -108,7 +106,8 @@ export function shouldTriggerYipyyGo(
   }
 
   const now = new Date();
-  const hoursUntilCheckIn = (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const hoursUntilCheckIn =
+    (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
   // Check if booking was created last-minute (inside initial send window)
   const isLastMinute = hoursUntilCheckIn <= config.timing.initialSendTime;
@@ -137,7 +136,11 @@ export function shouldTriggerYipyyGo(
     : calculateScheduledSendTime(checkInDate, config.timing.initialSendTime);
 
   // Generate message
-  const message = generateYipyyGoMessage(booking, config, serviceConfig.requirement);
+  const message = generateYipyyGoMessage(
+    booking,
+    config,
+    serviceConfig.requirement,
+  );
 
   return {
     shouldTrigger: true,
@@ -157,7 +160,7 @@ export function shouldTriggerYipyyGo(
 function generateYipyyGoMessage(
   booking: BookingForYipyyGo,
   config: YipyyGoConfig,
-  requirement: "mandatory" | "optional"
+  requirement: "mandatory" | "optional",
 ): YipyyGoMessage {
   const checkInDate = new Date(booking.startDate);
   const dateStr = checkInDate.toLocaleDateString("en-US", {
@@ -173,9 +176,7 @@ function generateYipyyGoMessage(
   const formLink = `/customer/bookings/${booking.id}/yipyygo-form`;
 
   const requirementText =
-    requirement === "mandatory"
-      ? "required"
-      : "recommended";
+    requirement === "mandatory" ? "required" : "recommended";
 
   const subject = `Complete Your Pre-Check-In Form - ${booking.petName}'s ${formatServiceName(booking.service)}`;
 
@@ -221,7 +222,7 @@ Completing this form in advance will make your check-in quick and smooth!`;
  * Map booking service string to YipyyGo service type
  */
 function mapBookingServiceToYipyyGoService(
-  service: string
+  service: string,
 ): ServiceType | null {
   const serviceMap: Record<string, ServiceType> = {
     daycare: "daycare",
@@ -255,7 +256,7 @@ function formatServiceName(service: string): string {
  */
 function calculateScheduledSendTime(
   checkInDate: Date,
-  initialSendTimeHours: number
+  initialSendTimeHours: number,
 ): Date {
   const sendTime = new Date(checkInDate);
   sendTime.setHours(sendTime.getHours() - initialSendTimeHours);
@@ -268,7 +269,7 @@ function calculateScheduledSendTime(
  */
 export function isLastMinuteBooking(
   booking: BookingForYipyyGo,
-  initialSendTimeHours: number
+  initialSendTimeHours: number,
 ): boolean {
   const checkInDate = new Date(booking.startDate);
   if (booking.checkInTime) {
@@ -277,7 +278,8 @@ export function isLastMinuteBooking(
   }
 
   const now = new Date();
-  const hoursUntilCheckIn = (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const hoursUntilCheckIn =
+    (checkInDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
   return hoursUntilCheckIn <= initialSendTimeHours;
 }
@@ -291,7 +293,7 @@ export function isLastMinuteBooking(
  * This should be called when a booking status changes to "confirmed"
  */
 export async function processBookingConfirmationForYipyyGo(
-  booking: BookingForYipyyGo
+  booking: BookingForYipyyGo,
 ): Promise<{
   triggered: boolean;
   sent: boolean;
@@ -324,7 +326,7 @@ export async function processBookingConfirmationForYipyyGo(
     await scheduleYipyyGoNotification(
       triggerResult.message,
       booking,
-      triggerResult.scheduledSendTime
+      triggerResult.scheduledSendTime,
     );
     return {
       triggered: true,
@@ -348,7 +350,7 @@ export async function processBookingConfirmationForYipyyGo(
  */
 async function sendYipyyGoNotification(
   message: YipyyGoMessage,
-  booking: BookingForYipyyGo
+  booking: BookingForYipyyGo,
 ): Promise<void> {
   // TODO: Integrate with actual notification service
   // For now, this is a placeholder
@@ -373,7 +375,7 @@ async function sendYipyyGoNotification(
 async function scheduleYipyyGoNotification(
   message: YipyyGoMessage,
   booking: BookingForYipyyGo,
-  sendTime: Date
+  sendTime: Date,
 ): Promise<void> {
   // TODO: Integrate with job queue/scheduler
   // For now, this is a placeholder

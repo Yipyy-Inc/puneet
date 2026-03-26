@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,25 +42,25 @@ const ACTION_META: Record<
     label: "Version Published",
     color: "text-indigo-700",
     bg: "bg-indigo-50 border-indigo-200",
-    icon: <BookOpen className="h-4 w-4 text-indigo-600" />,
+    icon: <BookOpen className="size-4 text-indigo-600" />,
   },
   submission_received: {
     label: "Submission Received",
     color: "text-emerald-700",
     bg: "bg-emerald-50 border-emerald-200",
-    icon: <FileText className="h-4 w-4 text-emerald-600" />,
+    icon: <FileText className="size-4 text-emerald-600" />,
   },
   staff_profile_edit: {
     label: "Profile Edit",
     color: "text-amber-700",
     bg: "bg-amber-50 border-amber-200",
-    icon: <UserPen className="h-4 w-4 text-amber-600" />,
+    icon: <UserPen className="size-4 text-amber-600" />,
   },
   merge_decision: {
     label: "Merge Decision",
     color: "text-violet-700",
     bg: "bg-violet-50 border-violet-200",
-    icon: <GitMerge className="h-4 w-4 text-violet-600" />,
+    icon: <GitMerge className="size-4 text-violet-600" />,
   },
 };
 
@@ -106,23 +106,31 @@ function ChangesTable({
   changes: { field: string; oldValue: string; newValue: string }[];
 }) {
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="overflow-hidden rounded-lg border">
       <table className="w-full text-xs">
         <thead>
           <tr className="bg-muted/40">
-            <th className="text-left p-2 font-medium text-muted-foreground">Field</th>
-            <th className="text-left p-2 font-medium text-muted-foreground">Before</th>
-            <th className="text-left p-2 font-medium text-muted-foreground">After</th>
+            <th className="text-muted-foreground p-2 text-left font-medium">
+              Field
+            </th>
+            <th className="text-muted-foreground p-2 text-left font-medium">
+              Before
+            </th>
+            <th className="text-muted-foreground p-2 text-left font-medium">
+              After
+            </th>
           </tr>
         </thead>
         <tbody>
           {changes.map((c, i) => (
             <tr key={i} className="border-t">
               <td className="p-2 font-medium">{c.field}</td>
-              <td className="p-2 text-muted-foreground">
-                {c.oldValue || <span className="italic text-muted-foreground/50">empty</span>}
+              <td className="text-muted-foreground p-2">
+                {c.oldValue || (
+                  <span className="text-muted-foreground/50 italic">empty</span>
+                )}
               </td>
-              <td className="p-2 font-medium text-foreground">{c.newValue}</td>
+              <td className="text-foreground p-2 font-medium">{c.newValue}</td>
             </tr>
           ))}
         </tbody>
@@ -149,22 +157,34 @@ function OverridesTable({
         </div>
       )}
       {overrides.length > 0 ? (
-        <div className="rounded-lg border overflow-hidden">
+        <div className="overflow-hidden rounded-lg border">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-muted/40">
-                <th className="text-left p-2 font-medium text-muted-foreground">Field</th>
-                <th className="text-left p-2 font-medium text-muted-foreground">Submitted</th>
-                <th className="text-left p-2 font-medium text-muted-foreground">Existing</th>
+                <th className="text-muted-foreground p-2 text-left font-medium">
+                  Field
+                </th>
+                <th className="text-muted-foreground p-2 text-left font-medium">
+                  Submitted
+                </th>
+                <th className="text-muted-foreground p-2 text-left font-medium">
+                  Existing
+                </th>
               </tr>
             </thead>
             <tbody>
               {overrides.map((o, i) => (
                 <tr key={i} className="border-t">
                   <td className="p-2 font-medium">{o.field}</td>
-                  <td className="p-2 font-medium text-foreground">{o.submittedValue}</td>
-                  <td className="p-2 text-muted-foreground">
-                    {o.existingValue || <span className="italic text-muted-foreground/50">empty</span>}
+                  <td className="text-foreground p-2 font-medium">
+                    {o.submittedValue}
+                  </td>
+                  <td className="text-muted-foreground p-2">
+                    {o.existingValue || (
+                      <span className="text-muted-foreground/50 italic">
+                        empty
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -172,7 +192,9 @@ function OverridesTable({
           </table>
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground italic">No field overrides — clean merge</p>
+        <p className="text-muted-foreground text-xs italic">
+          No field overrides — clean merge
+        </p>
       )}
     </div>
   );
@@ -185,35 +207,50 @@ function AuditRow({ entry }: { entry: FormAuditEntry }) {
   const meta = ACTION_META[entry.action];
   const hasDetail =
     (entry.changes && entry.changes.length > 0) ||
-    (entry.overrides !== undefined) ||
+    entry.overrides !== undefined ||
     entry.versionNumber !== undefined;
 
   return (
-    <div className={`rounded-lg border transition-all ${expanded ? meta.bg : "bg-background hover:bg-muted/30"}`}>
+    <div
+      className={`rounded-lg border transition-all ${
+        expanded ? meta.bg : `bg-background hover:bg-muted/30`
+      } `}
+    >
       <button
         type="button"
         onClick={() => hasDetail && setExpanded(!expanded)}
-        className={`w-full flex items-start gap-3 p-3 text-left ${hasDetail ? "cursor-pointer" : "cursor-default"}`}
+        className={`flex w-full items-start gap-3 p-3 text-left ${hasDetail ? `cursor-pointer` : `cursor-default`} `}
       >
         {/* timeline dot */}
-        <div className={`mt-0.5 shrink-0 rounded-full p-1.5 border ${meta.bg}`}>
+        <div
+          className={`mt-0.5 shrink-0 rounded-full border p-1.5 ${meta.bg} `}
+        >
           {meta.icon}
         </div>
 
         {/* content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`text-[10px] ${meta.color} border-current/20`}>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${meta.color} border-current/20`}
+            >
               {meta.label}
             </Badge>
-            <span className="text-xs text-muted-foreground">{formatRelative(entry.timestamp)}</span>
+            <span className="text-muted-foreground text-xs">
+              {formatRelative(entry.timestamp)}
+            </span>
           </div>
-          <p className="text-sm font-medium mt-1">{entry.formName ?? entry.formId}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{getDescription(entry)}</p>
+          <p className="mt-1 text-sm font-medium">
+            {entry.formName ?? entry.formId}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {getDescription(entry)}
+          </p>
         </div>
 
         {/* actor chip */}
-        <div className="shrink-0 flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+        <div className="text-muted-foreground mt-0.5 flex shrink-0 items-center gap-1.5 text-xs">
           {entry.actorType === "customer" ? (
             <User className="h-3 w-3" />
           ) : entry.actorType === "system" ? (
@@ -221,60 +258,98 @@ function AuditRow({ entry }: { entry: FormAuditEntry }) {
           ) : (
             <Shield className="h-3 w-3" />
           )}
-          <span className="hidden sm:inline">{entry.actorName ?? String(entry.actorId ?? "System")}</span>
+          <span className="hidden sm:inline">
+            {entry.actorName ?? String(entry.actorId ?? "System")}
+          </span>
         </div>
 
         {/* expand chevron */}
         {hasDetail && (
-          <div className="shrink-0 mt-1 text-muted-foreground">
-            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <div className="text-muted-foreground mt-1 shrink-0">
+            {expanded ? (
+              <ChevronDown className="size-4" />
+            ) : (
+              <ChevronRight className="size-4" />
+            )}
           </div>
         )}
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3 pl-12 space-y-3">
+        <div className="space-y-3 px-3 pb-3 pl-12">
           <Separator />
           {/* Publish detail */}
           {entry.action === "form_version_published" && entry.versionNumber && (
             <div className="flex items-center gap-2 text-xs">
-              <Badge variant="secondary" className="text-[10px]">v{entry.versionNumber}</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                v{entry.versionNumber}
+              </Badge>
               <span className="text-muted-foreground">
-                Published on {formatDate(entry.timestamp)} at {formatTime(entry.timestamp)}
+                Published on {formatDate(entry.timestamp)} at{" "}
+                {formatTime(entry.timestamp)}
               </span>
             </div>
           )}
           {/* Staff edit detail */}
-          {entry.action === "staff_profile_edit" && entry.changes && entry.changes.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Target: <span className="font-medium text-foreground capitalize">{entry.targetType}</span> #{entry.targetId}</span>
-                <span>·</span>
-                <span>{entry.changes.length} field{entry.changes.length > 1 ? "s" : ""} changed</span>
+          {entry.action === "staff_profile_edit" &&
+            entry.changes &&
+            entry.changes.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <span>
+                    Target:{" "}
+                    <span className="text-foreground font-medium capitalize">
+                      {entry.targetType}
+                    </span>{" "}
+                    #{entry.targetId}
+                  </span>
+                  <span>·</span>
+                  <span>
+                    {entry.changes.length} field
+                    {entry.changes.length > 1 ? "s" : ""} changed
+                  </span>
+                </div>
+                <ChangesTable changes={entry.changes} />
               </div>
-              <ChangesTable changes={entry.changes} />
-            </div>
-          )}
+            )}
           {/* Merge detail */}
           {entry.action === "merge_decision" && (
             <div className="space-y-2">
               {entry.relatedCustomerId && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Linked to Customer #{entry.relatedCustomerId}
                   {entry.relatedPetId ? ` · Pet #${entry.relatedPetId}` : ""}
                 </p>
               )}
-              <OverridesTable overrides={entry.overrides ?? []} mergeRule={entry.mergeRule} />
+              <OverridesTable
+                overrides={entry.overrides ?? []}
+                mergeRule={entry.mergeRule}
+              />
             </div>
           )}
           {/* Submission detail */}
           {entry.action === "submission_received" && entry.metadata && (
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>Submission ID: <span className="font-mono font-medium text-foreground">{entry.submissionId}</span></p>
-              {Boolean((entry.metadata as Record<string, unknown>).customerId) && (
-                <p>Customer #{String((entry.metadata as Record<string, unknown>).customerId)}</p>
+            <div className="text-muted-foreground space-y-1 text-xs">
+              <p>
+                Submission ID:{" "}
+                <span className="text-foreground font-mono font-medium">
+                  {entry.submissionId}
+                </span>
+              </p>
+              {Boolean(
+                (entry.metadata as Record<string, unknown>).customerId,
+              ) && (
+                <p>
+                  Customer #
+                  {String(
+                    (entry.metadata as Record<string, unknown>).customerId,
+                  )}
+                </p>
               )}
-              <p>Received: {formatDate(entry.timestamp)} at {formatTime(entry.timestamp)}</p>
+              <p>
+                Received: {formatDate(entry.timestamp)} at{" "}
+                {formatTime(entry.timestamp)}
+              </p>
             </div>
           )}
         </div>
@@ -310,7 +385,7 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
 
   const allEntries = useMemo(
     () => getFormAuditLog({ facilityId }),
-    [facilityId]
+    [facilityId],
   );
 
   const uniqueForms = useMemo(() => {
@@ -323,22 +398,52 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
 
   const filtered = useMemo(() => {
     let list = allEntries;
-    if (actionFilter !== "all") list = list.filter((e) => e.action === actionFilter);
-    if (formFilter !== "all") list = list.filter((e) => e.formId === formFilter);
+    if (actionFilter !== "all")
+      list = list.filter((e) => e.action === actionFilter);
+    if (formFilter !== "all")
+      list = list.filter((e) => e.formId === formFilter);
     return list;
   }, [allEntries, actionFilter, formFilter]);
 
   // Stats
-  const publishCount = allEntries.filter((e) => e.action === "form_version_published").length;
-  const submissionCount = allEntries.filter((e) => e.action === "submission_received").length;
-  const editCount = allEntries.filter((e) => e.action === "staff_profile_edit").length;
-  const mergeCount = allEntries.filter((e) => e.action === "merge_decision").length;
+  const publishCount = allEntries.filter(
+    (e) => e.action === "form_version_published",
+  ).length;
+  const submissionCount = allEntries.filter(
+    (e) => e.action === "submission_received",
+  ).length;
+  const editCount = allEntries.filter(
+    (e) => e.action === "staff_profile_edit",
+  ).length;
+  const mergeCount = allEntries.filter(
+    (e) => e.action === "merge_decision",
+  ).length;
 
   const stats = [
-    { label: "Published", count: publishCount, icon: <BookOpen className="h-4 w-4 text-indigo-500" />, bg: "bg-indigo-50" },
-    { label: "Submissions", count: submissionCount, icon: <FileText className="h-4 w-4 text-emerald-500" />, bg: "bg-emerald-50" },
-    { label: "Profile Edits", count: editCount, icon: <UserPen className="h-4 w-4 text-amber-500" />, bg: "bg-amber-50" },
-    { label: "Merges", count: mergeCount, icon: <GitMerge className="h-4 w-4 text-violet-500" />, bg: "bg-violet-50" },
+    {
+      label: "Published",
+      count: publishCount,
+      icon: <BookOpen className="size-4 text-indigo-500" />,
+      bg: "bg-indigo-50",
+    },
+    {
+      label: "Submissions",
+      count: submissionCount,
+      icon: <FileText className="size-4 text-emerald-500" />,
+      bg: "bg-emerald-50",
+    },
+    {
+      label: "Profile Edits",
+      count: editCount,
+      icon: <UserPen className="size-4 text-amber-500" />,
+      bg: "bg-amber-50",
+    },
+    {
+      label: "Merges",
+      count: mergeCount,
+      icon: <GitMerge className="size-4 text-violet-500" />,
+      bg: "bg-violet-50",
+    },
   ];
 
   // Group by date for timeline effect
@@ -361,23 +466,24 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
+          <Shield className="text-primary h-5 w-5" />
           <h2 className="text-2xl font-bold">Form Audit Trail</h2>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
-          Complete compliance log — every form publish, submission, profile edit, and merge decision.
+        <p className="text-muted-foreground mt-1 text-sm">
+          Complete compliance log — every form publish, submission, profile
+          edit, and merge decision.
         </p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {stats.map((s) => (
           <Card key={s.label} className="border">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`rounded-lg p-2 ${s.bg}`}>{s.icon}</div>
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className={`rounded-lg p-2 ${s.bg} `}>{s.icon}</div>
               <div>
                 <p className="text-2xl font-bold">{s.count}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="text-muted-foreground text-xs">{s.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -388,30 +494,36 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Filter className="h-4 w-4" />
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+              <Filter className="size-4" />
               <span className="font-medium">Filters</span>
             </div>
             <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[180px] h-8 text-xs">
+              <SelectTrigger className="h-8 w-[180px] text-xs">
                 <SelectValue placeholder="All actions" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All actions</SelectItem>
-                <SelectItem value="form_version_published">Version Published</SelectItem>
-                <SelectItem value="submission_received">Submission Received</SelectItem>
+                <SelectItem value="form_version_published">
+                  Version Published
+                </SelectItem>
+                <SelectItem value="submission_received">
+                  Submission Received
+                </SelectItem>
                 <SelectItem value="staff_profile_edit">Profile Edit</SelectItem>
                 <SelectItem value="merge_decision">Merge Decision</SelectItem>
               </SelectContent>
             </Select>
             <Select value={formFilter} onValueChange={setFormFilter}>
-              <SelectTrigger className="w-[220px] h-8 text-xs">
+              <SelectTrigger className="h-8 w-[220px] text-xs">
                 <SelectValue placeholder="All forms" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All forms</SelectItem>
                 {uniqueForms.map(([id, name]) => (
-                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -420,12 +532,15 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
                 variant="ghost"
                 size="sm"
                 className="h-8 text-xs"
-                onClick={() => { setActionFilter("all"); setFormFilter("all"); }}
+                onClick={() => {
+                  setActionFilter("all");
+                  setFormFilter("all");
+                }}
               >
                 Clear filters
               </Button>
             )}
-            <div className="ml-auto text-xs text-muted-foreground">
+            <div className="text-muted-foreground ml-auto text-xs">
               {filtered.length} event{filtered.length !== 1 ? "s" : ""}
             </div>
           </div>
@@ -436,9 +551,9 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+            <Clock className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
             <p className="text-muted-foreground font-medium">No audit events</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               {actionFilter !== "all" || formFilter !== "all"
                 ? "Try adjusting your filters"
                 : "Events will appear here as forms are published and submitted"}
@@ -449,10 +564,12 @@ export function FormAuditTrail({ facilityId = 11 }: FormAuditTrailProps) {
         <div className="space-y-6">
           {groupedByDate.map((group) => (
             <div key={group.date}>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-px flex-1 bg-border" />
-                <span className="text-xs font-medium text-muted-foreground shrink-0">{group.date}</span>
-                <div className="h-px flex-1 bg-border" />
+              <div className="mb-3 flex items-center gap-3">
+                <div className="bg-border h-px flex-1" />
+                <span className="text-muted-foreground shrink-0 text-xs font-medium">
+                  {group.date}
+                </span>
+                <div className="bg-border h-px flex-1" />
               </div>
               <div className="space-y-2">
                 {group.entries.map((entry) => (

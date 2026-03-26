@@ -1,29 +1,32 @@
 /**
  * Multi-Location Loyalty Configuration
- * 
+ *
  * Handles location-specific loyalty settings
  * Supports different configurations per location within a facility
  */
 
-import { FacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
+import {
+  FacilityLoyaltyConfig,
+  getFacilityLoyaltyConfig,
+} from "@/data/facility-loyalty-config";
 
 export interface LocationLoyaltyConfig {
   locationId: number;
   facilityId: number;
   enabled: boolean;
-  
+
   // Override facility defaults if needed
   overridePointsEarning?: boolean;
   overrideTiers?: boolean;
   overrideRewards?: boolean;
   overrideReferrals?: boolean;
-  
+
   // Location-specific settings
   pointsEarning?: any; // PointsEarningRule
   tiers?: any[]; // LoyaltyTierConfig[]
   rewardTypes?: any[]; // RewardTypeConfig[]
   referralProgram?: any; // ReferralProgramConfig
-  
+
   // Location restrictions
   restrictions?: {
     serviceTypes?: string[]; // Only certain service types earn points at this location
@@ -38,11 +41,10 @@ export interface LocationLoyaltyConfig {
  */
 export function getLocationLoyaltyConfig(
   facilityId: number,
-  locationId?: number
+  locationId?: number,
 ): FacilityLoyaltyConfig | null {
-  const { getFacilityLoyaltyConfig } = require("@/data/facility-loyalty-config");
   const facilityConfig = getFacilityLoyaltyConfig(facilityId);
-  
+
   if (!facilityConfig || !facilityConfig.enabled) {
     return null;
   }
@@ -56,7 +58,7 @@ export function getLocationLoyaltyConfig(
   // For now, return facility config (all locations use same config)
   // In production, this would query:
   // SELECT * FROM location_loyalty_configs WHERE location_id = ? AND facility_id = ?
-  
+
   return facilityConfig;
 }
 
@@ -65,7 +67,7 @@ export function getLocationLoyaltyConfig(
  */
 export function isLoyaltyEnabledForLocation(
   facilityId: number,
-  locationId?: number
+  locationId?: number,
 ): boolean {
   const config = getLocationLoyaltyConfig(facilityId, locationId);
   return config !== null && config.enabled === true;
@@ -77,10 +79,10 @@ export function isLoyaltyEnabledForLocation(
  */
 export function getEffectiveLoyaltyConfig(
   facilityId: number,
-  locationId?: number
+  locationId?: number,
 ): FacilityLoyaltyConfig | null {
   const facilityConfig = getLocationLoyaltyConfig(facilityId);
-  
+
   if (!facilityConfig) {
     return null;
   }

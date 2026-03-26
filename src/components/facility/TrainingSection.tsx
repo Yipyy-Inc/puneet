@@ -413,28 +413,28 @@ export function TrainingSection() {
       case "scheduled":
         return (
           <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-            <Calendar className="h-3 w-3 mr-1" />
+            <Calendar className="mr-1 h-3 w-3" />
             Scheduled
           </Badge>
         );
       case "pending":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-            <Hourglass className="h-3 w-3 mr-1" />
+            <Hourglass className="mr-1 h-3 w-3" />
             Pending
           </Badge>
         );
       case "in-progress":
         return (
           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <PlayCircle className="h-3 w-3 mr-1" />
+            <PlayCircle className="mr-1 h-3 w-3" />
             In Progress
           </Badge>
         );
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
+            <CheckCircle className="mr-1 h-3 w-3" />
             Completed
           </Badge>
         );
@@ -519,24 +519,24 @@ export function TrainingSection() {
 
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-primary" />
+            <GraduationCap className="text-primary h-5 w-5" />
             <h3 className="text-lg font-semibold">Training</h3>
             <Badge variant="outline">{todaySessions.length} today</Badge>
           </div>
 
           {/* Filter Toggles */}
           <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <div className="flex rounded-lg border p-1 gap-1 flex-wrap">
+            <Eye className="text-muted-foreground size-4" />
+            <div className="flex flex-wrap gap-1 rounded-lg border p-1">
               <Button
                 size="sm"
                 variant={showScheduled ? "default" : "ghost"}
                 onClick={() => setShowScheduled(!showScheduled)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <Calendar className="h-3 w-3" />
                 Scheduled
@@ -548,7 +548,7 @@ export function TrainingSection() {
                 size="sm"
                 variant={showPending ? "default" : "ghost"}
                 onClick={() => setShowPending(!showPending)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <Hourglass className="h-3 w-3" />
                 Pending
@@ -560,7 +560,7 @@ export function TrainingSection() {
                 size="sm"
                 variant={showInProgress ? "default" : "ghost"}
                 onClick={() => setShowInProgress(!showInProgress)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <PlayCircle className="h-3 w-3" />
                 In Progress
@@ -572,7 +572,7 @@ export function TrainingSection() {
                 size="sm"
                 variant={showCompleted ? "default" : "ghost"}
                 onClick={() => setShowCompleted(!showCompleted)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <CheckCircle className="h-3 w-3" />
                 Completed
@@ -586,7 +586,7 @@ export function TrainingSection() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by class name, trainer, pet, or owner..."
             value={searchQuery}
@@ -596,9 +596,9 @@ export function TrainingSection() {
         </div>
 
         {/* Sessions List */}
-        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+        <div className="max-h-[500px] space-y-2 overflow-y-auto">
           {displayedSessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="text-muted-foreground py-8 text-center text-sm">
               {searchQuery
                 ? "No sessions match your search"
                 : "No training sessions for today"}
@@ -612,23 +612,23 @@ export function TrainingSection() {
               return (
                 <div
                   key={session.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors cursor-pointer`}
+                  className={`flex items-center justify-between rounded-lg border p-3 ${styles.bg} cursor-pointer transition-colors`}
                   onClick={() => handleViewDetails(session)}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div
-                      className={`h-10 w-10 rounded-full ${styles.iconBg} flex items-center justify-center shrink-0`}
+                      className={`h-10 w-10 rounded-full ${styles.iconBg} flex shrink-0 items-center justify-center`}
                     >
-                      <GraduationCap className={`h-5 w-5 ${styles.icon}`} />
+                      <GraduationCap className={`h-5 w-5 ${styles.icon} `} />
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium truncate">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium">
                           {session.className}
                         </p>
                         {getStatusBadge(session.status)}
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
                         <Users className="h-3 w-3" />
                         <span>{sessionEnrollments.length} attendees</span>
                         <span>•</span>
@@ -641,7 +641,7 @@ export function TrainingSection() {
                             ` +${sessionEnrollments.length - 2} more`}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                      <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
                         <Clock className="h-3 w-3" />
                         <span>
                           {formatTime(session.startTime)} -{" "}
@@ -652,11 +652,11 @@ export function TrainingSection() {
                         <span>{session.trainerName}</span>
                         <span>•</span>
                         {isTrainerAvailable(session.trainerId) ? (
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs h-5">
+                          <Badge className="h-5 bg-green-100 text-xs text-green-800 dark:bg-green-900 dark:text-green-200">
                             Available
                           </Badge>
                         ) : (
-                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs h-5">
+                          <Badge className="h-5 bg-red-100 text-xs text-red-800 dark:bg-red-900 dark:text-red-200">
                             Busy
                             {getTrainerCurrentClass(session.trainerId) &&
                               ` - ${getTrainerCurrentClass(session.trainerId)}`}
@@ -665,7 +665,7 @@ export function TrainingSection() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {getActionButton(session)}
                   </div>
                 </div>
@@ -705,14 +705,14 @@ export function TrainingSection() {
             <div className="space-y-6">
               {/* Pet Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Pet Information</h3>
+                <h3 className="mb-3 text-lg font-semibold">Pet Information</h3>
                 <div className="grid grid-cols-1 gap-4">
                   {getSessionEnrollments(selectedSession.attendees).map(
                     (enrollment) => {
                       return (
                         <div
                           key={enrollment.id}
-                          className="flex items-center gap-4 p-4 rounded-lg bg-muted/50"
+                          className="bg-muted/50 flex items-center gap-4 rounded-lg p-4"
                         >
                           <Checkbox
                             checked={arrivedPets.has(enrollment.petId)}
@@ -737,13 +737,13 @@ export function TrainingSection() {
                               className="rounded-full"
                             />
                           ) : (
-                            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                              <PawPrint className="h-6 w-6 text-primary" />
+                            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary h-6 w-6" />
                             </div>
                           )}
                           <div>
                             <p className="font-medium">{enrollment.petName}</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {enrollment.petBreed}
                             </p>
                           </div>
@@ -756,7 +756,7 @@ export function TrainingSection() {
 
               {/* Owner Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">
+                <h3 className="mb-3 text-lg font-semibold">
                   Owner Information
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -765,7 +765,7 @@ export function TrainingSection() {
                       return (
                         <div
                           key={enrollment.id}
-                          className="flex items-center gap-4 p-4 rounded-lg bg-muted/50"
+                          className="bg-muted/50 flex items-center gap-4 rounded-lg p-4"
                         >
                           <Image
                             src="/people/person-2.jpg"
@@ -778,10 +778,10 @@ export function TrainingSection() {
                             <p className="font-medium">
                               {enrollment.ownerName}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {enrollment.ownerEmail}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {enrollment.ownerPhone}
                             </p>
                           </div>
@@ -794,8 +794,8 @@ export function TrainingSection() {
 
               {/* Booking Details */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
-                <div className="p-4 rounded-lg bg-muted/50">
+                <h3 className="mb-3 text-lg font-semibold">Booking Details</h3>
+                <div className="bg-muted/50 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Service</p>
@@ -844,7 +844,7 @@ export function TrainingSection() {
                 {selectedSession?.status === "pending" && (
                   <Button
                     variant="outline"
-                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    className="border-orange-600 text-orange-600 hover:bg-orange-50"
                     onClick={() => revertToScheduled(selectedSession)}
                   >
                     Revert to Scheduled
@@ -854,14 +854,14 @@ export function TrainingSection() {
                   <>
                     <Button
                       variant="outline"
-                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      className="border-orange-600 text-orange-600 hover:bg-orange-50"
                       onClick={() => revertToScheduled(selectedSession)}
                     >
                       Revert to Scheduled
                     </Button>
                     <Button
                       variant="outline"
-                      className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                      className="border-yellow-600 text-yellow-600 hover:bg-yellow-50"
                       onClick={() => revertToPending(selectedSession)}
                     >
                       Revert to Pending
@@ -871,7 +871,7 @@ export function TrainingSection() {
                 {selectedSession?.status === "completed" && (
                   <Button
                     variant="outline"
-                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    className="border-orange-600 text-orange-600 hover:bg-orange-50"
                     onClick={() => revertToScheduled(selectedSession)}
                   >
                     Revert to Scheduled
@@ -887,7 +887,7 @@ export function TrainingSection() {
                 </Button>
                 {selectedSession?.status === "scheduled" && (
                   <Button variant="outline" onClick={handleDetailsCheckIn}>
-                    <Hourglass className="h-4 w-4 mr-2" />
+                    <Hourglass className="mr-2 size-4" />
                     Mark Ready
                   </Button>
                 )}
@@ -900,7 +900,7 @@ export function TrainingSection() {
                       !canStartSession(selectedSession)
                     }
                   >
-                    <PlayCircle className="h-4 w-4 mr-2" />
+                    <PlayCircle className="mr-2 size-4" />
                     {!isTrainerAvailable(selectedSession.trainerId)
                       ? `${selectedSession.trainerName} is Busy`
                       : !canStartSession(selectedSession)
@@ -914,18 +914,18 @@ export function TrainingSection() {
         >
           {selectedSession && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <GraduationCap className="h-6 w-6 text-primary" />
+              <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
+                <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                  <GraduationCap className="text-primary h-6 w-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-lg">
+                    <p className="text-lg font-semibold">
                       {selectedSession.className}
                     </p>
                     {getStatusBadge(selectedSession.status)}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Trainer: {selectedSession.trainerName}
                   </p>
                 </div>
@@ -966,7 +966,7 @@ export function TrainingSection() {
                         return (
                           <div
                             key={enrollment.id}
-                            className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
+                            className="bg-muted/50 flex items-center gap-3 rounded-lg p-2"
                           >
                             <Checkbox
                               checked={arrivedPets.has(enrollment.petId)}
@@ -991,7 +991,7 @@ export function TrainingSection() {
                                 }
                                 className="shrink-0"
                               >
-                                <div className="h-8 w-8 rounded-full overflow-hidden">
+                                <div className="h-8 w-8 overflow-hidden rounded-full">
                                   <Image
                                     src={getPetImage(enrollment.petId)!}
                                     alt={enrollment.petName}
@@ -1010,8 +1010,8 @@ export function TrainingSection() {
                                 }
                                 className="shrink-0"
                               >
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <PawPrint className="h-4 w-4 text-primary" />
+                                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
+                                  <PawPrint className="text-primary size-4" />
                                 </div>
                               </Link>
                             )}
@@ -1022,15 +1022,15 @@ export function TrainingSection() {
                                     ? `/facility/dashboard/clients/${client.id}/pets/${enrollment.petId}`
                                     : "#"
                                 }
-                                className="font-medium text-sm hover:underline"
+                                className="text-sm font-medium hover:underline"
                               >
                                 {enrollment.petName}
                               </Link>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 {enrollment.ownerName} • {enrollment.petBreed}
                               </p>
                             </div>
-                            <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                            <div className="text-muted-foreground ml-auto flex items-center gap-1 text-xs">
                               <Phone className="h-3 w-3" />
                               {enrollment.ownerPhone}
                             </div>

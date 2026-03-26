@@ -6,7 +6,12 @@ import { CalendarClock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +34,10 @@ export function BookingRequestsTopbarDropdown({
   const facilityId = 11;
   const { requests } = useBookingRequestsStore();
   const pendingCount = React.useMemo(
-    () => requests.filter((r) => r.facilityId === facilityId && r.status === "pending").length,
+    () =>
+      requests.filter(
+        (r) => r.facilityId === facilityId && r.status === "pending",
+      ).length,
     [requests, facilityId],
   );
   const badge = formatBadge(pendingCount);
@@ -50,11 +58,11 @@ export function BookingRequestsTopbarDropdown({
                 className={cn("relative h-10 w-10 rounded-xl", className)}
                 data-has-badge={badge ? "true" : "false"}
               >
-                <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                <CalendarClock className="text-muted-foreground h-5 w-5" />
                 {badge ? (
                   <span
                     data-slot="topbar-badge"
-                    className="absolute -right-1 -top-1 min-w-5 h-5 px-1.5 rounded-full bg-destructive text-white text-[10px] leading-5 text-center font-medium"
+                    className="bg-destructive absolute -top-1 -right-1 h-5 min-w-5 rounded-full px-1.5 text-center text-[10px]/5 font-medium text-white"
                   >
                     {badge}
                   </span>
@@ -68,7 +76,7 @@ export function BookingRequestsTopbarDropdown({
         </Tooltip>
       </TooltipProvider>
 
-      <DialogContent className="min-w-7xl w-[95vw] h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="flex h-[90vh] w-[95vw] min-w-7xl flex-col overflow-hidden p-0">
         <DialogTitle className="sr-only">Booking requests</DialogTitle>
         <div className="flex-1 overflow-auto">
           <BookingRequestsPanel variant="card" />
@@ -77,4 +85,3 @@ export function BookingRequestsTopbarDropdown({
     </Dialog>
   );
 }
-

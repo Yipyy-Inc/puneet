@@ -55,7 +55,7 @@ export function ProcessPaymentModal({
 
         <div className="grid gap-4 py-4">
           {/* Payment Summary */}
-          <div className="bg-muted p-4 rounded-lg space-y-2">
+          <div className="bg-muted space-y-2 rounded-lg p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Base Price:</span>
               <span>${booking.basePrice.toFixed(2)}</span>
@@ -66,7 +66,7 @@ export function ProcessPaymentModal({
                 <span>-${booking.discount.toFixed(2)}</span>
               </div>
             )}
-            <div className="border-t pt-2 flex justify-between font-semibold text-lg">
+            <div className="flex justify-between border-t pt-2 text-lg font-semibold">
               <span>Total Amount:</span>
               <span>${booking.totalCost.toFixed(2)}</span>
             </div>
@@ -81,32 +81,32 @@ export function ProcessPaymentModal({
                 setPaymentMethod(value as "cash" | "card")
               }
             >
-              <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
+              <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-4">
                 <RadioGroupItem value="card" id="card-payment" />
                 <Label
                   htmlFor="card-payment"
-                  className="flex-1 cursor-pointer flex items-center gap-3"
+                  className="flex flex-1 cursor-pointer items-center gap-3"
                 >
-                  <CreditCard className="h-5 w-5 text-primary" />
+                  <CreditCard className="text-primary h-5 w-5" />
                   <div>
                     <div className="font-medium">Credit/Debit Card</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Process card payment
                     </div>
                   </div>
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-accent cursor-pointer">
+              <div className="hover:bg-accent flex cursor-pointer items-center space-x-2 rounded-lg border p-4">
                 <RadioGroupItem value="cash" id="cash-payment" />
                 <Label
                   htmlFor="cash-payment"
-                  className="flex-1 cursor-pointer flex items-center gap-3"
+                  className="flex flex-1 cursor-pointer items-center gap-3"
                 >
-                  <Banknote className="h-5 w-5 text-primary" />
+                  <Banknote className="text-primary h-5 w-5" />
                   <div>
                     <div className="font-medium">Cash</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       Cash payment received
                     </div>
                   </div>
@@ -116,7 +116,7 @@ export function ProcessPaymentModal({
           </div>
 
           <Alert>
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className="size-4" />
             <AlertDescription>
               Once confirmed, this booking will be marked as paid and the
               payment method will be recorded.
@@ -129,7 +129,7 @@ export function ProcessPaymentModal({
             Cancel
           </Button>
           <Button onClick={handleConfirm}>
-            <DollarSign className="mr-2 h-4 w-4" />
+            <DollarSign className="mr-2 size-4" />
             Confirm Payment
           </Button>
         </DialogFooter>

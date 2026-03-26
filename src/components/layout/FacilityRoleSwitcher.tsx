@@ -59,7 +59,7 @@ export function FacilityRoleSwitcher() {
     <>
       <DropdownMenuSeparator />
       <DropdownMenuLabel className="flex items-center gap-2">
-        <Shield className="h-4 w-4" />
+        <Shield className="size-4" />
         Role Preview (Demo)
       </DropdownMenuLabel>
       <DropdownMenuSub>
@@ -88,7 +88,7 @@ export function FacilityRoleSwitcher() {
                     </Badge>
                   )}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {FACILITY_ROLE_DESCRIPTIONS[role]}
                 </span>
               </DropdownMenuRadioItem>

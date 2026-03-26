@@ -21,15 +21,21 @@ export function InvoiceLoyaltySection({
   creditApplied,
   tierDiscount,
 }: InvoiceLoyaltySectionProps) {
-  if (!loyaltyPointsEarned && !loyaltyPointsRedeemed && !creditApplied && !discountCode && !tierDiscount) {
+  if (
+    !loyaltyPointsEarned &&
+    !loyaltyPointsRedeemed &&
+    !creditApplied &&
+    !discountCode &&
+    !tierDiscount
+  ) {
     return null;
   }
 
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Star className="h-4 w-4 text-primary" />
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Star className="text-primary size-4" />
           Loyalty & Rewards
         </CardTitle>
       </CardHeader>
@@ -40,9 +46,7 @@ export function InvoiceLoyaltySection({
               <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
               <span className="text-muted-foreground">Points Earned</span>
             </div>
-            <Badge className="bg-green-500">
-              +{loyaltyPointsEarned} pts
-            </Badge>
+            <Badge className="bg-green-500">+{loyaltyPointsEarned} pts</Badge>
           </div>
         )}
 
@@ -52,16 +56,14 @@ export function InvoiceLoyaltySection({
               <Gift className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               <span className="text-muted-foreground">Points Redeemed</span>
             </div>
-            <Badge className="bg-blue-500">
-              -{loyaltyPointsRedeemed} pts
-            </Badge>
+            <Badge className="bg-blue-500">-{loyaltyPointsRedeemed} pts</Badge>
           </div>
         )}
 
         {tierDiscount && tierDiscount > 0 && (
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <Star className="h-3.5 w-3.5 text-primary" />
+              <Star className="text-primary h-3.5 w-3.5" />
               <span className="text-muted-foreground">Tier Discount</span>
             </div>
             <Badge variant="outline" className="border-primary text-primary">
@@ -88,14 +90,12 @@ export function InvoiceLoyaltySection({
               <Gift className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
               <span className="text-muted-foreground">Credit Applied</span>
             </div>
-            <Badge className="bg-green-500">
-              ${creditApplied.toFixed(2)}
-            </Badge>
+            <Badge className="bg-green-500">${creditApplied.toFixed(2)}</Badge>
           </div>
         )}
 
         {rewardRedemptionId && (
-          <div className="pt-2 mt-2 border-t text-xs text-muted-foreground">
+          <div className="text-muted-foreground mt-2 border-t pt-2 text-xs">
             Reward ID: <span className="font-mono">{rewardRedemptionId}</span>
           </div>
         )}

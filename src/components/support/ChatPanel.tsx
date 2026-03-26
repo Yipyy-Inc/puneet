@@ -40,7 +40,11 @@ export function ChatPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
-  const insertVariable = useInsertAtCursor(chatInputRef, newMessage, setNewMessage);
+  const insertVariable = useInsertAtCursor(
+    chatInputRef,
+    newMessage,
+    setNewMessage,
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,22 +94,22 @@ export function ChatPanel({
   // List view when no chat is selected
   if (!selectedChat) {
     return (
-      <Card className="flex flex-col h-full rounded-none border-l border-t-0 border-b-0 border-r-0 shadow-none">
+      <Card className="flex h-full flex-col rounded-none border-t-0 border-r-0 border-b-0 border-l shadow-none">
         {/* Header */}
         <CardHeader className="border-b px-4 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-              <MessageSquare className="h-4 w-4 text-primary" />
+          <div className="mb-3 flex items-center gap-2">
+            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+              <MessageSquare className="text-primary size-4" />
             </div>
             <CardTitle className="text-lg">Live Chat Support</CardTitle>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
+              className="bg-muted/50 border-0 pl-9 focus-visible:ring-1"
             />
           </div>
         </CardHeader>
@@ -115,8 +119,8 @@ export function ChatPanel({
           <ScrollArea className="h-full">
             <div className="p-2">
               {filteredConversations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <MessageSquare className="mx-auto mb-2 h-10 w-10 opacity-50" />
                   <p className="text-sm">No conversations found</p>
                 </div>
               ) : (
@@ -129,40 +133,40 @@ export function ChatPanel({
                     <button
                       key={chat.id}
                       onClick={() => onSelectChat(chat)}
-                      className="w-full p-3 rounded-xl hover:bg-muted/50 transition-all text-left flex items-start gap-3 mb-1 group"
+                      className="group hover:bg-muted/50 mb-1 flex w-full items-start gap-3 rounded-xl p-3 text-left transition-all"
                     >
                       <div className="relative">
-                        <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                        <Avatar className="border-background h-10 w-10 border-2 shadow-sm">
                           <AvatarImage src="" />
                           <AvatarFallback className="bg-gradient-primary text-primary-foreground text-sm font-medium">
                             {getInitials(participantName)}
                           </AvatarFallback>
                         </Avatar>
                         {isActive && (
-                          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-background status-online" />
+                          <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-sm truncate text-foreground">
+                          <span className="text-foreground truncate text-sm font-medium">
                             {participantName}
                           </span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          <span className="text-muted-foreground text-xs whitespace-nowrap">
                             {new Date(chat.updatedAt).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
                           {chat.facility}
                         </p>
-                        <p className="text-sm text-muted-foreground truncate mt-1 group-hover:text-foreground/70 transition-colors">
+                        <p className="text-muted-foreground group-hover:text-foreground/70 mt-1 truncate text-sm transition-colors">
                           {lastMessage?.message || "No messages yet"}
                         </p>
                       </div>
                       {isActive && (
-                        <Badge className="shrink-0 text-xs bg-success/10 text-success hover:bg-success/20 border-0">
+                        <Badge className="bg-success/10 text-success hover:bg-success/20 shrink-0 border-0 text-xs">
                           Active
                         </Badge>
                       )}
@@ -182,68 +186,68 @@ export function ChatPanel({
   const isActive = selectedChat.status === "Active";
 
   return (
-    <Card className="flex flex-col h-full rounded-none border-l border-t-0 border-b-0 border-r-0 shadow-none">
+    <Card className="flex h-full flex-col rounded-none border-t-0 border-r-0 border-b-0 border-l shadow-none">
       {/* Chat Header */}
       <CardHeader className="border-b px-4 py-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 hover:bg-muted"
+            className="hover:bg-muted h-8 w-8 shrink-0"
             onClick={() => onSelectChat(null)}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
           </Button>
           <div className="relative">
-            <Avatar className="h-11 w-11 border-2 border-background shadow-sm">
+            <Avatar className="border-background h-11 w-11 border-2 shadow-sm">
               <AvatarImage src="" />
               <AvatarFallback className="bg-gradient-primary text-primary-foreground font-medium">
                 {getInitials(participantName)}
               </AvatarFallback>
             </Avatar>
             {isActive && (
-              <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-success border-2 border-background status-online" />
+              <span className="status-online border-background bg-success absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2" />
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold truncate text-foreground">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-foreground truncate font-semibold">
               {participantName}
             </h3>
-            <p className="text-sm text-muted-foreground truncate">
+            <p className="text-muted-foreground truncate text-sm">
               {selectedChat.facility}
             </p>
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="mt-4 flex items-center justify-center gap-2">
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-colors"
+            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary h-9 w-9 rounded-full transition-colors"
           >
-            <Phone className="h-4 w-4" />
+            <Phone className="size-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary hover:border-primary/50 transition-colors"
+            className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary h-9 w-9 rounded-full transition-colors"
           >
-            <Video className="h-4 w-4" />
+            <Video className="size-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-muted transition-colors"
+            className="hover:bg-muted h-9 w-9 rounded-full transition-colors"
           >
-            <MoreVertical className="h-4 w-4" />
+            <MoreVertical className="size-4" />
           </Button>
         </div>
       </CardHeader>
 
       {/* Activity Label */}
-      <div className="px-4 py-2 border-b bg-muted/30">
-        <p className="text-xs text-center text-muted-foreground font-medium uppercase tracking-wider">
+      <div className="bg-muted/30 border-b px-4 py-2">
+        <p className="text-muted-foreground text-center text-xs font-medium tracking-wider uppercase">
           Activity
         </p>
       </div>
@@ -251,7 +255,7 @@ export function ChatPanel({
       {/* Messages */}
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full">
-          <div className="p-4 space-y-4">
+          <div className="space-y-4 p-4">
             {selectedChat.messages.map((msg) => {
               const isSupport =
                 msg.sender.includes("Support") || msg.sender.includes("Agent");
@@ -261,12 +265,12 @@ export function ChatPanel({
                 <div
                   key={msg.id}
                   className={cn(
-                    "flex gap-3 animate-fade-in",
+                    "animate-fade-in flex gap-3",
                     isSupport ? "flex-row-reverse" : "flex-row",
                   )}
                 >
                   {!isSupport && (
-                    <Avatar className="h-8 w-8 shrink-0 border border-border shadow-sm">
+                    <Avatar className="border-border h-8 w-8 shrink-0 border shadow-sm">
                       <AvatarImage src="" />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                         {getInitials(senderName)}
@@ -275,16 +279,16 @@ export function ChatPanel({
                   )}
                   <div
                     className={cn(
-                      "flex flex-col max-w-[80%]",
+                      "flex max-w-[80%] flex-col",
                       isSupport ? "items-end" : "items-start",
                     )}
                   >
                     {!isSupport && (
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-foreground">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-foreground text-xs font-medium">
                           {senderName}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {new Date(msg.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -297,13 +301,13 @@ export function ChatPanel({
                         "rounded-2xl px-4 py-2.5 text-sm shadow-sm",
                         isSupport
                           ? "bg-primary text-primary-foreground rounded-br-md"
-                          : "bg-muted text-foreground rounded-bl-md border border-border/50",
+                          : `border-border/50 bg-muted text-foreground rounded-bl-md border`,
                       )}
                     >
                       {msg.message}
                     </div>
                     {isSupport && (
-                      <span className="text-xs text-muted-foreground mt-1">
+                      <span className="text-muted-foreground mt-1 text-xs">
                         {new Date(msg.timestamp).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -320,43 +324,40 @@ export function ChatPanel({
       </CardContent>
 
       {/* Message Input */}
-      <div className="p-4 border-t bg-card">
+      <div className="bg-card border-t p-4">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground h-9 w-9 shrink-0"
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="size-4" />
           </Button>
-          <div className="flex-1 relative">
+          <div className="relative flex-1">
             <Input
               ref={chatInputRef}
               placeholder="Write a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              className="pr-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary"
+              className="bg-muted/50 focus-visible:ring-primary border-0 pr-10 focus-visible:ring-1"
             />
           </div>
-          <VariableInsertDropdown
-            context="general"
-            onInsert={insertVariable}
-          />
+          <VariableInsertDropdown context="general" onInsert={insertVariable} />
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground h-9 w-9 shrink-0"
           >
-            <Smile className="h-4 w-4" />
+            <Smile className="size-4" />
           </Button>
           <Button
             size="icon"
-            className="h-9 w-9 shrink-0 bg-primary hover:bg-primary/90 shadow-sm"
+            className="bg-primary hover:bg-primary/90 h-9 w-9 shrink-0 shadow-sm"
             onClick={handleSend}
             disabled={!newMessage.trim()}
           >
-            <Send className="h-4 w-4" />
+            <Send className="size-4" />
           </Button>
         </div>
       </div>

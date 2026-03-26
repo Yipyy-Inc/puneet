@@ -1,13 +1,16 @@
 /**
  * Training Series Configuration
- * 
+ *
  * Defines the structure for training series (scheduled occurrences of course types)
  */
 
-import { type TrainingCourseType } from "./training-config";
-import { type Trainer } from "@/data/training";
-
-export type SeriesStatus = "draft" | "open" | "closed" | "in-progress" | "completed" | "cancelled";
+export type SeriesStatus =
+  | "draft"
+  | "open"
+  | "closed"
+  | "in-progress"
+  | "completed"
+  | "cancelled";
 
 export interface TrainingSeries {
   id: string;
@@ -58,27 +61,27 @@ export interface TrainingSeriesSession {
 export function calculateSessionDates(
   startDate: string,
   dayOfWeek: number,
-  numberOfWeeks: number
+  numberOfWeeks: number,
 ): string[] {
   const dates: string[] = [];
   const start = new Date(startDate);
-  
+
   // Find the first occurrence of the specified day of week
   const startDay = start.getDay();
   let daysToAdd = (dayOfWeek - startDay + 7) % 7;
   if (daysToAdd === 0 && start.getDay() !== dayOfWeek) {
     daysToAdd = 7; // If it's the same day but we want next week's occurrence
   }
-  
+
   const firstSessionDate = new Date(start);
   firstSessionDate.setDate(start.getDate() + daysToAdd);
-  
+
   for (let i = 0; i < numberOfWeeks; i++) {
     const sessionDate = new Date(firstSessionDate);
     sessionDate.setDate(firstSessionDate.getDate() + i * 7);
     dates.push(sessionDate.toISOString().split("T")[0]);
   }
-  
+
   return dates;
 }
 
@@ -86,14 +89,14 @@ export function calculateSessionDates(
  * Generate session instances for a series
  */
 export function generateSeriesSessions(
-  series: Omit<TrainingSeries, "sessions" | "id" | "createdAt" | "updatedAt">
+  series: Omit<TrainingSeries, "sessions" | "id" | "createdAt" | "updatedAt">,
 ): TrainingSeriesSession[] {
   const sessionDates = calculateSessionDates(
     series.startDate,
     series.dayOfWeek,
-    series.numberOfWeeks
+    series.numberOfWeeks,
   );
-  
+
   return sessionDates.map((date, index) => ({
     id: `session-${series.courseTypeId}-${date}-${index}`,
     seriesId: "", // Will be set when series is created

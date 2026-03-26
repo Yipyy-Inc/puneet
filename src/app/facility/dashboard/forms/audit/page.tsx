@@ -11,11 +11,13 @@ export default function FormAuditPage() {
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
           <Link href="/facility/dashboard/forms">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="size-4" />
           </Link>
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Audit & Compliance</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Audit & Compliance
+          </h2>
           <p className="text-muted-foreground">
             Immutable log of every form change for compliance review.
           </p>

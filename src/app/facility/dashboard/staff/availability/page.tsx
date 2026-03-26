@@ -183,7 +183,10 @@ export default function StaffAvailabilityPage() {
       label: "Type",
       defaultVisible: true,
       render: (request) => (
-        <Badge className={typeColors[request.type] || typeColors.other} variant="secondary">
+        <Badge
+          className={typeColors[request.type] || typeColors.other}
+          variant="secondary"
+        >
           {request.type}
         </Badge>
       ),
@@ -204,7 +207,7 @@ export default function StaffAvailabilityPage() {
       label: "Reason",
       defaultVisible: true,
       render: (request) => (
-        <span className="text-sm text-muted-foreground line-clamp-1">
+        <span className="text-muted-foreground line-clamp-1 text-sm">
           {request.reason}
         </span>
       ),
@@ -214,7 +217,10 @@ export default function StaffAvailabilityPage() {
       label: "Status",
       defaultVisible: true,
       render: (request) => (
-        <Badge className={statusColors[request.status] || statusColors.pending} variant="secondary">
+        <Badge
+          className={statusColors[request.status] || statusColors.pending}
+          variant="secondary"
+        >
           {request.status}
         </Badge>
       ),
@@ -260,13 +266,13 @@ export default function StaffAvailabilityPage() {
             <CardTitle className="text-sm font-medium">
               Staff with Availability
             </CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <User className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {new Set(facilityAvailability.map((a) => a.staffId)).size}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Out of {exampleStaff.length} total staff
             </p>
           </CardContent>
@@ -276,11 +282,11 @@ export default function StaffAvailabilityPage() {
             <CardTitle className="text-sm font-medium">
               Pending Requests
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-yellow-500" />
+            <AlertCircle className="size-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{pendingRequests.length}</div>
-            <p className="text-xs text-muted-foreground">Awaiting review</p>
+            <p className="text-muted-foreground text-xs">Awaiting review</p>
           </CardContent>
         </Card>
         <Card>
@@ -288,11 +294,11 @@ export default function StaffAvailabilityPage() {
             <CardTitle className="text-sm font-medium">
               Upcoming Time Off
             </CardTitle>
-            <Calendar className="h-4 w-4 text-green-500" />
+            <Calendar className="size-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{upcomingApproved.length}</div>
-            <p className="text-xs text-muted-foreground">Approved requests</p>
+            <p className="text-muted-foreground text-xs">Approved requests</p>
           </CardContent>
         </Card>
         <Card>
@@ -300,11 +306,11 @@ export default function StaffAvailabilityPage() {
             <CardTitle className="text-sm font-medium">
               Total Requests
             </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{facilityTimeOff.length}</div>
-            <p className="text-xs text-muted-foreground">All time</p>
+            <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
       </div>
@@ -329,7 +335,7 @@ export default function StaffAvailabilityPage() {
           <div className="flex items-center space-x-2">
             {activeTab === "requests" && (
               <Button onClick={() => setIsTimeOffModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 New Request
               </Button>
             )}
@@ -346,13 +352,13 @@ export default function StaffAvailabilityPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-3 font-medium">Staff</th>
+                      <th className="p-3 text-left font-medium">Staff</th>
                       {dayNames.map((day) => (
-                        <th key={day} className="text-center p-3 font-medium">
+                        <th key={day} className="p-3 text-center font-medium">
                           {day}
                         </th>
                       ))}
-                      <th className="text-right p-3 font-medium">Actions</th>
+                      <th className="p-3 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -361,12 +367,12 @@ export default function StaffAvailabilityPage() {
                       return (
                         <tr
                           key={staff.id}
-                          className="border-b hover:bg-muted/50"
+                          className="hover:bg-muted/50 border-b"
                         >
                           <td className="p-3">
                             <div>
                               <p className="font-medium">{staff.name}</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 {staff.role}
                               </p>
                             </div>
@@ -376,10 +382,10 @@ export default function StaffAvailabilityPage() {
                               (a) => a.dayOfWeek === dayIndex,
                             );
                             return (
-                              <td key={dayIndex} className="text-center p-3">
+                              <td key={dayIndex} className="p-3 text-center">
                                 {dayAvail && dayAvail.isAvailable ? (
                                   <div className="text-xs">
-                                    <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded">
+                                    <span className="inline-block rounded-sm bg-green-100 px-2 py-1 text-green-800">
                                       {dayAvail.startTime}-{dayAvail.endTime}
                                     </span>
                                   </div>
@@ -391,13 +397,13 @@ export default function StaffAvailabilityPage() {
                               </td>
                             );
                           })}
-                          <td className="text-right p-3">
+                          <td className="p-3 text-right">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleEditAvailability(staff.id)}
                             >
-                              <Edit className="h-4 w-4" />
+                              <Edit className="size-4" />
                             </Button>
                           </td>
                         </tr>
@@ -428,7 +434,7 @@ export default function StaffAvailabilityPage() {
                       onClick={() => handleReviewRequest(request)}
                       title="Review Request"
                     >
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="size-4 text-green-500" />
                     </Button>
                   </>
                 )}
@@ -463,10 +469,10 @@ export default function StaffAvailabilityPage() {
             {dayNames.map((day, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-3 border rounded-lg"
+                className="flex items-center gap-4 rounded-lg border p-3"
               >
                 <div className="w-16 font-medium">{day}</div>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
                     checked={availabilityForm[index]?.isAvailable || false}
@@ -479,12 +485,12 @@ export default function StaffAvailabilityPage() {
                         },
                       })
                     }
-                    className="h-4 w-4"
+                    className="size-4"
                   />
                   <span className="text-sm">Available</span>
                 </label>
                 {availabilityForm[index]?.isAvailable && (
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="ml-auto flex items-center gap-2">
                     <Input
                       type="time"
                       value={availabilityForm[index]?.startTime || "09:00"}
@@ -651,11 +657,13 @@ export default function StaffAvailabilityPage() {
 
           <div className="space-y-4 py-4">
             {reviewingRequest && (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="bg-muted/50 space-y-2 rounded-lg p-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Type:</span>
                   <Badge
-                    className={typeColors[reviewingRequest.type] || typeColors.other}
+                    className={
+                      typeColors[reviewingRequest.type] || typeColors.other
+                    }
                     variant="secondary"
                   >
                     {reviewingRequest.type}
@@ -669,7 +677,7 @@ export default function StaffAvailabilityPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Reason:</span>
-                  <span className="text-right max-w-[60%]">
+                  <span className="max-w-[60%] text-right">
                     {reviewingRequest.reason}
                   </span>
                 </div>
@@ -694,13 +702,13 @@ export default function StaffAvailabilityPage() {
                 <SelectContent>
                   <SelectItem value="approved">
                     <span className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="size-4 text-green-500" />
                       Approve
                     </span>
                   </SelectItem>
                   <SelectItem value="denied">
                     <span className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="size-4 text-red-500" />
                       Deny
                     </span>
                   </SelectItem>
@@ -737,12 +745,12 @@ export default function StaffAvailabilityPage() {
             >
               {reviewForm.status === "approved" ? (
                 <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  <CheckCircle2 className="mr-2 size-4" />
                   Approve Request
                 </>
               ) : (
                 <>
-                  <XCircle className="mr-2 h-4 w-4" />
+                  <XCircle className="mr-2 size-4" />
                   Deny Request
                 </>
               )}

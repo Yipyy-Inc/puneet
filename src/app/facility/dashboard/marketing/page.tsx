@@ -110,14 +110,14 @@ export default function MarketingPage() {
             {row.original.variables.length > 0 && (
               <Badge
                 variant="secondary"
-                className="text-xs gap-0.5 px-1.5 py-0"
+                className="gap-0.5 px-1.5 py-0 text-xs"
               >
                 <Braces className="h-2.5 w-2.5" />
                 {row.original.variables.length}
               </Badge>
             )}
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {row.original.subject}
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function MarketingPage() {
       header: "Use Case",
       cell: ({ row }) =>
         row.original.useCase ? (
-          <Badge variant="secondary" className="capitalize text-xs">
+          <Badge variant="secondary" className="text-xs capitalize">
             {row.original.useCase.replace(/_/g, " ")}
           </Badge>
         ) : null,
@@ -166,7 +166,7 @@ export default function MarketingPage() {
               setShowPreviewModal(true);
             }}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           </Button>
           <Button
             variant="ghost"
@@ -178,7 +178,7 @@ export default function MarketingPage() {
               setShowTemplateModal(true);
             }}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             variant="ghost"
@@ -190,7 +190,7 @@ export default function MarketingPage() {
               console.log(`Template "${row.original.name}" copied`);
             }}
           >
-            <Copy className="h-4 w-4" />
+            <Copy className="size-4" />
           </Button>
         </div>
       ),
@@ -205,18 +205,18 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {row.original.isFavorite && (
-            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+            <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />
           )}
           <div>
-            <div className="font-medium flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 font-medium">
               {row.original.name}
               {row.original.isBuiltIn && (
-                <Badge variant="outline" className="text-[10px] py-0 px-1">
+                <Badge variant="outline" className="px-1 py-0 text-[10px]">
                   Built-in
                 </Badge>
               )}
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {row.original.description}
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function MarketingPage() {
               setShowSegmentModal(true);
             }}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             variant="ghost"
@@ -271,7 +271,7 @@ export default function MarketingPage() {
             }}
             aria-label={`Delete segment ${row.original.name}`}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
           </Button>
         </div>
       ),
@@ -286,12 +286,12 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground capitalize flex items-center gap-1.5">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-sm capitalize">
             {row.original.type} Campaign
             {row.original.goal && (
               <Badge
                 variant="outline"
-                className="text-[10px] py-0 px-1 capitalize"
+                className="px-1 py-0 text-[10px] capitalize"
               >
                 {row.original.goal.replace(/_/g, " ")}
               </Badge>
@@ -356,7 +356,7 @@ export default function MarketingPage() {
               setShowCampaignModal(true);
             }}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="size-4" />
           </Button>
           {row.original.status === "draft" && (
             <Button
@@ -366,7 +366,7 @@ export default function MarketingPage() {
                 console.log(`Send campaign "${row.original.name}"`);
               }}
             >
-              <Send className="h-4 w-4" />
+              <Send className="size-4" />
             </Button>
           )}
         </div>
@@ -405,7 +405,7 @@ export default function MarketingPage() {
         <div>
           <div>{row.original.timesUsed} times</div>
           {row.original.maxUses && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               Max: {row.original.maxUses}
             </div>
           )}
@@ -431,7 +431,7 @@ export default function MarketingPage() {
       cell: ({ row }) => (
         <div>
           <div className="font-mono font-semibold">{row.original.code}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {row.original.description}
           </div>
         </div>
@@ -454,7 +454,7 @@ export default function MarketingPage() {
             <Badge variant="outline" className="capitalize">
               {row.original.type}
             </Badge>
-            <div className="text-sm mt-1">{displayValue}</div>
+            <div className="mt-1 text-sm">{displayValue}</div>
           </div>
         );
       },
@@ -466,7 +466,7 @@ export default function MarketingPage() {
         <div>
           <div>{row.original.usedCount} times</div>
           {row.original.usageLimit && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               Limit: {row.original.usageLimit}
             </div>
           )}
@@ -499,7 +499,7 @@ export default function MarketingPage() {
               setShowPromoModal(true);
             }}
           >
-            <Edit className="h-4 w-4" />
+            <Edit className="size-4" />
           </Button>
           <Button
             variant="ghost"
@@ -509,7 +509,7 @@ export default function MarketingPage() {
               console.log(`Promo code "${row.original.code}" copied`);
             }}
           >
-            <Copy className="h-4 w-4" />
+            <Copy className="size-4" />
           </Button>
         </div>
       ),
@@ -517,7 +517,7 @@ export default function MarketingPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -534,31 +534,31 @@ export default function MarketingPage() {
         <div className="overflow-x-auto">
           <TabsList>
             <TabsTrigger value="campaigns">
-              <Send className="h-4 w-4 mr-2" />
+              <Send className="mr-2 size-4" />
               Campaigns
             </TabsTrigger>
             <TabsTrigger value="templates">
-              <Mail className="h-4 w-4 mr-2" />
+              <Mail className="mr-2 size-4" />
               Templates
             </TabsTrigger>
             <TabsTrigger value="segments">
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="mr-2 size-4" />
               Segments
             </TabsTrigger>
             <TabsTrigger value="playdate-alerts">
-              <Heart className="h-4 w-4 mr-2" />
+              <Heart className="mr-2 size-4" />
               Playdate Alerts
             </TabsTrigger>
             <TabsTrigger value="loyalty">
-              <Award className="h-4 w-4 mr-2" />
+              <Award className="mr-2 size-4" />
               Loyalty
             </TabsTrigger>
             <TabsTrigger value="referrals">
-              <Target className="h-4 w-4 mr-2" />
+              <Target className="mr-2 size-4" />
               Referrals
             </TabsTrigger>
             <TabsTrigger value="promos">
-              <Tag className="h-4 w-4 mr-2" />
+              <Tag className="mr-2 size-4" />
               Promo Codes
             </TabsTrigger>
           </TabsList>
@@ -567,7 +567,7 @@ export default function MarketingPage() {
         {/* Campaigns Tab */}
         <TabsContent value="campaigns" className="space-y-4">
           {/* Analytics Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -576,7 +576,7 @@ export default function MarketingPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{campaigns.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {sentCampaigns.length} sent
                 </p>
               </CardContent>
@@ -591,7 +591,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {totalSent.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Across all campaigns
                 </p>
               </CardContent>
@@ -606,7 +606,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {avgOpenRate.toFixed(1)}%
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Across sent campaigns
                 </p>
               </CardContent>
@@ -621,7 +621,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {avgClickRate.toFixed(1)}%
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Of opened emails
                 </p>
               </CardContent>
@@ -633,7 +633,7 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Email & SMS Campaigns</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Create and manage marketing campaigns
                   </p>
                 </div>
@@ -643,7 +643,7 @@ export default function MarketingPage() {
                     setShowCampaignModal(true);
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Campaign
                 </Button>
               </div>
@@ -669,7 +669,7 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Email Templates</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Manage reusable email templates with branded preview
                   </p>
                 </div>
@@ -679,7 +679,7 @@ export default function MarketingPage() {
                     setShowTemplateModal(true);
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Template
                 </Button>
               </div>
@@ -703,7 +703,7 @@ export default function MarketingPage() {
                     <MessageSquare className="h-5 w-5" />
                     Quick Reply Templates
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Pre-written responses for chat and SMS conversations
                   </p>
                 </div>
@@ -712,7 +712,7 @@ export default function MarketingPage() {
                   size="sm"
                   onClick={() => setShowQuickReplyModal(true)}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   New Quick Reply
                 </Button>
               </div>
@@ -723,18 +723,18 @@ export default function MarketingPage() {
                   <button
                     key={reply.name}
                     type="button"
-                    className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer group text-left"
+                    className="group hover:bg-muted/50 cursor-pointer rounded-lg border p-3 text-left"
                     onClick={() =>
                       alert(`Quick reply "${reply.name}" copied to clipboard`)
                     }
                   >
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="mb-1 flex items-center justify-between">
                       <span className="text-sm font-medium">{reply.name}</span>
                       <Badge variant="outline" className="text-xs capitalize">
                         {reply.category}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
+                    <p className="text-muted-foreground line-clamp-2 text-xs">
                       {reply.body}
                     </p>
                   </button>
@@ -751,7 +751,7 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Customer Segments</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Build targeted customer groups with AND/OR filter logic
                   </p>
                 </div>
@@ -785,7 +785,7 @@ export default function MarketingPage() {
                       setShowSegmentModal(true);
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Create Segment
                   </Button>
                 </div>
@@ -810,7 +810,7 @@ export default function MarketingPage() {
         {/* Loyalty Tab */}
         <TabsContent value="loyalty" className="space-y-4">
           {/* Loyalty Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -821,7 +821,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {loyaltySettings.pointsPerDollar} pt / $1
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   100 pts = ${loyaltySettings.pointsValue}
                 </p>
               </CardContent>
@@ -837,7 +837,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {loyaltySettings.tiers.length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Loyalty tiers
                 </p>
               </CardContent>
@@ -853,7 +853,7 @@ export default function MarketingPage() {
                 <div className="text-2xl font-bold">
                   {customerLoyaltyData.length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Enrolled customers
                 </p>
               </CardContent>
@@ -872,7 +872,7 @@ export default function MarketingPage() {
                     0,
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-xs">
                   Lifetime points
                 </p>
               </CardContent>
@@ -885,12 +885,12 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Loyalty Tiers</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Tier benefits and requirements
                   </p>
                 </div>
                 <Button onClick={() => setShowLoyaltyModal(true)}>
-                  <Settings className="h-4 w-4 mr-2" />
+                  <Settings className="mr-2 size-4" />
                   Manage Settings
                 </Button>
               </div>
@@ -900,20 +900,20 @@ export default function MarketingPage() {
                 {loyaltySettings.tiers.map((tier) => (
                   <div
                     key={tier.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex items-center justify-between rounded-lg border p-4"
                     style={{ borderColor: tier.color }}
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-4 h-4 rounded-full"
+                          className="size-4 rounded-full"
                           style={{ backgroundColor: tier.color }}
                         />
                         <div>
-                          <div className="font-semibold text-lg">
+                          <div className="text-lg font-semibold">
                             {tier.name}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-muted-foreground text-sm">
                             {tier.minPoints}+ points required
                           </div>
                         </div>
@@ -927,10 +927,10 @@ export default function MarketingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">
+                      <div className="text-primary text-2xl font-bold">
                         {tier.discountPercentage}%
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         Discount
                       </div>
                     </div>
@@ -944,21 +944,21 @@ export default function MarketingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Achievement Badges</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-1 text-sm">
                 Customer milestones and rewards
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {badges.map((badge) => (
                   <div
                     key={badge.id}
-                    className="flex items-start gap-4 p-4 border rounded-lg"
+                    className="flex items-start gap-4 rounded-lg border p-4"
                   >
                     <div className="text-4xl">{badge.icon}</div>
                     <div className="flex-1">
                       <div className="font-semibold">{badge.name}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                      <div className="text-muted-foreground mt-1 text-sm">
                         {badge.description}
                       </div>
                       {badge.reward && (
@@ -987,7 +987,7 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Referral Codes</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Customer referral program
                   </p>
                 </div>
@@ -996,7 +996,7 @@ export default function MarketingPage() {
                     variant="outline"
                     onClick={() => setShowReferralConfigModal(true)}
                   >
-                    <Settings className="h-4 w-4 mr-2" />
+                    <Settings className="mr-2 size-4" />
                     Configure Program
                   </Button>
                   <Button
@@ -1005,7 +1005,7 @@ export default function MarketingPage() {
                       alert(`New referral code generated: ${newCode}`);
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="mr-2 size-4" />
                     Generate Code
                   </Button>
                 </div>
@@ -1029,12 +1029,12 @@ export default function MarketingPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Promo Codes</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     Discount codes and special offers
                   </p>
                 </div>
                 <Button onClick={() => setShowPromoModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 size-4" />
                   Create Promo Code
                 </Button>
               </div>
@@ -1053,7 +1053,7 @@ export default function MarketingPage() {
 
       {/* Modals */}
       <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <EmailTemplateModal
             template={selectedTemplate}
             onClose={() => {
@@ -1065,7 +1065,7 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showSegmentModal} onOpenChange={setShowSegmentModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <SegmentBuilderModal
             segment={selectedSegment}
             onClose={() => {
@@ -1077,7 +1077,7 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showCampaignModal} onOpenChange={setShowCampaignModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <CampaignBuilderModal
             campaign={selectedCampaign}
             onClose={() => {
@@ -1089,13 +1089,13 @@ export default function MarketingPage() {
       </Dialog>
 
       <Dialog open={showPromoModal} onOpenChange={setShowPromoModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <PromoCodeModal onClose={() => setShowPromoModal(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={showLoyaltyModal} onOpenChange={setShowLoyaltyModal}>
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <LoyaltyBuilderModal onClose={() => setShowLoyaltyModal(false)} />
         </DialogContent>
       </Dialog>
@@ -1104,7 +1104,7 @@ export default function MarketingPage() {
         open={showReferralConfigModal}
         onOpenChange={setShowReferralConfigModal}
       >
-        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <ReferralConfigModal
             onClose={() => setShowReferralConfigModal(false)}
           />
@@ -1113,7 +1113,7 @@ export default function MarketingPage() {
 
       {/* Template Preview Modal */}
       <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
-        <DialogContent className="min-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] min-w-2xl overflow-y-auto">
           {previewTemplate && (
             <>
               <DialogHeader>

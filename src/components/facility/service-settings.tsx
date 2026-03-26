@@ -193,12 +193,12 @@ export function ServiceSettingsComponent({
     }, 0);
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+            <div className="bg-primary/10 text-primary rounded-lg p-2">
               {serviceIcon}
             </div>
             <div>
@@ -214,7 +214,7 @@ export function ServiceSettingsComponent({
         </div>
         <Badge
           variant={settings.enabled ? "default" : "secondary"}
-          className="text-sm px-3 py-1"
+          className="px-3 py-1 text-sm"
         >
           {settings.enabled ? "Active" : "Inactive"}
         </Badge>
@@ -228,22 +228,22 @@ export function ServiceSettingsComponent({
               <CardTitle className="text-sm font-medium">
                 Total Sessions
               </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalSessions}</div>
-              <p className="text-xs text-muted-foreground">All time</p>
+              <p className="text-muted-foreground text-xs">All time</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{upcomingSessions}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Scheduled sessions
               </p>
             </CardContent>
@@ -252,24 +252,24 @@ export function ServiceSettingsComponent({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <BarChart3 className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{completedSessions}</div>
-              <p className="text-xs text-muted-foreground">Finished sessions</p>
+              <p className="text-muted-foreground text-xs">Finished sessions</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 ${totalRevenue.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">From completed</p>
+              <p className="text-muted-foreground text-xs">From completed</p>
             </CardContent>
           </Card>
         </div>
@@ -283,21 +283,21 @@ export function ServiceSettingsComponent({
       >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <Settings className="size-4" />
             General
           </TabsTrigger>
           <TabsTrigger value="locations" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
+            <MapPin className="size-4" />
             Locations
           </TabsTrigger>
           {showPackages && (
             <TabsTrigger value="packages" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
+              <Package className="size-4" />
               Packages
             </TabsTrigger>
           )}
           <TabsTrigger value="sessions" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="size-4" />
             Sessions
           </TabsTrigger>
         </TabsList>
@@ -317,7 +317,7 @@ export function ServiceSettingsComponent({
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="enabled">Enable Service</Label>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Make this service available for booking
                     </p>
                   </div>
@@ -372,7 +372,7 @@ export function ServiceSettingsComponent({
                     }}
                     disabled={!isEditing}
                   />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Standard rate for this service
                   </p>
                 </div>
@@ -403,7 +403,7 @@ export function ServiceSettingsComponent({
                       }
                       disabled={!isEditing}
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Maximum number of pets that can be accommodated
                     </p>
                   </div>
@@ -563,8 +563,8 @@ export function ServiceSettingsComponent({
             </CardHeader>
             <CardContent className="space-y-4">
               {locations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <MapPin className="mx-auto mb-2 h-12 w-12 opacity-50" />
                   <p>No locations available</p>
                   <p className="text-sm">Add locations in facility settings</p>
                 </div>
@@ -573,7 +573,7 @@ export function ServiceSettingsComponent({
                   {locations.map((location) => (
                     <div
                       key={location.name}
-                      className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                      className="hover:bg-accent/50 flex items-start space-x-3 rounded-lg border p-3 transition-colors"
                       data-selected={currentSettings.availableLocations.includes(
                         location.name,
                       )}
@@ -595,11 +595,11 @@ export function ServiceSettingsComponent({
                       <div className="flex-1">
                         <Label
                           htmlFor={`location-${location.name}`}
-                          className="font-medium cursor-pointer"
+                          className="cursor-pointer font-medium"
                         >
                           {location.name}
                         </Label>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {location.address}
                         </p>
                       </div>
@@ -607,8 +607,8 @@ export function ServiceSettingsComponent({
                   ))}
                 </div>
               )}
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <Info className="h-4 w-4" />
+              <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                <Info className="size-4" />
                 Select the locations where this service is available
               </p>
             </CardContent>
@@ -630,7 +630,7 @@ export function ServiceSettingsComponent({
                     size="sm"
                     className="gap-2"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="size-4" />
                     Add Package
                   </Button>
                 )}
@@ -638,8 +638,8 @@ export function ServiceSettingsComponent({
               <CardContent className="space-y-4">
                 {!currentSettings.packages ||
                 currentSettings.packages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Package className="mx-auto mb-2 h-12 w-12 opacity-50" />
                     <p>No packages configured</p>
                     {isEditing && (
                       <p className="text-sm">
@@ -662,7 +662,7 @@ export function ServiceSettingsComponent({
                                       name: e.target.value,
                                     })
                                   }
-                                  className="font-semibold text-lg mb-2"
+                                  className="mb-2 text-lg font-semibold"
                                   placeholder="Package name"
                                 />
                               ) : (
@@ -676,14 +676,14 @@ export function ServiceSettingsComponent({
                                 onClick={() => handleRemovePackage(pkg.id)}
                                 className="text-destructive hover:text-destructive"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="size-4" />
                               </Button>
                             )}
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <DollarSign className="text-muted-foreground size-4" />
                             {isEditing ? (
                               <Input
                                 type="number"
@@ -715,7 +715,7 @@ export function ServiceSettingsComponent({
                               rows={2}
                             />
                           ) : (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-muted-foreground text-sm">
                               {pkg.description}
                             </p>
                           )}
@@ -740,8 +740,8 @@ export function ServiceSettingsComponent({
             </CardHeader>
             <CardContent>
               {currentSettings.sessions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Calendar className="mx-auto mb-2 h-12 w-12 opacity-50" />
                   <p>No sessions scheduled</p>
                 </div>
               ) : (
@@ -749,25 +749,25 @@ export function ServiceSettingsComponent({
                   {currentSettings.sessions.map((session) => (
                     <div
                       key={session.id}
-                      className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
+                      className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-4 transition-colors"
                     >
-                      <div className="flex-1 grid grid-cols-4 gap-4">
+                      <div className="grid flex-1 grid-cols-4 gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Date</p>
+                          <p className="text-muted-foreground text-sm">Date</p>
                           <p className="font-medium">{session.date}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Time</p>
+                          <p className="text-muted-foreground text-sm">Time</p>
                           <p className="font-medium">{session.time}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Staff</p>
+                          <p className="text-muted-foreground text-sm">Staff</p>
                           <p className="font-medium">
                             {session.staff.join(", ")}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Pets</p>
+                          <p className="text-muted-foreground text-sm">Pets</p>
                           <p className="font-medium">
                             {session.pets.length} booked
                           </p>
@@ -794,14 +794,14 @@ export function ServiceSettingsComponent({
       </Tabs>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between border-t pt-4">
+        <div className="text-muted-foreground text-sm">
           {isEditing && "Make changes and click save to apply"}
         </div>
         <div className="flex gap-2">
           {!isEditing ? (
             <Button onClick={handleEdit} className="gap-2">
-              <Edit className="h-4 w-4" />
+              <Edit className="size-4" />
               Edit Settings
             </Button>
           ) : (
@@ -811,11 +811,11 @@ export function ServiceSettingsComponent({
                 onClick={handleCancel}
                 className="gap-2"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
                 Cancel
               </Button>
               <Button onClick={handleSave} className="gap-2">
-                <Save className="h-4 w-4" />
+                <Save className="size-4" />
                 Save Changes
               </Button>
             </>

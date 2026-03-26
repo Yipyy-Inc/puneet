@@ -62,7 +62,7 @@ export function YipyyGoStatusBadge({
 
   return (
     <Badge variant={variant} className={className} title={`YipyyGo: ${label}`}>
-      {showIcon && <Icon className="h-3 w-3 mr-1" />}
+      {showIcon && <Icon className="mr-1 h-3 w-3" />}
       {label}
     </Badge>
   );

@@ -30,8 +30,6 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
-  Wifi,
-  WifiOff,
   Wallet,
   Gift,
 } from "lucide-react";
@@ -100,13 +98,9 @@ import {
   processCloverPayment,
   type CloverPaymentRequest,
 } from "@/lib/clover-terminal-service";
-import {
-  processYipyyPay,
-  type YipyyPayRequest,
-} from "@/lib/yipyy-pay-service";
+import { processYipyyPay, type YipyyPayRequest } from "@/lib/yipyy-pay-service";
 import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
 import { logPaymentAction } from "@/lib/payment-audit";
-import { locations } from "@/data/settings";
 
 interface CartItemWithId extends CartItem {
   id: string;
@@ -116,9 +110,13 @@ export default function POSPage() {
   const searchParams = useSearchParams();
   const { role: facilityRole } = useFacilityRole();
   const currentUserId = getCurrentUserId();
-  const canApplyDiscount = hasPermission(facilityRole, "apply_discount", currentUserId || undefined);
+  const canApplyDiscount = hasPermission(
+    facilityRole,
+    "apply_discount",
+    currentUserId || undefined,
+  );
   const isManager = facilityRole === "manager" || facilityRole === "owner";
-  
+
   const [cart, setCart] = useState<CartItemWithId[]>([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -135,15 +133,20 @@ export default function POSPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedPetId, setSelectedPetId] = useState<number | null>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(
+    null,
+  );
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkSearchQuery, setLinkSearchQuery] = useState("");
-  
+
   // Discount states
   const [cartDiscount, setCartDiscount] = useState<CartDiscount | null>(null);
   const [promoCode, setPromoCode] = useState<string>("");
-  const [appliedPromoCode, setAppliedPromoCode] = useState<PromoCode | null>(null);
-  const [accountDiscount, setAccountDiscount] = useState<AccountDiscount | null>(null);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<PromoCode | null>(
+    null,
+  );
+  const [accountDiscount, setAccountDiscount] =
+    useState<AccountDiscount | null>(null);
 
   // Pre-select client when navigating from client file (e.g. ?clientId=15)
   useEffect(() => {
@@ -172,17 +175,17 @@ export default function POSPage() {
     type: "fixed" as "fixed" | "percent",
     value: 0,
   });
-  
+
   const [cartDiscountForm, setCartDiscountForm] = useState({
     type: "percent" as "percent" | "fixed",
     value: 0,
     reason: "",
   });
-  
+
   const [compItemForm, setCompItemForm] = useState({
     reason: "",
   });
-  
+
   const [editPriceForm, setEditPriceForm] = useState({
     unitPrice: 0,
     discount: 0,
@@ -197,8 +200,8 @@ export default function POSPage() {
   const [paymentForm, setPaymentForm] = useState<{
     method: PaymentMethod;
     splitPayments: boolean;
-    payments: { 
-      method: PaymentMethod; 
+    payments: {
+      method: PaymentMethod;
       amount: number;
       useYipyyPay?: boolean;
       useCloverTerminal?: boolean;
@@ -206,7 +209,11 @@ export default function POSPage() {
       cloverTerminalId?: string;
       tokenizedCardId?: string;
     }[];
-    chargeType: "pay_now" | "add_to_booking" | "charge_to_account" | "charge_to_active_stay";
+    chargeType:
+      | "pay_now"
+      | "add_to_booking"
+      | "charge_to_account"
+      | "charge_to_active_stay";
     selectedBookingId: number | null;
   }>({
     method: "cash",
@@ -215,10 +222,12 @@ export default function POSPage() {
     chargeType: "pay_now",
     selectedBookingId: null,
   });
-  const [isBookingSelectModalOpen, setIsBookingSelectModalOpen] = useState(false);
-  
+  const [isBookingSelectModalOpen, setIsBookingSelectModalOpen] =
+    useState(false);
+
   // Fiserv payment state
-  const [selectedTokenizedCard, setSelectedTokenizedCard] = useState<TokenizedCard | null>(null);
+  const [selectedTokenizedCard, setSelectedTokenizedCard] =
+    useState<TokenizedCard | null>(null);
   const [saveCardToAccount, setSaveCardToAccount] = useState(false);
   const [newCardDetails, setNewCardDetails] = useState({
     number: "",
@@ -228,79 +237,119 @@ export default function POSPage() {
     cardholderName: "",
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  
+
   // Clover terminal state
   const [useCloverTerminal, setUseCloverTerminal] = useState(false);
   const [cloverTerminalId, setCloverTerminalId] = useState<string | null>(null);
-  
+
   // Yipyy Pay / Tap to Pay state
   const [useYipyyPay, setUseYipyyPay] = useState(false);
   const [yipyyPayDeviceId, setYipyyPayDeviceId] = useState<string | null>(null);
-  
+
   // Store Credit and Gift Card state
   const [selectedGiftCardCode, setSelectedGiftCardCode] = useState("");
-  const [selectedGiftCard, setSelectedGiftCard] = useState<{ id: string; balance: number; code: string } | null>(null);
+  const [selectedGiftCard, setSelectedGiftCard] = useState<{
+    id: string;
+    balance: number;
+    code: string;
+  } | null>(null);
   const [storeCreditAmount, setStoreCreditAmount] = useState<number>(0);
-  
+
   // Tap to Pay modal state
   const [isTapToPayModalOpen, setIsTapToPayModalOpen] = useState(false);
-  const [tapToPayStatus, setTapToPayStatus] = useState<"idle" | "processing" | "success" | "failed">("idle");
+  const [tapToPayStatus, setTapToPayStatus] = useState<
+    "idle" | "processing" | "success" | "failed"
+  >("idle");
   const [tapToPayError, setTapToPayError] = useState<string | null>(null);
   const [tapToPayResponse, setTapToPayResponse] = useState<any>(null);
 
   const stats = getRetailStats();
 
   // Calculate subtotal (before any discounts)
-  const subtotal = cart.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-  
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0,
+  );
+
   // Calculate line item discounts
-  const lineItemDiscountTotal = cart.reduce((sum, item) => sum + item.discount, 0);
-  
+  const lineItemDiscountTotal = cart.reduce(
+    (sum, item) => sum + item.discount,
+    0,
+  );
+
   // Calculate cart-wide discount
   let cartDiscountAmount = 0;
   if (cartDiscount) {
     if (cartDiscount.type === "percent") {
-      cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (cartDiscount.value / 100);
+      cartDiscountAmount =
+        (subtotal - lineItemDiscountTotal) * (cartDiscount.value / 100);
     } else if (cartDiscount.type === "fixed") {
-      cartDiscountAmount = Math.min(cartDiscount.value, subtotal - lineItemDiscountTotal);
+      cartDiscountAmount = Math.min(
+        cartDiscount.value,
+        subtotal - lineItemDiscountTotal,
+      );
     } else if (cartDiscount.type === "promo_code" && appliedPromoCode) {
       if (appliedPromoCode.discountType === "percent") {
         const maxDiscount = appliedPromoCode.maxDiscount || Infinity;
         cartDiscountAmount = Math.min(
-          (subtotal - lineItemDiscountTotal) * (appliedPromoCode.discountValue / 100),
-          maxDiscount
+          (subtotal - lineItemDiscountTotal) *
+            (appliedPromoCode.discountValue / 100),
+          maxDiscount,
         );
       } else {
         cartDiscountAmount = Math.min(
           appliedPromoCode.discountValue,
-          subtotal - lineItemDiscountTotal
+          subtotal - lineItemDiscountTotal,
         );
       }
     } else if (cartDiscount.type === "account_discount" && accountDiscount) {
-      if (accountDiscount.applicableTo === "products" || accountDiscount.applicableTo === "all" || accountDiscount.applicableTo === "both") {
+      if (
+        accountDiscount.applicableTo === "products" ||
+        accountDiscount.applicableTo === "all" ||
+        accountDiscount.applicableTo === "both"
+      ) {
         if (accountDiscount.discountType === "percent") {
-          cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (accountDiscount.discountValue / 100);
+          cartDiscountAmount =
+            (subtotal - lineItemDiscountTotal) *
+            (accountDiscount.discountValue / 100);
         } else {
-          cartDiscountAmount = Math.min(accountDiscount.discountValue, subtotal - lineItemDiscountTotal);
+          cartDiscountAmount = Math.min(
+            accountDiscount.discountValue,
+            subtotal - lineItemDiscountTotal,
+          );
         }
       }
     }
   }
-  
+
   // Apply account discount automatically if available and no other cart discount
-  if (!cartDiscount && accountDiscount && selectedClientId && selectedClientId !== "__walk_in__") {
-    if (accountDiscount.applicableTo === "products" || accountDiscount.applicableTo === "all" || accountDiscount.applicableTo === "both") {
+  if (
+    !cartDiscount &&
+    accountDiscount &&
+    selectedClientId &&
+    selectedClientId !== "__walk_in__"
+  ) {
+    if (
+      accountDiscount.applicableTo === "products" ||
+      accountDiscount.applicableTo === "all" ||
+      accountDiscount.applicableTo === "both"
+    ) {
       if (accountDiscount.discountType === "percent") {
-        cartDiscountAmount = (subtotal - lineItemDiscountTotal) * (accountDiscount.discountValue / 100);
+        cartDiscountAmount =
+          (subtotal - lineItemDiscountTotal) *
+          (accountDiscount.discountValue / 100);
       } else {
-        cartDiscountAmount = Math.min(accountDiscount.discountValue, subtotal - lineItemDiscountTotal);
+        cartDiscountAmount = Math.min(
+          accountDiscount.discountValue,
+          subtotal - lineItemDiscountTotal,
+        );
       }
     }
   }
-  
+
   const discountTotal = lineItemDiscountTotal + cartDiscountAmount;
   const taxTotal = 0; // Can be calculated if needed
-  
+
   // Determine service type for tips configuration
   const detectedServiceType = useMemo(() => {
     // Check if booking is selected
@@ -314,7 +363,7 @@ export default function POSPage() {
         if (service.includes("boarding")) return "boarding";
       }
     }
-    
+
     // Check cart items for service indicators (could be extended)
     // For now, default to "retail" if no service detected
     return "retail";
@@ -326,9 +375,12 @@ export default function POSPage() {
     enabled: true,
     percentages: [15, 18, 20, 25],
   };
-  
+
   // Service-specific tips configuration
-  const serviceTipsConfig: Record<string, { enabled: boolean; percentages: number[] }> = {
+  const serviceTipsConfig: Record<
+    string,
+    { enabled: boolean; percentages: number[] }
+  > = {
     grooming: { enabled: true, percentages: [15, 18, 20, 25] },
     training: { enabled: false, percentages: [15, 18, 20] },
     daycare: { enabled: true, percentages: [10, 15, 20] },
@@ -336,8 +388,9 @@ export default function POSPage() {
     retail: { enabled: false, percentages: [15, 18, 20, 25] },
     other: { enabled: true, percentages: [15, 18, 20, 25] },
   };
-  
-  const tipsConfig = serviceTipsConfig[detectedServiceType] || defaultTipsConfig;
+
+  const tipsConfig =
+    serviceTipsConfig[detectedServiceType] || defaultTipsConfig;
 
   // Calculate tip amount
   const calculatedTipAmount = useMemo(() => {
@@ -483,7 +536,9 @@ export default function POSPage() {
 
     // Check minimum purchase
     if (promo.minPurchase && subtotal < promo.minPurchase) {
-      alert(`Minimum purchase of $${promo.minPurchase} required for this promo code`);
+      alert(
+        `Minimum purchase of $${promo.minPurchase} required for this promo code`,
+      );
       return;
     }
 
@@ -498,7 +553,7 @@ export default function POSPage() {
     setPromoCode("");
   };
 
-  const removeCartDiscount = () => {
+  const _removeCartDiscount = () => {
     setCartDiscount(null);
     setAppliedPromoCode(null);
   };
@@ -529,7 +584,7 @@ export default function POSPage() {
 
   const openEditPriceModal = (itemId: string) => {
     if (!canApplyDiscount) return;
-    
+
     const item = cart.find((i) => i.id === itemId);
     if (!item) return;
 
@@ -574,23 +629,31 @@ export default function POSPage() {
 
   const handlePayment = async () => {
     setIsProcessingPayment(true);
-    
+
     try {
       const facilityId = 11; // TODO: Get from context
       const staffName = "Staff"; // TODO: Get from auth context
-      
+
       // Check permission for manual card entry if using new card
-      if ((paymentForm.method === "credit" || paymentForm.method === "debit") && 
-          !useCloverTerminal && 
-          !useYipyyPay && 
-          !selectedTokenizedCard && 
-          newCardDetails.number &&
-          !hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined)) {
-        alert("Manual card entry requires admin/manager permission. Please use a saved card or contact a manager.");
+      if (
+        (paymentForm.method === "credit" || paymentForm.method === "debit") &&
+        !useCloverTerminal &&
+        !useYipyyPay &&
+        !selectedTokenizedCard &&
+        newCardDetails.number &&
+        !hasPermission(
+          facilityRole,
+          "manual_card_entry",
+          currentUserId || undefined,
+        )
+      ) {
+        alert(
+          "Manual card entry requires admin/manager permission. Please use a saved card or contact a manager.",
+        );
         setIsProcessingPayment(false);
         return;
       }
-      
+
       // Record transaction and link to client file, pet, and/or booking when selected
       const customerId =
         selectedClientId && selectedClientId !== "__walk_in__"
@@ -608,11 +671,12 @@ export default function POSPage() {
           : undefined);
 
       // Get pet name if pet is selected
-      const petName = selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
-        ? clients
-            .find((c) => String(c.id) === selectedClientId)
-            ?.pets.find((p) => p.id === selectedPetId)?.name
-        : undefined;
+      const petName =
+        selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
+          ? clients
+              .find((c) => String(c.id) === selectedClientId)
+              ?.pets.find((p) => p.id === selectedPetId)?.name
+          : undefined;
 
       // Get booking service if booking is selected
       const booking = selectedBookingId
@@ -620,7 +684,7 @@ export default function POSPage() {
         : null;
 
       const fiservConfig = getFiservConfig(facilityId);
-      
+
       // Log payment attempt
       logPaymentAction("payment_capture", {
         facilityId,
@@ -636,10 +700,11 @@ export default function POSPage() {
           cartItems: cart.length,
           tipAmount: calculatedTipAmount,
           tipPercentage: tipPercentage,
-          isManualEntry: !selectedTokenizedCard && newCardDetails.number ? true : false,
+          isManualEntry:
+            !selectedTokenizedCard && newCardDetails.number ? true : false,
         },
       });
-      
+
       // Handle split payments
       if (paymentForm.splitPayments && paymentForm.payments.length > 0) {
         const processedPayments: Array<{
@@ -652,19 +717,28 @@ export default function POSPage() {
           notes?: string;
         }> = [];
         let allPaymentsSuccessful = true;
-        let paymentErrors: string[] = [];
+        const paymentErrors: string[] = [];
 
         // Process each payment in the split
         for (let i = 0; i < paymentForm.payments.length; i++) {
           const payment = paymentForm.payments[i];
-          
+
           try {
             // Process Pay with iPhone
-            if ((payment.method === "credit" || payment.method === "debit") && payment.useYipyyPay && payment.yipyyPayDeviceId) {
-              const device = getYipyyPayDevice(facilityId, payment.yipyyPayDeviceId);
-              
+            if (
+              (payment.method === "credit" || payment.method === "debit") &&
+              payment.useYipyyPay &&
+              payment.yipyyPayDeviceId
+            ) {
+              const device = getYipyyPayDevice(
+                facilityId,
+                payment.yipyyPayDeviceId,
+              );
+
               if (!device || !device.isAuthorized || !device.isActive) {
-                paymentErrors.push(`Payment ${i + 1} (iPhone): Device not available`);
+                paymentErrors.push(
+                  `Payment ${i + 1} (iPhone): Device not available`,
+                );
                 allPaymentsSuccessful = false;
                 continue;
               }
@@ -679,11 +753,13 @@ export default function POSPage() {
                 bookingId: selectedBookingId || undefined,
                 sendReceipt: fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
                 processedBy: currentUserId || "staff-001",
-                processedById: currentUserId ? Number(currentUserId) : undefined,
+                processedById: currentUserId
+                  ? Number(currentUserId)
+                  : undefined,
               };
 
               const yipyyPayResponse = await processYipyyPay(yipyyPayRequest);
-              
+
               if (yipyyPayResponse.success) {
                 processedPayments.push({
                   method: payment.method,
@@ -692,16 +768,27 @@ export default function POSPage() {
                   notes: `Pay with iPhone (${device.deviceName})`,
                 });
               } else {
-                paymentErrors.push(`Payment ${i + 1} (iPhone): ${yipyyPayResponse.error?.message || "Failed"}`);
+                paymentErrors.push(
+                  `Payment ${i + 1} (iPhone): ${yipyyPayResponse.error?.message || "Failed"}`,
+                );
                 allPaymentsSuccessful = false;
               }
             }
             // Process Clover Terminal
-            else if ((payment.method === "credit" || payment.method === "debit") && payment.useCloverTerminal && payment.cloverTerminalId) {
-              const terminal = getCloverTerminal(facilityId, payment.cloverTerminalId);
-              
+            else if (
+              (payment.method === "credit" || payment.method === "debit") &&
+              payment.useCloverTerminal &&
+              payment.cloverTerminalId
+            ) {
+              const terminal = getCloverTerminal(
+                facilityId,
+                payment.cloverTerminalId,
+              );
+
               if (!terminal || !terminal.isOnline) {
-                paymentErrors.push(`Payment ${i + 1} (Clover): Terminal not available`);
+                paymentErrors.push(
+                  `Payment ${i + 1} (Clover): Terminal not available`,
+                );
                 allPaymentsSuccessful = false;
                 continue;
               }
@@ -714,13 +801,14 @@ export default function POSPage() {
                 description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
                 customerId: customerId ? Number(customerId) : undefined,
                 bookingId: selectedBookingId || undefined,
-                printReceipt: fiservConfig?.cloverTerminal?.autoPrintReceipts ?? true,
+                printReceipt:
+                  fiservConfig?.cloverTerminal?.autoPrintReceipts ?? true,
                 printCustomerCopy: true,
                 printMerchantCopy: true,
               };
 
               const cloverResponse = await processCloverPayment(cloverRequest);
-              
+
               if (cloverResponse.success) {
                 processedPayments.push({
                   method: payment.method,
@@ -730,15 +818,21 @@ export default function POSPage() {
                   notes: `Clover Terminal (${terminal.terminalName})`,
                 });
               } else {
-                paymentErrors.push(`Payment ${i + 1} (Clover): ${cloverResponse.error?.message || "Failed"}`);
+                paymentErrors.push(
+                  `Payment ${i + 1} (Clover): ${cloverResponse.error?.message || "Failed"}`,
+                );
                 allPaymentsSuccessful = false;
               }
             }
             // Process Fiserv (web card payment)
-            else if ((payment.method === "credit" || payment.method === "debit") && !payment.useYipyyPay && !payment.useCloverTerminal) {
+            else if (
+              (payment.method === "credit" || payment.method === "debit") &&
+              !payment.useYipyyPay &&
+              !payment.useCloverTerminal
+            ) {
               let paymentSource: "new_card" | "tokenized_card" = "new_card";
               let tokenizedCardId: string | undefined = payment.tokenizedCardId;
-              
+
               if (tokenizedCardId && customerId) {
                 paymentSource = "tokenized_card";
               } else if (customerId && selectedTokenizedCard) {
@@ -753,24 +847,26 @@ export default function POSPage() {
                 currency: "USD",
                 paymentSource,
                 tokenizedCardId,
-                newCard: paymentSource === "new_card" && newCardDetails.number
-                  ? {
-                      number: newCardDetails.number.replace(/\s/g, ""),
-                      expMonth: parseInt(newCardDetails.expMonth, 10),
-                      expYear: parseInt(newCardDetails.expYear, 10),
-                      cvv: newCardDetails.cvv,
-                      cardholderName: newCardDetails.cardholderName || name || "Customer",
-                      saveToAccount: saveCardToAccount && !!customerId,
-                      setAsDefault: saveCardToAccount && !!customerId,
-                    }
-                  : undefined,
+                newCard:
+                  paymentSource === "new_card" && newCardDetails.number
+                    ? {
+                        number: newCardDetails.number.replace(/\s/g, ""),
+                        expMonth: parseInt(newCardDetails.expMonth, 10),
+                        expYear: parseInt(newCardDetails.expYear, 10),
+                        cvv: newCardDetails.cvv,
+                        cardholderName:
+                          newCardDetails.cardholderName || name || "Customer",
+                        saveToAccount: saveCardToAccount && !!customerId,
+                        setAsDefault: saveCardToAccount && !!customerId,
+                      }
+                    : undefined,
                 description: `Split Payment ${i + 1}/${paymentForm.payments.length} - POS Transaction`,
                 context: "pos",
                 bookingId: selectedBookingId || undefined,
               };
 
               const fiservResponse = await processFiservPayment(fiservRequest);
-              
+
               if (fiservResponse.success) {
                 processedPayments.push({
                   method: payment.method,
@@ -779,7 +875,9 @@ export default function POSPage() {
                   notes: `Card Payment (Fiserv)`,
                 });
               } else {
-                paymentErrors.push(`Payment ${i + 1} (Card): ${fiservResponse.error?.message || "Failed"}`);
+                paymentErrors.push(
+                  `Payment ${i + 1} (Card): ${fiservResponse.error?.message || "Failed"}`,
+                );
                 allPaymentsSuccessful = false;
               }
             }
@@ -788,28 +886,40 @@ export default function POSPage() {
               processedPayments.push({
                 method: payment.method,
                 amount: payment.amount,
-                notes: payment.method === "cash" ? "Cash" : payment.method === "store_credit" ? "Store Credit" : "Gift Card",
+                notes:
+                  payment.method === "cash"
+                    ? "Cash"
+                    : payment.method === "store_credit"
+                      ? "Store Credit"
+                      : "Gift Card",
               });
             }
           } catch (error) {
-            paymentErrors.push(`Payment ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`);
+            paymentErrors.push(
+              `Payment ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
             allPaymentsSuccessful = false;
           }
         }
 
         if (!allPaymentsSuccessful) {
-          alert(`Some payments failed:\n${paymentErrors.join("\n")}\n\nPlease retry or use a different payment method.`);
+          alert(
+            `Some payments failed:\n${paymentErrors.join("\n")}\n\nPlease retry or use a different payment method.`,
+          );
           setIsProcessingPayment(false);
           return;
         }
 
         // All payments successful - record transaction
         const paymentNotes = processedPayments
-          .map((p, idx) => `${idx + 1}. ${p.notes || p.method}: $${p.amount.toFixed(2)}`)
+          .map(
+            (p, idx) =>
+              `${idx + 1}. ${p.notes || p.method}: $${p.amount.toFixed(2)}`,
+          )
           .join(" | ");
 
         addRetailTransaction({
-          items: cart.map(({ id, ...item }) => item),
+          items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
           cartDiscount: cartDiscount || undefined,
@@ -820,7 +930,7 @@ export default function POSPage() {
           tipPercentage: tipPercentage || undefined,
           total: grandTotal,
           paymentMethod: "split",
-          payments: processedPayments.map(p => ({
+          payments: processedPayments.map((p) => ({
             method: p.method,
             amount: p.amount,
           })),
@@ -835,9 +945,15 @@ export default function POSPage() {
           cashierName: "Staff",
           notes: `Split Payment: ${paymentNotes}`,
           // Store transaction IDs from last card payment (for refund purposes)
-          yipyyPayTransactionId: processedPayments.find(p => p.yipyyPayTransactionId)?.yipyyPayTransactionId,
-          cloverTransactionId: processedPayments.find(p => p.cloverTransactionId)?.cloverTransactionId,
-          fiservTransactionId: processedPayments.find(p => p.fiservTransactionId)?.fiservTransactionId,
+          yipyyPayTransactionId: processedPayments.find(
+            (p) => p.yipyyPayTransactionId,
+          )?.yipyyPayTransactionId,
+          cloverTransactionId: processedPayments.find(
+            (p) => p.cloverTransactionId,
+          )?.cloverTransactionId,
+          fiservTransactionId: processedPayments.find(
+            (p) => p.fiservTransactionId,
+          )?.fiservTransactionId,
           locationId: "loc-001", // TODO: Get from context
         });
       }
@@ -849,9 +965,11 @@ export default function POSPage() {
         (paymentForm.method === "credit" || paymentForm.method === "debit")
       ) {
         const terminal = getCloverTerminal(facilityId, cloverTerminalId);
-        
+
         if (!terminal || !terminal.isOnline) {
-          alert("Clover terminal is not available or offline. Please use another payment method.");
+          alert(
+            "Clover terminal is not available or offline. Please use another payment method.",
+          );
           setIsProcessingPayment(false);
           return;
         }
@@ -876,14 +994,16 @@ export default function POSPage() {
         const cloverResponse = await processCloverPayment(cloverRequest);
 
         if (!cloverResponse.success) {
-          alert(`Payment failed: ${cloverResponse.error?.message || "Unknown error"}`);
+          alert(
+            `Payment failed: ${cloverResponse.error?.message || "Unknown error"}`,
+          );
           setIsProcessingPayment(false);
           return;
         }
 
         // Payment successful - record transaction with Clover details
         addRetailTransaction({
-          items: cart.map(({ id, ...item }) => item),
+          items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
           cartDiscount: cartDiscount || undefined,
@@ -917,11 +1037,13 @@ export default function POSPage() {
         fiservConfig?.yipyyPay?.enabled &&
         (paymentForm.method === "credit" || paymentForm.method === "debit")
       ) {
-        const yipyyPayConfig = getYipyyPayConfig(facilityId);
+        const _yipyyPayConfig = getYipyyPayConfig(facilityId);
         const device = getYipyyPayDevice(facilityId, yipyyPayDeviceId);
-        
+
         if (!device || !device.isAuthorized || !device.isActive) {
-          alert("Yipyy Pay device is not available or not authorized. Please use another payment method.");
+          alert(
+            "Yipyy Pay device is not available or not authorized. Please use another payment method.",
+          );
           setIsProcessingPayment(false);
           return;
         }
@@ -946,14 +1068,16 @@ export default function POSPage() {
         const yipyyPayResponse = await processYipyyPay(yipyyPayRequest);
 
         if (!yipyyPayResponse.success) {
-          alert(`Payment failed: ${yipyyPayResponse.error?.message || "Unknown error"}`);
+          alert(
+            `Payment failed: ${yipyyPayResponse.error?.message || "Unknown error"}`,
+          );
           setIsProcessingPayment(false);
           return;
         }
 
         // Payment successful - record transaction with Yipyy Pay details
         addRetailTransaction({
-          items: cart.map(({ id, ...item }) => item),
+          items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
           cartDiscount: cartDiscount || undefined,
@@ -990,13 +1114,16 @@ export default function POSPage() {
         // Determine payment source
         let paymentSource: "new_card" | "tokenized_card" = "new_card";
         let tokenizedCardId: string | undefined;
-        
+
         if (selectedTokenizedCard && customerId) {
           paymentSource = "tokenized_card";
           tokenizedCardId = selectedTokenizedCard.id;
         } else if (customerId && !newCardDetails.number) {
           // Try to use default card on file
-          const defaultCard = getDefaultTokenizedCard(facilityId, Number(customerId));
+          const defaultCard = getDefaultTokenizedCard(
+            facilityId,
+            Number(customerId),
+          );
           if (defaultCard) {
             paymentSource = "tokenized_card";
             tokenizedCardId = defaultCard.id;
@@ -1011,17 +1138,19 @@ export default function POSPage() {
           currency: "USD",
           paymentSource,
           tokenizedCardId,
-          newCard: paymentSource === "new_card" && newCardDetails.number
-            ? {
-                number: newCardDetails.number.replace(/\s/g, ""),
-                expMonth: parseInt(newCardDetails.expMonth, 10),
-                expYear: parseInt(newCardDetails.expYear, 10),
-                cvv: newCardDetails.cvv,
-                cardholderName: newCardDetails.cardholderName || name || "Customer",
-                saveToAccount: saveCardToAccount && !!customerId,
-                setAsDefault: saveCardToAccount && !!customerId,
-              }
-            : undefined,
+          newCard:
+            paymentSource === "new_card" && newCardDetails.number
+              ? {
+                  number: newCardDetails.number.replace(/\s/g, ""),
+                  expMonth: parseInt(newCardDetails.expMonth, 10),
+                  expYear: parseInt(newCardDetails.expYear, 10),
+                  cvv: newCardDetails.cvv,
+                  cardholderName:
+                    newCardDetails.cardholderName || name || "Customer",
+                  saveToAccount: saveCardToAccount && !!customerId,
+                  setAsDefault: saveCardToAccount && !!customerId,
+                }
+              : undefined,
           tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
           description: `POS Transaction - ${cart.length} item(s)`,
           context: "pos",
@@ -1032,14 +1161,16 @@ export default function POSPage() {
         const fiservResponse = await processFiservPayment(fiservRequest);
 
         if (!fiservResponse.success) {
-          alert(`Payment failed: ${fiservResponse.error?.message || "Unknown error"}`);
+          alert(
+            `Payment failed: ${fiservResponse.error?.message || "Unknown error"}`,
+          );
           setIsProcessingPayment(false);
           return;
         }
 
         // Payment successful - record transaction with Fiserv details
         addRetailTransaction({
-          items: cart.map(({ id, ...item }) => item),
+          items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
           cartDiscount: cartDiscount || undefined,
@@ -1049,7 +1180,9 @@ export default function POSPage() {
           tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
           tipPercentage: tipPercentage || undefined,
           total: grandTotal,
-          paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+          paymentMethod: paymentForm.splitPayments
+            ? "split"
+            : paymentForm.method,
           payments: paymentForm.splitPayments
             ? paymentForm.payments
             : [{ method: paymentForm.method, amount: grandTotal }],
@@ -1079,7 +1212,9 @@ export default function POSPage() {
           if (finalAmount > 0) {
             paymentNotes += ` | Remaining: $${finalAmount.toFixed(2)}`;
             // TODO: Prompt for additional payment method for remaining amount
-            alert(`Store credit applied: $${storeCreditAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`);
+            alert(
+              `Store credit applied: $${storeCreditAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`,
+            );
             setIsProcessingPayment(false);
             return;
           }
@@ -1093,7 +1228,9 @@ export default function POSPage() {
           if (finalAmount > 0) {
             paymentNotes += ` | Remaining: $${finalAmount.toFixed(2)}`;
             // TODO: Prompt for additional payment method for remaining amount
-            alert(`Gift card applied: $${giftCardAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`);
+            alert(
+              `Gift card applied: $${giftCardAmount.toFixed(2)}. Remaining amount: $${finalAmount.toFixed(2)} needs to be paid with another method.`,
+            );
             setIsProcessingPayment(false);
             return;
           }
@@ -1101,7 +1238,7 @@ export default function POSPage() {
 
         // Non-card payment or Fiserv not enabled - process normally
         addRetailTransaction({
-          items: cart.map(({ id, ...item }) => item),
+          items: cart.map(({ id: _id, ...item }) => item),
           subtotal,
           discountTotal,
           cartDiscount: cartDiscount || undefined,
@@ -1111,10 +1248,17 @@ export default function POSPage() {
           tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
           tipPercentage: tipPercentage || undefined,
           total: finalAmount > 0 ? finalAmount : grandTotal,
-          paymentMethod: paymentForm.splitPayments ? "split" : paymentForm.method,
+          paymentMethod: paymentForm.splitPayments
+            ? "split"
+            : paymentForm.method,
           payments: paymentForm.splitPayments
             ? paymentForm.payments
-            : [{ method: paymentForm.method, amount: finalAmount > 0 ? finalAmount : grandTotal }],
+            : [
+                {
+                  method: paymentForm.method,
+                  amount: finalAmount > 0 ? finalAmount : grandTotal,
+                },
+              ],
           customerId,
           customerName: name,
           customerEmail: email,
@@ -1128,7 +1272,7 @@ export default function POSPage() {
           locationId: "loc-001", // TODO: Get from context
         });
       }
-      
+
       // Apply promo code usage count (increment usage in data)
       if (appliedPromoCode) {
         const promo = getPromoCodeByCode(appliedPromoCode.code);
@@ -1136,7 +1280,7 @@ export default function POSPage() {
           applyPromoCode(appliedPromoCode.code);
         }
       }
-      
+
       // Clear cart and discounts
       setCart([]);
       setCartDiscount(null);
@@ -1165,7 +1309,9 @@ export default function POSPage() {
       setIsReceiptModalOpen(true);
     } catch (error) {
       console.error("Payment processing error:", error);
-      alert("An error occurred while processing the payment. Please try again.");
+      alert(
+        "An error occurred while processing the payment. Please try again.",
+      );
     } finally {
       setIsProcessingPayment(false);
     }
@@ -1216,7 +1362,7 @@ export default function POSPage() {
   const searchCustomers = (query: string) => {
     if (!query.trim()) return [];
     const lowerQuery = query.toLowerCase();
-    
+
     return clients.filter((client) => {
       // Search by email
       if (client.email?.toLowerCase().includes(lowerQuery)) return true;
@@ -1231,7 +1377,10 @@ export default function POSPage() {
       const lastName = client.name.split(" ").slice(1).join(" ").toLowerCase();
       if (lastName.includes(lowerQuery)) return true;
       // Search by pet name
-      if (client.pets?.some((pet) => pet.name.toLowerCase().includes(lowerQuery))) return true;
+      if (
+        client.pets?.some((pet) => pet.name.toLowerCase().includes(lowerQuery))
+      )
+        return true;
       return false;
     });
   };
@@ -1251,17 +1400,21 @@ export default function POSPage() {
   const clientBookings = useMemo(() => {
     if (!selectedClientId || selectedClientId === "__walk_in__") return [];
     const clientIdNum = parseInt(selectedClientId);
-    
-    return bookings.filter((booking) => {
-      if (booking.clientId !== clientIdNum) return false;
-      // If pet is selected, filter by pet
-      if (selectedPetId && booking.petId !== selectedPetId) return false;
-      // Only show active/upcoming bookings (exclude completed and cancelled)
-      return booking.status === "pending" || booking.status === "confirmed";
-    }).sort((a, b) => {
-      // Sort by start date, most recent first
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-    });
+
+    return bookings
+      .filter((booking) => {
+        if (booking.clientId !== clientIdNum) return false;
+        // If pet is selected, filter by pet
+        if (selectedPetId && booking.petId !== selectedPetId) return false;
+        // Only show active/upcoming bookings (exclude completed and cancelled)
+        return booking.status === "pending" || booking.status === "confirmed";
+      })
+      .sort((a, b) => {
+        // Sort by start date, most recent first
+        return (
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        );
+      });
   }, [selectedClientId, selectedPetId]);
 
   // Get active stays (currently checked in) for charge to active stay option
@@ -1269,7 +1422,7 @@ export default function POSPage() {
     if (!selectedClientId || selectedClientId === "__walk_in__") return [];
     const clientIdNum = parseInt(selectedClientId);
     const today = new Date().toISOString().split("T")[0];
-    
+
     // Get bookings that are checked in
     const checkedInBookings = bookings.filter((booking) => {
       if (booking.clientId !== clientIdNum) return false;
@@ -1287,7 +1440,7 @@ export default function POSPage() {
     // Also check daycare and boarding check-ins
     // Note: This would need to import from daycare/boarding data files
     // For now, we'll use bookings with checked-in status
-    
+
     return checkedInBookings.sort((a, b) => {
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
@@ -1297,15 +1450,19 @@ export default function POSPage() {
   const bookableBookings = useMemo(() => {
     if (!selectedClientId || selectedClientId === "__walk_in__") return [];
     const clientIdNum = parseInt(selectedClientId);
-    
-    return bookings.filter((booking) => {
-      if (booking.clientId !== clientIdNum) return false;
-      if (selectedPetId && booking.petId !== selectedPetId) return false;
-      // Show confirmed and pending bookings (can add items to these)
-      return booking.status === "confirmed" || booking.status === "pending";
-    }).sort((a, b) => {
-      return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
-    });
+
+    return bookings
+      .filter((booking) => {
+        if (booking.clientId !== clientIdNum) return false;
+        if (selectedPetId && booking.petId !== selectedPetId) return false;
+        // Show confirmed and pending bookings (can add items to these)
+        return booking.status === "confirmed" || booking.status === "pending";
+      })
+      .sort((a, b) => {
+        return (
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        );
+      });
   }, [selectedClientId, selectedPetId]);
 
   const filteredProducts = products.filter(
@@ -1317,23 +1474,23 @@ export default function POSPage() {
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* Left Side - Product Search & Selection */}
-      <div className="lg:col-span-2 space-y-4">
+      <div className="space-y-4 lg:col-span-2">
         {/* Stats Row */}
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Today&apos;s Sales
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 ${stats.todayRevenue.toFixed(2)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {stats.todayTransactions} transactions
               </p>
             </CardContent>
@@ -1341,11 +1498,11 @@ export default function POSPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+              <ShoppingCart className="text-muted-foreground size-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.todayItems}</div>
-              <p className="text-xs text-muted-foreground">Today</p>
+              <p className="text-muted-foreground text-xs">Today</p>
             </CardContent>
           </Card>
           <Card>
@@ -1359,7 +1516,7 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.lowStockCount}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Items need restock
               </p>
             </CardContent>
@@ -1377,7 +1534,7 @@ export default function POSPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pendingAlerts}</div>
-              <p className="text-xs text-muted-foreground">Unacknowledged</p>
+              <p className="text-muted-foreground text-xs">Unacknowledged</p>
             </CardContent>
           </Card>
         </div>
@@ -1387,7 +1544,7 @@ export default function POSPage() {
           <CardContent className="pt-4">
             <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
               <div className="relative flex-1">
-                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Barcode className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder="Scan barcode or enter SKU..."
                   value={barcodeInput}
@@ -1402,7 +1559,7 @@ export default function POSPage() {
                 variant="outline"
                 onClick={() => setIsProductModalOpen(true)}
               >
-                <Search className="h-4 w-4 mr-2" />
+                <Search className="mr-2 size-4" />
                 Browse
               </Button>
             </form>
@@ -1415,12 +1572,12 @@ export default function POSPage() {
             <CardTitle className="text-lg">Quick Add</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               {products.slice(0, 8).map((product) => (
                 <Button
                   key={product.id}
                   variant="outline"
-                  className="h-auto py-3 flex flex-col items-start"
+                  className="flex h-auto flex-col items-start py-3"
                   onClick={() => {
                     if (product.hasVariants && product.variants.length > 0) {
                       // If has variants, add the first variant
@@ -1430,10 +1587,10 @@ export default function POSPage() {
                     }
                   }}
                 >
-                  <span className="font-medium text-sm truncate w-full text-left">
+                  <span className="w-full truncate text-left text-sm font-medium">
                     {product.name}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     ${product.basePrice.toFixed(2)}
                   </span>
                 </Button>
@@ -1445,7 +1602,7 @@ export default function POSPage() {
 
       {/* Right Side - Cart */}
       <div className="space-y-4">
-        <Card className="max-h-[calc(100vh-12rem)] flex flex-col">
+        <Card className="flex max-h-[calc(100vh-12rem)] flex-col">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -1464,11 +1621,11 @@ export default function POSPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             {/* Customer / Pet / Booking Link - Links sale to client file, pet, and/or booking */}
-            <div className="space-y-3 mb-3 p-3 border rounded-lg bg-muted/30 flex-shrink-0">
+            <div className="bg-muted/30 mb-3 shrink-0 space-y-3 rounded-lg border p-3">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium flex items-center gap-1.5">
+                <Label className="flex items-center gap-1.5 text-xs font-medium">
                   <LinkIcon className="h-3.5 w-3.5" />
                   Attach to Account / Pet / Booking
                 </Label>
@@ -1478,7 +1635,7 @@ export default function POSPage() {
                   className="h-7 text-xs"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <Search className="h-3 w-3 mr-1" />
+                  <Search className="mr-1 h-3 w-3" />
                   Search
                 </Button>
               </div>
@@ -1486,12 +1643,16 @@ export default function POSPage() {
               {/* Selected Customer */}
               {selectedClientId && selectedClientId !== "__walk_in__" ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{customerName}</p>
+                  <div className="bg-background flex items-center gap-2 rounded-sm border p-2">
+                    <User className="text-muted-foreground size-4" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {customerName}
+                      </p>
                       {customerEmail && (
-                        <p className="text-xs text-muted-foreground truncate">{customerEmail}</p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {customerEmail}
+                        </p>
                       )}
                     </div>
                     <Button
@@ -1512,14 +1673,20 @@ export default function POSPage() {
 
                   {/* Selected Pet */}
                   {selectedPetId && (
-                    <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                      <PawPrint className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {clientPets.find((p) => p.id === selectedPetId)?.name || "Pet"}
+                    <div className="bg-background flex items-center gap-2 rounded-sm border p-2">
+                      <PawPrint className="text-muted-foreground size-4" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {clientPets.find((p) => p.id === selectedPetId)
+                            ?.name || "Pet"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {clientPets.find((p) => p.id === selectedPetId)?.type} • {clientPets.find((p) => p.id === selectedPetId)?.breed}
+                        <p className="text-muted-foreground text-xs">
+                          {clientPets.find((p) => p.id === selectedPetId)?.type}{" "}
+                          •{" "}
+                          {
+                            clientPets.find((p) => p.id === selectedPetId)
+                              ?.breed
+                          }
                         </p>
                       </div>
                       <Button
@@ -1535,15 +1702,19 @@ export default function POSPage() {
 
                   {/* Selected Booking */}
                   {selectedBookingId && (
-                    <div className="flex items-center gap-2 p-2 bg-background rounded border">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {clientBookings.find((b) => b.id === selectedBookingId)?.service || "Booking"}
+                    <div className="bg-background flex items-center gap-2 rounded-sm border p-2">
+                      <Calendar className="text-muted-foreground size-4" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {clientBookings.find(
+                            (b) => b.id === selectedBookingId,
+                          )?.service || "Booking"}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {(() => {
-                            const booking = clientBookings.find((b) => b.id === selectedBookingId);
+                            const booking = clientBookings.find(
+                              (b) => b.id === selectedBookingId,
+                            );
                             if (!booking) return "";
                             return `${booking.startDate}${booking.endDate !== booking.startDate ? ` - ${booking.endDate}` : ""}`;
                           })()}
@@ -1564,7 +1735,13 @@ export default function POSPage() {
                   {!selectedPetId && clientPets.length > 0 && (
                     <Select
                       value={selectedPetId?.toString() || "__none__"}
-                      onValueChange={(value) => setSelectedPetId(value && value !== "__none__" ? parseInt(value) : null)}
+                      onValueChange={(value) =>
+                        setSelectedPetId(
+                          value && value !== "__none__"
+                            ? parseInt(value)
+                            : null,
+                        )
+                      }
                     >
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Link to pet (optional)" />
@@ -1583,7 +1760,13 @@ export default function POSPage() {
                   {!selectedBookingId && clientBookings.length > 0 && (
                     <Select
                       value={selectedBookingId?.toString() || "__none__"}
-                      onValueChange={(value) => setSelectedBookingId(value && value !== "__none__" ? parseInt(value) : null)}
+                      onValueChange={(value) =>
+                        setSelectedBookingId(
+                          value && value !== "__none__"
+                            ? parseInt(value)
+                            : null,
+                        )
+                      }
                     >
                       <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Apply to booking/stay (optional)" />
@@ -1591,10 +1774,20 @@ export default function POSPage() {
                       <SelectContent>
                         <SelectItem value="__none__">No booking</SelectItem>
                         {clientBookings.map((booking) => (
-                          <SelectItem key={booking.id} value={booking.id.toString()}>
+                          <SelectItem
+                            key={booking.id}
+                            value={booking.id.toString()}
+                          >
                             {booking.service} • {booking.startDate}
                             {booking.petId && (
-                              <> • {clientPets.find((p) => p.id === booking.petId)?.name}</>
+                              <>
+                                {" "}
+                                •{" "}
+                                {
+                                  clientPets.find((p) => p.id === booking.petId)
+                                    ?.name
+                                }
+                              </>
                             )}
                           </SelectItem>
                         ))}
@@ -1606,52 +1799,52 @@ export default function POSPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs"
+                  className="h-8 w-full text-xs"
                   onClick={() => setIsLinkModalOpen(true)}
                 >
-                  <LinkIcon className="h-3 w-3 mr-1" />
+                  <LinkIcon className="mr-1 h-3 w-3" />
                   Link to Customer / Pet / Booking
                 </Button>
               )}
 
               {selectedClientId && selectedClientId !== "__walk_in__" && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Purchase will appear in customer file and invoice correctly
                 </p>
               )}
             </div>
 
-            <Separator className="mb-3 flex-shrink-0" />
+            <Separator className="mb-3 shrink-0" />
 
             {/* Cart Items - Scrollable area */}
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <ShoppingCart className="h-12 w-12 mb-2" />
+              <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+                <ShoppingCart className="mb-2 h-12 w-12" />
                 <p>Cart is empty</p>
                 <p className="text-sm">Scan a barcode to add items</p>
               </div>
             ) : (
-              <ScrollArea className="flex-1 min-h-[200px] max-h-[400px]">
+              <ScrollArea className="max-h-[400px] min-h-[200px] flex-1">
                 <div className="space-y-2 pr-2">
                   {cart.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-start gap-2 p-2 rounded-lg border bg-card"
+                      className="bg-card flex items-start gap-2 rounded-lg border p-2"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
                           {item.productName}
                         </p>
                         {item.variantName && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {item.variantName}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           ${item.unitPrice.toFixed(2)} each
                         </p>
                         {item.discount > 0 && (
-                          <Badge variant="secondary" className="text-xs mt-1">
+                          <Badge variant="secondary" className="mt-1 text-xs">
                             -${item.discount.toFixed(2)} discount
                           </Badge>
                         )}
@@ -1682,10 +1875,10 @@ export default function POSPage() {
                         </Button>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-sm">
+                        <p className="text-sm font-medium">
                           ${item.total.toFixed(2)}
                         </p>
-                        <div className="flex gap-1 mt-1">
+                        <div className="mt-1 flex gap-1">
                           {canApplyDiscount && (
                             <>
                               <Button
@@ -1728,7 +1921,7 @@ export default function POSPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-5 w-5 text-destructive"
+                            className="text-destructive h-5 w-5"
                             onClick={() => removeFromCart(item.id)}
                             title="Remove Item"
                           >
@@ -1743,7 +1936,7 @@ export default function POSPage() {
             )}
 
             {/* Cart Summary - Always visible at bottom */}
-            <div className="pt-3 border-t mt-3 space-y-2 flex-shrink-0">
+            <div className="mt-3 shrink-0 space-y-2 border-t pt-3">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
@@ -1760,25 +1953,29 @@ export default function POSPage() {
                   <span>${taxTotal.toFixed(2)}</span>
                 </div>
               )}
-              
+
               {/* Tips Section - Only show if tips are enabled for this service type */}
-              {tipsConfig.enabled && (subtotal - discountTotal) > 0 && (
+              {tipsConfig.enabled && subtotal - discountTotal > 0 && (
                 <>
                   <Separator />
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">Tip</Label>
                       {calculatedTipAmount > 0 && (
-                        <span className="text-sm font-medium">${calculatedTipAmount.toFixed(2)}</span>
+                        <span className="text-sm font-medium">
+                          ${calculatedTipAmount.toFixed(2)}
+                        </span>
                       )}
                     </div>
-                    
+
                     {/* Tip Percentage Buttons */}
                     <div className="grid grid-cols-4 gap-1.5">
                       {tipsConfig.percentages.map((percent) => (
                         <Button
                           key={percent}
-                          variant={tipPercentage === percent ? "default" : "outline"}
+                          variant={
+                            tipPercentage === percent ? "default" : "outline"
+                          }
                           size="sm"
                           className="h-8 text-xs"
                           onClick={() => {
@@ -1791,7 +1988,7 @@ export default function POSPage() {
                         </Button>
                       ))}
                     </div>
-                    
+
                     {/* Custom Tip Amount */}
                     <div className="flex gap-1.5">
                       <Input
@@ -1824,9 +2021,9 @@ export default function POSPage() {
                   </div>
                 </>
               )}
-              
+
               <Separator />
-              <div className="flex justify-between font-bold text-lg">
+              <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
                 <span>${grandTotal.toFixed(2)}</span>
               </div>
@@ -1834,7 +2031,9 @@ export default function POSPage() {
               <div className="space-y-2 pt-2">
                 {/* Pay Now Options */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-muted-foreground">Pay Now</Label>
+                  <Label className="text-muted-foreground text-xs font-medium">
+                    Pay Now
+                  </Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
@@ -1850,7 +2049,7 @@ export default function POSPage() {
                         setIsPaymentModalOpen(true);
                       }}
                     >
-                      <Banknote className="h-4 w-4" />
+                      <Banknote className="size-4" />
                       Cash
                     </Button>
                     <Button
@@ -1867,7 +2066,7 @@ export default function POSPage() {
                         setIsPaymentModalOpen(true);
                       }}
                     >
-                      <CreditCard className="h-4 w-4" />
+                      <CreditCard className="size-4" />
                       Card
                     </Button>
                   </div>
@@ -1888,7 +2087,7 @@ export default function POSPage() {
                       setIsPaymentModalOpen(true);
                     }}
                   >
-                    <SplitSquareHorizontal className="h-4 w-4" />
+                    <SplitSquareHorizontal className="size-4" />
                     Split Payment
                   </Button>
                 </div>
@@ -1898,13 +2097,15 @@ export default function POSPage() {
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Charge Options</Label>
-                      
+                      <Label className="text-muted-foreground text-xs font-medium">
+                        Charge Options
+                      </Label>
+
                       {/* Add to Booking */}
                       {bookableBookings.length > 0 && (
                         <Button
                           variant="outline"
-                          className="w-full gap-2 justify-start"
+                          className="w-full justify-start gap-2"
                           disabled={cart.length === 0}
                           onClick={() => {
                             setPaymentForm({
@@ -1915,7 +2116,7 @@ export default function POSPage() {
                             setIsBookingSelectModalOpen(true);
                           }}
                         >
-                          <Calendar className="h-4 w-4" />
+                          <Calendar className="size-4" />
                           Add to Booking / Reservation
                           {bookableBookings.length > 0 && (
                             <Badge variant="secondary" className="ml-auto">
@@ -1929,7 +2130,7 @@ export default function POSPage() {
                       {activeStays.length > 0 && (
                         <Button
                           variant="outline"
-                          className="w-full gap-2 justify-start"
+                          className="w-full justify-start gap-2"
                           disabled={cart.length === 0}
                           onClick={() => {
                             setPaymentForm({
@@ -1940,7 +2141,7 @@ export default function POSPage() {
                             setIsPaymentModalOpen(true);
                           }}
                         >
-                          <LinkIcon className="h-4 w-4" />
+                          <LinkIcon className="size-4" />
                           Charge to Active Stay
                           <Badge variant="secondary" className="ml-auto">
                             {activeStays.length} active
@@ -1951,7 +2152,7 @@ export default function POSPage() {
                       {/* Charge to Account */}
                       <Button
                         variant="outline"
-                        className="w-full gap-2 justify-start"
+                        className="w-full justify-start gap-2"
                         disabled={cart.length === 0}
                         onClick={() => {
                           setPaymentForm({
@@ -1961,7 +2162,7 @@ export default function POSPage() {
                           setIsPaymentModalOpen(true);
                         }}
                       >
-                        <CreditCard className="h-4 w-4" />
+                        <CreditCard className="size-4" />
                         Charge to Account / Card on File
                       </Button>
                     </div>
@@ -1975,7 +2176,7 @@ export default function POSPage() {
 
       {/* Product Search Modal */}
       <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-h-[80vh] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Browse Products</DialogTitle>
             <DialogDescription>
@@ -1984,7 +2185,7 @@ export default function POSPage() {
           </DialogHeader>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               placeholder="Search by name, SKU, or barcode..."
               value={searchQuery}
@@ -1993,14 +2194,14 @@ export default function POSPage() {
             />
           </div>
 
-          <ScrollArea className="h-[400px] mt-4">
+          <ScrollArea className="mt-4 h-[400px]">
             <div className="space-y-2">
               {filteredProducts.map((product) => (
-                <div key={product.id} className="border rounded-lg p-3">
+                <div key={product.id} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-medium">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {product.category} • SKU: {product.sku}
                       </p>
                     </div>
@@ -2008,7 +2209,7 @@ export default function POSPage() {
                       <p className="font-medium">
                         ${product.basePrice.toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Stock: {product.stock}
                       </p>
                     </div>
@@ -2124,7 +2325,10 @@ export default function POSPage() {
       </Dialog>
 
       {/* Cart Discount Modal */}
-      <Dialog open={isCartDiscountModalOpen} onOpenChange={setIsCartDiscountModalOpen}>
+      <Dialog
+        open={isCartDiscountModalOpen}
+        onOpenChange={setIsCartDiscountModalOpen}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Apply Cart Discount</DialogTitle>
@@ -2205,7 +2409,10 @@ export default function POSPage() {
       </Dialog>
 
       {/* Promo Code Modal */}
-      <Dialog open={isPromoCodeModalOpen} onOpenChange={setIsPromoCodeModalOpen}>
+      <Dialog
+        open={isPromoCodeModalOpen}
+        onOpenChange={setIsPromoCodeModalOpen}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Apply Promo Code</DialogTitle>
@@ -2232,11 +2439,11 @@ export default function POSPage() {
             </div>
 
             {appliedPromoCode && (
-              <div className="rounded-lg bg-green-50 p-3 border border-green-200">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                 <p className="text-sm font-medium text-green-900">
                   Promo Code Applied: {appliedPromoCode.code}
                 </p>
-                <p className="text-xs text-green-700 mt-1">
+                <p className="mt-1 text-xs text-green-700">
                   {appliedPromoCode.description}
                 </p>
               </div>
@@ -2262,7 +2469,10 @@ export default function POSPage() {
 
       {/* Comp Item Modal (Manager Only) */}
       {isManager && (
-        <Dialog open={isCompItemModalOpen} onOpenChange={setIsCompItemModalOpen}>
+        <Dialog
+          open={isCompItemModalOpen}
+          onOpenChange={setIsCompItemModalOpen}
+        >
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>Comp / Free Item</DialogTitle>
@@ -2278,9 +2488,7 @@ export default function POSPage() {
                   type="text"
                   placeholder="e.g., Customer complaint, Employee benefit"
                   value={compItemForm.reason}
-                  onChange={(e) =>
-                    setCompItemForm({ reason: e.target.value })
-                  }
+                  onChange={(e) => setCompItemForm({ reason: e.target.value })}
                 />
               </div>
             </div>
@@ -2305,7 +2513,10 @@ export default function POSPage() {
 
       {/* Edit Price / Discount Modal */}
       {canApplyDiscount && (
-        <Dialog open={isEditPriceModalOpen} onOpenChange={setIsEditPriceModalOpen}>
+        <Dialog
+          open={isEditPriceModalOpen}
+          onOpenChange={setIsEditPriceModalOpen}
+        >
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>Edit Price & Discount</DialogTitle>
@@ -2358,7 +2569,9 @@ export default function POSPage() {
                 <Input
                   type="number"
                   min={0}
-                  max={editPriceForm.discountType === "percent" ? 100 : undefined}
+                  max={
+                    editPriceForm.discountType === "percent" ? 100 : undefined
+                  }
                   step={editPriceForm.discountType === "percent" ? "1" : "0.01"}
                   value={editPriceForm.discount}
                   onChange={(e) =>
@@ -2371,11 +2584,16 @@ export default function POSPage() {
               </div>
 
               {editPriceForm.unitPrice > 0 && (
-                <div className="rounded-lg bg-muted p-3 space-y-1">
+                <div className="bg-muted space-y-1 rounded-lg p-3">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
                     <span>
-                      ${(editPriceForm.unitPrice * (cart.find((i) => i.id === selectedCartItem)?.quantity || 1)).toFixed(2)}
+                      $
+                      {(
+                        editPriceForm.unitPrice *
+                        (cart.find((i) => i.id === selectedCartItem)
+                          ?.quantity || 1)
+                      ).toFixed(2)}
                     </span>
                   </div>
                   {editPriceForm.discount > 0 && (
@@ -2386,7 +2604,8 @@ export default function POSPage() {
                         {editPriceForm.discountType === "percent"
                           ? (
                               (editPriceForm.unitPrice *
-                                (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) *
+                                (cart.find((i) => i.id === selectedCartItem)
+                                  ?.quantity || 1) *
                                 editPriceForm.discount) /
                               100
                             ).toFixed(2)
@@ -2394,16 +2613,18 @@ export default function POSPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between font-medium pt-1 border-t">
+                  <div className="flex justify-between border-t pt-1 font-medium">
                     <span>Total:</span>
                     <span>
                       $
                       {(
                         editPriceForm.unitPrice *
-                          (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) -
+                          (cart.find((i) => i.id === selectedCartItem)
+                            ?.quantity || 1) -
                         (editPriceForm.discountType === "percent"
                           ? (editPriceForm.unitPrice *
-                              (cart.find((i) => i.id === selectedCartItem)?.quantity || 1) *
+                              (cart.find((i) => i.id === selectedCartItem)
+                                ?.quantity || 1) *
                               editPriceForm.discount) /
                             100
                           : editPriceForm.discount)
@@ -2431,8 +2652,11 @@ export default function POSPage() {
       )}
 
       {/* Booking Selection Modal (for Add to Booking) */}
-      <Dialog open={isBookingSelectModalOpen} onOpenChange={setIsBookingSelectModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+      <Dialog
+        open={isBookingSelectModalOpen}
+        onOpenChange={setIsBookingSelectModalOpen}
+      >
+        <DialogContent className="max-h-[80vh] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Select Booking to Add Items</DialogTitle>
             <DialogDescription>
@@ -2448,7 +2672,7 @@ export default function POSPage() {
                   return (
                     <div
                       key={booking.id}
-                      className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                      className="hover:bg-muted/50 cursor-pointer rounded-lg border p-4 transition-colors"
                       onClick={() => {
                         setPaymentForm({
                           ...paymentForm,
@@ -2476,14 +2700,15 @@ export default function POSPage() {
                               {booking.status}
                             </Badge>
                           </div>
-                          <p className="font-medium mt-2">
+                          <p className="mt-2 font-medium">
                             {pet?.name || "Pet"} • {booking.serviceType}
                           </p>
-                          <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                          <div className="text-muted-foreground mt-1 space-y-1 text-sm">
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {booking.startDate}
-                              {booking.endDate !== booking.startDate && ` - ${booking.endDate}`}
+                              {booking.endDate !== booking.startDate &&
+                                ` - ${booking.endDate}`}
                             </div>
                             {booking.checkInTime && (
                               <div className="flex items-center gap-1">
@@ -2518,10 +2743,10 @@ export default function POSPage() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <div className="text-muted-foreground py-8 text-center">
+                <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
                 <p>No bookings available</p>
-                <p className="text-sm mt-1">
+                <p className="mt-1 text-sm">
                   Customer must have a confirmed or active booking
                 </p>
               </div>
@@ -2553,9 +2778,11 @@ export default function POSPage() {
                     : "Process Payment"}
             </DialogTitle>
             <DialogDescription>
-              {paymentForm.chargeType === "add_to_booking" && paymentForm.selectedBookingId ? (
+              {paymentForm.chargeType === "add_to_booking" &&
+              paymentForm.selectedBookingId ? (
                 <>
-                  Items will be added to booking #{paymentForm.selectedBookingId}
+                  Items will be added to booking #
+                  {paymentForm.selectedBookingId}
                   <br />
                   Total: ${grandTotal.toFixed(2)}
                 </>
@@ -2579,49 +2806,60 @@ export default function POSPage() {
 
           <div className="space-y-4 py-4">
             {/* Show booking info if adding to booking */}
-            {paymentForm.chargeType === "add_to_booking" && paymentForm.selectedBookingId && (
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Adding to Booking</p>
-                {(() => {
-                  const booking = bookings.find((b) => b.id === paymentForm.selectedBookingId);
-                  const pet = booking ? clientPets.find((p) => p.id === booking.petId) : null;
-                  return booking ? (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {booking.service} • {pet?.name} • {booking.startDate}
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
+            {paymentForm.chargeType === "add_to_booking" &&
+              paymentForm.selectedBookingId && (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-sm font-medium">Adding to Booking</p>
+                  {(() => {
+                    const booking = bookings.find(
+                      (b) => b.id === paymentForm.selectedBookingId,
+                    );
+                    const pet = booking
+                      ? clientPets.find((p) => p.id === booking.petId)
+                      : null;
+                    return booking ? (
+                      <div className="text-muted-foreground mt-1 text-xs">
+                        {booking.service} • {pet?.name} • {booking.startDate}
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
 
             {/* Show active stay info if charging to active stay */}
-            {paymentForm.chargeType === "charge_to_active_stay" && paymentForm.selectedBookingId && (
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium">Charging to Active Stay</p>
-                {(() => {
-                  const stay = activeStays.find((s) => s.id === paymentForm.selectedBookingId);
-                  const pet = stay ? clientPets.find((p) => p.id === stay.petId) : null;
-                  return stay ? (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {stay.service} • {pet?.name} • Checked in
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
+            {paymentForm.chargeType === "charge_to_active_stay" &&
+              paymentForm.selectedBookingId && (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-sm font-medium">Charging to Active Stay</p>
+                  {(() => {
+                    const stay = activeStays.find(
+                      (s) => s.id === paymentForm.selectedBookingId,
+                    );
+                    const pet = stay
+                      ? clientPets.find((p) => p.id === stay.petId)
+                      : null;
+                    return stay ? (
+                      <div className="text-muted-foreground mt-1 text-xs">
+                        {stay.service} • {pet?.name} • Checked in
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              )}
 
             {/* Show account info if charging to account */}
             {paymentForm.chargeType === "charge_to_account" && (
-              <div className="p-3 bg-muted rounded-lg">
+              <div className="bg-muted rounded-lg p-3">
                 <p className="text-sm font-medium">Charging to Account</p>
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-muted-foreground mt-1 text-xs">
                   {customerName} • Card on file will be charged
                 </div>
               </div>
             )}
 
             {/* Payment method selection - only show for "pay_now" */}
-            {paymentForm.chargeType === "pay_now" && paymentForm.splitPayments ? (
+            {paymentForm.chargeType === "pay_now" &&
+            paymentForm.splitPayments ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Split Payment</Label>
@@ -2638,7 +2876,7 @@ export default function POSPage() {
                       })
                     }
                   >
-                    <Plus className="h-4 w-4 mr-1" />
+                    <Plus className="mr-1 size-4" />
                     Add Payment
                   </Button>
                 </div>
@@ -2647,14 +2885,20 @@ export default function POSPage() {
                   const facilityId = 11; // TODO: Get from context
                   const fiservConfig = getFiservConfig(facilityId);
                   const inPersonMethods = fiservConfig?.inPersonMethods;
-                  const isLastPayment = index === paymentForm.payments.length - 1;
-                  const remainingAmount = grandTotal - paymentForm.payments
-                    .slice(0, index)
-                    .reduce((sum, p) => sum + p.amount, 0);
-                  
+                  const isLastPayment =
+                    index === paymentForm.payments.length - 1;
+                  const remainingAmount =
+                    grandTotal -
+                    paymentForm.payments
+                      .slice(0, index)
+                      .reduce((sum, p) => sum + p.amount, 0);
+
                   return (
-                    <div key={index} className="space-y-3 p-4 border rounded-lg">
-                      <div className="flex gap-2 items-end">
+                    <div
+                      key={index}
+                      className="space-y-3 rounded-lg border p-4"
+                    >
+                      <div className="flex items-end gap-2">
                         <div className="flex-1">
                           <Label className="text-xs">Method</Label>
                           <Select
@@ -2665,8 +2909,14 @@ export default function POSPage() {
                                 ...newPayments[index],
                                 method: value,
                                 // Reset iPhone/Clover flags when changing method
-                                useYipyyPay: value === "credit" || value === "debit" ? newPayments[index].useYipyyPay : false,
-                                useCloverTerminal: value === "credit" || value === "debit" ? newPayments[index].useCloverTerminal : false,
+                                useYipyyPay:
+                                  value === "credit" || value === "debit"
+                                    ? newPayments[index].useYipyyPay
+                                    : false,
+                                useCloverTerminal:
+                                  value === "credit" || value === "debit"
+                                    ? newPayments[index].useCloverTerminal
+                                    : false,
                               };
                               setPaymentForm({
                                 ...paymentForm,
@@ -2681,22 +2931,24 @@ export default function POSPage() {
                               {inPersonMethods?.cash !== false && (
                                 <SelectItem value="cash">
                                   <div className="flex items-center gap-2">
-                                    <Banknote className="h-4 w-4" />
+                                    <Banknote className="size-4" />
                                     <span>Cash</span>
                                   </div>
                                 </SelectItem>
                               )}
-                              {(inPersonMethods?.cloverTerminal || inPersonMethods?.payWithiPhone || fiservConfig?.enabledPaymentMethods.card) && (
+                              {(inPersonMethods?.cloverTerminal ||
+                                inPersonMethods?.payWithiPhone ||
+                                fiservConfig?.enabledPaymentMethods.card) && (
                                 <>
                                   <SelectItem value="credit">
                                     <div className="flex items-center gap-2">
-                                      <CreditCard className="h-4 w-4" />
+                                      <CreditCard className="size-4" />
                                       <span>Credit Card</span>
                                     </div>
                                   </SelectItem>
                                   <SelectItem value="debit">
                                     <div className="flex items-center gap-2">
-                                      <CreditCard className="h-4 w-4" />
+                                      <CreditCard className="size-4" />
                                       <span>Debit Card</span>
                                     </div>
                                   </SelectItem>
@@ -2705,7 +2957,7 @@ export default function POSPage() {
                               {inPersonMethods?.storeCredit !== false && (
                                 <SelectItem value="store_credit">
                                   <div className="flex items-center gap-2">
-                                    <Wallet className="h-4 w-4" />
+                                    <Wallet className="size-4" />
                                     <span>Store Credit</span>
                                   </div>
                                 </SelectItem>
@@ -2713,7 +2965,7 @@ export default function POSPage() {
                               {inPersonMethods?.giftCard !== false && (
                                 <SelectItem value="gift_card">
                                   <div className="flex items-center gap-2">
-                                    <Gift className="h-4 w-4" />
+                                    <Gift className="size-4" />
                                     <span>Gift Card</span>
                                   </div>
                                 </SelectItem>
@@ -2733,7 +2985,10 @@ export default function POSPage() {
                               const newPayments = [...paymentForm.payments];
                               const amount = parseFloat(e.target.value) || 0;
                               if (isLastPayment) {
-                                newPayments[index].amount = Math.min(amount, remainingAmount);
+                                newPayments[index].amount = Math.min(
+                                  amount,
+                                  remainingAmount,
+                                );
                               } else {
                                 newPayments[index].amount = amount;
                               }
@@ -2749,7 +3004,8 @@ export default function POSPage() {
                                 const totalSoFar = newPayments
                                   .slice(0, index)
                                   .reduce((sum, p) => sum + p.amount, 0);
-                                newPayments[index].amount = grandTotal - totalSoFar;
+                                newPayments[index].amount =
+                                  grandTotal - totalSoFar;
                                 setPaymentForm({
                                   ...paymentForm,
                                   payments: newPayments,
@@ -2759,14 +3015,17 @@ export default function POSPage() {
                           />
                           {isLastPayment && (
                             <div className="mt-1 space-y-1">
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 Remaining: ${remainingAmount.toFixed(2)}
                               </p>
-                              {(payment.method === "credit" || payment.method === "debit") && inPersonMethods?.payWithiPhone && (
-                                <p className="text-xs text-blue-600 font-medium">
-                                  💡 Final payment can be completed with Pay with iPhone
-                                </p>
-                              )}
+                              {(payment.method === "credit" ||
+                                payment.method === "debit") &&
+                                inPersonMethods?.payWithiPhone && (
+                                  <p className="text-xs font-medium text-blue-600">
+                                    💡 Final payment can be completed with Pay
+                                    with iPhone
+                                  </p>
+                                )}
                             </div>
                           )}
                         </div>
@@ -2783,7 +3042,8 @@ export default function POSPage() {
                                 const totalSoFar = newPayments
                                   .slice(0, -1)
                                   .reduce((sum, p) => sum + p.amount, 0);
-                                newPayments[newPayments.length - 1].amount = grandTotal - totalSoFar;
+                                newPayments[newPayments.length - 1].amount =
+                                  grandTotal - totalSoFar;
                               }
                               setPaymentForm({
                                 ...paymentForm,
@@ -2791,152 +3051,212 @@ export default function POSPage() {
                               });
                             }}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="size-4" />
                           </Button>
                         )}
                       </div>
 
                       {/* Pay with iPhone option for credit/debit */}
-                      {(payment.method === "credit" || payment.method === "debit") && inPersonMethods?.payWithiPhone && (
-                        <div className="space-y-2 border rounded-lg p-3 bg-muted/50">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs">Pay with iPhone (Tap to Pay)</Label>
-                            <Switch
-                              checked={payment.useYipyyPay || false}
-                              onCheckedChange={(checked) => {
-                                const newPayments = [...paymentForm.payments];
-                                newPayments[index] = {
-                                  ...newPayments[index],
-                                  useYipyyPay: checked,
-                                  useCloverTerminal: checked ? false : newPayments[index].useCloverTerminal,
-                                };
-                                if (checked) {
-                                  const devices = getYipyyPayDevicesByFacility(facilityId);
-                                  if (devices.length > 0) {
-                                    newPayments[index].yipyyPayDeviceId = devices[0].deviceId;
-                                  }
-                                } else {
-                                  newPayments[index].yipyyPayDeviceId = undefined;
-                                }
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  payments: newPayments,
-                                });
-                              }}
-                            />
-                          </div>
-                          {payment.useYipyyPay && (
-                            <div className="grid gap-2">
-                              <Label className="text-xs">Select iPhone Device</Label>
-                              <Select
-                                value={payment.yipyyPayDeviceId || ""}
-                                onValueChange={(value) => {
+                      {(payment.method === "credit" ||
+                        payment.method === "debit") &&
+                        inPersonMethods?.payWithiPhone && (
+                          <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">
+                                Pay with iPhone (Tap to Pay)
+                              </Label>
+                              <Switch
+                                checked={payment.useYipyyPay || false}
+                                onCheckedChange={(checked) => {
                                   const newPayments = [...paymentForm.payments];
-                                  newPayments[index].yipyyPayDeviceId = value;
+                                  newPayments[index] = {
+                                    ...newPayments[index],
+                                    useYipyyPay: checked,
+                                    useCloverTerminal: checked
+                                      ? false
+                                      : newPayments[index].useCloverTerminal,
+                                  };
+                                  if (checked) {
+                                    const devices =
+                                      getYipyyPayDevicesByFacility(facilityId);
+                                    if (devices.length > 0) {
+                                      newPayments[index].yipyyPayDeviceId =
+                                        devices[0].deviceId;
+                                    }
+                                  } else {
+                                    newPayments[index].yipyyPayDeviceId =
+                                      undefined;
+                                  }
                                   setPaymentForm({
                                     ...paymentForm,
                                     payments: newPayments,
                                   });
                                 }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select device" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getYipyyPayDevicesByFacility(facilityId).map((device) => (
-                                    <SelectItem key={device.id} value={device.deviceId}>
-                                      <div className="flex items-center gap-2">
-                                        <Smartphone className="h-4 w-4" />
-                                        <span>{device.deviceName}</span>
-                                        {device.isAuthorized ? (
-                                          <Badge variant="default" className="ml-2">Ready</Badge>
-                                        ) : (
-                                          <Badge variant="secondary" className="ml-2">Pending</Badge>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              />
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {payment.useYipyyPay && (
+                              <div className="grid gap-2">
+                                <Label className="text-xs">
+                                  Select iPhone Device
+                                </Label>
+                                <Select
+                                  value={payment.yipyyPayDeviceId || ""}
+                                  onValueChange={(value) => {
+                                    const newPayments = [
+                                      ...paymentForm.payments,
+                                    ];
+                                    newPayments[index].yipyyPayDeviceId = value;
+                                    setPaymentForm({
+                                      ...paymentForm,
+                                      payments: newPayments,
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select device" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getYipyyPayDevicesByFacility(
+                                      facilityId,
+                                    ).map((device) => (
+                                      <SelectItem
+                                        key={device.id}
+                                        value={device.deviceId}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Smartphone className="size-4" />
+                                          <span>{device.deviceName}</span>
+                                          {device.isAuthorized ? (
+                                            <Badge
+                                              variant="default"
+                                              className="ml-2"
+                                            >
+                                              Ready
+                                            </Badge>
+                                          ) : (
+                                            <Badge
+                                              variant="secondary"
+                                              className="ml-2"
+                                            >
+                                              Pending
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                       {/* Clover Terminal option for credit/debit */}
-                      {(payment.method === "credit" || payment.method === "debit") && !payment.useYipyyPay && inPersonMethods?.cloverTerminal && (
-                        <div className="space-y-2 border rounded-lg p-3 bg-muted/50">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs">Use Clover Terminal</Label>
-                            <Switch
-                              checked={payment.useCloverTerminal || false}
-                              onCheckedChange={(checked) => {
-                                const newPayments = [...paymentForm.payments];
-                                newPayments[index] = {
-                                  ...newPayments[index],
-                                  useCloverTerminal: checked,
-                                };
-                                if (checked) {
-                                  const terminals = getCloverTerminalsByFacility(facilityId);
-                                  if (terminals.length > 0) {
-                                    newPayments[index].cloverTerminalId = terminals[0].terminalId;
-                                  }
-                                } else {
-                                  newPayments[index].cloverTerminalId = undefined;
-                                }
-                                setPaymentForm({
-                                  ...paymentForm,
-                                  payments: newPayments,
-                                });
-                              }}
-                            />
-                          </div>
-                          {payment.useCloverTerminal && (
-                            <div className="grid gap-2">
-                              <Label className="text-xs">Select Terminal</Label>
-                              <Select
-                                value={payment.cloverTerminalId || ""}
-                                onValueChange={(value) => {
+                      {(payment.method === "credit" ||
+                        payment.method === "debit") &&
+                        !payment.useYipyyPay &&
+                        inPersonMethods?.cloverTerminal && (
+                          <div className="bg-muted/50 space-y-2 rounded-lg border p-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">
+                                Use Clover Terminal
+                              </Label>
+                              <Switch
+                                checked={payment.useCloverTerminal || false}
+                                onCheckedChange={(checked) => {
                                   const newPayments = [...paymentForm.payments];
-                                  newPayments[index].cloverTerminalId = value;
+                                  newPayments[index] = {
+                                    ...newPayments[index],
+                                    useCloverTerminal: checked,
+                                  };
+                                  if (checked) {
+                                    const terminals =
+                                      getCloverTerminalsByFacility(facilityId);
+                                    if (terminals.length > 0) {
+                                      newPayments[index].cloverTerminalId =
+                                        terminals[0].terminalId;
+                                    }
+                                  } else {
+                                    newPayments[index].cloverTerminalId =
+                                      undefined;
+                                  }
                                   setPaymentForm({
                                     ...paymentForm,
                                     payments: newPayments,
                                   });
                                 }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select terminal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getCloverTerminalsByFacility(facilityId).map((terminal) => (
-                                    <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
-                                      <div className="flex items-center gap-2">
-                                        <Printer className="h-4 w-4" />
-                                        <span>{terminal.terminalName}</span>
-                                        {terminal.isOnline ? (
-                                          <Badge variant="default" className="ml-2">Online</Badge>
-                                        ) : (
-                                          <Badge variant="secondary" className="ml-2">Offline</Badge>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              />
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {payment.useCloverTerminal && (
+                              <div className="grid gap-2">
+                                <Label className="text-xs">
+                                  Select Terminal
+                                </Label>
+                                <Select
+                                  value={payment.cloverTerminalId || ""}
+                                  onValueChange={(value) => {
+                                    const newPayments = [
+                                      ...paymentForm.payments,
+                                    ];
+                                    newPayments[index].cloverTerminalId = value;
+                                    setPaymentForm({
+                                      ...paymentForm,
+                                      payments: newPayments,
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select terminal" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getCloverTerminalsByFacility(
+                                      facilityId,
+                                    ).map((terminal) => (
+                                      <SelectItem
+                                        key={terminal.terminalId}
+                                        value={terminal.terminalId}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <Printer className="size-4" />
+                                          <span>{terminal.terminalName}</span>
+                                          {terminal.isOnline ? (
+                                            <Badge
+                                              variant="default"
+                                              className="ml-2"
+                                            >
+                                              Online
+                                            </Badge>
+                                          ) : (
+                                            <Badge
+                                              variant="secondary"
+                                              className="ml-2"
+                                            >
+                                              Offline
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                       {/* Store Credit for split payment */}
-                      {payment.method === "store_credit" && selectedClientId && selectedClientId !== "__walk_in__" && (
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-xs text-muted-foreground">
-                            Available: ${getStoreCreditBalance(selectedClientId).toFixed(2)}
-                          </p>
-                        </div>
-                      )}
+                      {payment.method === "store_credit" &&
+                        selectedClientId &&
+                        selectedClientId !== "__walk_in__" && (
+                          <div className="bg-muted rounded-lg p-3">
+                            <p className="text-muted-foreground text-xs">
+                              Available: $
+                              {getStoreCreditBalance(selectedClientId).toFixed(
+                                2,
+                              )}
+                            </p>
+                          </div>
+                        )}
 
                       {/* Gift Card for split payment */}
                       {payment.method === "gift_card" && (
@@ -2978,16 +3298,20 @@ export default function POSPage() {
                     const facilityId = 11; // TODO: Get from context
                     const fiservConfig = getFiservConfig(facilityId);
                     const inPersonMethods = fiservConfig?.inPersonMethods;
-                    const enabledPaymentMethods = fiservConfig?.enabledPaymentMethods;
-                    const cardOnFileEnabled = fiservConfig?.cardOnFileSettings?.enabled !== false;
-                    
+                    const enabledPaymentMethods =
+                      fiservConfig?.enabledPaymentMethods;
+                    const cardOnFileEnabled =
+                      fiservConfig?.cardOnFileSettings?.enabled !== false;
+
                     // Check if customer has saved cards
-                    const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
-                      ? parseInt(selectedClientId) 
-                      : null;
-                    const tokenizedCards = customerId && cardOnFileEnabled
-                      ? getTokenizedCardsByClient(facilityId, customerId)
-                      : [];
+                    const customerId =
+                      selectedClientId && selectedClientId !== "__walk_in__"
+                        ? parseInt(selectedClientId)
+                        : null;
+                    const tokenizedCards =
+                      customerId && cardOnFileEnabled
+                        ? getTokenizedCardsByClient(facilityId, customerId)
+                        : [];
                     const hasSavedCards = tokenizedCards.length > 0;
 
                     return (
@@ -2996,11 +3320,16 @@ export default function POSPage() {
                         {cardOnFileEnabled && hasSavedCards && (
                           <Button
                             type="button"
-                            variant={paymentForm.method === "credit" && selectedTokenizedCard ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
+                            variant={
+                              paymentForm.method === "credit" &&
+                              selectedTokenizedCard
+                                ? "default"
+                                : "outline"
+                            }
+                            className="flex h-auto flex-col items-start gap-2 p-4"
                             onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
+                              setPaymentForm({
+                                ...paymentForm,
                                 method: "credit",
                                 chargeType: "pay_now",
                                 selectedBookingId: null,
@@ -3014,11 +3343,12 @@ export default function POSPage() {
                             <CreditCard className="h-5 w-5" />
                             <div className="text-left">
                               <p className="font-medium">Card on File</p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-muted-foreground text-xs">
                                 Use saved card
                                 {selectedTokenizedCard && (
-                                  <span className="block mt-1">
-                                    {selectedTokenizedCard.cardBrand} •••• {selectedTokenizedCard.cardLast4}
+                                  <span className="mt-1 block">
+                                    {selectedTokenizedCard.cardBrand} ••••{" "}
+                                    {selectedTokenizedCard.cardLast4}
                                   </span>
                                 )}
                               </p>
@@ -3027,303 +3357,406 @@ export default function POSPage() {
                         )}
 
                         {/* Clover Terminal */}
-                        {inPersonMethods?.cloverTerminal && fiservConfig?.cloverTerminal?.enabled && (
-                          <Button
-                            type="button"
-                            variant={paymentForm.method === "credit" && useCloverTerminal ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
-                            onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
-                                method: "credit",
-                                chargeType: "pay_now",
-                                selectedBookingId: null,
-                              });
-                              setUseCloverTerminal(true);
-                              setUseYipyyPay(false);
-                              setYipyyPayDeviceId(null);
-                              setSelectedTokenizedCard(null);
-                              // Auto-select first terminal if available
-                              const terminals = getCloverTerminalsByFacility(facilityId);
-                              if (terminals.length > 0) {
-                                const defaultTerminalId = fiservConfig?.cloverTerminal?.terminalId || terminals[0].terminalId;
-                                setCloverTerminalId(defaultTerminalId);
+                        {inPersonMethods?.cloverTerminal &&
+                          fiservConfig?.cloverTerminal?.enabled && (
+                            <Button
+                              type="button"
+                              variant={
+                                paymentForm.method === "credit" &&
+                                useCloverTerminal
+                                  ? "default"
+                                  : "outline"
                               }
-                            }}
-                          >
-                            <Printer className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Clover Terminal</p>
-                              <p className="text-xs text-muted-foreground">
-                                Tap/Chip/Swipe
-                              </p>
-                            </div>
-                          </Button>
-                        )}
+                              className="flex h-auto flex-col items-start gap-2 p-4"
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "credit",
+                                  chargeType: "pay_now",
+                                  selectedBookingId: null,
+                                });
+                                setUseCloverTerminal(true);
+                                setUseYipyyPay(false);
+                                setYipyyPayDeviceId(null);
+                                setSelectedTokenizedCard(null);
+                                // Auto-select first terminal if available
+                                const terminals =
+                                  getCloverTerminalsByFacility(facilityId);
+                                if (terminals.length > 0) {
+                                  const defaultTerminalId =
+                                    fiservConfig?.cloverTerminal?.terminalId ||
+                                    terminals[0].terminalId;
+                                  setCloverTerminalId(defaultTerminalId);
+                                }
+                              }}
+                            >
+                              <Printer className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Clover Terminal</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Tap/Chip/Swipe
+                                </p>
+                              </div>
+                            </Button>
+                          )}
 
                         {/* Cash */}
-                        {inPersonMethods?.cash !== false && enabledPaymentMethods?.cash !== false && (
-                          <Button
-                            type="button"
-                            variant={paymentForm.method === "cash" ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
-                            onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
-                                method: "cash",
-                                chargeType: "pay_now",
-                                selectedBookingId: null,
-                              });
-                              setUseCloverTerminal(false);
-                              setCloverTerminalId(null);
-                              setUseYipyyPay(false);
-                              setYipyyPayDeviceId(null);
-                              setSelectedTokenizedCard(null);
-                            }}
-                          >
-                            <Banknote className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Cash</p>
-                              <p className="text-xs text-muted-foreground">
-                                Cash payment
-                              </p>
-                            </div>
-                          </Button>
-                        )}
+                        {inPersonMethods?.cash !== false &&
+                          enabledPaymentMethods?.cash !== false && (
+                            <Button
+                              type="button"
+                              variant={
+                                paymentForm.method === "cash"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="flex h-auto flex-col items-start gap-2 p-4"
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "cash",
+                                  chargeType: "pay_now",
+                                  selectedBookingId: null,
+                                });
+                                setUseCloverTerminal(false);
+                                setCloverTerminalId(null);
+                                setUseYipyyPay(false);
+                                setYipyyPayDeviceId(null);
+                                setSelectedTokenizedCard(null);
+                              }}
+                            >
+                              <Banknote className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Cash</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Cash payment
+                                </p>
+                              </div>
+                            </Button>
+                          )}
 
                         {/* Store Credit */}
-                        {inPersonMethods?.storeCredit !== false && enabledPaymentMethods?.storeCredit !== false && (
-                          <Button
-                            type="button"
-                            variant={paymentForm.method === "store_credit" ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
-                            onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
-                                method: "store_credit",
-                                chargeType: "pay_now",
-                                selectedBookingId: null,
-                              });
-                              setUseCloverTerminal(false);
-                              setCloverTerminalId(null);
-                              setUseYipyyPay(false);
-                              setYipyyPayDeviceId(null);
-                              setSelectedTokenizedCard(null);
-                            }}
-                            disabled={!selectedClientId || selectedClientId === "__walk_in__"}
-                          >
-                            <Wallet className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Store Credit</p>
-                              <p className="text-xs text-muted-foreground">
-                                {selectedClientId && selectedClientId !== "__walk_in__"
-                                  ? `Available: $${getStoreCreditBalance(selectedClientId).toFixed(2)}`
-                                  : "Select customer first"}
-                              </p>
-                            </div>
-                          </Button>
-                        )}
+                        {inPersonMethods?.storeCredit !== false &&
+                          enabledPaymentMethods?.storeCredit !== false && (
+                            <Button
+                              type="button"
+                              variant={
+                                paymentForm.method === "store_credit"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="flex h-auto flex-col items-start gap-2 p-4"
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "store_credit",
+                                  chargeType: "pay_now",
+                                  selectedBookingId: null,
+                                });
+                                setUseCloverTerminal(false);
+                                setCloverTerminalId(null);
+                                setUseYipyyPay(false);
+                                setYipyyPayDeviceId(null);
+                                setSelectedTokenizedCard(null);
+                              }}
+                              disabled={
+                                !selectedClientId ||
+                                selectedClientId === "__walk_in__"
+                              }
+                            >
+                              <Wallet className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Store Credit</p>
+                                <p className="text-muted-foreground text-xs">
+                                  {selectedClientId &&
+                                  selectedClientId !== "__walk_in__"
+                                    ? `Available: $${getStoreCreditBalance(selectedClientId).toFixed(2)}`
+                                    : "Select customer first"}
+                                </p>
+                              </div>
+                            </Button>
+                          )}
 
                         {/* Gift Card */}
-                        {inPersonMethods?.giftCard !== false && enabledPaymentMethods?.giftCard !== false && (
-                          <Button
-                            type="button"
-                            variant={paymentForm.method === "gift_card" ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
-                            onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
-                                method: "gift_card",
-                                chargeType: "pay_now",
-                                selectedBookingId: null,
-                              });
-                              setUseCloverTerminal(false);
-                              setCloverTerminalId(null);
-                              setUseYipyyPay(false);
-                              setYipyyPayDeviceId(null);
-                              setSelectedTokenizedCard(null);
-                            }}
-                          >
-                            <Gift className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Gift Card</p>
-                              <p className="text-xs text-muted-foreground">
-                                Enter gift card code
-                              </p>
-                            </div>
-                          </Button>
-                        )}
+                        {inPersonMethods?.giftCard !== false &&
+                          enabledPaymentMethods?.giftCard !== false && (
+                            <Button
+                              type="button"
+                              variant={
+                                paymentForm.method === "gift_card"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="flex h-auto flex-col items-start gap-2 p-4"
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "gift_card",
+                                  chargeType: "pay_now",
+                                  selectedBookingId: null,
+                                });
+                                setUseCloverTerminal(false);
+                                setCloverTerminalId(null);
+                                setUseYipyyPay(false);
+                                setYipyyPayDeviceId(null);
+                                setSelectedTokenizedCard(null);
+                              }}
+                            >
+                              <Gift className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Gift Card</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Enter gift card code
+                                </p>
+                              </div>
+                            </Button>
+                          )}
 
                         {/* Pay with iPhone (Tap to Pay) - if enabled and not using Clover */}
-                        {inPersonMethods?.payWithiPhone && fiservConfig?.yipyyPay?.enabled && !useCloverTerminal && (
-                          <Button
-                            type="button"
-                            variant={paymentForm.method === "credit" && useYipyyPay ? "default" : "outline"}
-                            className="h-auto p-4 flex flex-col items-start gap-2"
-                            onClick={() => {
-                              setPaymentForm({ 
-                                ...paymentForm, 
-                                method: "credit",
-                                chargeType: "pay_now",
-                                selectedBookingId: null,
-                              });
-                              setUseYipyyPay(true);
-                              setUseCloverTerminal(false);
-                              setCloverTerminalId(null);
-                              setSelectedTokenizedCard(null);
-                              // Auto-select first device if available
-                              const devices = getYipyyPayDevicesByFacility(facilityId);
-                              if (devices.length > 0) {
-                                setYipyyPayDeviceId(devices[0].deviceId);
+                        {inPersonMethods?.payWithiPhone &&
+                          fiservConfig?.yipyyPay?.enabled &&
+                          !useCloverTerminal && (
+                            <Button
+                              type="button"
+                              variant={
+                                paymentForm.method === "credit" && useYipyyPay
+                                  ? "default"
+                                  : "outline"
                               }
-                            }}
-                          >
-                            <Smartphone className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Pay with iPhone</p>
-                              <p className="text-xs text-muted-foreground">
-                                Tap to Pay
-                              </p>
-                            </div>
-                          </Button>
-                        )}
+                              className="flex h-auto flex-col items-start gap-2 p-4"
+                              onClick={() => {
+                                setPaymentForm({
+                                  ...paymentForm,
+                                  method: "credit",
+                                  chargeType: "pay_now",
+                                  selectedBookingId: null,
+                                });
+                                setUseYipyyPay(true);
+                                setUseCloverTerminal(false);
+                                setCloverTerminalId(null);
+                                setSelectedTokenizedCard(null);
+                                // Auto-select first device if available
+                                const devices =
+                                  getYipyyPayDevicesByFacility(facilityId);
+                                if (devices.length > 0) {
+                                  setYipyyPayDeviceId(devices[0].deviceId);
+                                }
+                              }}
+                            >
+                              <Smartphone className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Pay with iPhone</p>
+                                <p className="text-muted-foreground text-xs">
+                                  Tap to Pay
+                                </p>
+                              </div>
+                            </Button>
+                          )}
                       </div>
                     );
                   })()}
                 </div>
 
                 {/* Clover Terminal Selection */}
-                {(paymentForm.method === "credit" || paymentForm.method === "debit") && useCloverTerminal && (() => {
-                  const facilityId = 11; // TODO: Get from context
-                  const fiservConfig = getFiservConfig(facilityId);
-                  const terminals = fiservConfig?.cloverTerminal?.enabled
-                    ? getCloverTerminalsByFacility(facilityId)
-                    : [];
+                {(paymentForm.method === "credit" ||
+                  paymentForm.method === "debit") &&
+                  useCloverTerminal &&
+                  (() => {
+                    const facilityId = 11; // TODO: Get from context
+                    const fiservConfig = getFiservConfig(facilityId);
+                    const terminals = fiservConfig?.cloverTerminal?.enabled
+                      ? getCloverTerminalsByFacility(facilityId)
+                      : [];
 
-                  if (terminals.length > 0) {
-                    return (
-                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold">Clover Terminal Selected</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Process payment via physical terminal (Tap/Chip/Swipe)
-                          </p>
-                        </div>
-                        {useCloverTerminal && (
-                          <div className="grid gap-2">
-                            <Label className="text-xs">Select Terminal</Label>
-                            <Select
-                              value={cloverTerminalId || ""}
-                              onValueChange={setCloverTerminalId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select terminal" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {terminals.map((terminal) => (
-                                  <SelectItem key={terminal.terminalId} value={terminal.terminalId}>
-                                    <div className="flex items-center gap-2">
-                                      <span>{terminal.terminalName}</span>
-                                      {terminal.isOnline ? (
-                                        <Badge variant="default" className="ml-2">Online</Badge>
-                                      ) : (
-                                        <Badge variant="secondary" className="ml-2">Offline</Badge>
+                    if (terminals.length > 0) {
+                      return (
+                        <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                              Clover Terminal Selected
+                            </Label>
+                            <p className="text-muted-foreground text-xs">
+                              Process payment via physical terminal
+                              (Tap/Chip/Swipe)
+                            </p>
+                          </div>
+                          {useCloverTerminal && (
+                            <div className="grid gap-2">
+                              <Label className="text-xs">Select Terminal</Label>
+                              <Select
+                                value={cloverTerminalId || ""}
+                                onValueChange={setCloverTerminalId}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select terminal" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {terminals.map((terminal) => (
+                                    <SelectItem
+                                      key={terminal.terminalId}
+                                      value={terminal.terminalId}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span>{terminal.terminalName}</span>
+                                        {terminal.isOnline ? (
+                                          <Badge
+                                            variant="default"
+                                            className="ml-2"
+                                          >
+                                            Online
+                                          </Badge>
+                                        ) : (
+                                          <Badge
+                                            variant="secondary"
+                                            className="ml-2"
+                                          >
+                                            Offline
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {cloverTerminalId &&
+                                (() => {
+                                  const terminal = getCloverTerminal(
+                                    facilityId,
+                                    cloverTerminalId,
+                                  );
+                                  if (!terminal) return null;
+                                  return (
+                                    <div className="text-muted-foreground mt-1 text-xs">
+                                      {terminal.location && (
+                                        <span>
+                                          Location: {terminal.location} •{" "}
+                                        </span>
+                                      )}
+                                      Supports:{" "}
+                                      {[
+                                        terminal.supportsTap && "Tap",
+                                        terminal.supportsChip && "Chip",
+                                        terminal.supportsSwipe && "Swipe",
+                                      ]
+                                        .filter(Boolean)
+                                        .join(", ")}
+                                      {fiservConfig?.cloverTerminal
+                                        ?.autoPrintReceipts && (
+                                        <span> • Auto-print enabled</span>
                                       )}
                                     </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {cloverTerminalId && (() => {
-                              const terminal = getCloverTerminal(facilityId, cloverTerminalId);
-                              if (!terminal) return null;
-                              return (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {terminal.location && <span>Location: {terminal.location} • </span>}
-                                  Supports: {[
-                                    terminal.supportsTap && "Tap",
-                                    terminal.supportsChip && "Chip",
-                                    terminal.supportsSwipe && "Swipe",
-                                  ].filter(Boolean).join(", ")}
-                                  {fiservConfig?.cloverTerminal?.autoPrintReceipts && (
-                                    <span> • Auto-print enabled</span>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                                  );
+                                })()}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                 {/* Yipyy Pay / Tap to Pay Selection */}
-                {(paymentForm.method === "credit" || paymentForm.method === "debit") && useYipyyPay && !useCloverTerminal && (() => {
-                  const facilityId = 11; // TODO: Get from context
-                  const fiservConfig = getFiservConfig(facilityId);
-                  const devices = fiservConfig?.yipyyPay?.enabled
-                    ? getYipyyPayDevicesByFacility(facilityId)
-                    : [];
+                {(paymentForm.method === "credit" ||
+                  paymentForm.method === "debit") &&
+                  useYipyyPay &&
+                  !useCloverTerminal &&
+                  (() => {
+                    const facilityId = 11; // TODO: Get from context
+                    const fiservConfig = getFiservConfig(facilityId);
+                    const devices = fiservConfig?.yipyyPay?.enabled
+                      ? getYipyyPayDevicesByFacility(facilityId)
+                      : [];
 
-                  if (devices.length > 0) {
-                    return (
-                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold">Pay with iPhone (Tap to Pay) Selected</Label>
-                          <p className="text-xs text-muted-foreground">
-                            Accept contactless payment directly on iPhone - no terminal needed
-                          </p>
-                        </div>
-                        {useYipyyPay && (
-                          <div className="grid gap-2">
-                            <Label className="text-xs">Select iPhone Device</Label>
-                            <Select
-                              value={yipyyPayDeviceId || ""}
-                              onValueChange={setYipyyPayDeviceId}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select device" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {devices.map((device) => (
-                                  <SelectItem key={device.id} value={device.deviceId}>
-                                    <div className="flex items-center gap-2">
-                                      <Smartphone className="h-4 w-4" />
-                                      <span>{device.deviceName}</span>
-                                      {device.isAuthorized ? (
-                                        <Badge variant="default" className="ml-2">Ready</Badge>
-                                      ) : (
-                                        <Badge variant="secondary" className="ml-2">Pending</Badge>
+                    if (devices.length > 0) {
+                      return (
+                        <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-semibold">
+                              Pay with iPhone (Tap to Pay) Selected
+                            </Label>
+                            <p className="text-muted-foreground text-xs">
+                              Accept contactless payment directly on iPhone - no
+                              terminal needed
+                            </p>
+                          </div>
+                          {useYipyyPay && (
+                            <div className="grid gap-2">
+                              <Label className="text-xs">
+                                Select iPhone Device
+                              </Label>
+                              <Select
+                                value={yipyyPayDeviceId || ""}
+                                onValueChange={setYipyyPayDeviceId}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select device" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {devices.map((device) => (
+                                    <SelectItem
+                                      key={device.id}
+                                      value={device.deviceId}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Smartphone className="size-4" />
+                                        <span>{device.deviceName}</span>
+                                        {device.isAuthorized ? (
+                                          <Badge
+                                            variant="default"
+                                            className="ml-2"
+                                          >
+                                            Ready
+                                          </Badge>
+                                        ) : (
+                                          <Badge
+                                            variant="secondary"
+                                            className="ml-2"
+                                          >
+                                            Pending
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {yipyyPayDeviceId &&
+                                (() => {
+                                  const device = getYipyyPayDevice(
+                                    facilityId,
+                                    yipyyPayDeviceId,
+                                  );
+                                  if (!device) return null;
+                                  return (
+                                    <div className="text-muted-foreground mt-1 text-xs">
+                                      {device.lastUsedAt && (
+                                        <span>
+                                          Last used:{" "}
+                                          {new Date(
+                                            device.lastUsedAt,
+                                          ).toLocaleDateString()}{" "}
+                                          •{" "}
+                                        </span>
+                                      )}
+                                      Tap card, iPhone, or Apple Watch to the
+                                      top of the phone.
+                                      {fiservConfig?.yipyyPay
+                                        ?.autoSendReceipt && (
+                                        <span>
+                                          {" "}
+                                          • Receipt will be sent automatically
+                                        </span>
                                       )}
                                     </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {yipyyPayDeviceId && (() => {
-                              const device = getYipyyPayDevice(facilityId, yipyyPayDeviceId);
-                              if (!device) return null;
-                              return (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {device.lastUsedAt && (
-                                    <span>Last used: {new Date(device.lastUsedAt).toLocaleDateString()} • </span>
-                                  )}
-                                  Tap card, iPhone, or Apple Watch to the top of the phone.
-                                  {fiservConfig?.yipyyPay?.autoSendReceipt && (
-                                    <span> • Receipt will be sent automatically</span>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                                  );
+                                })()}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                 {paymentForm.method === "cash" && (
                   <div className="grid gap-2">
@@ -3333,68 +3766,77 @@ export default function POSPage() {
                 )}
 
                 {/* Store Credit */}
-                {paymentForm.method === "store_credit" && (() => {
-                  const facilityId = 11; // TODO: Get from context
-                  const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
-                    ? selectedClientId 
-                    : null;
-                  const availableStoreCredit = customerId 
-                    ? getStoreCreditBalance(customerId)
-                    : 0;
+                {paymentForm.method === "store_credit" &&
+                  (() => {
+                    const _facilityId = 11; // TODO: Get from context
+                    const customerId =
+                      selectedClientId && selectedClientId !== "__walk_in__"
+                        ? selectedClientId
+                        : null;
+                    const availableStoreCredit = customerId
+                      ? getStoreCreditBalance(customerId)
+                      : 0;
 
-                  if (!customerId) {
-                    return (
-                      <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground">
-                          Please select a customer to use store credit
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-3 border rounded-lg p-4">
-                      <div className="space-y-2">
-                        <Label>Available Store Credit</Label>
-                        <div className="text-2xl font-bold text-green-600">
-                          ${availableStoreCredit.toFixed(2)}
-                        </div>
-                        {availableStoreCredit < grandTotal && (
-                          <p className="text-xs text-muted-foreground">
-                            Store credit balance is less than total. Remaining amount will need to be paid with another method.
+                    if (!customerId) {
+                      return (
+                        <div className="bg-muted rounded-lg p-3">
+                          <p className="text-muted-foreground text-sm">
+                            Please select a customer to use store credit
                           </p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-3 rounded-lg border p-4">
+                        <div className="space-y-2">
+                          <Label>Available Store Credit</Label>
+                          <div className="text-2xl font-bold text-green-600">
+                            ${availableStoreCredit.toFixed(2)}
+                          </div>
+                          {availableStoreCredit < grandTotal && (
+                            <p className="text-muted-foreground text-xs">
+                              Store credit balance is less than total. Remaining
+                              amount will need to be paid with another method.
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="text-xs">Amount to Apply</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={Math.min(availableStoreCredit, grandTotal)}
+                            step="0.01"
+                            value={storeCreditAmount || ""}
+                            onChange={(e) => {
+                              const amount = parseFloat(e.target.value) || 0;
+                              setStoreCreditAmount(
+                                Math.min(
+                                  amount,
+                                  availableStoreCredit,
+                                  grandTotal,
+                                ),
+                              );
+                            }}
+                            placeholder={`Max: $${Math.min(availableStoreCredit, grandTotal).toFixed(2)}`}
+                          />
+                        </div>
+                        {storeCreditAmount > 0 && (
+                          <div className="text-sm">
+                            <span>Remaining after store credit: </span>
+                            <span className="font-semibold">
+                              ${(grandTotal - storeCreditAmount).toFixed(2)}
+                            </span>
+                          </div>
                         )}
                       </div>
-                      <div className="grid gap-2">
-                        <Label className="text-xs">Amount to Apply</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={Math.min(availableStoreCredit, grandTotal)}
-                          step="0.01"
-                          value={storeCreditAmount || ""}
-                          onChange={(e) => {
-                            const amount = parseFloat(e.target.value) || 0;
-                            setStoreCreditAmount(Math.min(amount, availableStoreCredit, grandTotal));
-                          }}
-                          placeholder={`Max: $${Math.min(availableStoreCredit, grandTotal).toFixed(2)}`}
-                        />
-                      </div>
-                      {storeCreditAmount > 0 && (
-                        <div className="text-sm">
-                          <span>Remaining after store credit: </span>
-                          <span className="font-semibold">
-                            ${(grandTotal - storeCreditAmount).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
 
                 {/* Gift Card */}
                 {paymentForm.method === "gift_card" && (
-                  <div className="space-y-3 border rounded-lg p-4">
+                  <div className="space-y-3 rounded-lg border p-4">
                     <div className="grid gap-2">
                       <Label>Gift Card Code</Label>
                       <div className="flex gap-2">
@@ -3402,13 +3844,20 @@ export default function POSPage() {
                           type="text"
                           placeholder="Enter gift card code"
                           value={selectedGiftCardCode}
-                          onChange={(e) => setSelectedGiftCardCode(e.target.value.toUpperCase())}
+                          onChange={(e) =>
+                            setSelectedGiftCardCode(
+                              e.target.value.toUpperCase(),
+                            )
+                          }
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
                               const facilityId = 11; // TODO: Get from context
                               const giftCard = giftCards.find(
-                                (gc) => gc.code === selectedGiftCardCode && gc.facilityId === facilityId && gc.status === "active"
+                                (gc) =>
+                                  gc.code === selectedGiftCardCode &&
+                                  gc.facilityId === facilityId &&
+                                  gc.status === "active",
                               );
                               if (giftCard) {
                                 setSelectedGiftCard({
@@ -3418,7 +3867,7 @@ export default function POSPage() {
                                 });
                                 if (giftCard.currentBalance < grandTotal) {
                                   alert(
-                                    `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`
+                                    `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
                                   );
                                 }
                               } else {
@@ -3434,7 +3883,10 @@ export default function POSPage() {
                           onClick={() => {
                             const facilityId = 11; // TODO: Get from context
                             const giftCard = giftCards.find(
-                              (gc) => gc.code === selectedGiftCardCode && gc.facilityId === facilityId && gc.status === "active"
+                              (gc) =>
+                                gc.code === selectedGiftCardCode &&
+                                gc.facilityId === facilityId &&
+                                gc.status === "active",
                             );
                             if (giftCard) {
                               setSelectedGiftCard({
@@ -3444,7 +3896,7 @@ export default function POSPage() {
                               });
                               if (giftCard.currentBalance < grandTotal) {
                                 alert(
-                                  `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`
+                                  `Gift card balance ($${giftCard.currentBalance.toFixed(2)}) is less than total. Remaining amount will need to be paid with another method.`,
                                 );
                               }
                             } else {
@@ -3458,17 +3910,21 @@ export default function POSPage() {
                       </div>
                     </div>
                     {selectedGiftCard && (
-                      <div className="p-3 bg-muted rounded-lg space-y-2">
+                      <div className="bg-muted space-y-2 rounded-lg p-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Gift Card: {selectedGiftCard.code}</span>
+                          <span className="text-sm font-medium">
+                            Gift Card: {selectedGiftCard.code}
+                          </span>
                           <Badge variant="default">Active</Badge>
                         </div>
                         <div className="text-2xl font-bold text-green-600">
                           ${selectedGiftCard.balance.toFixed(2)}
                         </div>
                         {selectedGiftCard.balance < grandTotal && (
-                          <p className="text-xs text-muted-foreground">
-                            Remaining amount: ${(grandTotal - selectedGiftCard.balance).toFixed(2)} will need to be paid with another method
+                          <p className="text-muted-foreground text-xs">
+                            Remaining amount: $
+                            {(grandTotal - selectedGiftCard.balance).toFixed(2)}{" "}
+                            will need to be paid with another method
                           </p>
                         )}
                       </div>
@@ -3477,168 +3933,248 @@ export default function POSPage() {
                 )}
 
                 {/* Saved Card on File Selection */}
-                {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && !useYipyyPay && (() => {
-                  const facilityId = 11; // TODO: Get from context
-                  const fiservConfig = getFiservConfig(facilityId);
-                  const customerId = selectedClientId && selectedClientId !== "__walk_in__" 
-                    ? Number(selectedClientId) 
-                    : null;
-                  const tokenizedCards = customerId && fiservConfig?.enabledPaymentMethods.cardOnFile
-                    ? getTokenizedCardsByClient(facilityId, customerId)
-                    : [];
+                {(paymentForm.method === "credit" ||
+                  paymentForm.method === "debit") &&
+                  !useCloverTerminal &&
+                  !useYipyyPay &&
+                  (() => {
+                    const facilityId = 11; // TODO: Get from context
+                    const fiservConfig = getFiservConfig(facilityId);
+                    const customerId =
+                      selectedClientId && selectedClientId !== "__walk_in__"
+                        ? Number(selectedClientId)
+                        : null;
+                    const tokenizedCards =
+                      customerId &&
+                      fiservConfig?.enabledPaymentMethods.cardOnFile
+                        ? getTokenizedCardsByClient(facilityId, customerId)
+                        : [];
 
-                  if (tokenizedCards.length > 0) {
-                    return (
-                      <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                        <Label className="text-sm font-semibold">Saved Card on File</Label>
-                        <div className="grid gap-2">
-                          <Select
-                            value={selectedTokenizedCard?.id || "new"}
-                            onValueChange={(value) => {
-                              if (value === "new") {
-                                setSelectedTokenizedCard(null);
-                              } else {
-                                const card = tokenizedCards.find((c) => c.id === value);
-                                setSelectedTokenizedCard(card || null);
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new">Enter New Card</SelectItem>
-                              {tokenizedCards.map((card) => (
-                                <SelectItem key={card.id} value={card.id}>
-                                  <div className="flex items-center gap-2">
-                                    <CreditCard className="h-4 w-4" />
-                                    <span>{card.cardBrand?.toUpperCase()} •••• {card.cardLast4}</span>
-                                    <span className="text-muted-foreground">(Exp {card.cardExpMonth}/{card.cardExpYear})</span>
-                                    {card.isDefault && <Badge variant="outline" className="ml-2 text-xs">Default</Badge>}
-                                  </div>
+                    if (tokenizedCards.length > 0) {
+                      return (
+                        <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
+                          <Label className="text-sm font-semibold">
+                            Saved Card on File
+                          </Label>
+                          <div className="grid gap-2">
+                            <Select
+                              value={selectedTokenizedCard?.id || "new"}
+                              onValueChange={(value) => {
+                                if (value === "new") {
+                                  setSelectedTokenizedCard(null);
+                                } else {
+                                  const card = tokenizedCards.find(
+                                    (c) => c.id === value,
+                                  );
+                                  setSelectedTokenizedCard(card || null);
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new">
+                                  Enter New Card
                                 </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground">
-                            {selectedTokenizedCard 
-                              ? `Using saved ${selectedTokenizedCard.cardBrand?.toUpperCase()} card ending in ${selectedTokenizedCard.cardLast4}`
-                              : "Select a saved card or enter new card details below"}
-                          </p>
+                                {tokenizedCards.map((card) => (
+                                  <SelectItem key={card.id} value={card.id}>
+                                    <div className="flex items-center gap-2">
+                                      <CreditCard className="size-4" />
+                                      <span>
+                                        {card.cardBrand?.toUpperCase()} ••••{" "}
+                                        {card.cardLast4}
+                                      </span>
+                                      <span className="text-muted-foreground">
+                                        (Exp {card.cardExpMonth}/
+                                        {card.cardExpYear})
+                                      </span>
+                                      {card.isDefault && (
+                                        <Badge
+                                          variant="outline"
+                                          className="ml-2 text-xs"
+                                        >
+                                          Default
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-muted-foreground text-xs">
+                              {selectedTokenizedCard
+                                ? `Using saved ${selectedTokenizedCard.cardBrand?.toUpperCase()} card ending in ${selectedTokenizedCard.cardLast4}`
+                                : "Select a saved card or enter new card details below"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                      );
+                    }
+                    return null;
+                  })()}
 
                 {/* Fiserv Card Selection - New Card Entry */}
-                {(paymentForm.method === "credit" || paymentForm.method === "debit") && !useCloverTerminal && !useYipyyPay && (
-                  <div className="space-y-4">
-                    {/* Manual Card Entry - Check Permission */}
-                    {!selectedTokenizedCard && !hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined) && (
-                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          ⚠️ Manual card entry requires admin/manager permission. Please use a saved card or contact a manager.
-                        </p>
-                      </div>
-                    )}
-
-                    {!selectedTokenizedCard && hasPermission(facilityRole, "manual_card_entry", currentUserId || undefined) && (
-                      <div className="space-y-3 border rounded-lg p-4">
-                        <Label>Card Details</Label>
-                        <div className="grid gap-2">
-                          <Label className="text-xs">Card Number</Label>
-                          <Input
-                            type="text"
-                            placeholder="1234 5678 9012 3456"
-                            value={newCardDetails.number}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\s/g, "");
-                              if (/^\d*$/.test(value) && value.length <= 16) {
-                                const formatted = value.match(/.{1,4}/g)?.join(" ") || value;
-                                setNewCardDetails({ ...newCardDetails, number: formatted });
-                              }
-                            }}
-                            maxLength={19}
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="grid gap-2">
-                            <Label className="text-xs">Month</Label>
-                            <Input
-                              type="text"
-                              placeholder="MM"
-                              value={newCardDetails.expMonth}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, "");
-                                if (value.length <= 2) {
-                                  setNewCardDetails({ ...newCardDetails, expMonth: value });
-                                }
-                              }}
-                              maxLength={2}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label className="text-xs">Year</Label>
-                            <Input
-                              type="text"
-                              placeholder="YYYY"
-                              value={newCardDetails.expYear}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, "");
-                                if (value.length <= 4) {
-                                  setNewCardDetails({ ...newCardDetails, expYear: value });
-                                }
-                              }}
-                              maxLength={4}
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label className="text-xs">CVV</Label>
-                            <Input
-                              type="text"
-                              placeholder="123"
-                              value={newCardDetails.cvv}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, "");
-                                if (value.length <= 4) {
-                                  setNewCardDetails({ ...newCardDetails, cvv: value });
-                                }
-                              }}
-                              maxLength={4}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label className="text-xs">Cardholder Name</Label>
-                          <Input
-                            type="text"
-                            placeholder="John Doe"
-                            value={newCardDetails.cardholderName}
-                            onChange={(e) =>
-                              setNewCardDetails({ ...newCardDetails, cardholderName: e.target.value })
-                            }
-                          />
-                        </div>
-                        {selectedClientId && selectedClientId !== "__walk_in__" && (
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="saveCard"
-                              checked={saveCardToAccount}
-                              onChange={(e) => setSaveCardToAccount(e.target.checked)}
-                              className="rounded border-gray-300"
-                            />
-                            <Label htmlFor="saveCard" className="text-sm font-normal">
-                              Save card to customer account for future payments
-                            </Label>
+                {(paymentForm.method === "credit" ||
+                  paymentForm.method === "debit") &&
+                  !useCloverTerminal &&
+                  !useYipyyPay && (
+                    <div className="space-y-4">
+                      {/* Manual Card Entry - Check Permission */}
+                      {!selectedTokenizedCard &&
+                        !hasPermission(
+                          facilityRole,
+                          "manual_card_entry",
+                          currentUserId || undefined,
+                        ) && (
+                          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                            <p className="text-sm text-yellow-800">
+                              ⚠️ Manual card entry requires admin/manager
+                              permission. Please use a saved card or contact a
+                              manager.
+                            </p>
                           </div>
                         )}
-                      </div>
-                    )}
-                  </div>
-                )}
+
+                      {!selectedTokenizedCard &&
+                        hasPermission(
+                          facilityRole,
+                          "manual_card_entry",
+                          currentUserId || undefined,
+                        ) && (
+                          <div className="space-y-3 rounded-lg border p-4">
+                            <Label>Card Details</Label>
+                            <div className="grid gap-2">
+                              <Label className="text-xs">Card Number</Label>
+                              <Input
+                                type="text"
+                                placeholder="1234 5678 9012 3456"
+                                value={newCardDetails.number}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(
+                                    /\s/g,
+                                    "",
+                                  );
+                                  if (
+                                    /^\d*$/.test(value) &&
+                                    value.length <= 16
+                                  ) {
+                                    const formatted =
+                                      value.match(/.{1,4}/g)?.join(" ") ||
+                                      value;
+                                    setNewCardDetails({
+                                      ...newCardDetails,
+                                      number: formatted,
+                                    });
+                                  }
+                                }}
+                                maxLength={19}
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="grid gap-2">
+                                <Label className="text-xs">Month</Label>
+                                <Input
+                                  type="text"
+                                  placeholder="MM"
+                                  value={newCardDetails.expMonth}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(
+                                      /\D/g,
+                                      "",
+                                    );
+                                    if (value.length <= 2) {
+                                      setNewCardDetails({
+                                        ...newCardDetails,
+                                        expMonth: value,
+                                      });
+                                    }
+                                  }}
+                                  maxLength={2}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label className="text-xs">Year</Label>
+                                <Input
+                                  type="text"
+                                  placeholder="YYYY"
+                                  value={newCardDetails.expYear}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(
+                                      /\D/g,
+                                      "",
+                                    );
+                                    if (value.length <= 4) {
+                                      setNewCardDetails({
+                                        ...newCardDetails,
+                                        expYear: value,
+                                      });
+                                    }
+                                  }}
+                                  maxLength={4}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label className="text-xs">CVV</Label>
+                                <Input
+                                  type="text"
+                                  placeholder="123"
+                                  value={newCardDetails.cvv}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(
+                                      /\D/g,
+                                      "",
+                                    );
+                                    if (value.length <= 4) {
+                                      setNewCardDetails({
+                                        ...newCardDetails,
+                                        cvv: value,
+                                      });
+                                    }
+                                  }}
+                                  maxLength={4}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label className="text-xs">Cardholder Name</Label>
+                              <Input
+                                type="text"
+                                placeholder="John Doe"
+                                value={newCardDetails.cardholderName}
+                                onChange={(e) =>
+                                  setNewCardDetails({
+                                    ...newCardDetails,
+                                    cardholderName: e.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+                            {selectedClientId &&
+                              selectedClientId !== "__walk_in__" && (
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="saveCard"
+                                    checked={saveCardToAccount}
+                                    onChange={(e) =>
+                                      setSaveCardToAccount(e.target.checked)
+                                    }
+                                    className="rounded-sm border-gray-300"
+                                  />
+                                  <Label
+                                    htmlFor="saveCard"
+                                    className="text-sm font-normal"
+                                  >
+                                    Save card to customer account for future
+                                    payments
+                                  </Label>
+                                </div>
+                              )}
+                          </div>
+                        )}
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -3675,7 +4211,7 @@ export default function POSPage() {
 
       {/* Link Customer / Pet / Booking Modal */}
       <Dialog open={isLinkModalOpen} onOpenChange={setIsLinkModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-h-[80vh] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Search Customer / Pet / Booking</DialogTitle>
             <DialogDescription>
@@ -3685,7 +4221,7 @@ export default function POSPage() {
 
           <div className="space-y-4 py-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 placeholder="Search by email, phone, name, first name, last name, or pet name..."
                 value={linkSearchQuery}
@@ -3702,7 +4238,7 @@ export default function POSPage() {
                     {filteredCustomers.map((client) => (
                       <div
                         key={client.id}
-                        className="border rounded-lg p-3 hover:bg-muted/50 cursor-pointer transition-colors"
+                        className="hover:bg-muted/50 cursor-pointer rounded-lg border p-3 transition-colors"
                         onClick={() => {
                           handleClientSelect(String(client.id));
                           setIsLinkModalOpen(false);
@@ -3712,16 +4248,16 @@ export default function POSPage() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
+                              <User className="text-muted-foreground size-4" />
                               <p className="font-medium">{client.name}</p>
                               {selectedClientId === String(client.id) && (
                                 <Badge variant="default" className="text-xs">
-                                  <Check className="h-3 w-3 mr-1" />
+                                  <Check className="mr-1 h-3 w-3" />
                                   Selected
                                 </Badge>
                               )}
                             </div>
-                            <div className="mt-1 space-y-1 text-sm text-muted-foreground">
+                            <div className="text-muted-foreground mt-1 space-y-1 text-sm">
                               {client.email && (
                                 <div className="flex items-center gap-1">
                                   <Mail className="h-3 w-3" />
@@ -3735,10 +4271,14 @@ export default function POSPage() {
                                 </div>
                               )}
                               {client.pets && client.pets.length > 0 && (
-                                <div className="flex items-center gap-1 flex-wrap">
+                                <div className="flex flex-wrap items-center gap-1">
                                   <PawPrint className="h-3 w-3" />
-                                  {client.pets.map((pet, idx) => (
-                                    <Badge key={pet.id} variant="outline" className="text-xs">
+                                  {client.pets.map((pet) => (
+                                    <Badge
+                                      key={pet.id}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       {pet.name}
                                     </Badge>
                                   ))}
@@ -3751,17 +4291,17 @@ export default function POSPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <div className="text-muted-foreground py-8 text-center">
+                    <Search className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p>No customers found</p>
-                    <p className="text-sm mt-1">Try a different search term</p>
+                    <p className="mt-1 text-sm">Try a different search term</p>
                   </div>
                 )
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Search className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <Search className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   <p>Start typing to search customers</p>
-                  <p className="text-sm mt-1">
+                  <p className="mt-1 text-sm">
                     Search by email, phone, name, or pet name
                   </p>
                 </div>
@@ -3793,14 +4333,17 @@ export default function POSPage() {
       </Dialog>
 
       {/* Tap to Pay Modal */}
-      <Dialog open={isTapToPayModalOpen} onOpenChange={(open) => {
-        setIsTapToPayModalOpen(open);
-        if (!open) {
-          setTapToPayStatus("idle");
-          setTapToPayError(null);
-          setTapToPayResponse(null);
-        }
-      }}>
+      <Dialog
+        open={isTapToPayModalOpen}
+        onOpenChange={(open) => {
+          setIsTapToPayModalOpen(open);
+          if (!open) {
+            setTapToPayStatus("idle");
+            setTapToPayError(null);
+            setTapToPayResponse(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -3816,18 +4359,31 @@ export default function POSPage() {
             const facilityId = 11; // TODO: Get from context
             const fiservConfig = getFiservConfig(facilityId);
             const inPersonMethods = fiservConfig?.inPersonMethods;
-            const device = yipyyPayDeviceId ? getYipyyPayDevice(facilityId, yipyyPayDeviceId) : null;
-            const minIOSVersion = inPersonMethods?.iphoneSettings?.deviceRequirements.minIOSVersion || "16.0";
+            const device = yipyyPayDeviceId
+              ? getYipyyPayDevice(facilityId, yipyyPayDeviceId)
+              : null;
+            const minIOSVersion =
+              inPersonMethods?.iphoneSettings?.deviceRequirements
+                .minIOSVersion || "16.0";
             const deviceCheck = isDeviceReadyForTapToPay(minIOSVersion);
-            const enabledLocations = inPersonMethods?.iphoneSettings?.enabledLocations || [];
-            const restrictedRoles = inPersonMethods?.iphoneSettings?.restrictedRoles || [];
+            const enabledLocations =
+              inPersonMethods?.iphoneSettings?.enabledLocations || [];
+            const restrictedRoles =
+              inPersonMethods?.iphoneSettings?.restrictedRoles || [];
             const currentLocation = "loc-001"; // TODO: Get from context
-            const isLocationEnabled = enabledLocations.includes(currentLocation);
-            const isRoleAuthorized = restrictedRoles.length === 0 || restrictedRoles.includes(facilityRole);
+            const isLocationEnabled =
+              enabledLocations.includes(currentLocation);
+            const isRoleAuthorized =
+              restrictedRoles.length === 0 ||
+              restrictedRoles.includes(facilityRole);
 
             // Pre-payment checks
             if (tapToPayStatus === "idle") {
-              const checks: { label: string; passed: boolean; error?: string }[] = [
+              const checks: {
+                label: string;
+                passed: boolean;
+                error?: string;
+              }[] = [
                 {
                   label: "Device is iPhone",
                   passed: deviceCheck.isIPhone,
@@ -3841,7 +4397,8 @@ export default function POSPage() {
                 {
                   label: "NFC Support",
                   passed: deviceCheck.supportsNFC,
-                  error: "Device does not support NFC (requires iPhone XS or newer)",
+                  error:
+                    "Device does not support NFC (requires iPhone XS or newer)",
                 },
                 {
                   label: "Facility has method enabled",
@@ -3860,7 +4417,8 @@ export default function POSPage() {
                 },
                 {
                   label: "Device authorized",
-                  passed: device?.isAuthorized === true && device?.isActive === true,
+                  passed:
+                    device?.isAuthorized === true && device?.isActive === true,
                   error: "Selected iPhone device is not authorized or active",
                 },
               ];
@@ -3871,10 +4429,12 @@ export default function POSPage() {
                 return (
                   <div className="space-y-4">
                     <Alert className="border-destructive">
-                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <AlertCircle className="text-destructive size-4" />
                       <AlertDescription>
-                        <div className="font-semibold mb-2">Pre-payment checks failed:</div>
-                        <ul className="list-disc list-inside space-y-1 text-sm">
+                        <div className="mb-2 font-semibold">
+                          Pre-payment checks failed:
+                        </div>
+                        <ul className="list-inside list-disc space-y-1 text-sm">
                           {failedChecks.map((check, idx) => (
                             <li key={idx} className="text-destructive">
                               {check.label}: {check.error}
@@ -3902,11 +4462,11 @@ export default function POSPage() {
               return (
                 <div className="space-y-6">
                   {/* Amount Display */}
-                  <div className="text-center space-y-2">
-                    <div className="text-5xl font-bold text-primary">
+                  <div className="space-y-2 text-center">
+                    <div className="text-primary text-5xl font-bold">
                       ${grandTotal.toFixed(2)}
                     </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="text-muted-foreground space-y-1 text-sm">
                       <div>Subtotal: ${subtotal.toFixed(2)}</div>
                       {taxTotal > 0 && <div>Tax: ${taxTotal.toFixed(2)}</div>}
                       {calculatedTipAmount > 0 && (
@@ -3916,18 +4476,21 @@ export default function POSPage() {
                   </div>
 
                   {/* Visual Prompt */}
-                  <div className="flex flex-col items-center space-y-4 p-6 bg-muted rounded-lg border-2 border-dashed">
-                    <div className="text-center space-y-2">
-                      <Smartphone className="h-16 w-16 mx-auto text-primary animate-pulse" />
+                  <div className="bg-muted flex flex-col items-center space-y-4 rounded-lg border-2 border-dashed p-6">
+                    <div className="space-y-2 text-center">
+                      <Smartphone className="text-primary mx-auto h-16 w-16 animate-pulse" />
                       <p className="text-lg font-semibold">
-                        Tap card, iPhone, or Apple Watch to the top of the phone.
+                        Tap card, iPhone, or Apple Watch to the top of the
+                        phone.
                       </p>
                     </div>
                     {device && (
-                      <div className="text-sm text-muted-foreground text-center">
+                      <div className="text-muted-foreground text-center text-sm">
                         Device: {device.deviceName}
                         {device.isAuthorized && (
-                          <Badge variant="default" className="ml-2">Ready</Badge>
+                          <Badge variant="default" className="ml-2">
+                            Ready
+                          </Badge>
                         )}
                       </div>
                     )}
@@ -3955,18 +4518,25 @@ export default function POSPage() {
 
                         try {
                           const customerId =
-                            selectedClientId && selectedClientId !== "__walk_in__"
+                            selectedClientId &&
+                            selectedClientId !== "__walk_in__"
                               ? selectedClientId
                               : undefined;
                           const name =
                             customerName ||
-                            (selectedClientId && selectedClientId !== "__walk_in__"
-                              ? clients.find((c) => String(c.id) === selectedClientId)?.name
+                            (selectedClientId &&
+                            selectedClientId !== "__walk_in__"
+                              ? clients.find(
+                                  (c) => String(c.id) === selectedClientId,
+                                )?.name
                               : undefined);
                           const email =
                             customerEmail ||
-                            (selectedClientId && selectedClientId !== "__walk_in__"
-                              ? clients.find((c) => String(c.id) === selectedClientId)?.email
+                            (selectedClientId &&
+                            selectedClientId !== "__walk_in__"
+                              ? clients.find(
+                                  (c) => String(c.id) === selectedClientId,
+                                )?.email
                               : undefined);
 
                           const yipyyPayRequest: YipyyPayRequest = {
@@ -3974,48 +4544,76 @@ export default function POSPage() {
                             deviceId: yipyyPayDeviceId,
                             amount: grandTotal - (calculatedTipAmount || 0),
                             currency: "USD",
-                            tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+                            tipAmount:
+                              calculatedTipAmount > 0
+                                ? calculatedTipAmount
+                                : undefined,
                             description: `POS Transaction - ${cart.length} item(s)`,
                             invoiceId: undefined,
-                            customerId: customerId ? Number(customerId) : undefined,
+                            customerId: customerId
+                              ? Number(customerId)
+                              : undefined,
                             bookingId: selectedBookingId || undefined,
-                            sendReceipt: fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
+                            sendReceipt:
+                              fiservConfig?.yipyyPay?.autoSendReceipt ?? true,
                             processedBy: currentUserId || "staff-001",
-                            processedById: currentUserId ? Number(currentUserId) : undefined,
+                            processedById: currentUserId
+                              ? Number(currentUserId)
+                              : undefined,
                           };
 
-                          const response = await processYipyyPay(yipyyPayRequest);
+                          const response =
+                            await processYipyyPay(yipyyPayRequest);
                           setTapToPayResponse(response);
 
                           if (response.success) {
                             setTapToPayStatus("success");
-                            
+
                             // Record transaction
                             addRetailTransaction({
-                              items: cart.map(({ id, ...item }) => item),
+                              items: cart.map(({ id: _id, ...item }) => item),
                               subtotal,
                               discountTotal,
                               cartDiscount: cartDiscount || undefined,
-                              promoCodeUsed: appliedPromoCode?.code || undefined,
-                              accountDiscountApplied: accountDiscount?.id || undefined,
+                              promoCodeUsed:
+                                appliedPromoCode?.code || undefined,
+                              accountDiscountApplied:
+                                accountDiscount?.id || undefined,
                               taxTotal,
-                              tipAmount: calculatedTipAmount > 0 ? calculatedTipAmount : undefined,
+                              tipAmount:
+                                calculatedTipAmount > 0
+                                  ? calculatedTipAmount
+                                  : undefined,
                               tipPercentage: tipPercentage || undefined,
                               total: grandTotal,
                               paymentMethod: paymentForm.method,
-                              payments: [{ method: paymentForm.method, amount: grandTotal }],
+                              payments: [
+                                {
+                                  method: paymentForm.method,
+                                  amount: grandTotal,
+                                },
+                              ],
                               customerId,
                               customerName: name,
                               customerEmail: email,
                               petId: selectedPetId || undefined,
-                              petName: selectedPetId && selectedClientId && selectedClientId !== "__walk_in__"
-                                ? clients
-                                    .find((c) => String(c.id) === selectedClientId)
-                                    ?.pets.find((p) => p.id === selectedPetId)?.name
-                                : undefined,
+                              petName:
+                                selectedPetId &&
+                                selectedClientId &&
+                                selectedClientId !== "__walk_in__"
+                                  ? clients
+                                      .find(
+                                        (c) =>
+                                          String(c.id) === selectedClientId,
+                                      )
+                                      ?.pets.find((p) => p.id === selectedPetId)
+                                      ?.name
+                                  : undefined,
                               bookingId: selectedBookingId || undefined,
                               bookingService: selectedBookingId
-                                ? bookings.find((b) => b.id === selectedBookingId)?.service
+                                ? bookings.find(
+                                    (b) => b.id === selectedBookingId,
+                                  )?.service
                                 : undefined,
                               cashierId: currentUserId || "staff-001",
                               cashierName: "Staff",
@@ -4025,7 +4623,9 @@ export default function POSPage() {
 
                             // Apply promo code usage
                             if (appliedPromoCode) {
-                              const promo = getPromoCodeByCode(appliedPromoCode.code);
+                              const promo = getPromoCodeByCode(
+                                appliedPromoCode.code,
+                              );
                               if (promo) {
                                 applyPromoCode(appliedPromoCode.code);
                               }
@@ -4047,11 +4647,15 @@ export default function POSPage() {
                             setYipyyPayDeviceId(null);
                           } else {
                             setTapToPayStatus("failed");
-                            setTapToPayError(response.error?.message || "Payment failed");
+                            setTapToPayError(
+                              response.error?.message || "Payment failed",
+                            );
                           }
                         } catch (error) {
                           setTapToPayStatus("failed");
-                          setTapToPayError("An error occurred while processing the payment");
+                          setTapToPayError(
+                            "An error occurred while processing the payment",
+                          );
                           console.error("Tap to Pay error:", error);
                         }
                       }}
@@ -4069,15 +4673,18 @@ export default function POSPage() {
                 <div className="space-y-6 text-center">
                   <div className="flex flex-col items-center space-y-4">
                     <div className="relative">
-                      <Smartphone className="h-20 w-20 text-primary animate-pulse" />
+                      <Smartphone className="text-primary h-20 w-20 animate-pulse" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                        <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-lg font-semibold">Processing payment...</p>
-                      <p className="text-sm text-muted-foreground">
-                        Tap card, iPhone, or Apple Watch to the top of the phone.
+                      <p className="text-lg font-semibold">
+                        Processing payment...
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        Tap card, iPhone, or Apple Watch to the top of the
+                        phone.
                       </p>
                     </div>
                   </div>
@@ -4092,8 +4699,10 @@ export default function POSPage() {
                   <div className="flex flex-col items-center space-y-4 text-center">
                     <CheckCircle2 className="h-16 w-16 text-green-600" />
                     <div className="space-y-1">
-                      <p className="text-xl font-semibold text-green-600">Payment Successful!</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xl font-semibold text-green-600">
+                        Payment Successful!
+                      </p>
+                      <p className="text-muted-foreground text-sm">
                         Transaction ID: {tapToPayResponse.yipyyTransactionId}
                       </p>
                     </div>
@@ -4110,7 +4719,7 @@ export default function POSPage() {
                           window.print();
                         }}
                       >
-                        <Printer className="h-4 w-4" />
+                        <Printer className="size-4" />
                         Print
                       </Button>
                       <Button
@@ -4122,7 +4731,7 @@ export default function POSPage() {
                           alert("Receipt sent via email");
                         }}
                       >
-                        <Mail className="h-4 w-4" />
+                        <Mail className="size-4" />
                         Email
                       </Button>
                       <Button
@@ -4134,7 +4743,7 @@ export default function POSPage() {
                           alert("Receipt sent via SMS");
                         }}
                       >
-                        <Phone className="h-4 w-4" />
+                        <Phone className="size-4" />
                         SMS
                       </Button>
                       <Button
@@ -4168,10 +4777,14 @@ export default function POSPage() {
               return (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center space-y-4 text-center">
-                    <XCircle className="h-16 w-16 text-destructive" />
+                    <XCircle className="text-destructive h-16 w-16" />
                     <div className="space-y-1">
-                      <p className="text-xl font-semibold text-destructive">Payment Failed</p>
-                      <p className="text-sm text-muted-foreground">{tapToPayError}</p>
+                      <p className="text-destructive text-xl font-semibold">
+                        Payment Failed
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {tapToPayError}
+                      </p>
                     </div>
                   </div>
 
@@ -4188,7 +4801,7 @@ export default function POSPage() {
                           // Retry will be handled by the idle state logic
                         }}
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="size-4" />
                         Retry Tap to Pay
                       </Button>
                       <Button
@@ -4201,7 +4814,7 @@ export default function POSPage() {
                           setIsPaymentModalOpen(true);
                         }}
                       >
-                        <Printer className="h-4 w-4" />
+                        <Printer className="size-4" />
                         Switch to Clover Terminal
                       </Button>
                       <Button
@@ -4214,24 +4827,28 @@ export default function POSPage() {
                           setIsPaymentModalOpen(true);
                         }}
                       >
-                        <Banknote className="h-4 w-4" />
+                        <Banknote className="size-4" />
                         Switch to Cash
                       </Button>
-                      {selectedClientId && selectedClientId !== "__walk_in__" && (
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start gap-2"
-                          onClick={() => {
-                            setIsTapToPayModalOpen(false);
-                            setUseYipyyPay(false);
-                            setPaymentForm({ ...paymentForm, method: "store_credit" });
-                            setIsPaymentModalOpen(true);
-                          }}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                          Switch to Store Credit
-                        </Button>
-                      )}
+                      {selectedClientId &&
+                        selectedClientId !== "__walk_in__" && (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            onClick={() => {
+                              setIsTapToPayModalOpen(false);
+                              setUseYipyyPay(false);
+                              setPaymentForm({
+                                ...paymentForm,
+                                method: "store_credit",
+                              });
+                              setIsPaymentModalOpen(true);
+                            }}
+                          >
+                            <CreditCard className="size-4" />
+                            Switch to Store Credit
+                          </Button>
+                        )}
                     </div>
                   </div>
 
@@ -4265,7 +4882,7 @@ export default function POSPage() {
           </DialogHeader>
 
           <div className="py-6 text-center">
-            <div className="text-4xl font-bold text-green-600 mb-2">
+            <div className="mb-2 text-4xl font-bold text-green-600">
               ${grandTotal.toFixed(2)}
             </div>
             <p className="text-muted-foreground">Transaction complete</p>
@@ -4279,7 +4896,7 @@ export default function POSPage() {
                 window.print();
               }}
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="size-4" />
               Print Receipt
             </Button>
             <Button
@@ -4288,13 +4905,13 @@ export default function POSPage() {
               disabled={!customerEmail}
               onClick={() => completeTransaction(true)}
             >
-              <Mail className="h-4 w-4" />
+              <Mail className="size-4" />
               Email Receipt
             </Button>
           </div>
 
           <Button
-            className="w-full mt-2"
+            className="mt-2 w-full"
             onClick={() => completeTransaction(false)}
           >
             Done

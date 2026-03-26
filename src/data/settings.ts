@@ -172,9 +172,7 @@ export const formRequirements: ServiceFormRequirementsConfig[] = [
       {
         formId: "form-intake-demo",
         formName: "New Client Intake Form",
-        gates: [
-          { stage: "before_booking", enforcement: "block" },
-        ],
+        gates: [{ stage: "before_booking", enforcement: "block" }],
         enabled: true,
       },
       {
@@ -195,25 +193,19 @@ export const formRequirements: ServiceFormRequirementsConfig[] = [
       {
         formId: "form-intake-demo",
         formName: "New Client Intake Form",
-        gates: [
-          { stage: "before_booking", enforcement: "block" },
-        ],
+        gates: [{ stage: "before_booking", enforcement: "block" }],
         enabled: true,
       },
       {
         formId: "form-vaccine-upload",
         formName: "Vaccination Records",
-        gates: [
-          { stage: "before_checkin", enforcement: "block" },
-        ],
+        gates: [{ stage: "before_checkin", enforcement: "block" }],
         enabled: true,
       },
       {
         formId: "form-boarding-agreement",
         formName: "Boarding Agreement & Liability Waiver",
-        gates: [
-          { stage: "before_approval", enforcement: "block" },
-        ],
+        gates: [{ stage: "before_approval", enforcement: "block" }],
         enabled: true,
       },
     ],
@@ -225,9 +217,7 @@ export const formRequirements: ServiceFormRequirementsConfig[] = [
       {
         formId: "form-intake-demo",
         formName: "New Client Intake Form",
-        gates: [
-          { stage: "before_booking", enforcement: "warn" },
-        ],
+        gates: [{ stage: "before_booking", enforcement: "warn" }],
         enabled: true,
       },
     ],
@@ -239,17 +229,13 @@ export const formRequirements: ServiceFormRequirementsConfig[] = [
       {
         formId: "form-intake-demo",
         formName: "New Client Intake Form",
-        gates: [
-          { stage: "before_booking", enforcement: "warn" },
-        ],
+        gates: [{ stage: "before_booking", enforcement: "warn" }],
         enabled: true,
       },
       {
         formId: "form-training-questionnaire",
         formName: "Training Goals & Behavior Questionnaire",
-        gates: [
-          { stage: "before_approval", enforcement: "block" },
-        ],
+        gates: [{ stage: "before_approval", enforcement: "block" }],
         enabled: true,
       },
     ],
@@ -270,8 +256,7 @@ export const reportCardConfig: ReportCardConfig = {
     everyday: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy at {facilityName}.",
-      friendsAndFun:
-        "{petName} was {socialLabel} during playtime. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} during playtime. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
       holidaySparkle:
@@ -282,20 +267,16 @@ export const reportCardConfig: ReportCardConfig = {
     christmas: {
       todaysVibe:
         "{petName} jingled through the day with a {moodLabel} mood and {energyLabel} energy.",
-      friendsAndFun:
-        "{petName} was {socialLabel} with friends. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} with friends. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
-      holidaySparkle:
-        "{petName} joined our Christmas cheer. {holidayNote}",
-      closingNote:
-        "Happy holidays from {facilityName}! {closingComment}",
+      holidaySparkle: "{petName} joined our Christmas cheer. {holidayNote}",
+      closingNote: "Happy holidays from {facilityName}! {closingComment}",
     },
     halloween: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy — spooky fun included!",
-      friendsAndFun:
-        "{petName} was {socialLabel} during playtime. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} during playtime. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
       holidaySparkle:
@@ -306,50 +287,41 @@ export const reportCardConfig: ReportCardConfig = {
     easter: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy — a springtime hop!",
-      friendsAndFun:
-        "{petName} was {socialLabel} with pals. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} with pals. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
-      holidaySparkle:
-        "{petName} enjoyed our Easter fun. {holidayNote}",
-      closingNote:
-        "Warm wishes from {facilityName}. {closingComment}",
+      holidaySparkle: "{petName} enjoyed our Easter fun. {holidayNote}",
+      closingNote: "Warm wishes from {facilityName}. {closingComment}",
     },
     thanksgiving: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy and lots of gratitude.",
-      friendsAndFun:
-        "{petName} was {socialLabel} during playtime. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} during playtime. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
-      holidaySparkle:
-        "{petName} joined our Thanksgiving cheer. {holidayNote}",
+      holidaySparkle: "{petName} joined our Thanksgiving cheer. {holidayNote}",
       closingNote:
         "We’re thankful for {petName} at {facilityName}. {closingComment}",
     },
     new_year: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy to ring in the New Year!",
-      friendsAndFun:
-        "{petName} was {socialLabel} during playtime. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} during playtime. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
       holidaySparkle:
         "{petName} joined our New Year celebration. {holidayNote}",
-      closingNote:
-        "Cheers from {facilityName}! {closingComment}",
+      closingNote: "Cheers from {facilityName}! {closingComment}",
     },
     valentines: {
       todaysVibe:
         "{petName} had a {moodLabel} day with {energyLabel} energy and lots of love.",
-      friendsAndFun:
-        "{petName} was {socialLabel} during playtime. {playNote}",
+      friendsAndFun: "{petName} was {socialLabel} during playtime. {playNote}",
       careMetrics:
         "Meals: {appetiteLabel}. Potty: {pottyLabel}. Meds: {medsLabel}.",
       holidaySparkle:
         "{petName} enjoyed our Valentine's sparkle. {holidayNote}",
-      closingNote:
-        "With love from {facilityName}. {closingComment}",
+      closingNote: "With love from {facilityName}. {closingComment}",
     },
   },
   autoSend: {
@@ -367,23 +339,36 @@ export const reportCardConfig: ReportCardConfig = {
       serviceId: "daycare",
       enabled: true,
       enabledSections: [
-        "todaysVibe", "friendsAndFun", "careMetrics", "holidaySparkle",
-        "closingNote", "overallFeedback", "photoShowcase",
+        "todaysVibe",
+        "friendsAndFun",
+        "careMetrics",
+        "holidaySparkle",
+        "closingNote",
+        "overallFeedback",
+        "photoShowcase",
       ],
     },
     {
       serviceId: "boarding",
       enabled: true,
       enabledSections: [
-        "todaysVibe", "friendsAndFun", "careMetrics", "closingNote",
-        "petCondition", "overallFeedback", "photoShowcase",
+        "todaysVibe",
+        "friendsAndFun",
+        "careMetrics",
+        "closingNote",
+        "petCondition",
+        "overallFeedback",
+        "photoShowcase",
       ],
     },
     {
       serviceId: "grooming",
       enabled: false,
       enabledSections: [
-        "todaysVibe", "careMetrics", "closingNote", "petCondition",
+        "todaysVibe",
+        "careMetrics",
+        "closingNote",
+        "petCondition",
         "photoShowcase",
       ],
     },
@@ -391,7 +376,10 @@ export const reportCardConfig: ReportCardConfig = {
       serviceId: "training",
       enabled: false,
       enabledSections: [
-        "todaysVibe", "closingNote", "customFeedback", "overallFeedback",
+        "todaysVibe",
+        "closingNote",
+        "customFeedback",
+        "overallFeedback",
       ],
     },
   ],
@@ -402,10 +390,26 @@ export const reportCardConfig: ReportCardConfig = {
   customQuestions: [],
   petCondition: {
     categories: [
-      { id: "coat", label: "Coat Condition", options: ["Normal", "Dry", "Oily", "Matted", "Shedding"] },
-      { id: "skin", label: "Skin", options: ["Normal", "Dry", "Irritated", "Rash"] },
-      { id: "ears", label: "Ears", options: ["Normal", "Dirty", "Irritated", "Odor"] },
-      { id: "eyes", label: "Eyes", options: ["Normal", "Discharge", "Red", "Tearing"] },
+      {
+        id: "coat",
+        label: "Coat Condition",
+        options: ["Normal", "Dry", "Oily", "Matted", "Shedding"],
+      },
+      {
+        id: "skin",
+        label: "Skin",
+        options: ["Normal", "Dry", "Irritated", "Rash"],
+      },
+      {
+        id: "ears",
+        label: "Ears",
+        options: ["Normal", "Dirty", "Irritated", "Odor"],
+      },
+      {
+        id: "eyes",
+        label: "Eyes",
+        options: ["Normal", "Discharge", "Red", "Tearing"],
+      },
     ],
   },
   reviewBooster: {
@@ -415,18 +419,51 @@ export const reportCardConfig: ReportCardConfig = {
   },
 };
 
-export const reportCardSectionMeta: Record<string, { label: string; description: string }> = {
+export const reportCardSectionMeta: Record<
+  string,
+  { label: string; description: string }
+> = {
   todaysVibe: { label: "Today's Vibe", description: "Mood and energy summary" },
-  friendsAndFun: { label: "Friends & Fun", description: "Social behavior and play notes" },
-  careMetrics: { label: "Care Metrics", description: "Meals, potty breaks, medications" },
-  holidaySparkle: { label: "Holiday Sparkle", description: "Seasonal themed content" },
-  closingNote: { label: "Closing Note", description: "Wrap-up message to the owner" },
-  overallFeedback: { label: "Overall Feedback", description: "Staff feedback with response options" },
-  customFeedback: { label: "Custom Feedback", description: "Facility-created questions" },
-  petCondition: { label: "Pet Condition", description: "Health and grooming observations" },
-  nextAppointment: { label: "Next Appointment", description: "Upcoming booking info or link" },
-  reviewBooster: { label: "Review Booster", description: "Prompt for external reviews" },
-  photoShowcase: { label: "Photo Showcase", description: "Photo and video highlights" },
+  friendsAndFun: {
+    label: "Friends & Fun",
+    description: "Social behavior and play notes",
+  },
+  careMetrics: {
+    label: "Care Metrics",
+    description: "Meals, potty breaks, medications",
+  },
+  holidaySparkle: {
+    label: "Holiday Sparkle",
+    description: "Seasonal themed content",
+  },
+  closingNote: {
+    label: "Closing Note",
+    description: "Wrap-up message to the owner",
+  },
+  overallFeedback: {
+    label: "Overall Feedback",
+    description: "Staff feedback with response options",
+  },
+  customFeedback: {
+    label: "Custom Feedback",
+    description: "Facility-created questions",
+  },
+  petCondition: {
+    label: "Pet Condition",
+    description: "Health and grooming observations",
+  },
+  nextAppointment: {
+    label: "Next Appointment",
+    description: "Upcoming booking info or link",
+  },
+  reviewBooster: {
+    label: "Review Booster",
+    description: "Prompt for external reviews",
+  },
+  photoShowcase: {
+    label: "Photo Showcase",
+    description: "Photo and video highlights",
+  },
 };
 
 export const kennelTypes: KennelType[] = [

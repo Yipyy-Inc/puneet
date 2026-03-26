@@ -16,13 +16,18 @@ function secureToken(): string {
   if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);
   } else {
-    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] = Math.floor(Math.random() * 256);
   }
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Generate and store a check-in token for this booking+pet. Returns the token. */
-export function generateCheckInToken(bookingId: number | string, petId: number, facilityId: number): string {
+export function generateCheckInToken(
+  bookingId: number | string,
+  petId: number,
+  facilityId: number,
+): string {
   const token = secureToken();
   tokenStore.set(token, {
     bookingId: Number(bookingId),
@@ -33,22 +38,29 @@ export function generateCheckInToken(bookingId: number | string, petId: number, 
 }
 
 /** Get or create token for a booking+pet (e.g. when form is submitted). */
-export function getOrCreateCheckInToken(bookingId: number | string, petId: number, facilityId: number): string {
+export function getOrCreateCheckInToken(
+  bookingId: number | string,
+  petId: number,
+  facilityId: number,
+): string {
   const existing = Array.from(tokenStore.entries()).find(
-    ([_, p]) => p.bookingId === Number(bookingId) && p.petId === petId
+    ([_, p]) => p.bookingId === Number(bookingId) && p.petId === petId,
   );
   if (existing) return existing[0];
   return generateCheckInToken(Number(bookingId), petId, facilityId);
 }
 
 /** Validate token and return payload; null if invalid. */
-export function validateCheckInToken(token: string): CheckInTokenPayload | null {
+export function validateCheckInToken(
+  token: string,
+): CheckInTokenPayload | null {
   return tokenStore.get(token) ?? null;
 }
 
 /** Build the URL that the QR code encodes. Works when scanned from any device. */
 export function buildCheckInUrl(token: string, baseOrigin?: string): string {
-  const origin = baseOrigin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  const origin =
+    baseOrigin ?? (typeof window !== "undefined" ? window.location.origin : "");
   return `${origin}/facility/checkin?t=${encodeURIComponent(token)}`;
 }
 
@@ -66,7 +78,11 @@ function seedDemoTokens(): void {
 seedDemoTokens();
 
 /** Record that a booking was checked in via QR (so facility can show status). */
-const qrCheckInRecords: { bookingId: number; facilityId: number; checkedInAt: string }[] = [];
+const qrCheckInRecords: {
+  bookingId: number;
+  facilityId: number;
+  checkedInAt: string;
+}[] = [];
 
 export function recordQrCheckIn(bookingId: number, facilityId: number): void {
   qrCheckInRecords.push({
@@ -76,7 +92,9 @@ export function recordQrCheckIn(bookingId: number, facilityId: number): void {
   });
 }
 
-export function getQrCheckInRecord(bookingId: number): { checkedInAt: string } | null {
+export function getQrCheckInRecord(
+  bookingId: number,
+): { checkedInAt: string } | null {
   const r = qrCheckInRecords.find((x) => x.bookingId === bookingId);
   return r ? { checkedInAt: r.checkedInAt } : null;
 }

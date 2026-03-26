@@ -130,7 +130,8 @@ export function GroomingSection() {
       if (apt.status === "scheduled" && !showScheduled) return false;
       if (apt.status === "checked-in" && !showCheckedIn) return false;
       if (apt.status === "in-progress" && !showInProgress) return false;
-      if (apt.status === "ready-for-pickup" && !showReadyForPickup) return false;
+      if (apt.status === "ready-for-pickup" && !showReadyForPickup)
+        return false;
       if (apt.status === "completed" && !showCompleted) return false;
       return true;
     });
@@ -205,9 +206,7 @@ export function GroomingSection() {
     };
 
     setAppointmentsData((prev) =>
-      prev.map((apt) =>
-        apt.id === appointment.id ? updatedAppointment : apt,
-      ),
+      prev.map((apt) => (apt.id === appointment.id ? updatedAppointment : apt)),
     );
 
     // Send notifications when status changes to "ready-for-pickup"
@@ -226,7 +225,7 @@ export function GroomingSection() {
           const notificationMessages: string[] = [];
           if (results.smsSent) notificationMessages.push("SMS sent");
           if (results.emailSent) notificationMessages.push("Email sent");
-          
+
           if (notificationMessages.length > 0) {
             toast.success("Customer notified", {
               description: `${notificationMessages.join(" and ")}: ${appointment.petName} is ready for pickup.`,
@@ -242,38 +241,50 @@ export function GroomingSection() {
 
     // If status changed to completed, automatically deduct products
     if (newStatus === "completed" && previousStatus !== "completed") {
-      import("@/lib/grooming-inventory-deduction").then(({ deductProductsForAppointment }) => {
-        const deductionResult = deductProductsForAppointment(
-          appointment,
-          appointment.stylistName,
-        );
+      import("@/lib/grooming-inventory-deduction").then(
+        ({ deductProductsForAppointment }) => {
+          const deductionResult = deductProductsForAppointment(
+            appointment,
+            appointment.stylistName,
+          );
 
-        if (deductionResult.success && deductionResult.deductions.length > 0) {
-          const productsDeducted = deductionResult.deductions
-            .map((d) => `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`)
-            .join(", ");
+          if (
+            deductionResult.success &&
+            deductionResult.deductions.length > 0
+          ) {
+            const productsDeducted = deductionResult.deductions
+              .map(
+                (d) =>
+                  `${d.productName} (${d.quantityDeducted} ${d.productName.includes("ml") ? "ml" : "units"})`,
+              )
+              .join(", ");
 
-          // Check for low stock alerts
-          const lowStockProducts = deductionResult.deductions.filter((d) => d.isNowLowStock);
-          if (lowStockProducts.length > 0) {
-            toast.warning("Products deducted - Low stock alert", {
-              description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+            // Check for low stock alerts
+            const lowStockProducts = deductionResult.deductions.filter(
+              (d) => d.isNowLowStock,
+            );
+            if (lowStockProducts.length > 0) {
+              toast.warning("Products deducted - Low stock alert", {
+                description: `${productsDeducted}. ${lowStockProducts.length} product(s) are now low in stock.`,
+                duration: 8000,
+              });
+            } else {
+              toast.success("Products deducted from inventory", {
+                description: productsDeducted,
+                duration: 5000,
+              });
+            }
+          } else if (deductionResult.errors.length > 0) {
+            const errorMessages = deductionResult.errors
+              .map((e) => e.reason)
+              .join(", ");
+            toast.error("Inventory deduction failed", {
+              description: errorMessages,
               duration: 8000,
             });
-          } else {
-            toast.success("Products deducted from inventory", {
-              description: productsDeducted,
-              duration: 5000,
-            });
           }
-        } else if (deductionResult.errors.length > 0) {
-          const errorMessages = deductionResult.errors.map((e) => e.reason).join(", ");
-          toast.error("Inventory deduction failed", {
-            description: errorMessages,
-            duration: 8000,
-          });
-        }
-      });
+        },
+      );
     }
 
     // Clear any existing undo timeout
@@ -468,50 +479,42 @@ export function GroomingSection() {
       case "scheduled":
         return (
           <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
-            <Calendar className="h-3 w-3 mr-1" />
+            <Calendar className="mr-1 h-3 w-3" />
             Scheduled
           </Badge>
         );
       case "checked-in":
         return (
           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            <LogIn className="h-3 w-3 mr-1" />
+            <LogIn className="mr-1 h-3 w-3" />
             Checked In
           </Badge>
         );
       case "in-progress":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-            <PlayCircle className="h-3 w-3 mr-1" />
+            <PlayCircle className="mr-1 h-3 w-3" />
             In Progress
           </Badge>
         );
       case "ready-for-pickup":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
+            <CheckCircle className="mr-1 h-3 w-3" />
             Ready for Pickup
           </Badge>
         );
       case "completed":
         return (
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <CheckCircle className="h-3 w-3 mr-1" />
+            <CheckCircle className="mr-1 h-3 w-3" />
             Completed
           </Badge>
         );
       case "cancelled":
-        return (
-          <Badge variant="destructive">
-            Cancelled
-          </Badge>
-        );
+        return <Badge variant="destructive">Cancelled</Badge>;
       case "no-show":
-        return (
-          <Badge variant="destructive">
-            No Show
-          </Badge>
-        );
+        return <Badge variant="destructive">No Show</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -599,24 +602,24 @@ export function GroomingSection() {
 
   return (
     <Card>
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* Header with Filters */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <Scissors className="h-5 w-5 text-primary" />
+            <Scissors className="text-primary h-5 w-5" />
             <h3 className="text-lg font-semibold">Grooming</h3>
             <Badge variant="outline">{todayAppointments.length} today</Badge>
           </div>
 
           {/* Filter Toggles */}
           <div className="flex items-center gap-2">
-            <Eye className="h-4 w-4 text-muted-foreground" />
-            <div className="flex rounded-lg border p-1 gap-1 flex-wrap">
+            <Eye className="text-muted-foreground size-4" />
+            <div className="flex flex-wrap gap-1 rounded-lg border p-1">
               <Button
                 size="sm"
                 variant={showScheduled ? "default" : "ghost"}
                 onClick={() => setShowScheduled(!showScheduled)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <Calendar className="h-3 w-3" />
                 Scheduled
@@ -628,7 +631,7 @@ export function GroomingSection() {
                 size="sm"
                 variant={showCheckedIn ? "default" : "ghost"}
                 onClick={() => setShowCheckedIn(!showCheckedIn)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <LogIn className="h-3 w-3" />
                 Checked In
@@ -640,7 +643,7 @@ export function GroomingSection() {
                 size="sm"
                 variant={showInProgress ? "default" : "ghost"}
                 onClick={() => setShowInProgress(!showInProgress)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <PlayCircle className="h-3 w-3" />
                 In Progress
@@ -652,7 +655,7 @@ export function GroomingSection() {
                 size="sm"
                 variant={showReadyForPickup ? "default" : "ghost"}
                 onClick={() => setShowReadyForPickup(!showReadyForPickup)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <CheckCircle className="h-3 w-3" />
                 Ready
@@ -664,7 +667,7 @@ export function GroomingSection() {
                 size="sm"
                 variant={showCompleted ? "default" : "ghost"}
                 onClick={() => setShowCompleted(!showCompleted)}
-                className="h-7 px-3 gap-1"
+                className="h-7 gap-1 px-3"
               >
                 <CheckCircle className="h-3 w-3" />
                 Completed
@@ -678,7 +681,7 @@ export function GroomingSection() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             placeholder="Search by pet name, owner, breed, phone, or groomer..."
             value={searchQuery}
@@ -688,9 +691,9 @@ export function GroomingSection() {
         </div>
 
         {/* Appointments List */}
-        <div className="space-y-2 max-h-[500px] overflow-y-auto">
+        <div className="max-h-[500px] space-y-2 overflow-y-auto">
           {displayedAppointments.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="text-muted-foreground py-8 text-center text-sm">
               {searchQuery
                 ? "No appointments match your search"
                 : "No appointments for today"}
@@ -702,10 +705,10 @@ export function GroomingSection() {
               return (
                 <div
                   key={appointment.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${styles.bg} transition-colors cursor-pointer`}
+                  className={`flex items-center justify-between rounded-lg border p-3 ${styles.bg} cursor-pointer transition-colors`}
                   onClick={() => handleViewDetails(appointment)}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex min-w-0 items-center gap-3">
                     {getPetImage(appointment.petId) ? (
                       <Link
                         href={
@@ -715,7 +718,7 @@ export function GroomingSection() {
                         }
                         className="shrink-0"
                       >
-                        <div className="h-10 w-10 rounded-full overflow-hidden">
+                        <div className="h-10 w-10 overflow-hidden rounded-full">
                           <Image
                             src={getPetImage(appointment.petId)!}
                             alt={appointment.petName}
@@ -737,28 +740,28 @@ export function GroomingSection() {
                         <div
                           className={`h-10 w-10 rounded-full ${styles.iconBg} flex items-center justify-center`}
                         >
-                          <PawPrint className={`h-5 w-5 ${styles.icon}`} />
+                          <PawPrint className={`h-5 w-5 ${styles.icon} `} />
                         </div>
                       </Link>
                     )}
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
                           href={
                             client
                               ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
                               : "#"
                           }
-                          className="font-medium truncate hover:underline"
+                          className="truncate font-medium hover:underline"
                         >
                           {appointment.petName}
                         </Link>
                         {getStatusBadge(appointment.status)}
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-muted-foreground truncate text-sm">
                         {appointment.ownerName} • {appointment.petBreed}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                      <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
                         <Clock className="h-3 w-3" />
                         <span>
                           {formatTime(appointment.startTime)} -{" "}
@@ -769,11 +772,11 @@ export function GroomingSection() {
                         <span>{appointment.stylistName}</span>
                         <span>•</span>
                         {isGroomerAvailable(appointment.stylistId) ? (
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs h-5">
+                          <Badge className="h-5 bg-green-100 text-xs text-green-800 dark:bg-green-900 dark:text-green-200">
                             Available
                           </Badge>
                         ) : (
-                          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs h-5">
+                          <Badge className="h-5 bg-red-100 text-xs text-red-800 dark:bg-red-900 dark:text-red-200">
                             Busy
                             {getGroomerCurrentPet(appointment.stylistId) &&
                               ` - ${getGroomerCurrentPet(appointment.stylistId)}`}
@@ -782,7 +785,7 @@ export function GroomingSection() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {getActionButton(appointment)}
                   </div>
                 </div>
@@ -814,9 +817,9 @@ export function GroomingSection() {
             <div className="space-y-6">
               {/* Pet Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Pet Information</h3>
+                <h3 className="mb-3 text-lg font-semibold">Pet Information</h3>
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                  <div className="bg-muted/50 flex items-center gap-4 rounded-lg p-4">
                     {getPetImage(selectedAppointment.petId) ? (
                       <Image
                         src={getPetImage(selectedAppointment.petId)!}
@@ -826,15 +829,15 @@ export function GroomingSection() {
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <PawPrint className="h-6 w-6 text-primary" />
+                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                        <PawPrint className="text-primary h-6 w-6" />
                       </div>
                     )}
                     <div>
                       <p className="font-medium">
                         {selectedAppointment.petName}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {selectedAppointment.petBreed} •{" "}
                         {selectedAppointment.petSize}
                       </p>
@@ -845,11 +848,11 @@ export function GroomingSection() {
 
               {/* Owner Information */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">
+                <h3 className="mb-3 text-lg font-semibold">
                   Owner Information
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                  <div className="bg-muted/50 flex items-center gap-4 rounded-lg p-4">
                     <Image
                       src="/people/person-2.jpg"
                       alt={selectedAppointment.ownerName}
@@ -861,7 +864,7 @@ export function GroomingSection() {
                       <p className="font-medium">
                         {selectedAppointment.ownerName}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         {selectedAppointment.ownerPhone}
                       </p>
                     </div>
@@ -871,8 +874,8 @@ export function GroomingSection() {
 
               {/* Booking Details */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Booking Details</h3>
-                <div className="p-4 rounded-lg bg-muted/50">
+                <h3 className="mb-3 text-lg font-semibold">Booking Details</h3>
+                <div className="bg-muted/50 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Service</p>
@@ -924,16 +927,22 @@ export function GroomingSection() {
                 {selectedAppointment?.status === "checked-in" && (
                   <Button
                     variant="outline"
-                    className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                    className="border-orange-600 text-orange-600 hover:bg-orange-50"
                     onClick={() => {
                       setAppointmentsData((prev) =>
                         prev.map((apt) =>
                           apt.id === selectedAppointment.id
-                            ? { ...apt, status: "scheduled" as const, checkInTime: null }
+                            ? {
+                                ...apt,
+                                status: "scheduled" as const,
+                                checkInTime: null,
+                              }
                             : apt,
                         ),
                       );
-                      toast.success(`${selectedAppointment.petName} - Reverted to Scheduled`);
+                      toast.success(
+                        `${selectedAppointment.petName} - Reverted to Scheduled`,
+                      );
                     }}
                   >
                     Revert to Scheduled
@@ -943,14 +952,14 @@ export function GroomingSection() {
                   <>
                     <Button
                       variant="outline"
-                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      className="border-orange-600 text-orange-600 hover:bg-orange-50"
                       onClick={() => revertToScheduled(selectedAppointment)}
                     >
                       Revert to Scheduled
                     </Button>
                     <Button
                       variant="outline"
-                      className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
+                      className="border-yellow-600 text-yellow-600 hover:bg-yellow-50"
                       onClick={() => revertToCheckedIn(selectedAppointment)}
                     >
                       Revert to Checked In
@@ -961,14 +970,14 @@ export function GroomingSection() {
                   <>
                     <Button
                       variant="outline"
-                      className="text-orange-600 border-orange-600 hover:bg-orange-50"
+                      className="border-orange-600 text-orange-600 hover:bg-orange-50"
                       onClick={() => revertToScheduled(selectedAppointment)}
                     >
                       Revert to Scheduled
                     </Button>
                     <Button
                       variant="outline"
-                      className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50"
                       onClick={() => revertToInProgress(selectedAppointment)}
                     >
                       Revert to In Progress
@@ -985,7 +994,7 @@ export function GroomingSection() {
                 </Button>
                 {selectedAppointment?.status === "scheduled" && (
                   <Button variant="outline" onClick={handleDetailsCheckIn}>
-                    <Hourglass className="h-4 w-4 mr-2" />
+                    <Hourglass className="mr-2 size-4" />
                     Mark Arrived
                   </Button>
                 )}
@@ -997,7 +1006,7 @@ export function GroomingSection() {
                       !isGroomerAvailable(selectedAppointment.stylistId)
                     }
                   >
-                    <PlayCircle className="h-4 w-4 mr-2" />
+                    <PlayCircle className="mr-2 size-4" />
                     {isGroomerAvailable(selectedAppointment.stylistId)
                       ? "Start Grooming"
                       : `${selectedAppointment.stylistName} is Busy`}
@@ -1009,7 +1018,7 @@ export function GroomingSection() {
         >
           {selectedAppointment && (
             <div className="space-y-4">
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+              <div className="bg-muted flex items-center gap-4 rounded-lg p-4">
                 {(() => {
                   const client = findClientForPet(selectedAppointment.petId);
                   return getPetImage(selectedAppointment.petId) ? (
@@ -1020,7 +1029,7 @@ export function GroomingSection() {
                           : "#"
                       }
                     >
-                      <div className="h-12 w-12 rounded-full overflow-hidden">
+                      <div className="h-12 w-12 overflow-hidden rounded-full">
                         <Image
                           src={getPetImage(selectedAppointment.petId)!}
                           alt={selectedAppointment.petName}
@@ -1038,8 +1047,8 @@ export function GroomingSection() {
                           : "#"
                       }
                     >
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <PawPrint className="h-6 w-6 text-primary" />
+                      <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-full">
+                        <PawPrint className="text-primary h-6 w-6" />
                       </div>
                     </Link>
                   );
@@ -1057,7 +1066,7 @@ export function GroomingSection() {
                               ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
                               : "#"
                           }
-                          className="font-semibold text-lg hover:underline"
+                          className="text-lg font-semibold hover:underline"
                         >
                           {selectedAppointment.petName}
                         </Link>
@@ -1065,7 +1074,7 @@ export function GroomingSection() {
                     })()}
                     {getStatusBadge(selectedAppointment.status)}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Owner: {selectedAppointment.ownerName}
                   </p>
                 </div>
@@ -1078,7 +1087,7 @@ export function GroomingSection() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Phone</p>
-                  <p className="font-medium flex items-center gap-1">
+                  <p className="flex items-center gap-1 font-medium">
                     <Phone className="h-3 w-3" />
                     {selectedAppointment.ownerPhone}
                   </p>
@@ -1116,20 +1125,24 @@ export function GroomingSection() {
                 <div>
                   <p className="text-muted-foreground">Base Price</p>
                   <p className="font-medium">
-                    ${(selectedAppointment.basePrice || selectedAppointment.totalPrice).toFixed(2)}
+                    $
+                    {(
+                      selectedAppointment.basePrice ||
+                      selectedAppointment.totalPrice
+                    ).toFixed(2)}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total Price</p>
-                  <p className="font-medium text-lg">
+                  <p className="text-lg font-medium">
                     ${selectedAppointment.totalPrice.toFixed(2)}
-                    {(selectedAppointment.priceAdjustments?.length || 0) > 0 && (
-                      <span className="text-sm text-muted-foreground ml-2">
+                    {(selectedAppointment.priceAdjustments?.length || 0) >
+                      0 && (
+                      <span className="text-muted-foreground ml-2 text-sm">
                         (+
-                        {selectedAppointment.priceAdjustments?.reduce(
-                          (sum, adj) => sum + adj.amount,
-                          0,
-                        ).toFixed(2)}
+                        {selectedAppointment.priceAdjustments
+                          ?.reduce((sum, adj) => sum + adj.amount, 0)
+                          .toFixed(2)}
                         )
                       </span>
                     )}
@@ -1185,11 +1198,14 @@ export function GroomingSection() {
               {(selectedAppointment.status === "checked-in" ||
                 selectedAppointment.status === "in-progress" ||
                 selectedAppointment.status === "ready-for-pickup") && (
-                <div className="pt-4 border-t">
+                <div className="border-t pt-4">
                   <PriceAdjustmentForm
                     appointmentId={selectedAppointment.id}
                     petName={selectedAppointment.petName}
-                    basePrice={selectedAppointment.basePrice || selectedAppointment.totalPrice}
+                    basePrice={
+                      selectedAppointment.basePrice ||
+                      selectedAppointment.totalPrice
+                    }
                     currentTotal={selectedAppointment.totalPrice}
                     adjustments={selectedAppointment.priceAdjustments || []}
                     onAddAdjustment={(adjustment) => {
@@ -1211,8 +1227,8 @@ export function GroomingSection() {
                         0,
                       );
                       const newTotal =
-                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
-                        totalAdjustments;
+                        (selectedAppointment.basePrice ||
+                          selectedAppointment.totalPrice) + totalAdjustments;
 
                       setAppointmentsData((prev) =>
                         prev.map((apt) =>
@@ -1222,7 +1238,8 @@ export function GroomingSection() {
                                 priceAdjustments: adjustments,
                                 totalPrice: newTotal,
                                 basePrice:
-                                  apt.basePrice || apt.totalPrice - totalAdjustments,
+                                  apt.basePrice ||
+                                  apt.totalPrice - totalAdjustments,
                               }
                             : apt,
                         ),
@@ -1236,16 +1253,16 @@ export function GroomingSection() {
                       }
                     }}
                     onRemoveAdjustment={(adjustmentId) => {
-                      const adjustments = (selectedAppointment.priceAdjustments || []).filter(
-                        (adj) => adj.id !== adjustmentId,
-                      );
+                      const adjustments = (
+                        selectedAppointment.priceAdjustments || []
+                      ).filter((adj) => adj.id !== adjustmentId);
                       const totalAdjustments = adjustments.reduce(
                         (sum, adj) => sum + adj.amount,
                         0,
                       );
                       const newTotal =
-                        (selectedAppointment.basePrice || selectedAppointment.totalPrice) +
-                        totalAdjustments;
+                        (selectedAppointment.basePrice ||
+                          selectedAppointment.totalPrice) + totalAdjustments;
 
                       setAppointmentsData((prev) =>
                         prev.map((apt) =>
@@ -1267,7 +1284,7 @@ export function GroomingSection() {
 
               {/* Intake Form - Show for checked-in, in-progress, or completed appointments */}
               {selectedAppointment && (
-                <div className="pt-4 border-t">
+                <div className="border-t pt-4">
                   <GroomingIntakeForm
                     appointmentId={selectedAppointment.id}
                     petName={selectedAppointment.petName}

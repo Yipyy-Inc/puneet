@@ -303,7 +303,7 @@ export default function FacilityDetailPage() {
   return (
     <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+      <div className="bg-background/95 supports-backdrop-filter:bg-background/60 border-b backdrop-blur-sm">
         <div className="px-6 py-4">
           <div className="flex items-center gap-4">
             <Button
@@ -313,9 +313,9 @@ export default function FacilityDetailPage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-3 flex-1">
+            <div className="flex flex-1 items-center gap-3">
               <div
-                className="flex items-center justify-center w-12 h-12 rounded-xl"
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
                 style={{
                   background:
                     "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
@@ -327,20 +327,20 @@ export default function FacilityDetailPage() {
                 <h1 className="text-2xl font-bold tracking-tight">
                   {facility.name}
                 </h1>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex items-center gap-2">
                   <StatusBadge type="status" value={currentStatus} showIcon />
                   <StatusBadge type="plan" value={facility.plan} showIcon />
                   {uniqueServices.length > 0 && (
-                    <div className="flex gap-1 ml-2">
+                    <div className="ml-2 flex gap-1">
                       {uniqueServices.slice(0, 3).map((service) => {
                         const Icon = getServiceIcon(service);
                         return (
                           <Badge
                             key={service}
                             variant="secondary"
-                            className="capitalize py-0.5 px-2 text-xs"
+                            className="px-2 py-0.5 text-xs capitalize"
                           >
-                            <Icon className="h-3 w-3 mr-1" />
+                            <Icon className="mr-1 h-3 w-3" />
                             {service}
                           </Badge>
                         );
@@ -348,7 +348,7 @@ export default function FacilityDetailPage() {
                       {uniqueServices.length > 3 && (
                         <Badge
                           variant="secondary"
-                          className="py-0.5 px-2 text-xs"
+                          className="px-2 py-0.5 text-xs"
                         >
                           +{uniqueServices.length - 3}
                         </Badge>
@@ -363,13 +363,13 @@ export default function FacilityDetailPage() {
                 variant="outline"
                 onClick={() => setShowImpersonateDialog(true)}
               >
-                <LogIn className="h-4 w-4 mr-2" />
+                <LogIn className="mr-2 size-4" />
                 Impersonate
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon">
-                    <MoreVertical className="h-4 w-4" />
+                    <MoreVertical className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -379,12 +379,12 @@ export default function FacilityDetailPage() {
                   <DropdownMenuItem
                     onClick={() => router.push(`/dashboard/facilities/new`)}
                   >
-                    <Settings className="mr-2 h-4 w-4" />
+                    <Settings className="mr-2 size-4" />
                     Edit Facility
                   </DropdownMenuItem>
 
                   <DropdownMenuItem>
-                    <Key className="mr-2 h-4 w-4" />
+                    <Key className="mr-2 size-4" />
                     Manage Permissions
                   </DropdownMenuItem>
 
@@ -395,7 +395,7 @@ export default function FacilityDetailPage() {
                     <DropdownMenuItem
                       onClick={() => handleStatusChange("active")}
                     >
-                      <Power className="mr-2 h-4 w-4 text-success" />
+                      <Power className="text-success mr-2 size-4" />
                       <span className="text-success">Activate</span>
                     </DropdownMenuItem>
                   )}
@@ -404,7 +404,7 @@ export default function FacilityDetailPage() {
                     <DropdownMenuItem
                       onClick={() => handleStatusChange("inactive")}
                     >
-                      <Power className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <Power className="text-muted-foreground mr-2 size-4" />
                       Deactivate
                     </DropdownMenuItem>
                   )}
@@ -413,7 +413,7 @@ export default function FacilityDetailPage() {
                     <DropdownMenuItem
                       onClick={() => handleStatusChange("suspended")}
                     >
-                      <Pause className="mr-2 h-4 w-4 text-warning" />
+                      <Pause className="text-warning mr-2 size-4" />
                       <span className="text-warning">Suspend</span>
                     </DropdownMenuItem>
                   )}
@@ -422,7 +422,7 @@ export default function FacilityDetailPage() {
                     onClick={() => handleStatusChange("archived")}
                     className="text-destructive"
                   >
-                    <Archive className="mr-2 h-4 w-4" />
+                    <Archive className="mr-2 size-4" />
                     Archive
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -432,7 +432,7 @@ export default function FacilityDetailPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <nav className="px-6 flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -442,14 +442,14 @@ export default function FacilityDetailPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap",
+                  `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? "bg-background border-b-2 border-primary text-primary"
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="size-4" />
                 {tab.name}
               </button>
             );
@@ -475,7 +475,7 @@ export default function FacilityDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="bg-muted space-y-2 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Facility:</span>
                 <span className="font-medium">{facility.name}</span>
@@ -498,7 +498,7 @@ export default function FacilityDetailPage() {
               Cancel
             </Button>
             <Button onClick={handleImpersonate}>
-              <LogIn className="mr-2 h-4 w-4" />
+              <LogIn className="mr-2 size-4" />
               Start Impersonation
             </Button>
           </DialogFooter>
@@ -520,7 +520,7 @@ export default function FacilityDetailPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="rounded-lg bg-muted p-4 space-y-2">
+            <div className="bg-muted space-y-2 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Current Status:</span>
                 <StatusBadge type="status" value={currentStatus} />
@@ -534,8 +534,8 @@ export default function FacilityDetailPage() {
               </div>
             </div>
             {statusChangeModal?.newStatus === "archived" && (
-              <p className="text-sm text-destructive mt-3 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
+              <p className="text-destructive mt-3 flex items-center gap-2 text-sm">
+                <AlertCircle className="size-4" />
                 Archiving will hide this facility and disable all operations.
               </p>
             )}
