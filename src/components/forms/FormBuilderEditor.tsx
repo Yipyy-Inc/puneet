@@ -1195,16 +1195,45 @@ function LogicRuleEditor({
 
   const triggerLabel = allQuestions.find((q) => q.id === rule.triggerQuestionId)?.label || "Question";
   const actionLabel = LOGIC_ACTIONS.find((a) => a.value === rule.action)?.label || rule.action;
+  const operatorLabel = CONDITION_OPERATORS.find((o) => o.value === rule.operator)?.label ?? rule.operator;
+  const valueDisplay = Array.isArray(rule.value) ? rule.value.join(", ") : rule.value;
+  const noValueOps = ["answered", "not_answered"];
+
+  // Build target label for plain-language summary
+  let targetLabel = "";
+  if (needsTargetQuestions && rule.targetQuestionIds?.length) {
+    const names = rule.targetQuestionIds
+      .map((id) => allQuestions.find((q) => q.id === id)?.label)
+      .filter(Boolean);
+    targetLabel = names.length > 2
+      ? `"${names[0]}" + ${names.length - 1} more`
+      : names.map((n) => `"${n}"`).join(", ");
+  } else if (needsTargetSection && rule.targetSectionId) {
+    targetLabel = `"${allSections.find((s) => s.id === rule.targetSectionId)?.title ?? "Section"}"`;
+  } else if (needsTag && rule.tagValue) {
+    targetLabel = `"${rule.tagValue}"`;
+  }
 
   return (
     <div className="rounded-lg border p-3 space-y-2.5 text-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">
-          IF &ldquo;{triggerLabel}&rdquo; → {actionLabel}
-        </p>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onRemove}>
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={onRemove}>
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
+      </div>
+      {/* Plain-language summary */}
+      <div className="rounded-md bg-muted/50 px-3 py-2 text-xs leading-relaxed">
+        <span className="font-semibold text-indigo-600">If</span>{" "}
+        <span className="font-medium">&ldquo;{triggerLabel}&rdquo;</span>{" "}
+        <span className="text-muted-foreground">{operatorLabel}</span>
+        {!noValueOps.includes(rule.operator) && valueDisplay && (
+          <> <span className="font-medium">&ldquo;{valueDisplay}&rdquo;</span></>
+        )}{" "}
+        <span className="font-semibold text-indigo-600">→</span>{" "}
+        <span className="font-medium text-emerald-700">{actionLabel}</span>
+        {targetLabel && (
+          <> <span className="text-muted-foreground">on</span> <span className="font-medium">{targetLabel}</span></>
+        )}
       </div>
       {/* Trigger question */}
       <Select

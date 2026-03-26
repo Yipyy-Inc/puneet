@@ -43,6 +43,8 @@ export default function PublicFormPage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [draftSavedShow, setDraftSavedShow] = useState(false);
   const draftLoadedRef = useRef(false);
   const formStartedEmittedRef = useRef(false);
 
@@ -149,7 +151,7 @@ export default function PublicFormPage() {
     }
   }, [form?.id, petIds?.[0], customerId]);
 
-  // Autosave draft (debounced)
+  // Autosave draft (debounced) with saved indicator
   useEffect(() => {
     if (!form || typeof window === "undefined" || submitted) return;
     const key = draftKey(form.id, petIds?.[0], customerId);
@@ -157,6 +159,8 @@ export default function PublicFormPage() {
       try {
         if (Object.keys(answers).length > 0) {
           localStorage.setItem(key, JSON.stringify(answers));
+          setDraftSavedShow(true);
+          setTimeout(() => setDraftSavedShow(false), 2000);
         } else {
           localStorage.removeItem(key);
         }
@@ -171,13 +175,14 @@ export default function PublicFormPage() {
     (e: React.FormEvent) => {
       e.preventDefault();
       if (!form) return;
+      setAttemptedSubmit(true);
       const required = visibleQuestions.filter((q) => q.required || logicEffects?.requiredQuestionIds.has(q.id));
       const missing = required.filter((q) => answers[q.id] === undefined || answers[q.id] === "");
       if (missing.length > 0) {
         setError(
           missing.length === 1
-            ? `Please answer: "${missing[0].label}".`
-            : `A few required fields still need your input: ${missing.map((q) => `"${q.label}"`).join(", ")}.`
+            ? `Almost there! Please fill in "${missing[0].label}" to continue.`
+            : `Just ${missing.length} more to go — please complete: ${missing.map((q) => `"${q.label}"`).join(", ")}.`
         );
         return;
       }
@@ -533,9 +538,16 @@ export default function PublicFormPage() {
               to link this response to your account and save progress.
             </p>
           )}
-          <p className="text-xs text-muted-foreground mb-4">
-            Your progress is saved automatically. You can leave and come back anytime.
-          </p>
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+            <p>Your progress is saved automatically. You can leave and come back anytime.</p>
+            <span
+              className={`shrink-0 ml-2 text-[10px] font-medium text-emerald-600 transition-opacity duration-300 ${
+                draftSavedShow ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              Saved
+            </span>
+          </div>
           {form.repeatPerPet && !isMultiPet && (
             <p className="text-xs text-muted-foreground mb-4">
               This form can be completed once per pet. Use the link from your pet&apos;s Forms tab to fill for a specific pet.
@@ -600,22 +612,25 @@ export default function PublicFormPage() {
               handleSubmit(e);
             }} className="space-y-6">
               {error && (
-                <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive" role="alert">
-                  <p className="font-medium">Please complete the required fields</p>
-                  <p className="mt-1 opacity-90">{error}</p>
+                <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700" role="alert">
+                  <p className="font-semibold">Oops, not quite ready yet</p>
+                  <p className="mt-1 text-rose-600">{error}</p>
                 </div>
               )}
-              {visibleQuestions.map((q) => (
-                <QuestionInput
-                  key={q.id}
-                  question={{
-                    ...q,
-                    required: q.required || (logicEffects?.requiredQuestionIds.has(q.id) ?? false),
-                  }}
-                  value={answers[q.id]}
-                  onChange={(v) => setAnswer(q.id, v)}
-                />
-              ))}
+              {visibleQuestions.map((q) => {
+                const isRequired = q.required || (logicEffects?.requiredQuestionIds.has(q.id) ?? false);
+                const isEmpty = answers[q.id] === undefined || answers[q.id] === "";
+                const showFieldError = attemptedSubmit && isRequired && isEmpty;
+                return (
+                  <QuestionInput
+                    key={q.id}
+                    question={{ ...q, required: isRequired }}
+                    value={answers[q.id]}
+                    onChange={(v) => setAnswer(q.id, v)}
+                    hasError={showFieldError}
+                  />
+                );
+              })}
               <Button
                 type="submit"
                 className="w-full min-h-12 text-base touch-manipulation"
@@ -647,19 +662,31 @@ function QuestionInput({
   question,
   value,
   onChange,
+  hasError,
 }: {
   question: FormQuestion;
   value: unknown;
   onChange: (v: unknown) => void;
+  hasError?: boolean;
 }) {
   const id = `q-${question.id}`;
   const opts = question.options ?? [];
   const help = question.helpText;
+  // Wrap in inline validation highlight
+  const wrap = (node: React.ReactNode) =>
+    hasError ? (
+      <div className="rounded-xl ring-2 ring-rose-200 bg-rose-50/30 p-3 -mx-1 space-y-1">
+        {node}
+        <p className="text-xs text-rose-500">This field is required</p>
+      </div>
+    ) : (
+      <>{node}</>
+    );
 
   switch (question.type) {
     case "yes_no": {
       const yesNoOpts = opts.length ? opts : [{ value: "yes", label: "Yes" }, { value: "no", label: "No" }];
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="flex gap-3">
@@ -682,7 +709,7 @@ function QuestionInput({
       );
     }
     case "radio":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="space-y-2">
@@ -703,7 +730,7 @@ function QuestionInput({
         </div>
       );
     case "textarea":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <textarea
@@ -717,7 +744,7 @@ function QuestionInput({
         </div>
       );
     case "select":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <select
@@ -744,7 +771,7 @@ function QuestionInput({
         else next.add(v);
         onChange(Array.from(next));
       };
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="flex flex-wrap gap-2">
@@ -764,7 +791,7 @@ function QuestionInput({
       );
     }
     case "checkbox":
-      return (
+      return wrap(
         <div className="flex items-center gap-2 min-h-12 touch-manipulation">
           <input
             id={id}
@@ -781,7 +808,7 @@ function QuestionInput({
         </div>
       );
     case "date":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
@@ -795,7 +822,7 @@ function QuestionInput({
         </div>
       );
     case "number":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
@@ -810,7 +837,7 @@ function QuestionInput({
         </div>
       );
     case "file":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="rounded-lg border-2 border-dashed border-input p-6 text-center">
@@ -842,7 +869,7 @@ function QuestionInput({
         </div>
       );
     case "signature":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="rounded-lg border border-input p-4 space-y-3">
@@ -867,7 +894,7 @@ function QuestionInput({
         </div>
       );
     case "phone":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
@@ -882,7 +909,7 @@ function QuestionInput({
         </div>
       );
     case "email":
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
@@ -899,7 +926,7 @@ function QuestionInput({
     case "address": {
       const addr = (value as { street?: string; city?: string; state?: string; zip?: string }) ?? {};
       const update = (field: string, v: string) => onChange({ ...addr, [field]: v });
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <div className="space-y-2">
@@ -936,7 +963,7 @@ function QuestionInput({
     }
     case "text":
     default:
-      return (
+      return wrap(
         <div className="space-y-2">
           <QuestionLabel label={question.label} required={question.required} helpText={help} />
           <Input
