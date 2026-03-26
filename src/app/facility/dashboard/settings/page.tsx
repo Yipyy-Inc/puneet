@@ -15,6 +15,7 @@ import { MobileAppSettings } from "@/components/additional-features/MobileAppSet
 import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSettings";
+import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -3279,9 +3280,10 @@ export default function SettingsPage() {
           <YipyyGoSettingsWrapper />
         </TabsContent>
 
-        {/* Form Requirements Tab (7.1) */}
+        {/* Form Requirements & Notifications Tab */}
         <TabsContent value="form-requirements" className="space-y-6">
           <FormRequirementsSettings />
+          <FormNotificationSettings />
         </TabsContent>
       </Tabs>
     </div>

@@ -61,6 +61,36 @@ const mockNotifications: Notification[] = [
     link: "/customer/bookings",
     category: "Bookings",
   },
+  {
+    id: "6",
+    type: "form_confirmed",
+    title: "Form Submission Confirmed",
+    message: "Your New Client Intake Form has been reviewed and confirmed by the facility",
+    read: false,
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    link: "/customer/documents",
+    category: "Forms",
+  },
+  {
+    id: "7",
+    type: "form_reminder",
+    title: "Missing Required Form",
+    message: "Please complete the Vaccination Records form before your upcoming boarding on March 28",
+    read: false,
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    link: "/customer/documents",
+    category: "Forms",
+  },
+  {
+    id: "8",
+    type: "form_correction",
+    title: "Form Needs Correction",
+    message: "Your Boarding Agreement form needs an update — please review the emergency contact section",
+    read: false,
+    createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+    link: "/customer/documents",
+    category: "Forms",
+  },
 ];
 
 const notificationIcons: Record<Notification["type"], string> = {
@@ -69,6 +99,9 @@ const notificationIcons: Record<Notification["type"], string> = {
   report_card: "📋",
   vaccination: "💉",
   booking_update: "✅",
+  form_confirmed: "📝",
+  form_reminder: "📄",
+  form_correction: "⚠️",
 };
 
 function formatTimeAgo(date: Date): string {

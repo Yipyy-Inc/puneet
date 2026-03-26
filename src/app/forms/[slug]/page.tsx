@@ -215,7 +215,7 @@ export default function PublicFormPage() {
             formId: form.id,
             formName: formEventName,
             hasFiles: submissionHasFiles(submission.id),
-            hasRedFlag: false,
+            hasRedFlag: logicEffects?.alertFlag ?? false,
           });
         });
         setMultiPetSubmittedCount(selectedPetIds.length);

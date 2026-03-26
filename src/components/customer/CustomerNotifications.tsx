@@ -32,7 +32,7 @@ import Link from "next/link";
 
 export interface Notification {
   id: string;
-  type: "reminder" | "receipt" | "report_card" | "vaccination" | "booking_update";
+  type: "reminder" | "receipt" | "report_card" | "vaccination" | "booking_update" | "form_confirmed" | "form_reminder" | "form_correction";
   title: string;
   message: string;
   read: boolean;
@@ -101,6 +101,9 @@ const notificationIcons: Record<Notification["type"], string> = {
   report_card: "📋",
   vaccination: "💉",
   booking_update: "✅",
+  form_confirmed: "📝",
+  form_reminder: "📄",
+  form_correction: "⚠️",
 };
 
 export function CustomerNotifications() {
