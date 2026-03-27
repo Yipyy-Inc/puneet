@@ -6,6 +6,7 @@
  */
 
 import {
+  type FacilityLoyaltyConfig,
   calculatePointsEarned,
   isTransactionEligibleForPoints,
 } from "@/data/facility-loyalty-config";
@@ -96,7 +97,7 @@ export function processLoyaltyPointsEarning(
     isBooking?: boolean;
     visitCount?: number;
   },
-  loyaltyConfig: unknown,
+  loyaltyConfig: FacilityLoyaltyConfig,
 ): LoyaltyTransaction | null {
   // Check if transaction is eligible
   const eligible = isTransactionEligibleForPoints(loyaltyConfig, {
@@ -577,7 +578,7 @@ export function integrateBookingCompletion(
     status: string;
     completedAt: string;
   },
-  loyaltyConfig: unknown,
+  loyaltyConfig: FacilityLoyaltyConfig,
 ): {
   loyaltyTransaction?: LoyaltyTransaction;
   auditLog: AuditLogEntry;
@@ -647,7 +648,7 @@ export function integratePOSTransaction(
     amount: number;
     items: Array<{ type: "product" | "service"; category?: string }>;
   },
-  loyaltyConfig: unknown,
+  loyaltyConfig: FacilityLoyaltyConfig,
 ): {
   loyaltyTransaction?: LoyaltyTransaction;
   auditLog: AuditLogEntry;
