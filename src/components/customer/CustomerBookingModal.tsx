@@ -19,7 +19,11 @@ import {
   CUSTOMER_ADDONS,
 } from "@/components/bookings/modals/constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { getAllServiceCategories, resolveIcon, isBuiltinService } from "@/lib/service-registry";
+import {
+  getAllServiceCategories,
+  resolveIcon,
+  isBuiltinService,
+} from "@/lib/service-registry";
 import { getCategoryMeta } from "@/data/custom-services";
 import { Button } from "@/components/ui/button";
 import {
@@ -212,14 +216,17 @@ export function CustomerBookingModal({
   const [_depositAmount, _setDepositAmount] = useState(0);
   // Custom module booking state
   const [customDurationMinutes, setCustomDurationMinutes] = useState<number>(0);
-  const [customSelectedResourceId, setCustomSelectedResourceId] = useState<string>("");
+  const [customSelectedResourceId, setCustomSelectedResourceId] =
+    useState<string>("");
   const [customPartySize, setCustomPartySize] = useState<number>(1);
 
   // Custom module detection — resolves the active module when a non-builtin service is selected
   const selectedCustomModule = useMemo(
     () =>
       selectedService && !isBuiltinService(selectedService)
-        ? activeModules.find((m) => m.slug === selectedService || m.id === selectedService) ?? null
+        ? (activeModules.find(
+            (m) => m.slug === selectedService || m.id === selectedService,
+          ) ?? null)
         : null,
     [selectedService, activeModules],
   );
@@ -267,7 +274,9 @@ export function CustomerBookingModal({
 
   // Check if pets have valid evaluations
   const getLatestEvaluation = useCallback((pet: Pet) => {
-    const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
+    const evals =
+      (pet as unknown as { evaluations?: Record<string, unknown>[] })
+        .evaluations ?? [];
     if (evals.length === 0) return null;
     return [...evals].sort((a, b) => {
       const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
@@ -768,11 +777,20 @@ export function CustomerBookingModal({
           }
           // Custom module service details: require duration if variable, resource if applicable
           if (isCustomModule && selectedCustomModule) {
-            const hasDurationOptions = selectedCustomModule.calendar.durationOptions.length > 0;
+            const hasDurationOptions =
+              selectedCustomModule.calendar.durationOptions.length > 0;
             if (hasDurationOptions && customDurationMinutes <= 0) return false;
-            const needsResource = selectedCustomModule.calendar.assignedTo === "resource" || selectedCustomModule.calendar.assignedTo === "combination";
-            const hasResources = facilityResources.filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id)).length > 0;
-            if (needsResource && hasResources && !customSelectedResourceId) return false;
+            const needsResource =
+              selectedCustomModule.calendar.assignedTo === "resource" ||
+              selectedCustomModule.calendar.assignedTo === "combination";
+            const hasResources =
+              facilityResources.filter((r) =>
+                (
+                  selectedCustomModule.calendar.assignedResourceIds ?? []
+                ).includes(r.id),
+              ).length > 0;
+            if (needsResource && hasResources && !customSelectedResourceId)
+              return false;
             return true;
           }
         }
@@ -903,8 +921,10 @@ export function CustomerBookingModal({
       setTipAmount(0);
       setCustomTipAmount("");
       setTipPercentage(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create booking");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create booking",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -1016,9 +1036,14 @@ export function CustomerBookingModal({
       const mod = selectedCustomModule;
       // Duration-based: match selected duration to calendar durationOptions or pricing durationTiers
       if (customDurationMinutes > 0) {
-        const durationOpt = mod.calendar.durationOptions.find((o) => o.minutes === customDurationMinutes);
-        if (durationOpt?.price != null) return durationOpt.price * selectedPetIds.length;
-        const tier = mod.pricing.durationTiers?.find((t) => t.durationMinutes === customDurationMinutes);
+        const durationOpt = mod.calendar.durationOptions.find(
+          (o) => o.minutes === customDurationMinutes,
+        );
+        if (durationOpt?.price != null)
+          return durationOpt.price * selectedPetIds.length;
+        const tier = mod.pricing.durationTiers?.find(
+          (t) => t.durationMinutes === customDurationMinutes,
+        );
         if (tier) return tier.price * selectedPetIds.length;
       }
       return mod.pricing.basePrice * selectedPetIds.length;
@@ -1356,7 +1381,7 @@ export function CustomerBookingModal({
 
               {/* Step 2: Service Selection — same card layout as facility (image, description, from price) */}
               {currentStep === 1 && (
-                <div className="space-y-4 px-2 py-2">
+                <div className="space-y-4 p-2">
                   <Label className="text-base">Select a service</Label>
 
                   {/* When mandatory evaluation and no pets selected: only show Evaluation + message */}
@@ -1539,7 +1564,7 @@ export function CustomerBookingModal({
 
               {/* Step 3: Details — Schedule, then Room Type (boarding) or Package + Add-ons (grooming) */}
               {currentStep === 2 && (
-                <div className="space-y-4 px-2 py-2">
+                <div className="space-y-4 p-2">
                   {detailsSubStepCount > 1 && (
                     <p className="text-muted-foreground text-sm font-medium">
                       Step {currentDetailsSubStep + 1} of {detailsSubStepCount}
@@ -1756,20 +1781,38 @@ export function CustomerBookingModal({
                       {isCustomModule && selectedCustomModule && (
                         <Card className="overflow-hidden">
                           {/* Module header with category color */}
-                          <div className="px-4 py-3" style={{ backgroundColor: customCategoryMeta?.color ? `${customCategoryMeta.color}15` : undefined }}>
+                          <div
+                            className="px-4 py-3"
+                            style={{
+                              backgroundColor: customCategoryMeta?.color
+                                ? `${customCategoryMeta.color}15`
+                                : undefined,
+                            }}
+                          >
                             <div className="flex items-center gap-2.5">
                               {(() => {
-                                const ModIcon = resolveIcon(selectedCustomModule.icon);
-                                return <ModIcon className="size-5 text-white" />;
+                                const ModIcon = resolveIcon(
+                                  selectedCustomModule.icon,
+                                );
+                                return (
+                                  <ModIcon className="size-5 text-white" />
+                                );
                               })()}
                               <div>
-                                <p className="text-sm font-semibold text-white">{selectedCustomModule.name}</p>
-                                <p className="text-xs text-white/80">{customCategoryMeta?.name ?? selectedCustomModule.category}</p>
+                                <p className="text-sm font-semibold text-white">
+                                  {selectedCustomModule.name}
+                                </p>
+                                <p className="text-xs text-white/80">
+                                  {customCategoryMeta?.name ??
+                                    selectedCustomModule.category}
+                                </p>
                               </div>
                             </div>
                           </div>
                           <CardContent className="space-y-4 p-4">
-                            <Label className="text-base">Select Date & Time</Label>
+                            <Label className="text-base">
+                              Select Date & Time
+                            </Label>
                             <DateSelectionCalendar
                               mode="single"
                               selectedDates={
@@ -1800,27 +1843,52 @@ export function CustomerBookingModal({
                                 }
                               }}
                               facilityHours={hours}
-                              scheduleTimeOverrides={scheduleOverridesForService}
+                              scheduleTimeOverrides={
+                                scheduleOverridesForService
+                              }
                               bookingRules={{
-                                minimumAdvanceBooking: rules.minimumAdvanceBooking,
-                                maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                                minimumAdvanceBooking:
+                                  rules.minimumAdvanceBooking,
+                                maximumAdvanceBooking:
+                                  rules.maximumAdvanceBooking,
                               }}
                               disabledDates={blockedDates}
                               disabledDateMessages={disabledDateMessages}
                             />
 
                             {/* Capacity / availability hint */}
-                            {selectedCustomModule.calendar.maxSimultaneousBookings > 0 && startDate && (
-                              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
-                                <CheckCircle className="size-3.5 shrink-0" />
-                                <span>
-                                  Up to {selectedCustomModule.calendar.maxSimultaneousBookings} booking{selectedCustomModule.calendar.maxSimultaneousBookings !== 1 ? "s" : ""} available per slot
-                                  {selectedCustomModule.calendar.bufferTimeMinutes > 0 && (
-                                    <> · {selectedCustomModule.calendar.bufferTimeMinutes} min buffer between sessions</>
-                                  )}
-                                </span>
-                              </div>
-                            )}
+                            {selectedCustomModule.calendar
+                              .maxSimultaneousBookings > 0 &&
+                              startDate && (
+                                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+                                  <CheckCircle className="size-3.5 shrink-0" />
+                                  <span>
+                                    Up to{" "}
+                                    {
+                                      selectedCustomModule.calendar
+                                        .maxSimultaneousBookings
+                                    }{" "}
+                                    booking
+                                    {selectedCustomModule.calendar
+                                      .maxSimultaneousBookings !== 1
+                                      ? "s"
+                                      : ""}{" "}
+                                    available per slot
+                                    {selectedCustomModule.calendar
+                                      .bufferTimeMinutes > 0 && (
+                                      <>
+                                        {" "}
+                                        ·{" "}
+                                        {
+                                          selectedCustomModule.calendar
+                                            .bufferTimeMinutes
+                                        }{" "}
+                                        min buffer between sessions
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                           </CardContent>
                         </Card>
                       )}
@@ -1828,154 +1896,219 @@ export function CustomerBookingModal({
                   )}
 
                   {/* Custom Module Sub-step 1: Service Details */}
-                  {currentDetailsSubStep === 1 && isCustomModule && selectedCustomModule && (
-                    <div className="space-y-4 px-1 py-2">
-                      <div>
-                        <Label className="text-base font-semibold">Service Details</Label>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          Configure your {selectedCustomModule.name} booking
-                        </p>
-                      </div>
+                  {currentDetailsSubStep === 1 &&
+                    isCustomModule &&
+                    selectedCustomModule && (
+                      <div className="space-y-4 px-1 py-2">
+                        <div>
+                          <Label className="text-base font-semibold">
+                            Service Details
+                          </Label>
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            Configure your {selectedCustomModule.name} booking
+                          </p>
+                        </div>
 
-                      {/* Duration picker — for timed sessions / variable duration */}
-                      {selectedCustomModule.calendar.enabled && selectedCustomModule.calendar.durationOptions.length > 0 && (
-                        <Card>
-                          <CardContent className="space-y-3 p-4">
-                            <div className="flex items-center gap-2">
-                              <Clock className="text-muted-foreground size-4" />
-                              <Label className="text-sm font-semibold">Session Duration</Label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                              {selectedCustomModule.calendar.durationOptions.map((opt) => (
-                                <button
-                                  key={opt.minutes}
-                                  type="button"
-                                  onClick={() => setCustomDurationMinutes(opt.minutes)}
-                                  className={`rounded-xl border-2 p-3 text-center transition-all ${
-                                    customDurationMinutes === opt.minutes
-                                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                      : "border-border hover:border-border/80 hover:bg-accent/30"
-                                  }`}
-                                >
-                                  <p className={`text-lg font-bold tabular-nums ${customDurationMinutes === opt.minutes ? "text-primary" : ""}`}>
-                                    {opt.minutes}
-                                  </p>
-                                  <p className="text-muted-foreground text-xs">minutes</p>
-                                  {opt.price != null && (
-                                    <p className={`mt-1 text-sm font-semibold ${customDurationMinutes === opt.minutes ? "text-primary" : "text-foreground"}`}>
-                                      ${opt.price.toFixed(2)}
-                                    </p>
+                        {/* Duration picker — for timed sessions / variable duration */}
+                        {selectedCustomModule.calendar.enabled &&
+                          selectedCustomModule.calendar.durationOptions.length >
+                            0 && (
+                            <Card>
+                              <CardContent className="space-y-3 p-4">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="text-muted-foreground size-4" />
+                                  <Label className="text-sm font-semibold">
+                                    Session Duration
+                                  </Label>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                  {selectedCustomModule.calendar.durationOptions.map(
+                                    (opt) => (
+                                      <button
+                                        key={opt.minutes}
+                                        type="button"
+                                        onClick={() =>
+                                          setCustomDurationMinutes(opt.minutes)
+                                        }
+                                        className={`rounded-xl border-2 p-3 text-center transition-all ${
+                                          customDurationMinutes === opt.minutes
+                                            ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                                            : "border-border hover:border-border/80 hover:bg-accent/30"
+                                        }`}
+                                      >
+                                        <p
+                                          className={`text-lg font-bold tabular-nums ${customDurationMinutes === opt.minutes ? "text-primary" : ""}`}
+                                        >
+                                          {opt.minutes}
+                                        </p>
+                                        <p className="text-muted-foreground text-xs">
+                                          minutes
+                                        </p>
+                                        {opt.price != null && (
+                                          <p
+                                            className={`mt-1 text-sm font-semibold ${customDurationMinutes === opt.minutes ? "text-primary" : "text-foreground"}`}
+                                          >
+                                            ${opt.price.toFixed(2)}
+                                          </p>
+                                        )}
+                                      </button>
+                                    ),
                                   )}
-                                </button>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Resource selection — pools, vans, rooms */}
-                      {(selectedCustomModule.calendar.assignedTo === "resource" || selectedCustomModule.calendar.assignedTo === "combination") && (
-                        <Card>
-                          <CardContent className="space-y-3 p-4">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="text-muted-foreground size-4" />
-                              <Label className="text-sm font-semibold">Select Location / Resource</Label>
-                            </div>
-                            <div className="space-y-2">
-                              {facilityResources
-                                .filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id))
-                                .map((res) => (
-                                  <button
-                                    key={res.id}
-                                    type="button"
-                                    onClick={() => setCustomSelectedResourceId(res.id)}
-                                    className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all ${
-                                      customSelectedResourceId === res.id
-                                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                        : "border-border hover:border-border/80 hover:bg-accent/30"
-                                    }`}
-                                  >
-                                    <div className={`flex size-10 items-center justify-center rounded-lg ${
-                                      customSelectedResourceId === res.id ? "bg-primary/10" : "bg-muted/50"
-                                    }`}>
-                                      <MapPin className={`size-5 ${customSelectedResourceId === res.id ? "text-primary" : "text-muted-foreground"}`} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <p className="text-sm font-semibold">{res.name}</p>
-                                      <p className="text-muted-foreground text-xs capitalize">
-                                        {res.type} · Capacity: {res.capacity}
-                                      </p>
-                                    </div>
-                                    {customSelectedResourceId === res.id && (
-                                      <CheckCircle className="text-primary size-5 shrink-0" />
-                                    )}
-                                  </button>
-                                ))}
-                              {facilityResources.filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id)).length === 0 && (
-                                <p className="text-muted-foreground text-xs italic">No specific resources assigned — facility will allocate on arrival.</p>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Party size — for event-based or transport */}
-                      {(selectedCustomModule.category === "event_based" || selectedCustomModule.category === "transport") && (
-                        <Card>
-                          <CardContent className="space-y-3 p-4">
-                            <div className="flex items-center gap-2">
-                              <Users className="text-muted-foreground size-4" />
-                              <Label className="text-sm font-semibold">
-                                {selectedCustomModule.category === "transport" ? "Dogs on This Route" : "Party Size (Dogs)"}
-                              </Label>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="size-9"
-                                disabled={customPartySize <= 1}
-                                onClick={() => setCustomPartySize((p) => Math.max(1, p - 1))}
-                              >
-                                -
-                              </Button>
-                              <span className="text-2xl font-bold tabular-nums w-12 text-center">{customPartySize}</span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="size-9"
-                                disabled={customPartySize >= (selectedCustomModule.onlineBooking.maxDogsPerSession || 20)}
-                                onClick={() => setCustomPartySize((p) => p + 1)}
-                              >
-                                +
-                              </Button>
-                              <span className="text-muted-foreground text-xs">
-                                max {selectedCustomModule.onlineBooking.maxDogsPerSession || "—"}
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Module info card */}
-                      <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-4">
-                        <Sparkles className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <p>{selectedCustomModule.description}</p>
-                          {selectedCustomModule.checkInOut.enabled && (
-                            <p className="font-medium">
-                              {selectedCustomModule.checkInOut.checkInType === "auto"
-                                ? "Auto check-in at booking time"
-                                : "Check-in required on arrival"}
-                              {selectedCustomModule.checkInOut.qrCodeSupport && " · QR check-in available"}
-                            </p>
+                                </div>
+                              </CardContent>
+                            </Card>
                           )}
+
+                        {/* Resource selection — pools, vans, rooms */}
+                        {(selectedCustomModule.calendar.assignedTo ===
+                          "resource" ||
+                          selectedCustomModule.calendar.assignedTo ===
+                            "combination") && (
+                          <Card>
+                            <CardContent className="space-y-3 p-4">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="text-muted-foreground size-4" />
+                                <Label className="text-sm font-semibold">
+                                  Select Location / Resource
+                                </Label>
+                              </div>
+                              <div className="space-y-2">
+                                {facilityResources
+                                  .filter((r) =>
+                                    (
+                                      selectedCustomModule.calendar
+                                        .assignedResourceIds ?? []
+                                    ).includes(r.id),
+                                  )
+                                  .map((res) => (
+                                    <button
+                                      key={res.id}
+                                      type="button"
+                                      onClick={() =>
+                                        setCustomSelectedResourceId(res.id)
+                                      }
+                                      className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                                        customSelectedResourceId === res.id
+                                          ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                                          : "border-border hover:border-border/80 hover:bg-accent/30"
+                                      }`}
+                                    >
+                                      <div
+                                        className={`flex size-10 items-center justify-center rounded-lg ${
+                                          customSelectedResourceId === res.id
+                                            ? "bg-primary/10"
+                                            : "bg-muted/50"
+                                        }`}
+                                      >
+                                        <MapPin
+                                          className={`size-5 ${customSelectedResourceId === res.id ? "text-primary" : "text-muted-foreground"}`}
+                                        />
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-semibold">
+                                          {res.name}
+                                        </p>
+                                        <p className="text-muted-foreground text-xs capitalize">
+                                          {res.type} · Capacity: {res.capacity}
+                                        </p>
+                                      </div>
+                                      {customSelectedResourceId === res.id && (
+                                        <CheckCircle className="text-primary size-5 shrink-0" />
+                                      )}
+                                    </button>
+                                  ))}
+                                {facilityResources.filter((r) =>
+                                  (
+                                    selectedCustomModule.calendar
+                                      .assignedResourceIds ?? []
+                                  ).includes(r.id),
+                                ).length === 0 && (
+                                  <p className="text-muted-foreground text-xs italic">
+                                    No specific resources assigned — facility
+                                    will allocate on arrival.
+                                  </p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Party size — for event-based or transport */}
+                        {(selectedCustomModule.category === "event_based" ||
+                          selectedCustomModule.category === "transport") && (
+                          <Card>
+                            <CardContent className="space-y-3 p-4">
+                              <div className="flex items-center gap-2">
+                                <Users className="text-muted-foreground size-4" />
+                                <Label className="text-sm font-semibold">
+                                  {selectedCustomModule.category === "transport"
+                                    ? "Dogs on This Route"
+                                    : "Party Size (Dogs)"}
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-9"
+                                  disabled={customPartySize <= 1}
+                                  onClick={() =>
+                                    setCustomPartySize((p) =>
+                                      Math.max(1, p - 1),
+                                    )
+                                  }
+                                >
+                                  -
+                                </Button>
+                                <span className="w-12 text-center text-2xl font-bold tabular-nums">
+                                  {customPartySize}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="size-9"
+                                  disabled={
+                                    customPartySize >=
+                                    (selectedCustomModule.onlineBooking
+                                      .maxDogsPerSession || 20)
+                                  }
+                                  onClick={() =>
+                                    setCustomPartySize((p) => p + 1)
+                                  }
+                                >
+                                  +
+                                </Button>
+                                <span className="text-muted-foreground text-xs">
+                                  max{" "}
+                                  {selectedCustomModule.onlineBooking
+                                    .maxDogsPerSession || "—"}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Module info card */}
+                        <div className="bg-muted/30 flex items-start gap-3 rounded-xl border p-4">
+                          <Sparkles className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                          <div className="text-muted-foreground space-y-1 text-xs">
+                            <p>{selectedCustomModule.description}</p>
+                            {selectedCustomModule.checkInOut.enabled && (
+                              <p className="font-medium">
+                                {selectedCustomModule.checkInOut.checkInType ===
+                                "auto"
+                                  ? "Auto check-in at booking time"
+                                  : "Check-in required on arrival"}
+                                {selectedCustomModule.checkInOut
+                                  .qrCodeSupport && " · QR check-in available"}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Sub-step 1 (Daycare): Add-ons */}
                   {currentDetailsSubStep === 1 &&
@@ -3165,7 +3298,12 @@ export function CustomerBookingModal({
                     {/* Header */}
                     <div
                       className="relative overflow-hidden px-6 py-6"
-                      style={{ backgroundColor: isCustomModule && customCategoryMeta?.color ? customCategoryMeta.color : "#f59e0b" }}
+                      style={{
+                        backgroundColor:
+                          isCustomModule && customCategoryMeta?.color
+                            ? customCategoryMeta.color
+                            : "#f59e0b",
+                      }}
                     >
                       <div className="relative flex items-center gap-4">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
@@ -3364,39 +3502,57 @@ export function CustomerBookingModal({
                             <Badge
                               variant="outline"
                               className="text-[10px]"
-                              style={{ borderColor: customCategoryMeta?.color, color: customCategoryMeta?.color }}
+                              style={{
+                                borderColor: customCategoryMeta?.color,
+                                color: customCategoryMeta?.color,
+                              }}
                             >
-                              {customCategoryMeta?.name ?? selectedCustomModule.category}
+                              {customCategoryMeta?.name ??
+                                selectedCustomModule.category}
                             </Badge>
                           </div>
                           {customDurationMinutes > 0 && (
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Duration</span>
+                              <span className="text-muted-foreground">
+                                Duration
+                              </span>
                               <span>{customDurationMinutes} minutes</span>
                             </div>
                           )}
                           {customSelectedResourceId && (
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Location</span>
-                              <span>
-                                {facilityResources.find((r) => r.id === customSelectedResourceId)?.name ?? customSelectedResourceId}
-                              </span>
-                            </div>
-                          )}
-                          {(selectedCustomModule.category === "event_based" || selectedCustomModule.category === "transport") && customPartySize > 1 && (
-                            <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">
-                                {selectedCustomModule.category === "transport" ? "Dogs on route" : "Party size"}
+                                Location
                               </span>
-                              <span>{customPartySize} dogs</span>
+                              <span>
+                                {facilityResources.find(
+                                  (r) => r.id === customSelectedResourceId,
+                                )?.name ?? customSelectedResourceId}
+                              </span>
                             </div>
                           )}
+                          {(selectedCustomModule.category === "event_based" ||
+                            selectedCustomModule.category === "transport") &&
+                            customPartySize > 1 && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                  {selectedCustomModule.category === "transport"
+                                    ? "Dogs on route"
+                                    : "Party size"}
+                                </span>
+                                <span>{customPartySize} dogs</span>
+                              </div>
+                            )}
                           {selectedCustomModule.checkInOut.enabled && (
                             <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Check-in</span>
+                              <span className="text-muted-foreground">
+                                Check-in
+                              </span>
                               <span className="capitalize">
                                 {selectedCustomModule.checkInOut.checkInType}
-                                {selectedCustomModule.checkInOut.qrCodeSupport ? " · QR available" : ""}
+                                {selectedCustomModule.checkInOut.qrCodeSupport
+                                  ? " · QR available"
+                                  : ""}
                               </span>
                             </div>
                           )}

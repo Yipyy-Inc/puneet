@@ -700,7 +700,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     });
   };
 
-  const getServiceBadge = (serviceType: string, item?: UnifiedCheckIn) => {
+  const getServiceBadge = (serviceType: string, _item?: UnifiedCheckIn) => {
     if (serviceType === "daycare") {
       return (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -1332,7 +1332,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                             );
                           })()}
-                          {getServiceBadge(selectedItem.serviceType, selectedItem)}
+                          {getServiceBadge(
+                            selectedItem.serviceType,
+                            selectedItem,
+                          )}
                         </div>
                         <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
@@ -1511,7 +1514,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                             );
                           })()}
-                          {getServiceBadge(selectedItem.serviceType, selectedItem)}
+                          {getServiceBadge(
+                            selectedItem.serviceType,
+                            selectedItem,
+                          )}
                         </div>
                         <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
@@ -1738,7 +1744,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                   </Link>
                                 );
                               })()}
-                              {getServiceBadge(selectedItem.serviceType, selectedItem)}
+                              {getServiceBadge(
+                                selectedItem.serviceType,
+                                selectedItem,
+                              )}
                             </div>
                             <p className="text-muted-foreground text-sm">
                               Breed: {selectedItem.petBreed}
@@ -1911,7 +1920,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             </Link>
                           );
                         })()}
-                        {getServiceBadge(selectedItem.serviceType, selectedItem)}
+                        {getServiceBadge(
+                          selectedItem.serviceType,
+                          selectedItem,
+                        )}
                       </div>
                       <p className="text-muted-foreground text-sm">
                         Owner: {selectedItem.ownerName}

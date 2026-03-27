@@ -9,10 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CustomServiceModule } from "@/lib/types";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import {
-  getCategoryMeta,
-  COLOR_HEX_MAP,
-} from "@/data/custom-services";
+import { getCategoryMeta, COLOR_HEX_MAP } from "@/data/custom-services";
 import {
   customServiceCheckIns,
   type CustomServiceCheckInStatus,
@@ -29,8 +26,7 @@ const STATUS_STYLES: Record<CustomServiceCheckInStatus, string> = {
     "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
   "in-progress":
     "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  completed:
-    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
   "checked-out":
     "bg-slate-100 text-slate-800 dark:bg-slate-900/30 dark:text-slate-400",
 };
@@ -116,9 +112,7 @@ export const CustomServiceDashboardSection = memo(
           <div className="flex gap-3">
             <div className="bg-muted/50 flex-1 rounded-lg px-4 py-3 text-center">
               <p className="text-2xl font-bold">{todaysCount}</p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Today
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">Today</p>
             </div>
             <div className="flex-1 rounded-lg bg-orange-50 px-4 py-3 text-center dark:bg-orange-950/20">
               <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">
@@ -140,9 +134,7 @@ export const CustomServiceDashboardSection = memo(
               <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
                 {completedCount}
               </p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Completed
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">Completed</p>
             </div>
           </div>
 
@@ -164,12 +156,13 @@ export const CustomServiceDashboardSection = memo(
                   <div className="flex min-w-0 items-center gap-3">
                     <div
                       className="flex size-8 shrink-0 items-center justify-center rounded-full"
-                      style={{ backgroundColor: accentColor ? `${accentColor}20` : undefined }}
+                      style={{
+                        backgroundColor: accentColor
+                          ? `${accentColor}20`
+                          : undefined,
+                      }}
                     >
-                      <User
-                        className="size-4"
-                        style={{ color: accentColor }}
-                      />
+                      <User className="size-4" style={{ color: accentColor }} />
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">
