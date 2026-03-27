@@ -34,8 +34,18 @@ export function ServiceStep({
     [activeModules],
   );
 
-  const getLatestEvaluation = (pet: Pet) => {
-    const evals = (pet as unknown as { evaluations?: any[] }).evaluations ?? [];
+  type Evaluation = {
+    evaluatedAt?: string;
+    status?: "passed" | "failed" | "outdated" | string;
+    isExpired?: boolean;
+    approvedServices?: unknown;
+    serviceApprovals?: unknown;
+    approvals?: unknown;
+  };
+
+  const getLatestEvaluation = (pet: Pet): Evaluation | null => {
+    const evals =
+      (pet as unknown as { evaluations?: Evaluation[] }).evaluations ?? [];
     if (evals.length === 0) return null;
     return [...evals].sort((a, b) => {
       const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
@@ -44,12 +54,12 @@ export function ServiceStep({
     })[0];
   };
 
-  const isExpiredEvaluation = (ev: any) => {
+  const isExpiredEvaluation = (ev: Evaluation | null) => {
     return ev?.isExpired === true || ev?.status === "outdated";
   };
 
-  const isPassedEvaluation = (ev: any) => ev?.status === "passed";
-  const isFailedEvaluation = (ev: any) => ev?.status === "failed";
+  const isPassedEvaluation = (ev: Evaluation | null) => ev?.status === "passed";
+  const isFailedEvaluation = (ev: Evaluation | null) => ev?.status === "failed";
   const hasValidEvaluation = (pet: Pet) => {
     const latest = getLatestEvaluation(pet);
     if (!latest) return false;
@@ -59,30 +69,35 @@ export function ServiceStep({
     return true;
   };
 
-  const isServiceApprovedByEvaluation = (ev: any, serviceId: string) => {
+  type ApprovalMap = {
+    daycare?: boolean;
+    boarding?: boolean;
+    customApproved?: string[];
+    custom?: string[];
+  };
+
+  const isServiceApprovedByEvaluation = (
+    ev: Evaluation | null,
+    serviceId: string,
+  ) => {
     if (!ev || !isPassedEvaluation(ev) || isExpiredEvaluation(ev)) return false;
     const approvals =
       ev.approvedServices ?? ev.serviceApprovals ?? ev.approvals ?? null;
-    // Backwards-compat: if API doesn't provide approvals, treat PASS as approved.
     if (!approvals) return true;
 
-    // boolean map: { daycare: true, boarding: false, customApproved: [...] }
     if (typeof approvals === "object" && !Array.isArray(approvals)) {
-      if (serviceId === "daycare" && "daycare" in approvals)
-        return Boolean((approvals as any).daycare);
-      if (serviceId === "boarding" && "boarding" in approvals)
-        return Boolean((approvals as any).boarding);
-      const customApproved: unknown = (approvals as any).customApproved;
-      if (Array.isArray(customApproved))
-        return customApproved.includes(serviceId);
-      const custom: unknown = (approvals as any).custom;
-      if (Array.isArray(custom)) return custom.includes(serviceId);
+      const map = approvals as ApprovalMap;
+      if (serviceId === "daycare" && typeof map.daycare === "boolean")
+        return map.daycare;
+      if (serviceId === "boarding" && typeof map.boarding === "boolean")
+        return map.boarding;
+      if (Array.isArray(map.customApproved))
+        return map.customApproved.includes(serviceId);
+      if (Array.isArray(map.custom)) return map.custom.includes(serviceId);
     }
 
-    // array of ids
     if (Array.isArray(approvals)) return approvals.includes(serviceId);
 
-    // string modes (rare)
     if (approvals === "both")
       return serviceId === "daycare" || serviceId === "boarding";
     if (approvals === "daycare") return serviceId === "daycare";

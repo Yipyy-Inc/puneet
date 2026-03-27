@@ -21,7 +21,7 @@ interface _MockSettings {
 interface UseLoyaltyConfigResult {
   // Configuration state
   isEnabled: boolean;
-  config: any | null;
+  config: unknown | null;
 
   // Location awareness
   isEnabledForLocation: (locationId?: number) => boolean;
@@ -43,7 +43,7 @@ interface UseLoyaltyConfigResult {
   };
 
   // Location-specific config
-  getLocationConfig: (locationId?: number) => any | null;
+  getLocationConfig: (locationId?: number) => unknown | null;
 }
 
 /**
@@ -152,7 +152,8 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
       pointsEnabled: config.pointsEarning ? true : false,
       tiersEnabled: config.tiers && config.tiers.length > 0,
       rewardsEnabled:
-        config.rewardTypes && config.rewardTypes.some((rt: any) => rt.enabled),
+        config.rewardTypes &&
+        config.rewardTypes.some((rt: { enabled?: boolean }) => rt.enabled),
       referralsEnabled: config.referralProgram?.enabled === true,
       expirationEnabled: config.pointsExpiration?.enabled === true,
     };
@@ -196,7 +197,7 @@ export function useCustomerLoyaltyAccess(): {
   canViewLoyalty: boolean;
   canRedeemRewards: boolean;
   canViewReferrals: boolean;
-  config: any | null;
+  config: unknown | null;
 } {
   const { isEnabled, config, features } = useLoyaltyConfig();
 

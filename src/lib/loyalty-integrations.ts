@@ -34,7 +34,7 @@ export interface LoyaltyTransaction {
   invoiceId?: string; // Invoice ID if applicable
   bookingId?: string; // Booking ID if applicable
   createdAt: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RewardRedemption {
@@ -69,8 +69,8 @@ export interface AuditLogEntry {
     | "booking"
     | "payment";
   entityId?: string;
-  changes?: Record<string, any>;
-  metadata?: Record<string, any>;
+  changes?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   timestamp: string;
   ipAddress?: string;
   userAgent?: string;
@@ -96,7 +96,7 @@ export function processLoyaltyPointsEarning(
     isBooking?: boolean;
     visitCount?: number;
   },
-  loyaltyConfig: any,
+  loyaltyConfig: unknown,
 ): LoyaltyTransaction | null {
   // Check if transaction is eligible
   const eligible = isTransactionEligibleForPoints(loyaltyConfig, {
@@ -139,7 +139,7 @@ export function processLoyaltyPointsEarning(
     points,
     value: transaction.amount,
     description: `Points earned from ${transaction.type}`,
-    source: transaction.type as any,
+    source: transaction.type as LoyaltyTransaction["source"],
     sourceId: transaction.sourceId,
     invoiceId: transaction.invoiceId,
     bookingId: transaction.bookingId,
@@ -190,7 +190,7 @@ export function processRewardRedemption(
 ): {
   redemption: RewardRedemption;
   loyaltyTransaction?: LoyaltyTransaction;
-  creditTransaction?: any;
+  creditTransaction?: unknown;
   discountCode?: string;
 } {
   const redemption: RewardRedemption = {
@@ -207,7 +207,7 @@ export function processRewardRedemption(
   };
 
   let loyaltyTransaction: LoyaltyTransaction | undefined;
-  let creditTransaction: any;
+  let creditTransaction: unknown;
   let discountCode: string | undefined;
 
   // Handle different reward types
@@ -344,7 +344,12 @@ export function applyRewardToInvoice(
  * Process referral reward
  */
 export function processReferralReward(
-  referralRelationship: any,
+  referralRelationship: {
+    id: string;
+    referrerId: number;
+    referredCustomerId: number;
+    facilityId: number;
+  },
   rewardType: "referrer" | "referee",
   reward: {
     type: "points" | "credit" | "discount";
@@ -352,7 +357,7 @@ export function processReferralReward(
   },
 ): {
   loyaltyTransaction?: LoyaltyTransaction;
-  creditTransaction?: any;
+  creditTransaction?: unknown;
   discountCode?: string;
 } {
   const customerId =
@@ -361,7 +366,7 @@ export function processReferralReward(
       : referralRelationship.referredCustomerId;
 
   let loyaltyTransaction: LoyaltyTransaction | undefined;
-  let creditTransaction: any;
+  let creditTransaction: unknown;
   let discountCode: string | undefined;
 
   if (reward.type === "points" && typeof reward.value === "number") {
@@ -533,7 +538,7 @@ export function triggerAutomationEvent(
   data: {
     customerId: number;
     facilityId: number;
-    [key: string]: any;
+    [key: string]: unknown;
   },
 ): void {
   // In production, this would trigger automation builder workflows
@@ -572,7 +577,7 @@ export function integrateBookingCompletion(
     status: string;
     completedAt: string;
   },
-  loyaltyConfig: any,
+  loyaltyConfig: unknown,
 ): {
   loyaltyTransaction?: LoyaltyTransaction;
   auditLog: AuditLogEntry;
@@ -642,7 +647,7 @@ export function integratePOSTransaction(
     amount: number;
     items: Array<{ type: "product" | "service"; category?: string }>;
   },
-  loyaltyConfig: any,
+  loyaltyConfig: unknown,
 ): {
   loyaltyTransaction?: LoyaltyTransaction;
   auditLog: AuditLogEntry;
@@ -701,7 +706,7 @@ export function integrateRewardRedemption(
 ): {
   redemption: RewardRedemption;
   loyaltyTransaction?: LoyaltyTransaction;
-  creditTransaction?: any;
+  creditTransaction?: unknown;
   discountCode?: string;
   auditLog: AuditLogEntry;
 } {

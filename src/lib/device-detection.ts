@@ -10,10 +10,9 @@
 export function isIPhone(): boolean {
   if (typeof window === "undefined") return false;
 
+  const operaUA = (window as Window & { opera?: string }).opera;
   const userAgent =
-    window.navigator.userAgent ||
-    window.navigator.vendor ||
-    (window as any).opera;
+    window.navigator.userAgent || window.navigator.vendor || operaUA || "";
   return /iPhone|iPod/.test(userAgent);
 }
 
