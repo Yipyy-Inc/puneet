@@ -10,6 +10,7 @@ import { bookings } from "@/data/bookings";
 import { daycareCheckIns } from "@/data/daycare";
 import { boardingGuests } from "@/data/boarding";
 import { groomingAppointments, GroomingAppointment } from "@/data/grooming";
+import { customServiceCheckIns } from "@/data/custom-service-checkins";
 
 export interface WorkloadMetrics {
   date: string;
@@ -42,6 +43,9 @@ export interface WorkloadMetrics {
   // Training sessions
   trainingSessionsCount: number;
 
+  // Custom service modules
+  customServicesCount: number;
+
   // Busy meter (0-100, calculated based on all metrics)
   busyMeter: number;
 }
@@ -55,6 +59,7 @@ export interface TimeBlockWorkload {
   groomingCount: number;
   evaluations: number;
   trainingCount: number;
+  customServicesCount: number;
   busyMeter: number;
 }
 
@@ -137,6 +142,12 @@ export function calculateWorkloadForDate(
   // For now, we'll use a placeholder - in real implementation, filter training sessions by date
   const trainingSessionsCount = 0; // TODO: Integrate with training module
 
+  // Custom service sessions for this date (pool, transport, events, etc.)
+  const customServicesForDate = customServiceCheckIns.filter((cs) => {
+    const checkInDate = cs.checkInTime.split("T")[0];
+    return checkInDate === dateStr;
+  });
+
   // Calculate busy meter (0-100)
   // Weighted calculation based on different service types
   const busyMeter = calculateBusyMeter({
@@ -147,6 +158,7 @@ export function calculateWorkloadForDate(
     grooming: groomingForDate.length,
     evaluations: evaluations.length,
     training: trainingSessionsCount,
+    customServices: customServicesForDate.length,
   });
 
   return {
@@ -170,6 +182,7 @@ export function calculateWorkloadForDate(
     groomingAppointments: groomingForDate,
     evaluationsCount: evaluations.length,
     trainingSessionsCount,
+    customServicesCount: customServicesForDate.length,
     busyMeter,
   };
 }
@@ -252,6 +265,21 @@ export function calculateWorkloadForTimeBlock(
   // Training sessions in this time block
   const trainingInBlock = 0; // TODO: Integrate with training module
 
+  // Custom service sessions in this time block (pool, transport, events)
+  const customServicesInBlock = customServiceCheckIns.filter((cs) => {
+    const checkInDate = cs.checkInTime.split("T")[0];
+    if (checkInDate !== dateStr) return false;
+    const csTime = cs.checkInTime.split("T")[1]?.substring(0, 5) ?? "";
+    if (!csTime) return false;
+    // Session overlaps if it starts before block ends and its expected end is after block starts
+    const csEndMinutes =
+      parseInt(csTime.split(":")[0]) * 60 +
+      parseInt(csTime.split(":")[1]) +
+      cs.durationMinutes;
+    const csEndTime = `${String(Math.floor(csEndMinutes / 60)).padStart(2, "0")}:${String(csEndMinutes % 60).padStart(2, "0")}`;
+    return csTime < endTime && csEndTime > startTime;
+  });
+
   const busyMeter = calculateBusyMeter({
     checkIns: checkInsInBlock.length,
     checkOuts: checkOutsInBlock.length,
@@ -260,6 +288,7 @@ export function calculateWorkloadForTimeBlock(
     grooming: groomingInBlock.length,
     evaluations: evaluationsInBlock.length,
     training: trainingInBlock,
+    customServices: customServicesInBlock.length,
   });
 
   return {
@@ -271,6 +300,7 @@ export function calculateWorkloadForTimeBlock(
     groomingCount: groomingInBlock.length,
     evaluations: evaluationsInBlock.length,
     trainingCount: trainingInBlock,
+    customServicesCount: customServicesInBlock.length,
     busyMeter,
   };
 }
@@ -287,6 +317,7 @@ function calculateBusyMeter(metrics: {
   grooming: number;
   evaluations: number;
   training: number;
+  customServices: number;
 }): number {
   // Weight different activities
   // These weights can be customized per facility
@@ -298,6 +329,7 @@ function calculateBusyMeter(metrics: {
     grooming: 4, // Each grooming appointment adds 4 points
     evaluations: 5, // Each evaluation adds 5 points (more time-consuming)
     training: 3, // Each training session adds 3 points
+    customServices: 3, // Each custom service session adds 3 points (pool, transport, event)
   };
 
   const totalPoints =
@@ -307,10 +339,10 @@ function calculateBusyMeter(metrics: {
     metrics.boarding * weights.boarding +
     metrics.grooming * weights.grooming +
     metrics.evaluations * weights.evaluations +
-    metrics.training * weights.training;
+    metrics.training * weights.training +
+    metrics.customServices * weights.customServices;
 
   // Normalize to 0-100 scale
-  // Assuming max capacity: 20 check-ins, 20 check-outs, 50 daycare, 30 boarding, 10 grooming, 5 evaluations, 5 training
   const maxPoints =
     20 * weights.checkIns +
     20 * weights.checkOuts +
@@ -318,7 +350,8 @@ function calculateBusyMeter(metrics: {
     30 * weights.boarding +
     10 * weights.grooming +
     5 * weights.evaluations +
-    5 * weights.training;
+    5 * weights.training +
+    10 * weights.customServices;
 
   const busyMeter = Math.min(100, Math.round((totalPoints / maxPoints) * 100));
   return busyMeter;

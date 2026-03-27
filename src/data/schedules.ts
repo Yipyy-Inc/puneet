@@ -571,4 +571,57 @@ export const schedules: Schedule[] = [
     facility: "Paws & Play Daycare",
     status: "scheduled",
   },
+
+  // ── Custom Service Module Staff ──────────────────────────────
+  // Yoda's Splash — Pool Attendant
+  {
+    id: 49,
+    staffId: 10,
+    staffName: "Jake M.",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "08:00",
+    endTime: "14:00",
+    role: "Yoda's Splash",
+    facility: "Paws & Play Daycare",
+    status: "scheduled",
+    location: "Main Pool",
+  },
+  {
+    id: 50,
+    staffId: 11,
+    staffName: "Amy R.",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "10:00",
+    endTime: "16:00",
+    role: "Yoda's Splash",
+    facility: "Paws & Play Daycare",
+    status: "scheduled",
+    location: "Splash Pad",
+  },
+  // Paws Express — Driver
+  {
+    id: 51,
+    staffId: 12,
+    staffName: "Chris T.",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "07:00",
+    endTime: "12:00",
+    role: "Paws Express",
+    facility: "Paws & Play Daycare",
+    status: "scheduled",
+    location: "Van #1 — West Route",
+  },
+  // Birthday Pawty — Event Coordinator
+  {
+    id: 52,
+    staffId: 13,
+    staffName: "Sophie L.",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "13:00",
+    endTime: "17:00",
+    role: "Birthday Pawty",
+    facility: "Paws & Play Daycare",
+    status: "scheduled",
+    location: "Party Room",
+  },
 ];

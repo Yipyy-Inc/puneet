@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { users } from "@/data/users";
 import { schedules, type Schedule } from "@/data/schedules";
 import { facilities } from "@/data/facilities";
@@ -68,7 +68,9 @@ import {
   Home,
   Scissors as ScissorsIcon,
   GraduationCap as GraduationCapIcon,
+  Sparkles,
 } from "lucide-react";
+import { useCustomServices } from "@/hooks/use-custom-services";
 
 // Example staff data for testing (matching staff page)
 const exampleStaff = [
@@ -1174,7 +1176,7 @@ export default function FacilitySchedulingPage() {
     conflictingShiftId?: number;
     conflictingShift?: (typeof schedules)[number];
     timeOffRequestId?: number;
-    details?: any;
+    details?: unknown;
   }> => {
     const conflicts: Array<{
       type:
@@ -1189,7 +1191,7 @@ export default function FacilitySchedulingPage() {
       conflictingShiftId?: number;
       conflictingShift?: (typeof schedules)[number];
       timeOffRequestId?: number;
-      details?: any;
+      details?: unknown;
     }> = [];
 
     // Get staff member
@@ -1423,7 +1425,7 @@ export default function FacilitySchedulingPage() {
     conflictingShiftId?: number;
     conflictingShift?: (typeof schedules)[number];
     timeOffRequestId?: number;
-    details?: any;
+    details?: unknown;
   }> => {
     const allConflicts: Array<{
       id: string;
@@ -1444,7 +1446,7 @@ export default function FacilitySchedulingPage() {
       conflictingShiftId?: number;
       conflictingShift?: (typeof schedules)[number];
       timeOffRequestId?: number;
-      details?: any;
+      details?: unknown;
     }> = [];
 
     // Scan all scheduled shifts
@@ -1486,6 +1488,30 @@ export default function FacilitySchedulingPage() {
 
     return uniqueConflicts;
   };
+
+  // Custom service modules with staff assignment (must be before early return)
+  const { activeModules } = useCustomServices();
+  const customModulesWithStaff = useMemo(
+    () => activeModules.filter((m) => m.staffAssignment.mode !== "none"),
+    [activeModules],
+  );
+
+  // Role categories (built-in + custom modules)
+  const roleCategories = useMemo(() => {
+    const builtIn = [
+      { id: "Boarding", label: "Boarding Attendants", icon: Building2 },
+      { id: "Daycare", label: "Daycare Attendants", icon: Users },
+      { id: "Grooming", label: "Groomers", icon: Scissors },
+      { id: "Training", label: "Trainers", icon: GraduationCap },
+      { id: "Admin", label: "Front Desk / Admin", icon: User },
+    ];
+    const customRoles = customModulesWithStaff.map((m) => ({
+      id: m.name,
+      label: m.name,
+      icon: Sparkles,
+    }));
+    return [...builtIn, ...customRoles];
+  }, [customModulesWithStaff]);
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -1648,6 +1674,7 @@ export default function FacilitySchedulingPage() {
         groomingCount: dailyWorkload.groomingAppointmentsCount,
         evaluations: dailyWorkload.evaluationsCount,
         trainingCount: dailyWorkload.trainingSessionsCount,
+        customServicesCount: dailyWorkload.customServicesCount,
         busyMeter: dailyWorkload.busyMeter,
       };
     }
@@ -1694,22 +1721,23 @@ export default function FacilitySchedulingPage() {
       groomingStaffCount > 0 ? 1 : 0,
     );
 
-    // Count staff by role
+    // Count staff by role (including custom service modules)
     const staffByRole = activeShifts.reduce(
       (acc, s) => {
         const role = s.role.toLowerCase();
         if (role.includes("daycare")) acc.daycare++;
-        if (role.includes("boarding")) acc.boarding++;
-        if (role.includes("groom")) acc.grooming++;
-        if (
+        else if (role.includes("boarding")) acc.boarding++;
+        else if (role.includes("groom")) acc.grooming++;
+        else if (
           role.includes("front") ||
           role.includes("admin") ||
           role.includes("desk")
         )
           acc.frontDesk++;
+        else acc.customServices++;
         return acc;
       },
-      { daycare: 0, boarding: 0, grooming: 0, frontDesk: 0 },
+      { daycare: 0, boarding: 0, grooming: 0, frontDesk: 0, customServices: 0 },
     );
 
     const totalStaffCount = activeShifts.length;
@@ -1737,15 +1765,6 @@ export default function FacilitySchedulingPage() {
       workload: workload?.busyMeter || 0,
     };
   };
-
-  // Role categories
-  const roleCategories = [
-    { id: "Boarding", label: "Boarding Attendants", icon: Building2 },
-    { id: "Daycare", label: "Daycare Attendants", icon: Users },
-    { id: "Grooming", label: "Groomers", icon: Scissors },
-    { id: "Training", label: "Trainers", icon: GraduationCap },
-    { id: "Admin", label: "Front Desk / Admin", icon: User },
-  ];
 
   // Calculate stats
   const today = new Date().toISOString().split("T")[0];
