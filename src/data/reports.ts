@@ -1,7 +1,7 @@
 import { bookings } from "./bookings";
 import { clients } from "./clients";
 import { facilities } from "./facilities";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 
 // Helper functions for report calculations
 export const calculateOccupancyRate = (
@@ -164,34 +164,19 @@ export const getTopCustomers = (facilityId: number, limit: number = 10) => {
     .slice(0, limit);
 };
 
-export interface OccupancyReportData {
-  date: string;
-  occupancyRate: number;
-  occupiedKennels: number;
-  totalKennels: number;
-  revenue: number;
-}
-
-export interface NoShowReportData {
-  date: string;
-  service: string;
-  clientName: string;
-  petName: string;
-  scheduledTime: string;
-  status: "no-show" | "late-cancellation";
-  revenue: number;
-}
-
-export interface CancellationReportData {
-  date: string;
-  service: string;
-  clientName: string;
-  petName: string;
-  reason?: string;
-  refundAmount: number;
-  cancellationTime: string;
-  advanceNotice: string; // e.g., "2 days", "1 hour"
-}
+// Types re-exported from @/types/reports (single source of truth)
+export type {
+  OccupancyReportData,
+  NoShowReportData,
+  CancellationReportData,
+  CustomReportConfig,
+  ServiceBreakdownItem,
+} from "@/types/reports";
+import type {
+  OccupancyReportData,
+  NoShowReportData,
+  CancellationReportData,
+} from "@/types/reports";
 
 // Generate sample occupancy report data
 export const generateOccupancyReport = (
@@ -338,27 +323,7 @@ export const reportFields = {
   ],
 };
 
-export interface CustomReportConfig {
-  id: string;
-  name: string;
-  description?: string;
-  dataSource: "bookings" | "clients" | "pets" | "payments";
-  selectedFields: string[];
-  filters: {
-    field: string;
-    operator: "equals" | "contains" | "greater_than" | "less_than" | "between";
-    value: string | number | boolean | string[];
-  }[];
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-  schedule?: {
-    enabled: boolean;
-    frequency: "daily" | "weekly" | "monthly";
-    recipients: string[];
-  };
-  createdAt: string;
-  createdBy: string;
-}
+import type { CustomReportConfig } from "@/types/reports";
 
 export const savedCustomReports: CustomReportConfig[] = [
   {
@@ -440,14 +405,7 @@ export const calculateServiceRevenue = (
   };
 };
 
-export interface ServiceBreakdownItem {
-  serviceId: string;
-  serviceName: string;
-  bookingCount: number;
-  revenue: number;
-  aov: number;
-  isCustom: boolean;
-}
+import type { ServiceBreakdownItem } from "@/types/reports";
 
 export const generateServiceBreakdownReport = (
   facilityId: number,

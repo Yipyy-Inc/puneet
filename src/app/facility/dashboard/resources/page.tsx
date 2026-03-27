@@ -28,7 +28,7 @@ import {
   Box,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import type { FacilityResource } from "@/lib/types";
+import type { FacilityResource } from "@/types/facility";
 
 const RESOURCE_TYPE_ICONS: Record<
   string,

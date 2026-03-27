@@ -5,35 +5,14 @@
  * Supports different configurations per location within a facility
  */
 
-import {
+export type {
+  LocationLoyaltyConfig,
   FacilityLoyaltyConfig,
-  getFacilityLoyaltyConfig,
-} from "@/data/facility-loyalty-config";
+} from "@/types/loyalty";
 
-export interface LocationLoyaltyConfig {
-  locationId: number;
-  facilityId: number;
-  enabled: boolean;
+import type { FacilityLoyaltyConfig } from "@/types/loyalty";
 
-  // Override facility defaults if needed
-  overridePointsEarning?: boolean;
-  overrideTiers?: boolean;
-  overrideRewards?: boolean;
-  overrideReferrals?: boolean;
-
-  // Location-specific settings
-  pointsEarning?: any; // PointsEarningRule
-  tiers?: any[]; // LoyaltyTierConfig[]
-  rewardTypes?: any[]; // RewardTypeConfig[]
-  referralProgram?: any; // ReferralProgramConfig
-
-  // Location restrictions
-  restrictions?: {
-    serviceTypes?: string[]; // Only certain service types earn points at this location
-    productCategories?: string[]; // Only certain product categories earn points
-    minimumPurchase?: number; // Higher minimum at this location
-  };
-}
+import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
 
 /**
  * Get loyalty configuration for a specific location

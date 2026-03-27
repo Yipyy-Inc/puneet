@@ -1,102 +1,12 @@
-export interface TicketTimelineEvent {
-  id: string;
-  type:
-    | "created"
-    | "status_change"
-    | "assignment"
-    | "priority_change"
-    | "message"
-    | "sla_update"
-    | "escalation"
-    | "note";
-  timestamp: string;
-  actor: string;
-  details: {
-    from?: string;
-    to?: string;
-    message?: string;
-    note?: string;
-  };
-}
-
-export interface SLAConfig {
-  id: string;
-  name: string;
-  priority: "Low" | "Medium" | "High" | "Urgent";
-  firstResponseTime: number; // in hours
-  resolutionTime: number; // in hours
-  escalationTime: number; // in hours
-  description: string;
-}
-
-export interface TicketSLA {
-  configId: string;
-  firstResponseDue: string;
-  resolutionDue: string;
-  escalationDue: string;
-  firstResponseMet?: boolean;
-  resolutionMet?: boolean;
-  isEscalated: boolean;
-  breachCount: number;
-}
-
-export interface SupportAgent {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  role: "Agent" | "Senior Agent" | "Team Lead" | "Manager";
-  department: string;
-  status: "Available" | "Busy" | "Away" | "Offline";
-  activeTickets: number;
-  specializations: string[];
-}
-
-export interface SupportTicket extends Record<string, unknown> {
-  id: string;
-  title: string;
-  description: string;
-  status:
-    | "Open"
-    | "In Progress"
-    | "Resolved"
-    | "Closed"
-    | "Escalated"
-    | "Pending";
-  priority: "Low" | "Medium" | "High" | "Urgent";
-  requester: string;
-  requesterEmail?: string;
-  facility: string;
-  facilityId?: string;
-  createdAt: string;
-  updatedAt: string;
-  assignedTo?: string;
-  assignedAgentId?: string;
-  category: string;
-  subcategory?: string;
-  tags?: string[];
-  sla?: TicketSLA;
-  timeline?: TicketTimelineEvent[];
-  messages?: {
-    id: string;
-    sender: string;
-    message: string;
-    timestamp: string;
-    isInternal?: boolean;
-  }[];
-  resolution?: {
-    resolvedAt: string;
-    resolvedBy: string;
-    resolutionNote: string;
-    satisfactionRating?: number;
-  };
-  escalation?: {
-    escalatedAt: string;
-    escalatedTo: string;
-    reason: string;
-    previousAssignee?: string;
-  };
-}
+// Types re-exported from @/types/support (single source of truth)
+export type {
+  TicketTimelineEvent,
+  SLAConfig,
+  TicketSLA,
+  SupportAgent,
+  SupportTicket,
+} from "@/types/support";
+import type { SLAConfig, SupportAgent, SupportTicket } from "@/types/support";
 
 // SLA Configurations
 export const slaConfigs: SLAConfig[] = [

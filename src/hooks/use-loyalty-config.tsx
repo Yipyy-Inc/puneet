@@ -10,6 +10,7 @@
 
 import { useMemo } from "react";
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
+import type { FacilityLoyaltyConfig, RewardTypeConfig } from "@/types/loyalty";
 
 // Mock settings - TODO: Replace with actual useSettings hook
 interface _MockSettings {
@@ -21,7 +22,7 @@ interface _MockSettings {
 interface UseLoyaltyConfigResult {
   // Configuration state
   isEnabled: boolean;
-  config: unknown | null;
+  config: FacilityLoyaltyConfig | null;
 
   // Location awareness
   isEnabledForLocation: (locationId?: number) => boolean;
@@ -43,7 +44,7 @@ interface UseLoyaltyConfigResult {
   };
 
   // Location-specific config
-  getLocationConfig: (locationId?: number) => unknown | null;
+  getLocationConfig: (locationId?: number) => FacilityLoyaltyConfig | null;
 }
 
 /**
@@ -153,7 +154,7 @@ export function useLoyaltyConfig(locationId?: number): UseLoyaltyConfigResult {
       tiersEnabled: config.tiers && config.tiers.length > 0,
       rewardsEnabled:
         config.rewardTypes &&
-        config.rewardTypes.some((rt: { enabled?: boolean }) => rt.enabled),
+        config.rewardTypes.some((rt: RewardTypeConfig) => rt.enabled),
       referralsEnabled: config.referralProgram?.enabled === true,
       expirationEnabled: config.pointsExpiration?.enabled === true,
     };
@@ -197,7 +198,7 @@ export function useCustomerLoyaltyAccess(): {
   canViewLoyalty: boolean;
   canRedeemRewards: boolean;
   canViewReferrals: boolean;
-  config: unknown | null;
+  config: FacilityLoyaltyConfig | null;
 } {
   const { isEnabled, config, features } = useLoyaltyConfig();
 

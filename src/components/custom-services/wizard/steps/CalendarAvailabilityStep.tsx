@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { CustomServiceModule, FacilityResource } from "@/lib/types";
+import type { CustomServiceModule, FacilityResource } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 interface CalendarAvailabilityStepProps {

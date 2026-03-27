@@ -11,22 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import type { YipyyGoFormData } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-interface ReviewSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type ReviewSectionProps = YipyyGoFormSectionProps;
 
 export function ReviewSection({
   formData,

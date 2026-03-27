@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -69,9 +70,10 @@ export default function ChangePasswordPage() {
       await changePassword(formData.currentPassword, formData.newPassword);
       toast.success("Password changed successfully!");
       router.push("/customer/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
-        error.message || "Failed to change password. Please try again.",
+        getErrorMessage(error) ||
+          "Failed to change password. Please try again.",
       );
     } finally {
       setIsLoading(false);

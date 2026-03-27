@@ -5,81 +5,19 @@
  * to prevent abuse and ensure accurate reward distribution.
  */
 
-import type { ReferralRewardType } from "./facility-loyalty-config";
+export type {
+  ReferralRelationship,
+  ReferralEvent,
+  ReferralValidationResult,
+  ReferralRewardType,
+} from "@/types/loyalty";
 
-// ============================================================================
-// Data Structures
-// ============================================================================
-
-/**
- * Referral Relationship
- * Links a referrer to a referred customer
- */
-export interface ReferralRelationship {
-  id: string;
-  referrerId: number; // Client ID of the person who referred
-  referredCustomerId: number; // Client ID of the person who was referred
-  referralCode: string; // The referral code used
-  facilityId: number; // Facility where referral was made
-  createdAt: string; // When the referral relationship was created
-  status: "pending" | "active" | "completed" | "cancelled";
-
-  // Tracking fields
-  firstBookingId?: string; // ID of the first booking
-  firstBookingDate?: string; // Date of first completed booking
-  firstBookingValue?: number; // Value of first booking
-  totalBookingValue?: number; // Total value of all bookings
-
-  // Reward tracking
-  referrerRewardStatus: "pending" | "eligible" | "issued" | "cancelled";
-  referrerRewardIssuedAt?: string;
-  referrerRewardValue?: number | string;
-  referrerRewardType?: ReferralRewardType;
-
-  refereeRewardStatus: "pending" | "eligible" | "issued" | "cancelled";
-  refereeRewardIssuedAt?: string;
-  refereeRewardValue?: number | string;
-  refereeRewardType?: ReferralRewardType;
-
-  // Validation flags
-  isSelfReferral: boolean; // Prevent self-referrals
-  isDuplicate: boolean; // Prevent duplicate rewards
-  validationNotes?: string; // Notes about validation
-}
-
-/**
- * Referral Event
- * Tracks events related to referrals (booking created, completed, cancelled, etc.)
- */
-export interface ReferralEvent {
-  id: string;
-  referralRelationshipId: string;
-  eventType:
-    | "booking_created"
-    | "booking_completed"
-    | "booking_cancelled"
-    | "booking_refunded"
-    | "reward_issued"
-    | "reward_cancelled";
-  bookingId?: string;
-  bookingValue?: number;
-  rewardValue?: number | string;
-  rewardType?: ReferralRewardType;
-  timestamp: string;
-  notes?: string;
-}
-
-/**
- * Referral Validation Result
- * Result of validating a referral action
- */
-export interface ReferralValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-  canTriggerReward: boolean;
-  reason?: string;
-}
+import type {
+  ReferralRelationship,
+  ReferralEvent,
+  ReferralValidationResult,
+  ReferralRewardType,
+} from "@/types/loyalty";
 
 // ============================================================================
 // Mock Data (In production, this would be in a database)

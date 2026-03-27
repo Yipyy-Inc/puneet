@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import type { CustomServiceModule, PricingModelType } from "@/lib/types";
+import type { CustomServiceModule, PricingModelType } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 const PRICING_MODELS: {

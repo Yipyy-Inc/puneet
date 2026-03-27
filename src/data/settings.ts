@@ -2,7 +2,7 @@
 // EVALUATION CONFIGURATION DATA
 // ========================================
 
-import {
+import type {
   EvaluationConfig,
   BusinessProfile,
   BusinessHours,
@@ -25,7 +25,7 @@ import {
   ServiceDateBlock,
   ScheduleTimeOverride,
   DropOffPickUpOverride,
-} from "@/lib/types";
+} from "@/types/facility";
 
 export const evaluationConfig: EvaluationConfig = {
   internalName: "Pet Evaluation",

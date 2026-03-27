@@ -6,60 +6,23 @@ import {
   type Product,
   type ProductVariant,
 } from "@/data/retail";
+import type {
+  SalesByPeriod,
+  TopProduct,
+  ProfitMarginReport,
+  SalesByStaff,
+  SalesByCategory,
+  SalesLinkedToServices,
+} from "@/types/retail";
 
-export interface SalesByPeriod {
-  date: string;
-  sales: number;
-  transactions: number;
-  items: number;
-}
-
-export interface TopProduct {
-  productId: string;
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-  quantitySold: number;
-  revenue: number;
-  cost: number;
-  profit: number;
-  profitMargin: number;
-}
-
-export interface ProfitMarginReport {
-  period: string;
-  revenue: number;
-  cost: number;
-  profit: number;
-  profitMargin: number;
-  transactions: number;
-}
-
-export interface SalesByStaff {
-  staffId: string;
-  staffName: string;
-  transactions: number;
-  revenue: number;
-  itemsSold: number;
-  averageTransaction: number;
-}
-
-export interface SalesByCategory {
-  category: string;
-  revenue: number;
-  transactions: number;
-  itemsSold: number;
-  profit: number;
-  profitMargin: number;
-}
-
-export interface SalesLinkedToServices {
-  serviceType: string;
-  revenue: number;
-  transactions: number;
-  itemsSold: number;
-}
+export type {
+  SalesByPeriod,
+  TopProduct,
+  ProfitMarginReport,
+  SalesByStaff,
+  SalesByCategory,
+  SalesLinkedToServices,
+};
 
 /**
  * Get sales by day/week/month

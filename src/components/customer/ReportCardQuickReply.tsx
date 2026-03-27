@@ -72,8 +72,10 @@ export function ReportCardQuickReply({
       toast.success("Reply sent!");
       onReplySent?.(message);
       setSelectedQuickReply(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send reply");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send reply",
+      );
       setSelectedQuickReply(null);
     }
   };
@@ -92,8 +94,10 @@ export function ReportCardQuickReply({
       onReplySent?.(customMessage);
       setIsCustomReplyOpen(false);
       setCustomMessage("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send reply");
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send reply",
+      );
     }
   };
 

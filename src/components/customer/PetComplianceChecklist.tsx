@@ -7,7 +7,7 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { clientDocuments } from "@/data/documents";
 import { invoices } from "@/data/payments";
 import { facilityConfig } from "@/data/facility-config";
-import type { Pet } from "@/lib/types";
+import type { Pet } from "@/types/pet";
 
 interface PetComplianceChecklistProps {
   pet: Pet;

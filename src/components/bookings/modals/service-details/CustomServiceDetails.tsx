@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Clock, MapPin, Users } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import type { CustomServiceModule, Pet } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
+import type { Pet } from "@/types/pet";
 import { resolveIcon } from "@/lib/service-registry";
 
 // Module-level constants

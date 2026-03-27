@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import type { PetPhoto, ReportCard } from "@/data/pet-data";
-import type { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 
 interface UnifiedPhoto {
   id: string;

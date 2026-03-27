@@ -56,7 +56,7 @@ import {
 import { toast } from "sonner";
 import { calculateStylistPerformance } from "@/lib/stylist-performance";
 
-type StylistWithRecord = Stylist & Record<string, unknown>;
+type StylistWithRecord = Stylist;
 
 const dayNames = [
   "Sunday",
@@ -100,7 +100,7 @@ export default function StylistsPage() {
   >(
     stylists.reduce(
       (acc, s) => {
-        acc[s.id] = (s as any).visibleOnline !== false; // Default to true if not set
+        acc[s.id] = s.visibleOnline !== false; // Default to true if not set
         return acc;
       },
       {} as Record<string, boolean>,

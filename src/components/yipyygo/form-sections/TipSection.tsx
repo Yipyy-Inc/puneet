@@ -11,22 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DollarSign } from "lucide-react";
-import type { YipyyGoFormData, TipSelection } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { TipSelection, YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-interface TipSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type TipSectionProps = YipyyGoFormSectionProps;
 
 const TIP_PERCENTAGES = [10, 15, 20, 25];
 

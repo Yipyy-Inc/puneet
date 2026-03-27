@@ -1,57 +1,8 @@
 // Payment and Transaction Data Models
 
-type PaymentStatus = "success" | "failed" | "pending" | "refunded";
-type PaymentMethod =
-  | "credit_card"
-  | "debit_card"
-  | "bank_transfer"
-  | "paypal"
-  | "stripe"
-  | "other";
+import type { Transaction, PaymentProvider } from "@/types/payments";
 
-export interface Transaction {
-  id: string;
-  facilityId: number;
-  facilityName: string;
-  transactionDate: string;
-  amount: number;
-  currency: string;
-  paymentMethod: PaymentMethod;
-  paymentProvider: string;
-  status: PaymentStatus;
-  customerId?: string;
-  customerName?: string;
-  description: string;
-  processingFee: number;
-  netAmount: number;
-  refundAmount?: number;
-  refundDate?: string;
-  failureReason?: string;
-}
-
-export interface PaymentProvider {
-  id: string;
-  name: string;
-  type: "stripe" | "paypal" | "square" | "braintree" | "custom";
-  isActive: boolean;
-  facilities: number[]; // facility IDs using this provider
-  processingFeePercentage: number;
-  fixedFee: number;
-  currency: string;
-  configuration: {
-    apiKey?: string;
-    publicKey?: string;
-    webhookUrl?: string;
-    supportedMethods: PaymentMethod[];
-  };
-  statistics: {
-    totalTransactions: number;
-    successfulTransactions: number;
-    failedTransactions: number;
-    totalVolume: number;
-    averageTransactionValue: number;
-  };
-}
+export type { Transaction, PaymentProvider };
 
 // Mock transaction data
 export const transactions: Transaction[] = [

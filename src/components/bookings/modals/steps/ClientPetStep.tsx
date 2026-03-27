@@ -11,7 +11,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Client, Pet, ModuleConfig } from "@/lib/types";
+import type { Client } from "@/types/client";
+import type { ModuleConfig } from "@/types/facility";
+import type { Pet } from "@/types/pet";
 
 interface ClientPetStepProps {
   searchQuery: string;

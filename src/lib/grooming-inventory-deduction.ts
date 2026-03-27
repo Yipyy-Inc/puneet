@@ -9,26 +9,11 @@ import type {
   GroomingAppointment,
   ProductUsage,
   ProductUsageLog,
-} from "@/data/grooming";
+  DeductionResult,
+} from "@/types/grooming";
 import { groomingPackages, groomingProducts } from "@/data/grooming";
 
-export interface DeductionResult {
-  success: boolean;
-  deductions: Array<{
-    productId: string;
-    productName: string;
-    quantityDeducted: number;
-    remainingStock: number;
-    wasLowStock: boolean;
-    isNowLowStock: boolean;
-  }>;
-  errors: Array<{
-    productId: string;
-    productName: string;
-    reason: string;
-  }>;
-  usageLogs: ProductUsageLog[];
-}
+export type { DeductionResult };
 
 /**
  * Deduct products from inventory when a grooming appointment is completed

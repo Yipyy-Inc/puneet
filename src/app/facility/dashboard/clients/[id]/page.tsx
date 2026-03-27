@@ -29,7 +29,7 @@ import {
   customerCredits,
 } from "@/data/payments";
 import { getClientRetailPurchases } from "@/data/retail";
-import { Evaluation } from "@/lib/types";
+import type { Evaluation } from "@/types/pet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

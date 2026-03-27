@@ -5,295 +5,69 @@
  */
 
 import { logFormVersionPublish } from "@/lib/form-audit";
+import type {
+  FormRecord,
+  FormVersionRecord,
+  FormSectionRecord,
+  FormFieldRecord,
+  FormOptionRecord,
+  LogicRuleRecord,
+  FormTemplate,
+  Form,
+  FormQuestion,
+  FormCondition,
+  FormLogicRule,
+  FormSectionDTO,
+  FieldMappingItem,
+  FormVersionSummary,
+  ConditionContext,
+  FieldType,
+  QuestionType,
+  ConditionOperator,
+  LogicActionType,
+  FormStatus,
+  FormAudience,
+  FormType,
+  LogicRuleOperator,
+  LogicRuleAction,
+} from "@/types/forms";
 
-// ----- Form (root) -----
-export type FormType =
-  | "intake"
-  | "pet"
-  | "owner"
-  | "customer"
-  | "service"
-  | "internal";
+export type {
+  FormType,
+  FormStatus,
+  FormAudience,
+  FormAppliesTo,
+  FormSettings,
+  FormRecord,
+  FormVersionRecord,
+  FormSectionRecord,
+  FieldType,
+  FieldVisibility,
+  FieldValidation,
+  FormFieldRecord,
+  FormOptionRecord,
+  LogicRuleOperator,
+  LogicRuleAction,
+  LogicRuleRecord,
+  QuestionType,
+  ConditionOperator,
+  ContextField,
+  FormCondition,
+  FormQuestion,
+  FormSectionDTO,
+  FieldMappingItem,
+  LogicActionType,
+  FormLogicRule,
+  Form,
+  FormTemplate,
+  FormVersionSummary,
+  ConditionContext,
+} from "@/types/forms";
 
-export type FormStatus = "draft" | "published" | "archived";
-
-export type FormAudience = "customer" | "staff" | "both";
-
-export interface FormAppliesTo {
-  petTypes?: string[]; // e.g. ["dog", "cat", "other"]
-  serviceTypes?: string[];
-  locationIds?: string[];
-}
-
-export interface FormSettings {
-  themeColor?: string;
-  welcomeMessage?: string;
-  submitMessage?: string;
-  /** Phase 2: scoring for intake (approve/deny/needs review). See forms-phase2-types. */
-  scoring?: import("./forms-phase2-types").FormScoringConfig;
-}
-
-export interface FormRecord {
-  id: string;
-  facilityId: number;
-  name: string;
-  slug: string;
-  type: FormType;
-  status: FormStatus;
-  audience: FormAudience;
-  appliesTo?: FormAppliesTo;
-  settings?: FormSettings;
-  repeatPerPet?: boolean;
-  requireAuth?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// ----- FormVersion (immutable once published) -----
-export interface FormVersionRecord {
-  id: string;
-  formId: string;
-  versionNumber: number;
-  publishedAt?: string;
-  createdBy?: string;
-  createdAt: string;
-}
-
-// ----- Section -----
-export interface FormSectionRecord {
-  id: string;
-  formVersionId: string;
-  title: string;
-  description?: string;
-  order: number;
-}
-
-// ----- Field (question) -----
-export type FieldType =
-  | "yes_no"
-  | "short_text"
-  | "long_text"
-  | "dropdown"
-  | "radio"
-  | "checkbox"
-  | "date"
-  | "number"
-  | "file_upload"
-  | "signature"
-  | "phone"
-  | "email"
-  | "address";
-
-export type FieldVisibility = "customer" | "staff";
-
-export interface FieldValidation {
-  min?: number;
-  max?: number;
-  regex?: string;
-  allowedFileTypes?: string[];
-}
-
-export interface FormFieldRecord {
-  id: string;
-  sectionId: string;
-  label: string;
-  helpText?: string;
-  fieldType: FieldType;
-  required: boolean;
-  visibility?: FieldVisibility;
-  appliesToPetType?: string;
-  defaultValue?: string;
-  validation?: FieldValidation;
-  mappingTarget?: string;
-  order: number;
-  /** Phase 2: multi-language labels. See forms-phase2-types. */
-  labelI18n?: Partial<
-    Record<import("./forms-phase2-types").SupportedFormLocale, string>
-  >;
-  /** Phase 2: payment block (when tokenization supported). */
-  paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
-}
-
-// ----- Option (for dropdown/radio/checkbox) -----
-export interface FormOptionRecord {
-  id: string;
-  fieldId: string;
-  label: string;
-  value: string;
-  order: number;
-}
-
-// ----- LogicRule (conditional branching) -----
-export type LogicRuleOperator =
-  | "eq"
-  | "neq"
-  | "contains"
-  | "gt"
-  | "lt"
-  | "answered"
-  | "not_answered";
-
-export type LogicRuleAction =
-  | "show"
-  | "hide"
-  | "require"
-  | "skip_to_section"
-  | "end_form"
-  | "set_tag"
-  | "set_status";
-
-export interface LogicRuleRecord {
-  id: string;
-  formVersionId: string;
-  triggerFieldId: string;
-  operator: LogicRuleOperator;
-  value?: string | string[];
-  action: LogicRuleAction;
-  targetFieldIds?: string[];
-  targetSectionId?: string;
-  /** Phase 2: trigger from pet attribute, tag, service type, or evaluation status. See LogicRuleTriggerPhase2. */
-  triggerSource?: import("./forms-phase2-types").LogicRuleTriggerPhase2["triggerSource"];
-  petAttribute?: import("./forms-phase2-types").PetAttributeCondition;
-  tagId?: string;
-}
-
-// ----- Legacy / flat shape (backward compat for existing UI) -----
+// Re-export ServiceType for backward compat (also in base.ts)
 export type ServiceType = "boarding" | "grooming" | "training" | "evaluation";
 
-export type QuestionType =
-  | "text"
-  | "textarea"
-  | "select"
-  | "multiselect"
-  | "checkbox"
-  | "date"
-  | "number"
-  | "file"
-  | "signature"
-  | "yes_no"
-  | "radio"
-  | "phone"
-  | "email"
-  | "address";
-
-export type ConditionOperator =
-  | "eq"
-  | "neq"
-  | "contains"
-  | "in"
-  | "gt"
-  | "lt"
-  | "answered"
-  | "not_answered";
-
-export type ContextField = "petType" | "serviceType" | "evaluationStatus";
-
-export interface FormCondition {
-  questionId?: string;
-  contextField?: ContextField;
-  operator: ConditionOperator;
-  value: string | string[];
-  /** Phase 2: condition on pet attribute (e.g. pet.breed, pet.hasTag). See forms-phase2-types. */
-  sourceType?: import("./forms-phase2-types").ConditionSourceType;
-  petAttribute?: import("./forms-phase2-types").PetAttributeCondition;
-  tagId?: string;
-}
-
-export interface FormQuestion {
-  id: string;
-  type: QuestionType;
-  label: string;
-  required: boolean;
-  options?: { value: string; label: string }[];
-  placeholder?: string;
-  condition?: FormCondition;
-  visibility?: "customer" | "staff";
-  sectionId?: string;
-  helpText?: string;
-  defaultValue?: string;
-  appliesToPetType?: string;
-  validation?: FieldValidation;
-  /** Phase 2: multi-language (EN/FR). See FormQuestionI18n in forms-phase2-types. */
-  labelI18n?: Partial<
-    Record<import("./forms-phase2-types").SupportedFormLocale, string>
-  >;
-  placeholderI18n?: Partial<
-    Record<import("./forms-phase2-types").SupportedFormLocale, string>
-  >;
-  /** Phase 2: payment block config (when payments module supports tokenization). */
-  paymentConfig?: import("./forms-phase2-types").FormPaymentBlockConfig;
-}
-
-/** Section for builder and flat Form DTO */
-export interface FormSectionDTO {
-  id: string;
-  title: string;
-  description?: string;
-  order: number;
-}
-
-export interface FieldMappingItem {
-  questionId: string;
-  target: string;
-}
-
-export type LogicActionType =
-  | "show"
-  | "hide"
-  | "require"
-  | "skip_to_section"
-  | "end_form"
-  | "set_tag"
-  | "alert_flag";
-
-export interface FormLogicRule {
-  id: string;
-  triggerQuestionId: string;
-  operator: ConditionOperator;
-  value?: string | string[];
-  action: LogicActionType;
-  targetQuestionIds?: string[];
-  targetSectionId?: string;
-  tagValue?: string;
-  endMessage?: string;
-}
-
-/** Flat Form DTO: used by list page, public fill, and builder when editing "current" version as flat list */
-export interface Form {
-  id: string;
-  facilityId: number;
-  name: string;
-  slug: string;
-  type: FormType;
-  serviceType?: ServiceType;
-  templateId?: string;
-  internal: boolean;
-  questions: FormQuestion[];
-  fieldMapping: FieldMappingItem[];
-  /** Logic rules (builder): IF trigger question answer THEN action on targets */
-  logicRules?: FormLogicRule[];
-  /** Sections (builder); when present, each question should have sectionId */
-  sections?: FormSectionDTO[];
-  repeatPerPet?: boolean;
-  requireAuth?: boolean;
-  createdAt: string;
-  updatedAt: string;
-  // New model fields (optional for backward compat)
-  status?: FormStatus;
-  audience?: FormAudience;
-  appliesTo?: FormAppliesTo;
-  settings?: FormSettings;
-}
-
-export interface FormTemplate {
-  id: string;
-  facilityId: number;
-  name: string;
-  formType: FormType;
-  questions: FormQuestion[];
-  createdAt: string;
-  updatedAt: string;
-}
+// ----- Legacy / flat shape types re-exported from @/types/forms -----
 
 // ----- In-memory stores -----
 let formRecords: FormRecord[] = [];
@@ -422,22 +196,6 @@ function formRecordToFlatForm(record: FormRecord, versionId?: string): Form {
     appliesTo: record.appliesTo,
     settings: record.settings,
   };
-}
-
-/** Phase 2 extended context for conditions (pet attributes, tags, etc.) */
-export interface ConditionContext {
-  petType?: string;
-  serviceType?: string;
-  evaluationStatus?: string;
-  petAttributes?: {
-    breed?: string;
-    type?: string;
-    age?: number;
-    weight?: number;
-    gender?: string;
-    tags?: string[];
-  };
-  customerTags?: string[];
 }
 
 /** Resolve source value from a condition, supporting Phase 2 sourceType/petAttribute/tag. */
@@ -968,15 +726,6 @@ export function updateForm(
 }
 
 /** Get version history for a form (newest first) */
-export interface FormVersionSummary {
-  versionId: string;
-  versionNumber: number;
-  publishedAt?: string;
-  createdAt: string;
-  createdBy?: string;
-  questionCount: number;
-}
-
 export function getFormVersionHistory(formId: string): FormVersionSummary[] {
   return formVersions
     .filter((v) => v.formId === formId)

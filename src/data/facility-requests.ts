@@ -1,31 +1,6 @@
-export interface FacilityRequest extends Record<string, unknown> {
-  id: number;
-  facilityName: string;
-  requestType:
-    | "Trial"
-    | "Plan Upgrade"
-    | "Plan Downgrade"
-    | "Add Service"
-    | "Remove Service";
-  description: string;
-  time: string;
-  status: "pending" | "approved" | "denied";
-  severity?: "normal" | "high";
-  details: string;
-  businessType: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  phone: string;
-  email: string;
-  adminName: string;
-  adminEmail: string;
-  plan: string;
-  requestedPlan?: string;
-  requestedService?: string;
-}
+// Types re-exported from @/types/facility (single source of truth)
+export type { FacilityRequest } from "@/types/facility";
+import type { FacilityRequest } from "@/types/facility";
 
 export const facilityRequests: FacilityRequest[] = [
   {

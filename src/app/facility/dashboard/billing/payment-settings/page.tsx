@@ -1237,14 +1237,16 @@ export default function PaymentSettingsPage() {
                 <div className="space-y-2">
                   <Label>Allowed Services for Auto-Pay</Label>
                   <div className="grid grid-cols-2 gap-3">
-                    {[
-                      "grooming",
-                      "membership",
-                      "package",
-                      "boarding",
-                      "daycare",
-                      "training",
-                    ].map((service) => (
+                    {(
+                      [
+                        "grooming",
+                        "membership",
+                        "package",
+                        "boarding",
+                        "daycare",
+                        "training",
+                      ] as const
+                    ).map((service) => (
                       <div
                         key={service}
                         className="flex items-center space-x-2"
@@ -1253,13 +1255,13 @@ export default function PaymentSettingsPage() {
                           type="checkbox"
                           id={`autopay-${service}`}
                           checked={config.autoPaySettings.allowedServices.includes(
-                            service as any,
+                            service,
                           )}
                           onChange={(e) => {
                             const allowedServices = e.target.checked
                               ? [
                                   ...config.autoPaySettings.allowedServices,
-                                  service as any,
+                                  service,
                                 ]
                               : config.autoPaySettings.allowedServices.filter(
                                   (s) => s !== service,

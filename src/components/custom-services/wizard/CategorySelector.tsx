@@ -2,7 +2,7 @@
 
 import { resolveIcon } from "@/lib/service-registry";
 import { CUSTOM_SERVICE_CATEGORIES_META } from "@/data/custom-services";
-import type { CustomServiceCategory } from "@/lib/types";
+import type { CustomServiceCategory } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_COLOR_MAP: Record<

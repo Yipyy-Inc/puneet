@@ -37,18 +37,16 @@ import { isBuiltinService } from "@/lib/service-registry";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 
-import {
-  Client,
-  FeedingScheduleItem,
-  MedicationItem,
+import type { Client } from "@/types/client";
+import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
+import type {
   NewBooking,
   Booking,
   DaycareDateTime,
   Task,
-  Pet,
-  Evaluation,
-} from "@/lib/types";
-import type { ExtraService } from "@/lib/types";
+  ExtraService,
+} from "@/types/booking";
+import type { Pet, Evaluation } from "@/types/pet";
 
 // Types
 
@@ -708,7 +706,7 @@ export function BookingModal({
     // Medication tasks
     if (booking.medications) {
       booking.medications.forEach((med) => {
-        med.times.forEach((time) => {
+        med.times.forEach((time: string) => {
           const petId = Array.isArray(booking.petId)
             ? booking.petId[0]
             : booking.petId;
@@ -809,8 +807,7 @@ export function BookingModal({
     );
 
     const latestEvaluation = (() => {
-      const evals =
-        (pet as unknown as { evaluations?: any[] })?.evaluations ?? [];
+      const evals = pet?.evaluations ?? [];
       if (evals.length === 0) return null;
       return [...evals].sort((a, b) => {
         const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;

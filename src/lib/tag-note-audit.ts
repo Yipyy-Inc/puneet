@@ -10,40 +10,13 @@
 
 import type { FacilityRole } from "@/lib/role-utils";
 
-// ========================================
-// TYPES
-// ========================================
-
-export type TagNoteAuditAction =
-  | "tag_created"
-  | "tag_updated"
-  | "tag_deleted"
-  | "tag_assigned"
-  | "tag_unassigned"
-  | "note_created"
-  | "note_updated"
-  | "note_deleted"
-  | "note_pinned"
-  | "note_unpinned"
-  | "note_visibility_changed"
-  | "tag_visibility_changed";
-
-export interface TagNoteAuditEntry {
-  id: string;
-  timestamp: string; // ISO
-  action: TagNoteAuditAction;
-  facilityId: number;
-  actorId: number | string;
-  actorName: string;
-  actorType: "staff" | "system";
-  actorRole?: FacilityRole;
-  entityType: "tag" | "note";
-  entityId: string;
-  targetType?: "pet" | "customer" | "booking" | "incident" | "internal_staff";
-  targetId?: number;
-  changes?: { field: string; oldValue: string; newValue: string }[];
-  metadata?: Record<string, unknown>;
-}
+// Types re-exported from @/types/tags (single source of truth)
+export type {
+  TagNoteAuditAction,
+  TagNoteAuditEntry,
+  TagNoteAuditFilters,
+} from "@/types/tags";
+import type { TagNoteAuditEntry } from "@/types/tags";
 
 // ========================================
 // IN-MEMORY LOG
@@ -328,16 +301,7 @@ export function logNoteVisibilityChanged(params: {
 // QUERY
 // ========================================
 
-export interface TagNoteAuditFilters {
-  facilityId?: number;
-  entityType?: "tag" | "note";
-  entityId?: string;
-  action?: TagNoteAuditAction;
-  targetType?: string;
-  targetId?: number;
-  from?: string; // ISO date
-  to?: string;
-}
+import type { TagNoteAuditFilters } from "@/types/tags";
 
 export function getTagNoteAuditLog(
   filters?: TagNoteAuditFilters,

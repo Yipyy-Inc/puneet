@@ -33,7 +33,7 @@ import type {
   NotificationToggle,
   Integration,
   ModuleAddon,
-} from "@/lib/types";
+} from "@/types/facility";
 
 interface SettingsContextValue {
   daycare: ModuleConfig;

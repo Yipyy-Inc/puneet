@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import type { CustomServiceStatus } from "@/lib/types";
+import type { CustomServiceStatus } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 interface CustomServiceStatusBadgeProps {

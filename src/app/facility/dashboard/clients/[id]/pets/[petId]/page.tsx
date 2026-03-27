@@ -54,11 +54,9 @@ import {
   PartyPopper,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import type {
-  Evaluation,
-  NewBooking as BookingData,
-  Client,
-} from "@/lib/types";
+import type { Client } from "@/types/client";
+import type { NewBooking as BookingData } from "@/types/booking";
+import type { Evaluation, Pet } from "@/types/pet";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { DataTable } from "@/components/ui/DataTable";
 import { useFacilityRole } from "@/hooks/use-facility-role";
@@ -164,20 +162,6 @@ const reportCardThemes: Record<string, ThemeStyle> = {
 };
 
 /* All card backgrounds are now light (-50 shades), so no dark detection needed */
-
-interface Pet {
-  id: number;
-  name: string;
-  type: string;
-  breed: string;
-  age: number;
-  weight: number;
-  color: string;
-  microchip: string;
-  allergies: string;
-  specialNeeds: string;
-  evaluations?: Evaluation[];
-}
 
 export default function PetDetailPage({
   params,
@@ -1338,16 +1322,9 @@ export default function PetDetailPage({
               </CardHeader>
               <CardContent className="space-y-3">
                 {(() => {
-                  const evals = (
-                    ("evaluations" in
-                    (pet as unknown as Record<string, unknown>)
-                      ? ((pet as unknown as { evaluations?: Evaluation[] })
-                          .evaluations ?? [])
-                      : []) as Evaluation[]
-                  ).map((ev) => {
+                  const evals = ((pet as Pet).evaluations ?? []).map((ev) => {
                     const expired =
-                      (ev as any).isExpired === true ||
-                      ev.status === "outdated";
+                      ev.isExpired === true || ev.status === "outdated";
                     const outcome =
                       ev.status === "passed"
                         ? "PASS"
@@ -1375,7 +1352,7 @@ export default function PetDetailPage({
                         {
                           key: "evaluatedAt",
                           label: "Date",
-                          render: (row: any) =>
+                          render: (row) =>
                             row.evaluatedAt
                               ? formatDateTime(row.evaluatedAt)
                               : "Not completed",
@@ -1383,7 +1360,7 @@ export default function PetDetailPage({
                         {
                           key: "outcome",
                           label: "Outcome",
-                          render: (row: any) => (
+                          render: (row) => (
                             <Badge
                               variant={
                                 row.outcome === "PASS"
@@ -1400,7 +1377,7 @@ export default function PetDetailPage({
                         {
                           key: "validity",
                           label: "Validity",
-                          render: (row: any) =>
+                          render: (row) =>
                             row.status === "passed" ||
                             row.status === "outdated" ? (
                               <Badge
@@ -1417,12 +1394,12 @@ export default function PetDetailPage({
                         {
                           key: "evaluatedBy",
                           label: "Evaluator",
-                          render: (row: any) => row.evaluatedBy || "—",
+                          render: (row) => row.evaluatedBy || "—",
                         },
                         {
                           key: "notes",
                           label: "Notes (staff)",
-                          render: (row: any) =>
+                          render: (row) =>
                             row.notes ? (
                               <span className="text-muted-foreground line-clamp-2">
                                 {row.notes}
@@ -1432,7 +1409,7 @@ export default function PetDetailPage({
                             ),
                         },
                       ]}
-                      actions={(row: any) => (
+                      actions={(row) => (
                         <Button
                           size="sm"
                           onClick={() => setActiveEvaluation(row)}

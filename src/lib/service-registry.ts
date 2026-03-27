@@ -52,7 +52,7 @@ import {
   Utensils,
   type LucideIcon,
 } from "lucide-react";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 
 // ========================================
 // ICON RESOLVER

@@ -30,7 +30,7 @@ import type {
   MedFrequency,
   MedAdminInstruction,
   MissedDoseAction,
-} from "@/lib/types";
+} from "@/types/booking";
 
 export interface PetOption {
   id: number;

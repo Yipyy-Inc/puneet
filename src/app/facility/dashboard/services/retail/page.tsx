@@ -98,7 +98,11 @@ import {
   processCloverPayment,
   type CloverPaymentRequest,
 } from "@/lib/clover-terminal-service";
-import { processYipyyPay, type YipyyPayRequest } from "@/lib/yipyy-pay-service";
+import {
+  processYipyyPay,
+  type YipyyPayRequest,
+  type YipyyPayResponse,
+} from "@/lib/yipyy-pay-service";
 import { isDeviceReadyForTapToPay } from "@/lib/device-detection";
 import { logPaymentAction } from "@/lib/payment-audit";
 
@@ -261,7 +265,8 @@ export default function POSPage() {
     "idle" | "processing" | "success" | "failed"
   >("idle");
   const [tapToPayError, setTapToPayError] = useState<string | null>(null);
-  const [tapToPayResponse, setTapToPayResponse] = useState<any>(null);
+  const [tapToPayResponse, setTapToPayResponse] =
+    useState<YipyyPayResponse | null>(null);
 
   const stats = getRetailStats();
 

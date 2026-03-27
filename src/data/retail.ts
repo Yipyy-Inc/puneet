@@ -1,406 +1,68 @@
 // Retail / POS module mock data
 
-export type ProductStatus = "active" | "inactive" | "discontinued";
-export type VariantType =
-  | "size"
-  | "color"
-  | "flavor"
-  | "weight"
-  | "design"
-  | "custom";
-export type OrderStatus =
-  | "pending"
-  | "ordered"
-  | "shipped"
-  | "partially_received"
-  | "received"
-  | "cancelled";
-export type TransactionStatus = "completed" | "refunded" | "voided";
-export type PaymentMethod =
-  | "cash"
-  | "credit"
-  | "debit"
-  | "split"
-  | "add_to_booking"
-  | "charge_to_account"
-  | "charge_to_active_stay"
-  | "store_credit"
-  | "gift_card"
-  | "custom";
-export type RefundMethod =
-  | "original_payment"
-  | "store_credit"
-  | "gift_card"
-  | "cash"
-  | "custom";
-export type ReturnStatus = "pending" | "approved" | "completed" | "cancelled";
-export type ReturnReason =
-  | "defective"
-  | "wrong_item"
-  | "not_as_described"
-  | "customer_request"
-  | "other";
-export type MovementType =
-  | "sale"
-  | "purchase"
-  | "adjustment"
-  | "return"
-  | "transfer";
+import type {
+  ProductStatus,
+  VariantType,
+  OrderStatus,
+  TransactionStatus,
+  PaymentMethod,
+  RefundMethod,
+  ReturnStatus,
+  ReturnReason,
+  MovementType,
+  CartItemType,
+  CartDiscountType,
+  ProductVariant,
+  Product,
+  Supplier,
+  PurchaseOrderItem,
+  PurchaseOrder,
+  CartItem,
+  CartDiscount,
+  PromoCode,
+  AccountDiscount,
+  Transaction,
+  ReturnItem,
+  Return,
+  StoreCredit,
+  CustomPaymentMethod,
+  InventoryMovement,
+  LowStockAlert,
+  OnlineStoreSettings,
+  RetailGiftCard as GiftCard,
+} from "@/types/retail";
 
-export interface ProductVariant {
-  id: string;
-  name: string;
-  sku: string; // Unique SKU for this variant
-  barcode: string; // Unique barcode for this variant
-  price: number; // Selling price
-  costPrice: number; // Cost price
-  stock: number; // Current stock count
-  minStock: number; // Minimum stock threshold
-  maxStock: number; // Maximum stock threshold
-  variantType: VariantType; // Type of variation (size, color, etc.)
-  variantValue: string; // The actual value (e.g., "Large", "Red", "500g")
-  customVariantType?: string; // Custom variant type name if variantType is "custom"
-  imageUrl?: string; // Image URL for this specific variant
-  imageUrls?: string[]; // Multiple images for this variant
-}
-
-export interface Product {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  brand: string;
-  basePrice: number;
-  baseCostPrice: number;
-  sku: string;
-  barcode: string;
-  status: ProductStatus;
-  hasVariants: boolean;
-  variants: ProductVariant[];
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  imageUrl?: string;
-  tags: string[];
-  taxable: boolean;
-  taxRate: number;
-  onlineVisible: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Supplier {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  contactName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  country: string;
-  website?: string;
-  paymentTerms: string;
-  leadTimeDays: number;
-  status: "active" | "inactive";
-  notes: string;
-  totalOrders: number;
-  createdAt: string;
-}
-
-export interface PurchaseOrderItem {
-  productId: string;
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-  quantity: number;
-  unitCost: number;
-  totalCost: number;
-  receivedQuantity: number;
-}
-
-export interface PurchaseOrder {
-  [key: string]: unknown;
-  id: string;
-  orderNumber: string;
-  supplierId: string;
-  supplierName: string;
-  status: OrderStatus;
-  items: PurchaseOrderItem[];
-  subtotal: number;
-  tax: number;
-  shipping: number;
-  total: number;
-  notes: string;
-  orderedAt: string;
-  expectedDelivery: string;
-  receivedAt?: string;
-  createdBy: string;
-}
-
-export type CartItemType = "product" | "service" | "package" | "membership";
-
-export interface CartItem {
-  // Item identification
-  itemType: CartItemType;
-  productId?: string; // For retail products
-  serviceId?: string; // For services (daycare, boarding, grooming, training, etc.)
-  packageId?: string; // For packages
-  membershipId?: string; // For memberships
-
-  // Item details
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-
-  // Service-specific (if itemType is "service")
-  serviceType?: string; // "daycare" | "boarding" | "grooming" | "training" | etc.
-  serviceDate?: string; // Date for service
-  serviceDuration?: number; // Duration in minutes
-
-  // Package/Membership-specific
-  packageDetails?: string; // Package description
-  membershipPlanId?: string; // Membership plan ID
-
-  // Pricing
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  discountType: "fixed" | "percent";
-  total: number;
-
-  // Comp/Free items
-  isComp?: boolean; // Employee comp / free item
-  compReason?: string; // Reason for comp (manager only)
-}
-
-export type CartDiscountType =
-  | "percent"
-  | "fixed"
-  | "promo_code"
-  | "account_discount"
-  | "employee_discount";
-
-export interface CartDiscount {
-  type: CartDiscountType;
-  value: number; // Percentage or fixed amount
-  promoCode?: string; // If type is "promo_code"
-  appliedBy?: string; // User ID who applied the discount
-  reason?: string; // Reason for discount (for manager comps)
-}
-
-export interface PromoCode {
-  id: string;
-  code: string;
-  description: string;
-  discountType: "percent" | "fixed";
-  discountValue: number;
-  minPurchase?: number; // Minimum purchase amount required
-  maxDiscount?: number; // Maximum discount amount (for percentage)
-  validFrom: string;
-  validTo: string;
-  usageLimit?: number; // Total number of times it can be used
-  usageCount: number; // Current usage count
-  isActive: boolean;
-  applicableTo?: string[]; // Product IDs or categories (empty = all products)
-  createdBy: string;
-  createdAt: string;
-}
-
-export interface AccountDiscount {
-  id: string;
-  customerId: string;
-  customerName: string;
-  discountType: "percent" | "fixed";
-  discountValue: number;
-  applicableTo?: "all" | "products" | "services" | "both";
-  productCategories?: string[]; // If applicableTo includes products
-  validFrom: string;
-  validTo?: string; // Optional expiration
-  isActive: boolean;
-  notes?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Transaction {
-  [key: string]: unknown;
-  id: string;
-  transactionNumber: string;
-  items: CartItem[];
-  subtotal: number;
-  discountTotal: number;
-  cartDiscount?: CartDiscount; // Cart-wide discount applied
-  promoCodeUsed?: string; // Promo code if used
-  accountDiscountApplied?: string; // Account discount ID if applied
-  taxTotal: number;
-  tipAmount?: number; // Optional tip amount
-  tipPercentage?: number; // Tip percentage if applied
-  total: number;
-  paymentMethod: PaymentMethod;
-  payments: {
-    method: PaymentMethod;
-    amount: number;
-    customMethodName?: string; // If method is "custom"
-  }[];
-  status: TransactionStatus;
-  customerId?: string;
-  customerName?: string;
-  customerEmail?: string;
-  petId?: number; // Link to specific pet
-  petName?: string; // Pet name for display
-  bookingId?: number; // Link to booking/stay
-  bookingService?: string; // Service type (daycare, boarding, grooming, etc.)
-  chargedToBookingId?: number; // If paymentMethod is "add_to_booking" or "charge_to_active_stay", this is the booking ID items were added to
-  chargedToAccount?: boolean; // If paymentMethod is "charge_to_account", indicates items charged to account
-  cashierId: string;
-  cashierName: string;
-  receiptSent: boolean;
-  receiptEmail?: string;
-  notes: string;
-  createdAt: string;
-  returns?: Return[]; // Associated returns
-  // Payment processing details
-  fiservTransactionId?: string; // Fiserv transaction ID if paid via Fiserv
-  yipyyPayTransactionId?: string; // Yipyy Pay transaction ID if paid via iPhone
-  cloverTransactionId?: string; // Clover terminal transaction ID if paid via Clover
-  tokenizedCardId?: string; // Tokenized card ID if paid with saved card
-  // Location and reconciliation
-  locationId?: string; // Location where transaction occurred
-}
-
-export interface ReturnItem {
-  transactionItemId: string; // Reference to original transaction item
-  productId: string;
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-  quantity: number; // Quantity being returned
-  originalQuantity: number; // Original quantity purchased
-  unitPrice: number;
-  discount: number;
-  discountType?: "fixed" | "percent";
-  total: number;
-  reason: ReturnReason;
-  reasonNotes?: string;
-  restocked: boolean; // Whether item was returned to inventory
-}
-
-export interface Return {
-  id: string;
-  returnNumber: string;
-  transactionId: string;
-  transactionNumber: string;
-  items: ReturnItem[];
-  subtotal: number; // Total of returned items
-  refundTotal: number; // Amount to refund
-  refundMethod: RefundMethod;
-  customRefundMethodName?: string; // If refundMethod is "custom"
-  storeCreditAmount?: number; // If refundMethod is "store_credit"
-  giftCardNumber?: string; // If refundMethod is "gift_card"
-  status: ReturnStatus;
-  customerId?: string;
-  customerName?: string;
-  customerEmail?: string;
-  processedBy: string; // User ID who processed the return
-  processedByName: string;
-  notes?: string;
-  createdAt: string;
-  completedAt?: string;
-}
-
-export interface StoreCredit {
-  id: string;
-  customerId: string;
-  customerName: string;
-  amount: number;
-  balance: number; // Remaining balance
-  issuedFrom?: string; // Return ID if issued from a return
-  expiresAt?: string; // Optional expiration date
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GiftCard {
-  id: string;
-  cardNumber: string;
-  pin?: string;
-  amount: number;
-  balance: number; // Remaining balance
-  issuedFrom?: string; // Return ID if issued from a return
-  customerId?: string; // If linked to a customer
-  customerName?: string;
-  expiresAt?: string; // Optional expiration date
-  isActive: boolean;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CustomPaymentMethod {
-  id: string;
-  name: string;
-  description?: string;
-  isActive: boolean;
-  canBeUsedForRefunds: boolean;
-  icon?: string; // Icon identifier
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface InventoryMovement {
-  [key: string]: unknown;
-  id: string;
-  productId: string;
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-  movementType: MovementType;
-  quantity: number;
-  previousStock: number;
-  newStock: number;
-  reason: string;
-  referenceId?: string;
-  referenceType?: "transaction" | "purchase_order" | "adjustment";
-  createdBy: string;
-  createdAt: string;
-}
-
-export interface LowStockAlert {
-  [key: string]: unknown;
-  id: string;
-  productId: string;
-  productName: string;
-  variantId?: string;
-  variantName?: string;
-  sku: string;
-  currentStock: number;
-  minStock: number;
-  status: "pending" | "acknowledged" | "resolved";
-  createdAt: string;
-  acknowledgedAt?: string;
-  acknowledgedBy?: string;
-}
-
-export interface OnlineStoreSettings {
-  enabled: boolean;
-  syncInventory: boolean;
-  syncProducts: boolean;
-  syncPrices: boolean;
-  lastSyncAt: string;
-  storeUrl: string;
-  apiConnected: boolean;
-  autoPublishNewProducts: boolean;
-  lowStockThreshold: number;
-  hideOutOfStock: boolean;
-}
+export type {
+  ProductStatus,
+  VariantType,
+  OrderStatus,
+  TransactionStatus,
+  PaymentMethod,
+  RefundMethod,
+  ReturnStatus,
+  ReturnReason,
+  MovementType,
+  CartItemType,
+  CartDiscountType,
+  ProductVariant,
+  Product,
+  Supplier,
+  PurchaseOrderItem,
+  PurchaseOrder,
+  CartItem,
+  CartDiscount,
+  PromoCode,
+  AccountDiscount,
+  Transaction,
+  ReturnItem,
+  Return,
+  StoreCredit,
+  CustomPaymentMethod,
+  InventoryMovement,
+  LowStockAlert,
+  OnlineStoreSettings,
+};
+export type { RetailGiftCard as GiftCard } from "@/types/retail";
 
 // Mock Data
 

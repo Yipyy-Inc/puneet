@@ -5,80 +5,20 @@
  * the customer sees any booking options. All validation is invisible to the customer.
  */
 
-export type GroomerSelectionMode =
-  | "stealth" // Customer never sees groomer names (system assigns)
-  | "optional" // "No preference" vs specific groomer
-  | "tier-only" // "Senior Stylist" vs "Junior Stylist" (no names)
-  | "full-choice"; // See all groomers with photos/bios
+export type {
+  GroomerSelectionMode,
+  GroomingServiceCategory,
+  GroomingBookingRules,
+  GroomingFacilityConfig,
+  GroomingPreBookingValidation,
+} from "@/types/grooming";
+export type { DepositType } from "@/types/base";
 
-export type DepositType = "none" | "fixed" | "percentage";
-
-export interface GroomingServiceCategory {
-  id: string;
-  name: string;
-  enabled: boolean;
-  hiddenWhenFullyBooked?: boolean; // Hide if fully booked for X weeks
-  fullyBookedWeeksThreshold?: number; // Weeks threshold for hiding
-}
-
-export interface GroomingBookingRules {
-  // Lead Time Configuration
-  leadTime: {
-    minimumHours: number; // e.g., 24 hours for salon, 48 hours for mobile
-    allowSameDay: boolean; // Whether today shows as available
-    allowTomorrow: boolean; // Whether tomorrow shows as available
-  };
-
-  // Groomer Selection Mode
-  groomerSelection: {
-    mode: GroomerSelectionMode;
-    // For tier-only mode
-    tiers?: Array<{
-      id: string;
-      name: string; // e.g., "Senior Stylist", "Junior Stylist"
-      description?: string;
-    }>;
-  };
-
-  // Deposit Requirements
-  deposit: {
-    type: DepositType;
-    amount?: number; // Fixed amount in dollars (if type is "fixed")
-    percentage?: number; // Percentage of total (if type is "percentage")
-    refundable: boolean;
-    requiredAtBooking: boolean; // Must be paid immediately or can be paid later
-  };
-
-  // Service Visibility
-  serviceVisibility: {
-    categories: GroomingServiceCategory[];
-    hideFullyBookedCategories: boolean; // Auto-hide categories that are fully booked
-  };
-
-  // Vaccination Requirements
-  vaccination: {
-    requireRecordsBeforeBooking: boolean; // Blocks booking until staff approves
-    requiredVaccines: string[]; // e.g., ["Rabies", "DHPP", "Bordetella"]
-  };
-}
-
-export interface GroomingFacilityConfig {
-  enabled: boolean;
-  bookingRules: GroomingBookingRules;
-  operatingHours: {
-    monday: { open: string; close: string };
-    tuesday: { open: string; close: string };
-    wednesday: { open: string; close: string };
-    thursday: { open: string; close: string };
-    friday: { open: string; close: string };
-    saturday: { open: string; close: string };
-    sunday: { open: string; close: string };
-  };
-  serviceTypes: {
-    salon: boolean; // In-facility grooming
-    mobile: boolean; // Mobile grooming service
-  };
-}
+import type {
+  GroomingBookingRules,
+  GroomingFacilityConfig,
+  GroomingPreBookingValidation,
+} from "@/types/grooming";
 
 /**
  * Default grooming configuration
@@ -153,38 +93,6 @@ export const defaultGroomingConfig: GroomingFacilityConfig = {
  * Pre-Booking Validation Results
  * These are computed BEFORE the customer sees any booking options
  */
-export interface GroomingPreBookingValidation {
-  // Is grooming service available at all?
-  isAvailable: boolean;
-
-  // Earliest available booking date/time
-  earliestAvailableDate: Date | null;
-
-  // Available service categories (after filtering)
-  availableCategories: GroomingServiceCategory[];
-
-  // Groomer selection options (based on mode)
-  groomerSelectionOptions: {
-    mode: GroomerSelectionMode;
-    canSelectGroomer: boolean;
-    canSelectTier: boolean;
-    showGroomerNames: boolean;
-    tiers?: Array<{ id: string; name: string; description?: string }>;
-  };
-
-  // Deposit information
-  depositInfo: {
-    required: boolean;
-    type: DepositType;
-    amount?: number;
-    percentage?: number;
-    message: string; // Customer-facing message about deposit
-  };
-
-  // Validation errors/warnings (for internal use, not shown to customer)
-  validationErrors: string[];
-  validationWarnings: string[];
-}
 
 /**
  * Validates grooming booking rules BEFORE customer sees booking options

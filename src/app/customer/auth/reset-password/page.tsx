@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Loader2, ArrowLeft } from "lucide-react";
+import { getErrorMessage } from "@/lib/errors";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -86,9 +87,9 @@ function ResetPasswordForm() {
       await resetPassword(token, formData.password);
       toast.success("Password reset successfully!");
       router.push("/customer/auth/login");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
-        error.message || "Failed to reset password. Please try again.",
+        getErrorMessage(error) || "Failed to reset password. Please try again.",
       );
     } finally {
       setIsLoading(false);

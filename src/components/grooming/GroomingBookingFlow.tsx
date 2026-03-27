@@ -60,7 +60,7 @@ import { toast } from "sonner";
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
 
-export type PetSize = "S" | "M" | "L" | "XL";
+export type PetSizeLabel = "S" | "M" | "L" | "XL";
 
 export interface PetWithBookingInfo {
   id: number;
@@ -71,9 +71,10 @@ export interface PetWithBookingInfo {
   weight: number;
   color: string;
   imageUrl?: string;
-  size: PetSize;
+  size: PetSizeLabel;
   lastGroomingDate?: string;
   lastGroomingService?: string;
+  specialNeeds?: string;
   vaccinationStatus: {
     required: boolean;
     isCompliant: boolean;
@@ -568,7 +569,7 @@ export function GroomingBookingFlow({
         )[0];
 
       // Determine pet size based on weight
-      const size: PetSize =
+      const size: PetSizeLabel =
         pet.weight <= 15
           ? "S"
           : pet.weight <= 50
@@ -721,7 +722,7 @@ export function GroomingBookingFlow({
   // Get price for selected service based on pet size
   const getServicePrice = (
     category: ServiceCategoryOption,
-    petSize: PetSize,
+    petSize: PetSizeLabel,
   ): number => {
     if (category.sizePricing && category.sizePricing[petSize]) {
       return category.sizePricing[petSize];
@@ -871,7 +872,7 @@ export function GroomingBookingFlow({
     const isSenior = selectedPet.age >= (selectedPet.type === "Dog" ? 7 : 10);
 
     // Check specialNeeds or behavior flags (in production, this would come from pet profile)
-    const specialNeeds = (selectedPet as any).specialNeeds || "";
+    const specialNeeds = selectedPet.specialNeeds || "";
     const isAnxious = /anxious|aggressive|nervous|fearful/i.test(specialNeeds);
 
     return { isAnxious, isSenior };
@@ -1085,7 +1086,7 @@ export function GroomingBookingFlow({
   // Check if pet needs Fear-Free Certified groomer
   const requiresFearFree = useMemo(() => {
     if (!selectedPet) return false;
-    const specialNeeds = (selectedPet as any).specialNeeds || "";
+    const specialNeeds = selectedPet.specialNeeds || "";
     return /anxious|aggressive|fearful|nervous|behavior/i.test(specialNeeds);
   }, [selectedPet]);
 
@@ -1107,7 +1108,9 @@ export function GroomingBookingFlow({
     petBookings.forEach((booking) => {
       // In production, this would come from booking.stylistId
       // For now, we'll use a mock approach
-      const groomerId = (booking as any).stylistId;
+      const groomerId = (booking as Record<string, unknown>).stylistId as
+        | string
+        | undefined;
       if (groomerId) {
         groomerCounts.set(groomerId, (groomerCounts.get(groomerId) || 0) + 1);
       }

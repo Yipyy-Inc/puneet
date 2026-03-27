@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { Evaluation } from "@/lib/types";
+import type { Evaluation } from "@/types/pet";
 import { X } from "lucide-react";
 
 type YesNo = "yes" | "no" | "";

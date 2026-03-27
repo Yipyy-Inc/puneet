@@ -1,148 +1,29 @@
 // Training module mock data
+import type {
+  Trainer,
+  TrainingClass,
+  TrainingSession,
+  Enrollment,
+  TrainerNote,
+  ProgressRecord,
+  TrainingPackage,
+} from "@/types/training";
 
-export type TrainingClassStatus =
-  | "scheduled"
-  | "in-progress"
-  | "completed"
-  | "cancelled";
-export type EnrollmentStatus =
-  | "enrolled"
-  | "completed"
-  | "dropped"
-  | "waitlisted";
-export type SkillLevel = "beginner" | "intermediate" | "advanced";
-export type ClassType = "group" | "private";
+export type {
+  TrainingClassStatus,
+  EnrollmentStatus,
+  SkillLevel,
+  Trainer,
+  TrainingClass,
+  TrainingSession,
+  Enrollment,
+  TrainerNote,
+  ProgressRecord,
+  SkillProgress,
+  TrainingPackage,
+} from "@/types/training";
 
-export interface Trainer {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  photoUrl?: string;
-  specializations: string[];
-  certifications: string[];
-  yearsExperience: number;
-  status: "active" | "inactive" | "on-leave";
-  bio: string;
-  rating: number;
-  totalClasses: number;
-  hireDate: string;
-}
-
-export interface TrainingClass {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  description: string;
-  trainerId: string;
-  trainerName: string;
-  classType: ClassType;
-  skillLevel: SkillLevel;
-  dayOfWeek: number; // 0 = Sunday, 1 = Monday, etc.
-  startTime: string;
-  endTime: string;
-  duration: number; // in minutes
-  capacity: number;
-  enrolledCount: number;
-  price: number;
-  status: "active" | "inactive";
-  location: string;
-  startDate: string;
-  endDate: string;
-  totalSessions: number;
-}
-
-export interface TrainingSession {
-  [key: string]: unknown;
-  id: string;
-  classId: string;
-  className: string;
-  trainerId: string;
-  trainerName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: TrainingClassStatus;
-  attendees: string[]; // enrollment IDs
-  notes: string;
-}
-
-export interface Enrollment {
-  [key: string]: unknown;
-  id: string;
-  classId: string;
-  className: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  ownerId: number;
-  ownerName: string;
-  ownerPhone: string;
-  ownerEmail: string;
-  enrollmentDate: string;
-  status: EnrollmentStatus;
-  sessionsAttended: number;
-  totalSessions: number;
-  packageId?: string;
-  notes: string;
-}
-
-export interface TrainerNote {
-  [key: string]: unknown;
-  id: string;
-  enrollmentId: string;
-  petId: number;
-  petName: string;
-  classId: string;
-  className: string;
-  sessionId?: string;
-  trainerId: string;
-  trainerName: string;
-  date: string;
-  note: string;
-  category: "behavior" | "progress" | "concern" | "achievement" | "general";
-  isPrivate: boolean; // If true, only visible to staff
-}
-
-export interface ProgressRecord {
-  [key: string]: unknown;
-  id: string;
-  enrollmentId: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  classId: string;
-  className: string;
-  trainerId: string;
-  trainerName: string;
-  skills: SkillProgress[];
-  overallProgress: number; // 0-100
-  lastUpdated: string;
-  notes: string;
-}
-
-export interface SkillProgress {
-  skillName: string;
-  level: number; // 0-100
-  status: "not-started" | "in-progress" | "mastered";
-  lastPracticed?: string;
-}
-
-export interface TrainingPackage {
-  [key: string]: unknown;
-  id: string;
-  name: string;
-  description: string;
-  classType: ClassType;
-  skillLevel: SkillLevel;
-  sessions: number;
-  price: number;
-  validityDays: number;
-  isActive: boolean;
-  popular?: boolean;
-  includes: string[];
-}
+export type { ClassType } from "@/types/base";
 
 // Mock Data
 

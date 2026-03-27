@@ -5,29 +5,16 @@
  * for grooming appointment assignments.
  */
 
-import type { GroomingAppointment, Stylist, PetSize } from "@/data/grooming";
+import type {
+  GroomingAppointment,
+  Stylist,
+  StylistConflict,
+  ConflictDetail,
+  StylistAvailabilityCheck,
+} from "@/types/grooming";
+import type { PetSize } from "@/types/base";
 
-export interface StylistConflict {
-  hasConflict: boolean;
-  conflicts: ConflictDetail[];
-  reason: string | null;
-}
-
-export interface ConflictDetail {
-  type: "overlap" | "capacity" | "skill" | "availability";
-  message: string;
-  conflictingAppointmentId?: string;
-  conflictingAppointmentDate?: string;
-  conflictingAppointmentTime?: string;
-}
-
-export interface StylistAvailabilityCheck {
-  isAvailable: boolean;
-  canHandlePet: boolean;
-  conflicts: StylistConflict;
-  dailyAppointmentCount: number;
-  remainingCapacity: number;
-}
+export type { StylistConflict, ConflictDetail, StylistAvailabilityCheck };
 
 /**
  * Check if two time ranges overlap

@@ -10,29 +10,9 @@
  * - form_red_flag_answer: when a submission matches a logic rule that triggers an alert (e.g. on submit or in processing)
  */
 
-export type FormAutomationEventType =
-  | "form_link_sent"
-  | "form_started"
-  | "form_submitted"
-  | "form_incomplete_by_deadline"
-  | "form_red_flag_answer";
+import type { FormAutomationEventType, FormEventPayload } from "@/types/forms";
 
-export interface FormEventPayload {
-  facilityId: number;
-  formId: string;
-  formName?: string;
-  submissionId?: string;
-  customerId?: number;
-  petIds?: number[];
-  /** For form_link_sent: how link was shared (copy, email, etc.) */
-  sentVia?: string;
-  /** For form_incomplete_by_deadline: deadline that was missed */
-  deadline?: string;
-  /** For form_red_flag_answer: which question/rule triggered */
-  triggerQuestionId?: string;
-  triggerRuleId?: string;
-  [key: string]: unknown;
-}
+export type { FormAutomationEventType, FormEventPayload } from "@/types/forms";
 
 /**
  * Emit a form event for automation builder. In production this would push to an event bus or automation engine.

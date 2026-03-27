@@ -149,8 +149,12 @@ export function AddVaccinationModal({
       setUploadedFile(null);
       setErrors({});
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add vaccination record");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to add vaccination record";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

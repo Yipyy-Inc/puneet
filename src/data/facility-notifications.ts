@@ -5,38 +5,12 @@
 
 import { facilityConfig } from "@/data/facility-config";
 
-export type FacilityNotificationType =
-  | "yipyygo_submitted"
-  | "form_submission_new"
-  | "form_submission_red_flag"
-  | "form_submission_has_files"
-  | "info"
-  | "warning";
-
-export interface FacilityNotification {
-  id: string;
-  type: FacilityNotificationType;
-  title: string;
-  message: string;
-  read: boolean;
-  timestamp: string; // ISO
-  /** For YipyyGo: link to booking review */
-  bookingId?: number;
-  facilityId?: number;
-  /** For form submissions: link to submission detail */
-  submissionId?: string;
-  /** Optional: pet name, arrival time, form submission info */
-  meta?: {
-    petName?: string;
-    arrivalTime?: string;
-    bookingRef?: string;
-    submissionId?: string;
-    formName?: string;
-    formId?: string;
-    hasRedFlag?: boolean;
-    hasFiles?: boolean;
-  };
-}
+// Types re-exported from @/types/facility (single source of truth)
+export type {
+  FacilityNotificationType,
+  FacilityNotification,
+} from "@/types/facility";
+import type { FacilityNotification } from "@/types/facility";
 
 // Seed example notifications so staff see YipyyGo submissions on the dashboard
 const notifications: FacilityNotification[] = [

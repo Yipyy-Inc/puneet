@@ -1,50 +1,14 @@
 // Facility Subscription Data Models
+// Types re-exported from @/types/facility (single source of truth)
 
-type SubscriptionStatus =
-  | "active"
-  | "trial"
-  | "suspended"
-  | "cancelled"
-  | "expired";
-
-export interface FacilitySubscription {
-  id: string;
-  facilityId: number; // Links to facility in facilities.ts
-  facilityName: string;
-  tierId: string; // Links to subscription-tiers.ts
-  tierName: string;
-  status: SubscriptionStatus;
-  billingCycle: "monthly" | "quarterly" | "yearly";
-  startDate: string;
-  endDate: string;
-  trialEndDate?: string;
-  autoRenew: boolean;
-  enabledModules: string[]; // Array of module IDs from modules.ts
-  customizations?: {
-    maxUsers?: number;
-    maxReservations?: number;
-    storageGB?: number;
-    maxLocations?: number;
-  };
-  usage: {
-    currentUsers: number;
-    monthlyReservations: number;
-    storageUsedGB: number;
-    activeLocations: number;
-  };
-  billing: {
-    baseCost: number;
-    moduleCosts: { moduleId: string; cost: number }[];
-    totalCost: number;
-    currency: string;
-    nextBillingDate: string;
-    lastPaymentDate?: string;
-    paymentMethod?: string;
-  };
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type {
+  FacilitySubscription,
+  SubscriptionStatus,
+} from "@/types/facility";
+import type {
+  FacilitySubscription,
+  SubscriptionStatus,
+} from "@/types/facility";
 
 export const facilitySubscriptions: FacilitySubscription[] = [
   {

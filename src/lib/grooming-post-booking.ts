@@ -8,56 +8,17 @@
  * - Day-of notifications and check-in
  */
 
-export interface GroomingBookingData {
-  id: string;
-  clientId: number;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  petId: number;
-  petName: string;
-  serviceCategory: string;
-  serviceVariant?: string;
-  addOns: string[];
-  groomerId?: string;
-  groomerName?: string;
-  groomerTier?: string;
-  serviceLocation: "salon" | "mobile";
-  address?: string;
-  salonLocationId?: string;
-  appointmentDate: Date;
-  appointmentTime: string;
-  duration: number; // in minutes
-  totalPrice: number;
-  depositAmount: number;
-  depositMethod: "full" | "deposit" | "hold" | "venue";
-  recurringEnabled: boolean;
-  recurringFrequency?: number; // weeks
-  recurringEndAfter?: "occurrences" | "date" | "never";
-  recurringOccurrences?: number;
-  recurringEndDate?: Date;
-  keepSameGroomer?: boolean;
-  petBehaviorNotes?: string;
-  specialInstructions?: string;
-  lastVisitDate?: Date;
-  petNotes?: string; // e.g., "Nervous with dryers"
-}
+export type {
+  GroomingBookingData,
+  GroomerNotification,
+  ClientConfirmation,
+} from "@/types/grooming";
 
-export interface GroomerNotification {
-  groomerId: string;
-  groomerName: string;
-  notificationType: "app" | "sms";
-  message: string;
-  bookingId: string;
-}
-
-export interface ClientConfirmation {
-  bookingId: string;
-  manageBookingLink: string;
-  emailSent: boolean;
-  smsSent: boolean;
-  icsFileGenerated: boolean;
-}
+import type {
+  GroomingBookingData,
+  GroomerNotification,
+  ClientConfirmation,
+} from "@/types/grooming";
 
 /**
  * Immediate post-booking actions

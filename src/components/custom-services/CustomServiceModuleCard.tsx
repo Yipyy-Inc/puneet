@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CustomServiceStatusBadge } from "./CustomServiceStatusBadge";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import type { CustomServiceModule } from "@/lib/types";
+import type { CustomServiceModule } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 import {

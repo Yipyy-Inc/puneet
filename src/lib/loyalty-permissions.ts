@@ -5,27 +5,14 @@
  * Fully configurable per facility
  */
 
+export type {
+  LoyaltyPermission,
+  LoyaltyPermissionConfig,
+} from "@/types/loyalty";
+
+import type { LoyaltyPermission } from "@/types/loyalty";
+
 import { getFacilityLoyaltyConfig } from "@/data/facility-loyalty-config";
-
-export type LoyaltyPermission =
-  | "loyalty.view"
-  | "loyalty.manage"
-  | "loyalty.reports.view"
-  | "loyalty.reports.export"
-  | "loyalty.rewards.manage"
-  | "loyalty.rewards.issue"
-  | "loyalty.rewards.redeem"
-  | "loyalty.points.adjust"
-  | "loyalty.referrals.manage"
-  | "loyalty.referrals.view"
-  | "loyalty.settings.manage";
-
-export interface LoyaltyPermissionConfig {
-  facilityId: number;
-  locationId?: number; // Optional: location-specific permissions
-  rolePermissions: Record<string, LoyaltyPermission[]>;
-  customPermissions?: Record<string, LoyaltyPermission[]>; // User-specific overrides
-}
 
 /**
  * Default role permissions for loyalty features

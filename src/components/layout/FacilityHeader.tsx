@@ -22,7 +22,9 @@ import { bookings as initialBookings } from "@/data/bookings";
 import { clients as initialClients } from "@/data/clients";
 import { useBookingModal } from "@/hooks/use-booking-modal";
 
-import { Client, Pet, NewBooking, Booking } from "@/lib/types";
+import type { Client } from "@/types/client";
+import type { NewBooking, Booking } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 

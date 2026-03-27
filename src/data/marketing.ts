@@ -3,77 +3,43 @@
 // ========================================
 
 import { defaultCustomServiceModules } from "@/data/custom-services";
+import type {
+  SegmentFilterCategory,
+  SegmentFilterOperator,
+  SegmentFilter,
+  FilterGroup,
+  CustomerSegment,
+  SegmentFilterFieldDef,
+  EmailTemplateUseCase,
+  EmailTemplate,
+  CampaignGoal,
+  Campaign,
+  FacilityBranding,
+  PlaydateAlertConfig,
+  PlaydateAlertTemplate,
+  PlaydateAlertLog,
+  MarketingPromoCode,
+  ReferralNotificationTemplate,
+} from "@/types/marketing";
 
-// ----------------------------------------
-// Segment Filter System (AND/OR Groups)
-// ----------------------------------------
-
-export type SegmentFilterCategory =
-  | "service"
-  | "pet"
-  | "frequency"
-  | "booking"
-  | "compliance"
-  | "spending"
-  | "friends";
-
-export type SegmentFilterOperator =
-  | "equals"
-  | "not_equals"
-  | "greater_than"
-  | "less_than"
-  | "in"
-  | "not_in"
-  | "between"
-  | "contains"
-  | "is_true"
-  | "is_false";
-
-export interface SegmentFilter {
-  id: string;
-  category: SegmentFilterCategory;
-  field: string;
-  operator: SegmentFilterOperator;
-  value: string | number | boolean | string[] | [number, number];
-}
-
-export interface FilterGroup {
-  id: string;
-  filters: SegmentFilter[];
-}
-
-export interface CustomerSegment {
-  id: string;
-  name: string;
-  description: string;
-  filterGroups: FilterGroup[];
-  groupLogicOperator: "AND" | "OR";
-  customerCount: number;
-  isFavorite: boolean;
-  isBuiltIn: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Filter field definitions for the segment builder UI
-export interface SegmentFilterFieldDef {
-  field: string;
-  label: string;
-  category: SegmentFilterCategory;
-  operators: SegmentFilterOperator[];
-  valueType:
-    | "number"
-    | "text"
-    | "select"
-    | "multi_select"
-    | "date"
-    | "date_range"
-    | "boolean"
-    | "pet_select";
-  options?: { value: string; label: string }[];
-  placeholder?: string;
-  unit?: string;
-}
+export type {
+  SegmentFilterCategory,
+  SegmentFilterOperator,
+  SegmentFilter,
+  FilterGroup,
+  CustomerSegment,
+  SegmentFilterFieldDef,
+  EmailTemplateUseCase,
+  EmailTemplate,
+  CampaignGoal,
+  Campaign,
+  FacilityBranding,
+  PlaydateAlertConfig,
+  PlaydateAlertTemplate,
+  PlaydateAlertLog,
+  ReferralNotificationTemplate,
+};
+export type { MarketingPromoCode as PromoCode } from "@/types/marketing";
 
 // Auto-detect custom services and merge with core services
 const CORE_SERVICE_OPTIONS = [
@@ -1049,20 +1015,6 @@ export const customerSegments: CustomerSegment[] = [
 // Email Templates
 // ----------------------------------------
 
-export type EmailTemplateUseCase =
-  | "welcome"
-  | "booking_reminder"
-  | "vaccination_expiry"
-  | "newsletter"
-  | "birthday"
-  | "grooming_rebook"
-  | "daycare_promo"
-  | "boarding_seasonal"
-  | "win_back"
-  | "referral_program"
-  | "new_service"
-  | "playdate_alert";
-
 export const EMAIL_USE_CASE_LABELS: Record<
   EmailTemplateUseCase | "other",
   string
@@ -1088,28 +1040,6 @@ export const EMAIL_USE_CASE_OPTIONS: {
 }[] = Object.entries(EMAIL_USE_CASE_LABELS)
   .filter(([k]) => k !== "other")
   .map(([value, label]) => ({ value: value as EmailTemplateUseCase, label }));
-
-export interface EmailTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  category: "promotional" | "transactional" | "reminder" | "newsletter";
-  useCase?: EmailTemplateUseCase;
-  variables: string[];
-  offerSection?: {
-    headline: string;
-    description: string;
-    code?: string;
-    expiryDays?: number;
-  };
-  buttonText?: string;
-  buttonLink?: string;
-  previewImageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-  timesUsed: number;
-}
 
 export const emailTemplates: EmailTemplate[] = [
   {
@@ -1364,14 +1294,6 @@ export const emailTemplates: EmailTemplate[] = [
 // Campaigns
 // ----------------------------------------
 
-export type CampaignGoal =
-  | "fill_slow_days"
-  | "rebook_grooming"
-  | "promote_packages"
-  | "holiday_promo"
-  | "new_service"
-  | "general";
-
 export const CAMPAIGN_GOALS: {
   value: CampaignGoal;
   label: string;
@@ -1422,41 +1344,6 @@ export const CAMPAIGN_GOALS: {
     suggestedSegments: [],
   },
 ];
-
-export interface Campaign {
-  id: string;
-  name: string;
-  type: "email" | "sms";
-  templateId: string;
-  segmentId: string;
-  status: "draft" | "scheduled" | "sending" | "sent" | "paused";
-  goal?: CampaignGoal;
-  scheduledAt?: string;
-  sentAt?: string;
-  stats: {
-    sent: number;
-    delivered: number;
-    opened: number;
-    clicked: number;
-    bounced: number;
-    unsubscribed: number;
-  };
-  abTest?: {
-    enabled: boolean;
-    variantA: string;
-    variantB: string;
-    splitPercentage: number;
-    winner?: "A" | "B";
-  };
-  recurring?: {
-    enabled: boolean;
-    frequency: "weekly" | "biweekly" | "monthly";
-    dayOfWeek?: number;
-    dayOfMonth?: number;
-  };
-  createdAt: string;
-  createdBy: string;
-}
 
 export const campaigns: Campaign[] = [
   {
@@ -1594,17 +1481,6 @@ export const campaigns: Campaign[] = [
 // Facility Branding
 // ----------------------------------------
 
-export interface FacilityBranding {
-  logo: string;
-  primaryColor: string;
-  secondaryColor: string;
-  fromName: string;
-  replyToEmail: string;
-  footerText: string;
-  socialLinks: { platform: string; url: string }[];
-  unsubscribeLink: string;
-}
-
 export const facilityBranding: FacilityBranding = {
   logo: "/logos/happy-paws-logo.png",
   primaryColor: "#2563eb",
@@ -1624,40 +1500,6 @@ export const facilityBranding: FacilityBranding = {
 // ----------------------------------------
 // Playdate Alerts System
 // ----------------------------------------
-
-export interface PlaydateAlertConfig {
-  enabled: boolean;
-  triggerServices: string[];
-  triggerMoment: "on_request" | "on_confirmation";
-  channels: { sms: boolean; email: boolean; inApp: boolean };
-  timing: "immediate" | "scheduled";
-  beforeHours?: number;
-  quietHoursStart?: string;
-  quietHoursEnd?: string;
-  rateLimitPerDay: number;
-}
-
-export interface PlaydateAlertTemplate {
-  sms: string;
-  email: { subject: string; body: string };
-  variables: string[];
-}
-
-export interface PlaydateAlertLog {
-  id: string;
-  facilityId: string;
-  triggerBookingId: string;
-  triggerPetId: number;
-  triggerPetName: string;
-  recipientCustomerId: number;
-  recipientCustomerName: string;
-  recipientPetId: number;
-  recipientPetName: string;
-  channel: "sms" | "email" | "in_app";
-  status: "sent" | "suppressed" | "failed";
-  reasonSuppressed?: string;
-  sentAt: string;
-}
 
 export const playdateAlertConfig: PlaydateAlertConfig = {
   enabled: true,
@@ -1841,26 +1683,24 @@ export const playdateAlertLogs: PlaydateAlertLog[] = [
 // LOYALTY & REFERRALS DATA
 // ========================================
 
-/**
- * @deprecated Use FacilityLoyaltyConfig from facility-loyalty-config.ts instead
- * This interface is kept for backward compatibility
- */
-export interface LoyaltySettings {
-  enabled: boolean;
-  pointsPerDollar: number;
-  pointsValue: number;
-  expirationMonths?: number;
-  tiers: LoyaltyTier[];
-}
+export type {
+  LoyaltySettings,
+  LoyaltyTier,
+  CustomerLoyalty,
+  LoyaltyReward,
+  ReferralCode,
+  Badge,
+} from "@/types/loyalty";
+export type { SimplePointsEarningRule as PointsEarningRule } from "@/types/loyalty";
 
-export interface LoyaltyTier {
-  id: string;
-  name: string;
-  minPoints: number;
-  benefits: string[];
-  discountPercentage: number;
-  color: string;
-}
+import type {
+  LoyaltySettings,
+  CustomerLoyalty,
+  LoyaltyReward,
+  SimplePointsEarningRule,
+  ReferralCode,
+  Badge,
+} from "@/types/loyalty";
 
 export const loyaltySettings: LoyaltySettings = {
   enabled: true,
@@ -1917,46 +1757,7 @@ export const loyaltySettings: LoyaltySettings = {
   ],
 };
 
-export interface CustomerLoyalty {
-  clientId: number;
-  points: number;
-  tier: string;
-  lifetimePoints: number;
-  pointsHistory: {
-    date: string;
-    points: number;
-    type: "earned" | "redeemed" | "expired";
-    description: string;
-  }[];
-}
-
-export interface LoyaltyReward {
-  id: string;
-  name: string;
-  description: string;
-  requiredPoints: number;
-  rewardType:
-    | "discount_code"
-    | "credit_balance"
-    | "auto_apply"
-    | "free_service";
-  rewardValue: number | string;
-  applicableServices?: string[];
-  expiryDays?: number;
-  terms?: string;
-  isActive: boolean;
-  facilityId?: number;
-}
-
-export interface PointsEarningRule {
-  type: "per_dollar" | "per_visit" | "per_referral" | "bonus" | "holiday";
-  description: string;
-  points: number | { base: number; multiplier?: number };
-  applicableServices?: string[];
-  conditions?: string;
-}
-
-export const pointsEarningRules: PointsEarningRule[] = [
+export const pointsEarningRules: SimplePointsEarningRule[] = [
   { type: "per_dollar", description: "Earn 1 point per $1 spent", points: 1 },
   {
     type: "per_visit",
@@ -2118,19 +1919,6 @@ export const customerLoyaltyData: CustomerLoyalty[] = [
   },
 ];
 
-export interface ReferralCode {
-  id: string;
-  code: string;
-  referrerId: number;
-  referrerReward: number;
-  refereeReward: number;
-  timesUsed: number;
-  maxUses?: number;
-  expiresAt?: string;
-  createdAt: string;
-  isActive: boolean;
-}
-
 export const referralCodes: ReferralCode[] = [
   {
     id: "ref-001",
@@ -2166,26 +1954,6 @@ export const referralCodes: ReferralCode[] = [
     isActive: true,
   },
 ];
-
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  criteria: {
-    type:
-      | "bookings_count"
-      | "total_spent"
-      | "consecutive_months"
-      | "referrals"
-      | "reviews";
-    threshold: number;
-  };
-  reward?: {
-    type: "discount" | "points" | "freebie";
-    value: number | string;
-  };
-}
 
 export const badges: Badge[] = [
   {
@@ -2226,32 +1994,7 @@ export const badges: Badge[] = [
 // PROMOTIONS DATA
 // ========================================
 
-export interface PromoCode {
-  id: string;
-  code: string;
-  description: string;
-  type: "percentage" | "fixed" | "free_service";
-  value: number | string;
-  minPurchase?: number;
-  maxDiscount?: number;
-  validFrom: string;
-  validUntil: string;
-  usageLimit?: number;
-  usedCount: number;
-  perCustomerLimit?: number;
-  applicableServices?: string[];
-  autoApply?: boolean;
-  conditions?: {
-    firstTimeCustomer?: boolean;
-    specificDays?: string[];
-    specificServices?: string[];
-  };
-  isActive: boolean;
-  createdBy: string;
-  createdAt: string;
-}
-
-export const promoCodes: PromoCode[] = [
+export const promoCodes: MarketingPromoCode[] = [
   {
     id: "promo-001",
     code: "WELCOME10",
@@ -2334,16 +2077,6 @@ export const promoCodes: PromoCode[] = [
 // ============================================================================
 // Referral Notification Templates
 // ============================================================================
-
-export interface ReferralNotificationTemplate {
-  id: string;
-  type: "referrer_reward_earned" | "referee_welcome" | "referral_milestone";
-  channel: "in_app" | "email" | "sms";
-  subject?: string;
-  titleTemplate: string;
-  bodyTemplate: string;
-  variables: string[];
-}
 
 export const referralNotificationTemplates: ReferralNotificationTemplate[] = [
   {

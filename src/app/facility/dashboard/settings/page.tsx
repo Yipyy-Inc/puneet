@@ -7,7 +7,7 @@ import type {
   ServiceDateBlock,
   ScheduleTimeOverride,
   DropOffPickUpOverride,
-} from "@/lib/types";
+} from "@/types/facility";
 import { SettingsBlock } from "@/components/ui/settings-block";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,7 +71,7 @@ import type {
   ReportCardServiceConfig,
   ReportCardCustomQuestion,
   CustomFeedbackType,
-} from "@/lib/types";
+} from "@/types/facility";
 
 // Business Profile Component
 function BusinessProfileCard() {

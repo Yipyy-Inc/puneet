@@ -7,48 +7,9 @@
  * - Merge decisions + what was overridden
  */
 
-export type FormAuditAction =
-  | "form_version_published"
-  | "submission_received"
-  | "staff_profile_edit"
-  | "merge_decision";
+import type { FormAuditAction, FormAuditEntry } from "@/types/forms";
 
-export interface FormAuditEntry {
-  id: string;
-  timestamp: string; // ISO
-  action: FormAuditAction;
-  facilityId: number;
-  /** Form version publish: formId; submission: formId; staff edit / merge: formId from submission */
-  formId?: string;
-  formName?: string;
-  /** Form version publish */
-  versionNumber?: number;
-  versionId?: string;
-  /** Submission received / staff edit / merge */
-  submissionId?: string;
-  /** Who performed the action (staff user id or "customer" / "system") */
-  actorId?: string | number;
-  actorName?: string;
-  actorType?: "customer" | "staff" | "system";
-  /** Staff profile edit: target entity */
-  targetType?: "customer" | "pet";
-  targetId?: string | number;
-  /** Staff edit: field-level changes (field, oldValue, newValue) */
-  changes?: { field: string; oldValue: string; newValue: string }[];
-  /** Merge: rule applied */
-  mergeRule?: "submitted_wins" | "existing_wins" | "ask";
-  /** Merge: what was overridden (field, submittedValue, existingValue) */
-  overrides?: {
-    field: string;
-    submittedValue: string;
-    existingValue: string;
-  }[];
-  /** Merge: linked customer/pet */
-  relatedCustomerId?: number;
-  relatedPetId?: number;
-  /** Extra context */
-  metadata?: Record<string, unknown>;
-}
+export type { FormAuditAction, FormAuditEntry } from "@/types/forms";
 
 const auditLog: FormAuditEntry[] = [
   // Seed data — realistic audit trail entries for demo

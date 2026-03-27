@@ -14,22 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { YipyyGoFormData, BelongingItem } from "@/data/yipyygo-forms";
-import type { YipyyGoConfig } from "@/data/yipyygo-config";
+import type { BelongingItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
 
-interface BelongingsSectionProps {
-  formData: YipyyGoFormData;
-  updateFormData: (updates: Partial<YipyyGoFormData>) => void;
-  booking: any;
-  pet: any;
-  customer: any;
-  config: YipyyGoConfig | null;
-  onNext: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-  isLastSection: boolean;
-}
+type BelongingsSectionProps = YipyyGoFormSectionProps;
 
 const BELONGING_TYPES: { value: BelongingItem["type"]; label: string }[] = [
   { value: "food", label: "Food" },

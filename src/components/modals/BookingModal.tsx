@@ -29,7 +29,7 @@ import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { useState } from "react";
 import Link from "next/link";
-import type { Evaluation } from "@/lib/types";
+import type { Evaluation } from "@/types/pet";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
@@ -96,7 +96,7 @@ export function BookingModal({ booking }: BookingModalProps) {
 
   if (booking.medications) {
     booking.medications.forEach((med) => {
-      med.times.forEach((time) => {
+      med.times.forEach((time: string) => {
         tasks.push({
           id: `med-${med.id}-${time}`,
           type: "medication",

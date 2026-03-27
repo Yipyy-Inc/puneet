@@ -1,0 +1,764 @@
+import { z } from "zod";
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+export const dayOfWeekEnum = z.enum([
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+]);
+export type DayOfWeek = z.infer<typeof dayOfWeekEnum>;
+
+export const evaluationDurationEnum = z.enum([
+  "half-day",
+  "full-day",
+  "custom",
+]);
+
+export const reportCardThemeEnum = z.enum([
+  "everyday",
+  "christmas",
+  "halloween",
+  "easter",
+  "thanksgiving",
+  "new_year",
+  "valentines",
+]);
+export type ReportCardTheme = z.infer<typeof reportCardThemeEnum>;
+
+export const reportCardAutoSendModeEnum = z.enum([
+  "immediate",
+  "scheduled",
+  "checkout",
+  "end_of_day",
+  "manual",
+]);
+
+export const reportCardServiceIdEnum = z.enum([
+  "daycare",
+  "boarding",
+  "grooming",
+  "training",
+]);
+export type ReportCardServiceId =
+  | z.infer<typeof reportCardServiceIdEnum>
+  | (string & {});
+
+export const reportCardSectionIdEnum = z.enum([
+  "todaysVibe",
+  "friendsAndFun",
+  "careMetrics",
+  "holidaySparkle",
+  "closingNote",
+  "overallFeedback",
+  "customFeedback",
+  "petCondition",
+  "nextAppointment",
+  "reviewBooster",
+  "photoShowcase",
+]);
+export type ReportCardSectionId = z.infer<typeof reportCardSectionIdEnum>;
+
+export const customFeedbackTypeEnum = z.enum([
+  "rating",
+  "text",
+  "select",
+  "yes_no",
+]);
+export type CustomFeedbackType = z.infer<typeof customFeedbackTypeEnum>;
+
+export const customServiceCategoryEnum = z.enum([
+  "timed_session",
+  "stay_based",
+  "transport",
+  "event_based",
+  "addon_only",
+  "one_time_appointment",
+]);
+export type CustomServiceCategory = z.infer<typeof customServiceCategoryEnum>;
+
+export const customServiceStatusEnum = z.enum([
+  "draft",
+  "active",
+  "disabled",
+  "archived",
+]);
+export type CustomServiceStatus = z.infer<typeof customServiceStatusEnum>;
+
+export const pricingModelTypeEnum = z.enum([
+  "flat_rate",
+  "duration_based",
+  "per_pet",
+  "per_booking",
+  "per_route",
+  "dynamic",
+  "addon_only",
+]);
+export type PricingModelType = z.infer<typeof pricingModelTypeEnum>;
+
+export const facilityNotificationTypeEnum = z.enum([
+  "yipyygo_submitted",
+  "form_submission_new",
+  "form_submission_red_flag",
+  "form_submission_has_files",
+  "info",
+  "warning",
+]);
+export type FacilityNotificationType = z.infer<
+  typeof facilityNotificationTypeEnum
+>;
+
+export const facilityRequestTypeEnum = z.enum([
+  "Trial",
+  "Plan Upgrade",
+  "Plan Downgrade",
+  "Add Service",
+  "Remove Service",
+]);
+
+export const facilityRequestStatusEnum = z.enum([
+  "pending",
+  "approved",
+  "denied",
+]);
+
+export const subscriptionStatusEnum = z.enum([
+  "active",
+  "trial",
+  "suspended",
+  "cancelled",
+  "expired",
+]);
+export type SubscriptionStatus = z.infer<typeof subscriptionStatusEnum>;
+
+export const facilityResourceTypeEnum = z.enum([
+  "room",
+  "pool",
+  "van",
+  "equipment",
+  "yard",
+  "other",
+]);
+
+export const paymentGatewayProviderEnum = z.enum([
+  "stripe",
+  "square",
+  "paypal",
+]);
+
+export const kennelSizeEnum = z.enum(["small", "medium", "large", "xlarge"]);
+
+export const settingsAuditActionEnum = z.enum([
+  "created",
+  "updated",
+  "deleted",
+]);
+
+// ============================================================================
+// Evaluation Config
+// ============================================================================
+
+export const evaluationConfigSchema = z.object({
+  internalName: z.string(),
+  customerName: z.string(),
+  description: z.string(),
+  price: z.number(),
+  duration: evaluationDurationEnum,
+  customHours: z.number().optional(),
+  schedule: z.object({
+    durationOptionsMinutes: z.array(z.number()),
+    defaultDurationMinutes: z.number().optional(),
+    timeWindows: z.array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        startTime: z.string(),
+        endTime: z.string(),
+      }),
+    ),
+    slotMode: z.enum(["fixed", "window"]),
+    fixedStartTimes: z.array(z.string()),
+  }),
+  taxSettings: z.object({
+    taxable: z.boolean(),
+    taxRate: z.number().optional(),
+  }),
+});
+export type EvaluationConfig = z.infer<typeof evaluationConfigSchema>;
+
+// ============================================================================
+// Business Profile & Location
+// ============================================================================
+
+export const businessProfileSchema = z.object({
+  businessName: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  website: z.string(),
+  address: z.object({
+    street: z.string(),
+    city: z.string(),
+    state: z.string(),
+    zipCode: z.string(),
+    country: z.string(),
+  }),
+  logo: z.string(),
+  description: z.string(),
+  socialMedia: z.object({
+    facebook: z.string().optional(),
+    instagram: z.string().optional(),
+    twitter: z.string().optional(),
+  }),
+});
+export type BusinessProfile = z.infer<typeof businessProfileSchema>;
+
+export type BusinessHours = {
+  [K in DayOfWeek]: {
+    isOpen: boolean;
+    openTime: string;
+    closeTime: string;
+  };
+};
+
+export const locationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  address: z.string(),
+  phone: z.string(),
+  capacity: z.number(),
+  isActive: z.boolean(),
+});
+export type Location = z.infer<typeof locationSchema>;
+
+// ============================================================================
+// Booking Rules & Configuration
+// ============================================================================
+
+export const bookingRulesSchema = z.object({
+  minimumAdvanceBooking: z.number(),
+  maximumAdvanceBooking: z.number(),
+  cancelPolicyHours: z.number(),
+  cancelFeePercentage: z.number(),
+  depositPercentage: z.number(),
+  depositRequired: z.boolean(),
+  capacityLimit: z.number(),
+  dailyCapacityLimit: z.number(),
+  allowOverBooking: z.boolean(),
+  overBookingPercentage: z.number(),
+});
+export type BookingRules = z.infer<typeof bookingRulesSchema>;
+
+export const facilityBookingFlowConfigSchema = z.object({
+  evaluationRequired: z.boolean(),
+  hideServicesUntilEvaluationCompleted: z.boolean(),
+  servicesRequiringEvaluation: z.array(z.string()),
+  hiddenServices: z.array(z.string()),
+});
+export type FacilityBookingFlowConfig = z.infer<
+  typeof facilityBookingFlowConfigSchema
+>;
+
+// ============================================================================
+// Kennel, Pet Size, Vaccination
+// ============================================================================
+
+export const kennelTypeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  size: kennelSizeEnum,
+  dimensions: z.string(),
+  amenities: z.array(z.string()),
+  dailyRate: z.number(),
+  quantity: z.number(),
+});
+export type KennelType = z.infer<typeof kennelTypeSchema>;
+
+export const petSizeClassSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  weightMin: z.number(),
+  weightMax: z.number(),
+  unit: z.enum(["lbs", "kg"]),
+});
+export type PetSizeClass = z.infer<typeof petSizeClassSchema>;
+
+export const vaccinationRuleSchema = z.object({
+  id: z.string(),
+  vaccineName: z.string(),
+  required: z.boolean(),
+  expiryWarningDays: z.number(),
+  applicableServices: z.array(z.string()),
+});
+export type VaccinationRule = z.infer<typeof vaccinationRuleSchema>;
+
+// ============================================================================
+// Payment, Tax, Currency
+// ============================================================================
+
+export const paymentGatewaySchema = z.object({
+  provider: paymentGatewayProviderEnum,
+  isEnabled: z.boolean(),
+  apiKey: z.string(),
+  webhookSecret: z.string(),
+  testMode: z.boolean(),
+});
+export type PaymentGateway = z.infer<typeof paymentGatewaySchema>;
+
+export const taxRateSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  rate: z.number(),
+  applicableServices: z.array(z.string()),
+  isDefault: z.boolean(),
+});
+export type TaxRate = z.infer<typeof taxRateSchema>;
+
+export const currencySettingsSchema = z.object({
+  currency: z.string(),
+  symbol: z.string(),
+  decimalPlaces: z.number(),
+  thousandSeparator: z.string(),
+  decimalSeparator: z.string(),
+});
+export type CurrencySettings = z.infer<typeof currencySettingsSchema>;
+
+// ============================================================================
+// Roles, Notifications, Integrations
+// ============================================================================
+
+export const roleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  permissions: z.record(z.string(), z.boolean()),
+});
+export type Role = z.infer<typeof roleSchema>;
+
+export const notificationToggleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  email: z.boolean(),
+  sms: z.boolean(),
+  push: z.boolean(),
+  category: z.enum(["client", "staff", "system"]),
+});
+export type NotificationToggle = z.infer<typeof notificationToggleSchema>;
+
+export const integrationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: z.enum(["communication", "accounting", "ai", "phone"]),
+  isEnabled: z.boolean(),
+  config: z.record(
+    z.string(),
+    z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.record(z.string(), z.boolean()),
+    ]),
+  ),
+});
+export type Integration = z.infer<typeof integrationSchema>;
+
+// ============================================================================
+// Subscription & Modules
+// ============================================================================
+
+export const subscriptionPlanSchema = z.object({
+  planName: z.string(),
+  planTier: z.enum(["starter", "professional", "enterprise"]),
+  billingCycle: z.enum(["monthly", "annual"]),
+  price: z.number(),
+  nextBillingDate: z.string(),
+  status: z.enum(["active", "trial", "cancelled"]),
+});
+export type SubscriptionPlan = z.infer<typeof subscriptionPlanSchema>;
+
+export const moduleAddonSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  monthlyPrice: z.number(),
+  isEnabled: z.boolean(),
+  isIncludedInPlan: z.boolean(),
+});
+export type ModuleAddon = z.infer<typeof moduleAddonSchema>;
+
+// ============================================================================
+// Settings Audit Log (distinct from loyalty AuditLogEntry)
+// ============================================================================
+
+export const settingsAuditLogEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  userId: z.string(),
+  userName: z.string(),
+  action: settingsAuditActionEnum,
+  section: z.string(),
+  settingName: z.string(),
+  oldValue: z.string(),
+  newValue: z.string(),
+  ipAddress: z.string(),
+});
+/** Settings audit log entry — not to be confused with loyalty AuditLogEntry */
+export type SettingsAuditLogEntry = z.infer<typeof settingsAuditLogEntrySchema>;
+/** @deprecated Use SettingsAuditLogEntry — kept as AuditLogEntry for backward compat in src/lib/types.ts */
+export type AuditLogEntry = SettingsAuditLogEntry;
+
+// ============================================================================
+// Schedule Overrides & Date Blocks
+// ============================================================================
+
+export const scheduleTimeOverrideSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  services: z.array(z.string()).optional(),
+  openTime: z.string(),
+  closeTime: z.string(),
+});
+export type ScheduleTimeOverride = z.infer<typeof scheduleTimeOverrideSchema>;
+
+export const dropOffPickUpOverrideSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  services: z.array(z.string()),
+  dropOffStart: z.string(),
+  dropOffEnd: z.string(),
+  pickUpStart: z.string(),
+  pickUpEnd: z.string(),
+});
+export type DropOffPickUpOverride = z.infer<typeof dropOffPickUpOverrideSchema>;
+
+export const serviceDateBlockSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  services: z.array(z.string()),
+  closed: z.boolean(),
+  blockCheckIn: z.boolean().optional(),
+  blockCheckOut: z.boolean().optional(),
+  closureMessage: z.string().optional(),
+});
+export type ServiceDateBlock = z.infer<typeof serviceDateBlockSchema>;
+
+// ============================================================================
+// Report Card Config
+// ============================================================================
+
+export const reportCardTemplateSetSchema = z.object({
+  todaysVibe: z.string(),
+  friendsAndFun: z.string(),
+  careMetrics: z.string(),
+  holidaySparkle: z.string(),
+  closingNote: z.string(),
+});
+export type ReportCardTemplateSet = z.infer<typeof reportCardTemplateSetSchema>;
+
+export const reportCardAutoSendConfigSchema = z.object({
+  mode: reportCardAutoSendModeEnum,
+  sendTime: z.string().optional(),
+  channels: z.object({
+    email: z.boolean(),
+    message: z.boolean(),
+    sms: z.boolean(),
+  }),
+});
+export type ReportCardAutoSendConfig = z.infer<
+  typeof reportCardAutoSendConfigSchema
+>;
+
+export const reportCardBrandConfigSchema = z.object({
+  reportTitle: z.string(),
+  accentColor: z.string(),
+  showFacilityLogo: z.boolean(),
+});
+export type ReportCardBrandConfig = z.infer<typeof reportCardBrandConfigSchema>;
+
+export const reportCardOverallFeedbackConfigSchema = z.object({
+  title: z.string(),
+  responseOptions: z.array(z.string()),
+});
+export type ReportCardOverallFeedbackConfig = z.infer<
+  typeof reportCardOverallFeedbackConfigSchema
+>;
+
+export const reportCardCustomQuestionSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  type: customFeedbackTypeEnum,
+  options: z.array(z.string()).optional(),
+  required: z.boolean(),
+});
+export type ReportCardCustomQuestion = z.infer<
+  typeof reportCardCustomQuestionSchema
+>;
+
+export const reportCardConditionCategorySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  options: z.array(z.string()),
+});
+export type ReportCardConditionCategory = z.infer<
+  typeof reportCardConditionCategorySchema
+>;
+
+export const reportCardPetConditionConfigSchema = z.object({
+  categories: z.array(reportCardConditionCategorySchema),
+});
+export type ReportCardPetConditionConfig = z.infer<
+  typeof reportCardPetConditionConfigSchema
+>;
+
+export const reportCardReviewBoosterConfigSchema = z.object({
+  ratingThreshold: z.number(),
+  reviewUrl: z.string(),
+  reviewPromptText: z.string(),
+});
+export type ReportCardReviewBoosterConfig = z.infer<
+  typeof reportCardReviewBoosterConfigSchema
+>;
+
+export const reportCardServiceConfigSchema = z.object({
+  serviceId: z.string(),
+  enabled: z.boolean(),
+  enabledSections: z.array(reportCardSectionIdEnum),
+});
+export type ReportCardServiceConfig = z.infer<
+  typeof reportCardServiceConfigSchema
+>;
+
+export const reportCardConfigSchema = z.object({
+  enabledThemes: z.array(reportCardThemeEnum),
+  templates: z.record(reportCardThemeEnum, reportCardTemplateSetSchema),
+  autoSend: reportCardAutoSendConfigSchema,
+  brand: reportCardBrandConfigSchema.optional(),
+  serviceConfigs: z.array(reportCardServiceConfigSchema).optional(),
+  overallFeedback: reportCardOverallFeedbackConfigSchema.optional(),
+  customQuestions: z.array(reportCardCustomQuestionSchema).optional(),
+  petCondition: reportCardPetConditionConfigSchema.optional(),
+  reviewBooster: reportCardReviewBoosterConfigSchema.optional(),
+});
+export type ReportCardConfig = z.infer<typeof reportCardConfigSchema>;
+
+// ============================================================================
+// Module Config
+// ============================================================================
+
+export const moduleConfigSchema = z.object({
+  clientFacingName: z.string(),
+  staffFacingName: z.string(),
+  slogan: z.string(),
+  description: z.string(),
+  bannerImage: z.string().optional(),
+  basePrice: z.number(),
+  settings: z.object({
+    evaluation: z.object({
+      enabled: z.boolean(),
+      optional: z.boolean().optional(),
+    }),
+  }),
+  status: z.object({
+    disabled: z.boolean(),
+    reason: z.string().optional(),
+  }),
+});
+export type ModuleConfig = z.infer<typeof moduleConfigSchema>;
+
+// ============================================================================
+// Custom Service Module (complex — kept as interface)
+// ============================================================================
+
+export interface CustomServiceModule {
+  id: string;
+  facilityId: number;
+  name: string;
+  slug: string;
+  icon: string;
+  iconColor: string;
+  iconColorTo: string;
+  category: CustomServiceCategory;
+  description: string;
+  internalNotes?: string;
+  calendar: {
+    enabled: boolean;
+    durationMode: "fixed" | "variable";
+    durationOptions: { minutes: number; label: string; price?: number }[];
+    bufferTimeMinutes: number;
+    maxSimultaneousBookings: number;
+    assignedTo: "room" | "resource" | "staff" | "combination";
+    assignedResourceIds: string[];
+  };
+  checkInOut: {
+    enabled: boolean;
+    checkInType: "manual" | "auto";
+    checkOutTimeTracking: boolean;
+    qrCodeSupport: boolean;
+  };
+  stayBased: {
+    enabled: boolean;
+    requiresRoomKennel: boolean;
+    affectsKennelView: boolean;
+    generatesDailyTasks: boolean;
+  };
+  onlineBooking: {
+    enabled: boolean;
+    eligibleClients: "all" | "approved_only" | "active_members_only";
+    approvalRequired: boolean;
+    maxDogsPerSession: number;
+    cancellationPolicy: { hoursBeforeBooking: number; feePercentage: number };
+    depositRequired: boolean;
+    depositAmount?: number;
+  };
+  pricing: {
+    model: PricingModelType;
+    basePrice: number;
+    durationTiers?: { durationMinutes: number; price: number }[];
+    peakPricingRules?: {
+      id: string;
+      name: string;
+      adjustment: number;
+      adjustmentType: "percentage" | "flat";
+    }[];
+    parentServiceId?: string;
+    taxable: boolean;
+    tipAllowed: boolean;
+    membershipDiscountEligible: boolean;
+  };
+  staffAssignment: {
+    autoAssign: boolean;
+    requiredRole: string;
+    customRoleName?: string;
+    taskGeneration: ("setup" | "execution" | "cleanup")[];
+  };
+  yipyyGoRequired: boolean;
+  requiresEvaluation: boolean;
+  showInSidebar: boolean;
+  sidebarPosition: number;
+  dependencies: string[];
+  status: CustomServiceStatus;
+  disableReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const facilityResourceSchema = z.object({
+  id: z.string(),
+  facilityId: z.number(),
+  name: z.string(),
+  type: facilityResourceTypeEnum,
+  capacity: z.number(),
+  isAvailable: z.boolean(),
+  description: z.string().optional(),
+});
+export type FacilityResource = z.infer<typeof facilityResourceSchema>;
+
+// ============================================================================
+// Facility Notification (from facility-notifications.ts)
+// ============================================================================
+
+export const facilityNotificationSchema = z.object({
+  id: z.string(),
+  type: facilityNotificationTypeEnum,
+  title: z.string(),
+  message: z.string(),
+  read: z.boolean(),
+  timestamp: z.string(),
+  bookingId: z.number().optional(),
+  facilityId: z.number().optional(),
+  submissionId: z.string().optional(),
+  meta: z
+    .object({
+      petName: z.string().optional(),
+      arrivalTime: z.string().optional(),
+      bookingRef: z.string().optional(),
+      submissionId: z.string().optional(),
+      formName: z.string().optional(),
+      formId: z.string().optional(),
+      hasRedFlag: z.boolean().optional(),
+      hasFiles: z.boolean().optional(),
+    })
+    .optional(),
+});
+export type FacilityNotification = z.infer<typeof facilityNotificationSchema>;
+
+// ============================================================================
+// Facility Request (from facility-requests.ts)
+// ============================================================================
+
+export interface FacilityRequest extends Record<string, unknown> {
+  id: number;
+  facilityName: string;
+  requestType:
+    | "Trial"
+    | "Plan Upgrade"
+    | "Plan Downgrade"
+    | "Add Service"
+    | "Remove Service";
+  description: string;
+  time: string;
+  status: "pending" | "approved" | "denied";
+  severity?: "normal" | "high";
+  details: string;
+  businessType: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+  email: string;
+  adminName: string;
+  adminEmail: string;
+  plan: string;
+  requestedPlan?: string;
+  requestedService?: string;
+}
+
+// ============================================================================
+// Facility Subscription (from facility-subscriptions.ts)
+// ============================================================================
+
+export interface FacilitySubscription {
+  id: string;
+  facilityId: number;
+  facilityName: string;
+  tierId: string;
+  tierName: string;
+  status: SubscriptionStatus;
+  billingCycle: "monthly" | "quarterly" | "yearly";
+  startDate: string;
+  endDate: string;
+  trialEndDate?: string;
+  autoRenew: boolean;
+  enabledModules: string[];
+  customizations?: {
+    maxUsers?: number;
+    maxReservations?: number;
+    storageGB?: number;
+    maxLocations?: number;
+  };
+  usage: {
+    currentUsers: number;
+    monthlyReservations: number;
+    storageUsedGB: number;
+    activeLocations: number;
+  };
+  billing: {
+    baseCost: number;
+    moduleCosts: { moduleId: string; cost: number }[];
+    totalCost: number;
+    currency: string;
+    nextBillingDate: string;
+    lastPaymentDate?: string;
+    paymentMethod?: string;
+  };
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}

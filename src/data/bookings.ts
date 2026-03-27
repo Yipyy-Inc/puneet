@@ -1,4 +1,4 @@
-import { Booking } from "@/lib/types";
+import type { Booking } from "@/types/booking";
 
 export const bookings: Booking[] = [
   // Daycare bookings
