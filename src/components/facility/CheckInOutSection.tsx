@@ -686,7 +686,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
 
   const formatExpectedDeparture = (dateStr: string, serviceType: string) => {
     const date = new Date(dateStr);
-    if (serviceType === "daycare") {
+    // Daycare shows time, boarding shows date
+    if (serviceType !== "boarding") {
       return date.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
@@ -699,7 +700,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     });
   };
 
-  const getServiceBadge = (serviceType: string) => {
+  const getServiceBadge = (serviceType: string, item?: UnifiedCheckIn) => {
     if (serviceType === "daycare") {
       return (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -716,7 +717,6 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
         </Badge>
       );
     }
-    // Custom service badge
     return (
       <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
         <PawPrint className="mr-1 size-3" />
@@ -857,7 +857,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       <div
                         key={item.id}
                         className={cn(
-                          `flex cursor-pointer items-center justify-between rounded-lg border bg-orange-50/50 p-3 transition-colors hover:bg-orange-100/50 dark:bg-orange-950/20 dark:hover:bg-orange-950/30`,
+                          `cursor-pointer space-y-2.5 rounded-lg border bg-orange-50/50 p-3 transition-colors hover:bg-orange-100/50 dark:bg-orange-950/20 dark:hover:bg-orange-950/30`,
                           isCritical &&
                             `border-l-4 border-l-red-500 dark:border-l-red-400`,
                           isWarning &&
@@ -869,7 +869,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           <span className="sr-only">Critical alert</span>
                         )}
                         {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex items-start gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -903,28 +903,28 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </div>
                             </Link>
                           )}
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Link
-                                href={
-                                  client
-                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                    : "#"
-                                }
-                                className="truncate font-medium hover:underline"
-                              >
-                                {item.petName}
-                              </Link>
-                              {getServiceBadge(item.serviceType)}
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="text-sm font-semibold hover:underline"
+                            >
+                              {item.petName}
+                            </Link>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              {getServiceBadge(item.serviceType, item)}
+                              <TagList
+                                entityType="pet"
+                                entityId={item.petId}
+                                compact
+                                maxVisible={2}
+                              />
                             </div>
-                            <TagList
-                              entityType="pet"
-                              entityId={item.petId}
-                              compact
-                              maxVisible={2}
-                            />
-                            <p className="text-muted-foreground truncate text-sm">
-                              {item.ownerName} • {item.petBreed}
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {item.ownerName}
                             </p>
                             {item.serviceType === "boarding" &&
                               item.totalNights && (
@@ -935,14 +935,16 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               )}
                           </div>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {scheduledYipyyGoByItemId.get(item.id) && (
+                        <div className="flex items-center justify-between">
+                          {scheduledYipyyGoByItemId.get(item.id) ? (
                             <YipyyGoStatusBadge
                               status={
                                 scheduledYipyyGoByItemId.get(item.id)!.status
                               }
                               showIcon={false}
                             />
+                          ) : (
+                            <span />
                           )}
                           <Button
                             size="sm"
@@ -1020,7 +1022,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                       <div
                         key={item.id}
                         className={cn(
-                          `bg-card hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors`,
+                          `bg-card hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors`,
                           isCritical &&
                             `border-l-4 border-l-red-500 dark:border-l-red-400`,
                           isWarning &&
@@ -1032,7 +1034,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                           <span className="sr-only">Critical alert</span>
                         )}
                         {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex items-start gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -1066,30 +1068,30 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </div>
                             </Link>
                           )}
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Link
-                                href={
-                                  client
-                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                    : "#"
-                                }
-                                className="truncate font-medium hover:underline"
-                              >
-                                {item.petName}
-                              </Link>
-                              {getServiceBadge(item.serviceType)}
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="text-sm font-semibold hover:underline"
+                            >
+                              {item.petName}
+                            </Link>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              {getServiceBadge(item.serviceType, item)}
+                              <TagList
+                                entityType="pet"
+                                entityId={item.petId}
+                                compact
+                                maxVisible={2}
+                              />
                             </div>
-                            <TagList
-                              entityType="pet"
-                              entityId={item.petId}
-                              compact
-                              maxVisible={2}
-                            />
-                            <p className="text-muted-foreground truncate text-sm">
-                              {item.ownerName} • {item.petBreed}
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {item.ownerName}
                             </p>
-                            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-xs">
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
                               <Clock className="size-3" />
                               <span>In: {formatTime(item.checkInTime)}</span>
                               <span>•</span>
@@ -1100,24 +1102,22 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                   item.serviceType,
                                 )}
                               </span>
-                              {item.serviceType === "boarding" &&
-                                item.kennelName && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{item.kennelName}</span>
-                                  </>
-                                )}
-                              {item.serviceType === "daycare" &&
-                                item.playGroup && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{item.playGroup}</span>
-                                  </>
-                                )}
                             </div>
+                            {item.serviceType === "boarding" &&
+                              item.kennelName && (
+                                <p className="text-muted-foreground text-xs">
+                                  {item.kennelName}
+                                </p>
+                              )}
+                            {item.serviceType === "daycare" &&
+                              item.playGroup && (
+                                <p className="text-muted-foreground text-xs">
+                                  {item.playGroup}
+                                </p>
+                              )}
                           </div>
                         </div>
-                        <div className="flex shrink-0 gap-2">
+                        <div className="flex justify-end">
                           <Button
                             size="sm"
                             variant="outline"
@@ -1138,14 +1138,13 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
               </CardContent>
             </Card>
           )}
-
           {/* Checked Out Today */}
           {showCheckedOut && (
             <Card>
               <CardHeader className="space-y-3 pb-4">
                 <div className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <CheckCircle className="size-4 text-gray-600" />
+                    <LogOut className="size-4 text-gray-600" />
                     Checked Out Today
                   </CardTitle>
                   <div className="flex items-center gap-2">
@@ -1191,10 +1190,10 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="flex cursor-pointer items-center justify-between rounded-lg border bg-gray-50/50 p-3 transition-colors hover:bg-gray-100/50 dark:bg-gray-950/20 dark:hover:bg-gray-950/30"
+                        className="cursor-pointer space-y-2 rounded-lg border bg-gray-50/50 p-3 transition-colors hover:bg-gray-100/50 dark:bg-gray-950/20 dark:hover:bg-gray-950/30"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex items-start gap-3">
                           {getPetImage(item.petId) ? (
                             <Link
                               href={
@@ -1228,24 +1227,24 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </div>
                             </Link>
                           )}
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Link
-                                href={
-                                  client
-                                    ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                    : "#"
-                                }
-                                className="truncate font-medium hover:underline"
-                              >
-                                {item.petName}
-                              </Link>
-                              {getServiceBadge(item.serviceType)}
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={
+                                client
+                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                  : "#"
+                              }
+                              className="text-sm font-semibold hover:underline"
+                            >
+                              {item.petName}
+                            </Link>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              {getServiceBadge(item.serviceType, item)}
                             </div>
-                            <p className="text-muted-foreground truncate text-sm">
-                              {item.ownerName} • {item.petBreed}
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {item.ownerName}
                             </p>
-                            <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
                               <Clock className="size-3" />
                               <span>
                                 Out:{" "}
@@ -1333,7 +1332,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                             );
                           })()}
-                          {getServiceBadge(selectedItem.serviceType)}
+                          {getServiceBadge(selectedItem.serviceType, selectedItem)}
                         </div>
                         <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
@@ -1512,7 +1511,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                               </Link>
                             );
                           })()}
-                          {getServiceBadge(selectedItem.serviceType)}
+                          {getServiceBadge(selectedItem.serviceType, selectedItem)}
                         </div>
                         <p className="text-muted-foreground text-sm">
                           Breed: {selectedItem.petBreed}
@@ -1739,7 +1738,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                                   </Link>
                                 );
                               })()}
-                              {getServiceBadge(selectedItem.serviceType)}
+                              {getServiceBadge(selectedItem.serviceType, selectedItem)}
                             </div>
                             <p className="text-muted-foreground text-sm">
                               Breed: {selectedItem.petBreed}
@@ -1912,7 +1911,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             </Link>
                           );
                         })()}
-                        {getServiceBadge(selectedItem.serviceType)}
+                        {getServiceBadge(selectedItem.serviceType, selectedItem)}
                       </div>
                       <p className="text-muted-foreground text-sm">
                         Owner: {selectedItem.ownerName}

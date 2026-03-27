@@ -19,7 +19,8 @@ import {
   CUSTOMER_ADDONS,
 } from "@/components/bookings/modals/constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { getAllServiceCategories } from "@/lib/service-registry";
+import { getAllServiceCategories, resolveIcon, isBuiltinService } from "@/lib/service-registry";
+import { getCategoryMeta } from "@/data/custom-services";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,6 +59,10 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  MapPin,
+  Users,
+  Sparkles,
 } from "lucide-react";
 import {
   DateSelectionCalendar,
@@ -158,7 +163,7 @@ export function CustomerBookingModal({
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
   );
-  const { activeModules } = useCustomServices();
+  const { activeModules, resources: facilityResources } = useCustomServices();
   const allServices = useMemo(
     () => getAllServiceCategories(SERVICE_CATEGORIES, activeModules),
     [activeModules],
@@ -205,6 +210,24 @@ export function CustomerBookingModal({
   const [tipPercentage, setTipPercentage] = useState<number | null>(null);
   const [_depositRequired, _setDepositRequired] = useState(false);
   const [_depositAmount, _setDepositAmount] = useState(0);
+  // Custom module booking state
+  const [customDurationMinutes, setCustomDurationMinutes] = useState<number>(0);
+  const [customSelectedResourceId, setCustomSelectedResourceId] = useState<string>("");
+  const [customPartySize, setCustomPartySize] = useState<number>(1);
+
+  // Custom module detection — resolves the active module when a non-builtin service is selected
+  const selectedCustomModule = useMemo(
+    () =>
+      selectedService && !isBuiltinService(selectedService)
+        ? activeModules.find((m) => m.slug === selectedService || m.id === selectedService) ?? null
+        : null,
+    [selectedService, activeModules],
+  );
+  const isCustomModule = selectedCustomModule !== null;
+  const customCategoryMeta = selectedCustomModule
+    ? getCategoryMeta(selectedCustomModule.category)
+    : null;
+
   // Details sub-step (0 = Schedule; daycare/boarding may add Room, Add-ons, Feeding later)
   const [currentDetailsSubStep, setCurrentDetailsSubStep] = useState(0);
   // Daycare: multi-date + time slider
@@ -349,12 +372,14 @@ export function CustomerBookingModal({
   );
 
   // Number of Details sub-steps: daycare 2 (Schedule, Add-ons); boarding 3 (Schedule, Room Type, Add-ons); grooming 3 (Schedule, Package, Add-ons)
+  // Custom modules: 2 (Schedule, Service Details — duration/resource/capacity)
   const detailsSubStepCount = useMemo(() => {
     if (selectedService === "daycare") return 2;
     if (selectedService === "boarding") return 3;
     if (selectedService === "grooming") return 3;
+    if (selectedCustomModule) return 2;
     return 1;
-  }, [selectedService]);
+  }, [selectedService, selectedCustomModule]);
 
   // Add-ons for current service (daycare or boarding only; grooming uses GROOMING_ADDONS)
   const eligibleAddons = useMemo(() => {
@@ -425,6 +450,10 @@ export function CustomerBookingModal({
     setSelectedGroomingAddons([]);
     setExtraServices([]);
     setAddOnApplyTo({});
+    // Custom module state
+    setCustomDurationMinutes(0);
+    setCustomSelectedResourceId("");
+    setCustomPartySize(1);
   }, [selectedService]);
 
   // Facility schedule props for DateSelectionCalendar (time slider)
@@ -724,6 +753,10 @@ export function CustomerBookingModal({
               boardingDateTimes.length > 0
             );
           }
+          // Custom modules: need a date selected
+          if (isCustomModule) {
+            return startDate !== "";
+          }
           return startDate !== "" && checkInTime !== "";
         }
         if (currentDetailsSubStep === 1) {
@@ -732,6 +765,15 @@ export function CustomerBookingModal({
           }
           if (selectedService === "grooming") {
             return selectedGroomingPackage !== "";
+          }
+          // Custom module service details: require duration if variable, resource if applicable
+          if (isCustomModule && selectedCustomModule) {
+            const hasDurationOptions = selectedCustomModule.calendar.durationOptions.length > 0;
+            if (hasDurationOptions && customDurationMinutes <= 0) return false;
+            const needsResource = selectedCustomModule.calendar.assignedTo === "resource" || selectedCustomModule.calendar.assignedTo === "combination";
+            const hasResources = facilityResources.filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id)).length > 0;
+            if (needsResource && hasResources && !customSelectedResourceId) return false;
+            return true;
           }
         }
         return true;
@@ -774,6 +816,11 @@ export function CustomerBookingModal({
     roomAssignments.length,
     selectedGroomingPackage,
     vaccinationCompliance,
+    isCustomModule,
+    selectedCustomModule,
+    customDurationMinutes,
+    customSelectedResourceId,
+    facilityResources,
   ]);
 
   const handleNext = () => {
@@ -964,6 +1011,18 @@ export function CustomerBookingModal({
       const base = service ? service.basePrice * selectedPetIds.length : 0;
       return base + extraServicesTotal;
     }
+    // Custom module pricing — duration-based or base price
+    if (isCustomModule && selectedCustomModule) {
+      const mod = selectedCustomModule;
+      // Duration-based: match selected duration to calendar durationOptions or pricing durationTiers
+      if (customDurationMinutes > 0) {
+        const durationOpt = mod.calendar.durationOptions.find((o) => o.minutes === customDurationMinutes);
+        if (durationOpt?.price != null) return durationOpt.price * selectedPetIds.length;
+        const tier = mod.pricing.durationTiers?.find((t) => t.durationMinutes === customDurationMinutes);
+        if (tier) return tier.price * selectedPetIds.length;
+      }
+      return mod.pricing.basePrice * selectedPetIds.length;
+    }
     const service = allServices.find((s) => s.id === selectedService);
     if (!service) return 0;
     return service.basePrice * selectedPetIds.length;
@@ -977,6 +1036,9 @@ export function CustomerBookingModal({
     effectiveEndDate,
     extraServicesTotal,
     allServices,
+    isCustomModule,
+    selectedCustomModule,
+    customDurationMinutes,
   ]);
 
   const totalPrice = useMemo(() => {
@@ -1689,7 +1751,230 @@ export function CustomerBookingModal({
                           </CardContent>
                         </Card>
                       )}
+
+                      {/* Custom Module: Category-aware schedule */}
+                      {isCustomModule && selectedCustomModule && (
+                        <Card className="overflow-hidden">
+                          {/* Module header with category color */}
+                          <div className="px-4 py-3" style={{ backgroundColor: customCategoryMeta?.color ? `${customCategoryMeta.color}15` : undefined }}>
+                            <div className="flex items-center gap-2.5">
+                              {(() => {
+                                const ModIcon = resolveIcon(selectedCustomModule.icon);
+                                return <ModIcon className="size-5 text-white" />;
+                              })()}
+                              <div>
+                                <p className="text-sm font-semibold text-white">{selectedCustomModule.name}</p>
+                                <p className="text-xs text-white/80">{customCategoryMeta?.name ?? selectedCustomModule.category}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <CardContent className="space-y-4 p-4">
+                            <Label className="text-base">Select Date & Time</Label>
+                            <DateSelectionCalendar
+                              mode="single"
+                              selectedDates={
+                                startDate
+                                  ? [new Date(startDate + "T00:00:00")]
+                                  : []
+                              }
+                              onSelectionChange={(dates) => {
+                                if (dates.length > 0)
+                                  setStartDate(formatDateToISO(dates[0]));
+                              }}
+                              showTimeSelection
+                              dateTimes={
+                                startDate
+                                  ? [
+                                      {
+                                        date: startDate,
+                                        checkInTime: checkInTime,
+                                        checkOutTime: checkInTime,
+                                      },
+                                    ]
+                                  : []
+                              }
+                              onDateTimesChange={(times) => {
+                                if (times.length > 0) {
+                                  setStartDate(times[0].date);
+                                  setCheckInTime(times[0].checkInTime);
+                                }
+                              }}
+                              facilityHours={hours}
+                              scheduleTimeOverrides={scheduleOverridesForService}
+                              bookingRules={{
+                                minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                                maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                              }}
+                              disabledDates={blockedDates}
+                              disabledDateMessages={disabledDateMessages}
+                            />
+
+                            {/* Capacity / availability hint */}
+                            {selectedCustomModule.calendar.maxSimultaneousBookings > 0 && startDate && (
+                              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
+                                <CheckCircle className="size-3.5 shrink-0" />
+                                <span>
+                                  Up to {selectedCustomModule.calendar.maxSimultaneousBookings} booking{selectedCustomModule.calendar.maxSimultaneousBookings !== 1 ? "s" : ""} available per slot
+                                  {selectedCustomModule.calendar.bufferTimeMinutes > 0 && (
+                                    <> · {selectedCustomModule.calendar.bufferTimeMinutes} min buffer between sessions</>
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
                     </>
+                  )}
+
+                  {/* Custom Module Sub-step 1: Service Details */}
+                  {currentDetailsSubStep === 1 && isCustomModule && selectedCustomModule && (
+                    <div className="space-y-4 px-1 py-2">
+                      <div>
+                        <Label className="text-base font-semibold">Service Details</Label>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Configure your {selectedCustomModule.name} booking
+                        </p>
+                      </div>
+
+                      {/* Duration picker — for timed sessions / variable duration */}
+                      {selectedCustomModule.calendar.enabled && selectedCustomModule.calendar.durationOptions.length > 0 && (
+                        <Card>
+                          <CardContent className="space-y-3 p-4">
+                            <div className="flex items-center gap-2">
+                              <Clock className="text-muted-foreground size-4" />
+                              <Label className="text-sm font-semibold">Session Duration</Label>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {selectedCustomModule.calendar.durationOptions.map((opt) => (
+                                <button
+                                  key={opt.minutes}
+                                  type="button"
+                                  onClick={() => setCustomDurationMinutes(opt.minutes)}
+                                  className={`rounded-xl border-2 p-3 text-center transition-all ${
+                                    customDurationMinutes === opt.minutes
+                                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                      : "border-border hover:border-border/80 hover:bg-accent/30"
+                                  }`}
+                                >
+                                  <p className={`text-lg font-bold tabular-nums ${customDurationMinutes === opt.minutes ? "text-primary" : ""}`}>
+                                    {opt.minutes}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">minutes</p>
+                                  {opt.price != null && (
+                                    <p className={`mt-1 text-sm font-semibold ${customDurationMinutes === opt.minutes ? "text-primary" : "text-foreground"}`}>
+                                      ${opt.price.toFixed(2)}
+                                    </p>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Resource selection — pools, vans, rooms */}
+                      {(selectedCustomModule.calendar.assignedTo === "resource" || selectedCustomModule.calendar.assignedTo === "combination") && (
+                        <Card>
+                          <CardContent className="space-y-3 p-4">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="text-muted-foreground size-4" />
+                              <Label className="text-sm font-semibold">Select Location / Resource</Label>
+                            </div>
+                            <div className="space-y-2">
+                              {facilityResources
+                                .filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id))
+                                .map((res) => (
+                                  <button
+                                    key={res.id}
+                                    type="button"
+                                    onClick={() => setCustomSelectedResourceId(res.id)}
+                                    className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all ${
+                                      customSelectedResourceId === res.id
+                                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                        : "border-border hover:border-border/80 hover:bg-accent/30"
+                                    }`}
+                                  >
+                                    <div className={`flex size-10 items-center justify-center rounded-lg ${
+                                      customSelectedResourceId === res.id ? "bg-primary/10" : "bg-muted/50"
+                                    }`}>
+                                      <MapPin className={`size-5 ${customSelectedResourceId === res.id ? "text-primary" : "text-muted-foreground"}`} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm font-semibold">{res.name}</p>
+                                      <p className="text-muted-foreground text-xs capitalize">
+                                        {res.type} · Capacity: {res.capacity}
+                                      </p>
+                                    </div>
+                                    {customSelectedResourceId === res.id && (
+                                      <CheckCircle className="text-primary size-5 shrink-0" />
+                                    )}
+                                  </button>
+                                ))}
+                              {facilityResources.filter((r) => (selectedCustomModule.calendar.assignedResourceIds ?? []).includes(r.id)).length === 0 && (
+                                <p className="text-muted-foreground text-xs italic">No specific resources assigned — facility will allocate on arrival.</p>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Party size — for event-based or transport */}
+                      {(selectedCustomModule.category === "event_based" || selectedCustomModule.category === "transport") && (
+                        <Card>
+                          <CardContent className="space-y-3 p-4">
+                            <div className="flex items-center gap-2">
+                              <Users className="text-muted-foreground size-4" />
+                              <Label className="text-sm font-semibold">
+                                {selectedCustomModule.category === "transport" ? "Dogs on This Route" : "Party Size (Dogs)"}
+                              </Label>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="size-9"
+                                disabled={customPartySize <= 1}
+                                onClick={() => setCustomPartySize((p) => Math.max(1, p - 1))}
+                              >
+                                -
+                              </Button>
+                              <span className="text-2xl font-bold tabular-nums w-12 text-center">{customPartySize}</span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="size-9"
+                                disabled={customPartySize >= (selectedCustomModule.onlineBooking.maxDogsPerSession || 20)}
+                                onClick={() => setCustomPartySize((p) => p + 1)}
+                              >
+                                +
+                              </Button>
+                              <span className="text-muted-foreground text-xs">
+                                max {selectedCustomModule.onlineBooking.maxDogsPerSession || "—"}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Module info card */}
+                      <div className="flex items-start gap-3 rounded-xl border bg-muted/30 p-4">
+                        <Sparkles className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <p>{selectedCustomModule.description}</p>
+                          {selectedCustomModule.checkInOut.enabled && (
+                            <p className="font-medium">
+                              {selectedCustomModule.checkInOut.checkInType === "auto"
+                                ? "Auto check-in at booking time"
+                                : "Check-in required on arrival"}
+                              {selectedCustomModule.checkInOut.qrCodeSupport && " · QR check-in available"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Sub-step 1 (Daycare): Add-ons */}
@@ -2878,8 +3163,10 @@ export function CustomerBookingModal({
                   {/* Receipt card — same style as facility ConfirmStep */}
                   <div className="bg-card overflow-hidden rounded-xl border shadow-lg">
                     {/* Header */}
-                    <div className="relative overflow-hidden bg-linear-to-br from-amber-500 via-orange-500 to-rose-500 px-6 py-6">
-                      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTZzLTItNC0yLTYgMi00IDItNi0yLTQtMi02IDItNCAyLTYtMi00LTIgLTYgMi00IDItNiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+                    <div
+                      className="relative overflow-hidden px-6 py-6"
+                      style={{ backgroundColor: isCustomModule && customCategoryMeta?.color ? customCategoryMeta.color : "#f59e0b" }}
+                    >
                       <div className="relative flex items-center gap-4">
                         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
                           {(() => {
@@ -3069,6 +3356,52 @@ export function CustomerBookingModal({
                             )}
                           </div>
                         )}
+
+                      {/* Custom module details */}
+                      {isCustomModule && selectedCustomModule && (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px]"
+                              style={{ borderColor: customCategoryMeta?.color, color: customCategoryMeta?.color }}
+                            >
+                              {customCategoryMeta?.name ?? selectedCustomModule.category}
+                            </Badge>
+                          </div>
+                          {customDurationMinutes > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Duration</span>
+                              <span>{customDurationMinutes} minutes</span>
+                            </div>
+                          )}
+                          {customSelectedResourceId && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Location</span>
+                              <span>
+                                {facilityResources.find((r) => r.id === customSelectedResourceId)?.name ?? customSelectedResourceId}
+                              </span>
+                            </div>
+                          )}
+                          {(selectedCustomModule.category === "event_based" || selectedCustomModule.category === "transport") && customPartySize > 1 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">
+                                {selectedCustomModule.category === "transport" ? "Dogs on route" : "Party size"}
+                              </span>
+                              <span>{customPartySize} dogs</span>
+                            </div>
+                          )}
+                          {selectedCustomModule.checkInOut.enabled && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Check-in</span>
+                              <span className="capitalize">
+                                {selectedCustomModule.checkInOut.checkInType}
+                                {selectedCustomModule.checkInOut.qrCodeSupport ? " · QR available" : ""}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Add-ons (daycare/boarding) */}
                       {extraServices.length > 0 &&
