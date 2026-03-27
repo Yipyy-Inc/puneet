@@ -279,8 +279,8 @@ export function CustomerBookingModal({
         .evaluations ?? [];
     if (evals.length === 0) return null;
     return [...evals].sort((a, b) => {
-      const da = a?.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
-      const db = b?.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
+      const da = a?.evaluatedAt ? new Date(String(a.evaluatedAt)).getTime() : 0;
+      const db = b?.evaluatedAt ? new Date(String(b.evaluatedAt)).getTime() : 0;
       return db - da;
     })[0];
   }, []);
