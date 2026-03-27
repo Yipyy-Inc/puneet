@@ -1492,7 +1492,7 @@ export default function FacilitySchedulingPage() {
   // Custom service modules with staff assignment (must be before early return)
   const { activeModules } = useCustomServices();
   const customModulesWithStaff = useMemo(
-    () => activeModules.filter((m) => m.staffAssignment.mode !== "none"),
+    () => activeModules.filter((m) => m.staffAssignment.requiredRole !== ""),
     [activeModules],
   );
 
