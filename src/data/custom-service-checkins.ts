@@ -1,35 +1,12 @@
 // Custom service check-in mock data
 // Mirrors DaycareCheckIn / BoardingGuest structure for unified dashboard display
 
-export type CustomServiceCheckInStatus =
-  | "scheduled"
-  | "checked-in"
-  | "in-progress"
-  | "completed"
-  | "checked-out";
+import type {
+  CustomServiceCheckIn,
+  CustomServiceCheckInStatus,
+} from "@/types/facility";
 
-export interface CustomServiceCheckIn {
-  id: string;
-  moduleId: string;
-  moduleName: string;
-  moduleSlug: string;
-  petId: number;
-  petName: string;
-  petBreed: string;
-  petSize: "small" | "medium" | "large" | "giant";
-  ownerId: number;
-  ownerName: string;
-  ownerPhone: string;
-  checkInTime: string;
-  checkOutTime: string | null;
-  scheduledCheckOut: string;
-  status: CustomServiceCheckInStatus;
-  durationMinutes: number;
-  resourceName?: string;
-  staffAssigned?: string;
-  notes: string;
-  price: number;
-}
+export type { CustomServiceCheckIn, CustomServiceCheckInStatus };
 
 // Today's date string for mock data
 const today = new Date().toISOString().split("T")[0];

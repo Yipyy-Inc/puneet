@@ -5,7 +5,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
-import type { FacilityBookingFlowConfig, ModuleConfig, Pet } from "@/lib/types";
+import type { FacilityBookingFlowConfig } from "@/types/booking";
+import type { ModuleConfig } from "@/types/facility";
+import type { Pet } from "@/types/pet";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { getAllServiceCategories } from "@/lib/service-registry";
 

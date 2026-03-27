@@ -72,7 +72,8 @@ import {
   DateSelectionCalendar,
   type DateTimeInfo,
 } from "@/components/ui/date-selection-calendar";
-import { Booking, Pet } from "@/lib/types";
+import type { Booking } from "@/types/booking";
+import type { Pet } from "@/types/pet";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { facilityConfig } from "@/data/facility-config";

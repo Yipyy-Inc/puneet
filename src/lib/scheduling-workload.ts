@@ -37,19 +37,6 @@ export interface WorkloadMetrics {
   busyMeter: number;
 }
 
-export interface TimeBlockWorkload {
-  timeBlock: string; // e.g., "08:00-10:00"
-  checkIns: number;
-  checkOuts: number;
-  daycareCount: number;
-  boardingCount: number;
-  groomingCount: number;
-  evaluations: number;
-  trainingCount: number;
-  customServicesCount: number;
-  busyMeter: number;
-}
-
 /**
  * Calculate workload metrics for a specific date
  */

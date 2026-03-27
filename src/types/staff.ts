@@ -455,9 +455,38 @@ export const timeBlockWorkloadSchema = z.object({
   groomingCount: z.number(),
   evaluations: z.number(),
   trainingCount: z.number(),
+  customServicesCount: z.number(),
   busyMeter: z.number(),
 });
 export type TimeBlockWorkload = z.infer<typeof timeBlockWorkloadSchema>;
+
+// ============================================================================
+// Staff Schedule
+// ============================================================================
+
+export const scheduleStatusEnum = z.enum([
+  "scheduled",
+  "confirmed",
+  "completed",
+  "absent",
+  "sick",
+]);
+export type ScheduleStatus = z.infer<typeof scheduleStatusEnum>;
+
+export const scheduleSchema = z.object({
+  id: z.number(),
+  staffId: z.number(),
+  staffName: z.string(),
+  date: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+  role: z.string(),
+  facility: z.string(),
+  status: scheduleStatusEnum,
+  location: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type Schedule = z.infer<typeof scheduleSchema>;
 
 // ============================================================================
 // Staff Conflict (from additional-features)

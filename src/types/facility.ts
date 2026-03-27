@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { petSizeEnum } from "@/types/base";
 
 // ============================================================================
 // Enums
@@ -569,6 +570,45 @@ export const moduleConfigSchema = z.object({
   }),
 });
 export type ModuleConfig = z.infer<typeof moduleConfigSchema>;
+
+// ============================================================================
+// Custom Service Check-Ins
+// ============================================================================
+
+export const customServiceCheckInStatusEnum = z.enum([
+  "scheduled",
+  "checked-in",
+  "in-progress",
+  "completed",
+  "checked-out",
+]);
+export type CustomServiceCheckInStatus = z.infer<
+  typeof customServiceCheckInStatusEnum
+>;
+
+export const customServiceCheckInSchema = z.object({
+  id: z.string(),
+  moduleId: z.string(),
+  moduleName: z.string(),
+  moduleSlug: z.string(),
+  petId: z.number(),
+  petName: z.string(),
+  petBreed: z.string(),
+  petSize: petSizeEnum,
+  ownerId: z.number(),
+  ownerName: z.string(),
+  ownerPhone: z.string(),
+  checkInTime: z.string(),
+  checkOutTime: z.string().nullable(),
+  scheduledCheckOut: z.string(),
+  status: customServiceCheckInStatusEnum,
+  durationMinutes: z.number(),
+  resourceName: z.string().optional(),
+  staffAssigned: z.string().optional(),
+  notes: z.string(),
+  price: z.number(),
+});
+export type CustomServiceCheckIn = z.infer<typeof customServiceCheckInSchema>;
 
 // ============================================================================
 // Custom Service Module (complex — kept as interface)

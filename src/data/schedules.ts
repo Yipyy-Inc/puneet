@@ -1,16 +1,6 @@
-export interface Schedule {
-  id: number;
-  staffId: number;
-  staffName: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  role: string; // boarding/daycare/grooming/front desk/Admin/Manager
-  facility: string;
-  status: "scheduled" | "confirmed" | "completed" | "absent" | "sick";
-  location?: string; // Optional: daycare floor, boarding wing, grooming room
-  notes?: string; // Internal notes
-}
+import type { Schedule } from "@/types/staff";
+
+export type { Schedule };
 
 export const schedules: Schedule[] = [
   // Current Week (Nov 15-21, 2025)
