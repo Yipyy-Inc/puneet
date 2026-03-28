@@ -8,7 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui/modal";
 
 import {
@@ -21,6 +30,7 @@ import {
   Hourglass,
   Calendar,
   LogIn,
+  Filter,
 } from "lucide-react";
 import {
   groomingAppointments,
@@ -66,6 +76,10 @@ export function GroomingSection() {
     useState<GroomingAppointmentWithPending | null>(null);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [groomerFilter, setGroomerFilter] = useState<string>("all");
+  const [showScheduled, setShowScheduled] = useState(true);
+  const [showInProgress, setShowInProgress] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(true);
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -498,157 +512,297 @@ export function GroomingSection() {
     <Card>
       <CardContent className="space-y-4 pt-6">
         {/* Header with Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <Scissors className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Grooming</h3>
-            <Badge variant="outline">{todayAppointments.length} today</Badge>
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Filter className="size-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Groomer</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={groomerFilter}
+                onValueChange={setGroomerFilter}
+              >
+                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                {stylists.map((s) => (
+                  <DropdownMenuRadioItem key={s.id} value={s.id}>
+                    {s.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Show sections</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={showScheduled}
+                onCheckedChange={(v) => setShowScheduled(!!v)}
+              >
+                Scheduled
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showInProgress}
+                onCheckedChange={(v) => setShowInProgress(!!v)}
+              >
+                In Progress
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showCompleted}
+                onCheckedChange={(v) => setShowCompleted(!!v)}
+              >
+                Completed
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Column-based layout matching CheckInOutSection */}
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div
+          className={`grid gap-4 ${
+            [showScheduled, showInProgress, showCompleted].filter(Boolean)
+              .length === 1
+              ? "lg:grid-cols-1"
+              : [showScheduled, showInProgress, showCompleted].filter(Boolean)
+                    .length === 2
+                ? "lg:grid-cols-2"
+                : "lg:grid-cols-3"
+          } `}
+        >
           {/* Scheduled Column */}
-          {(() => {
-            const scheduled = todayAppointments.filter(
-              (apt) =>
-                apt.status === "scheduled" || apt.status === "checked-in",
-            );
-            const filtered = searchQuery.trim()
-              ? scheduled.filter((apt) => {
-                  const q = searchQuery.toLowerCase();
-                  return (
-                    apt.petName.toLowerCase().includes(q) ||
-                    apt.ownerName.toLowerCase().includes(q) ||
-                    apt.stylistName.toLowerCase().includes(q)
-                  );
-                })
-              : scheduled;
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Calendar className="size-4 text-blue-600" />
-                      Scheduled
-                    </CardTitle>
-                    <Badge variant="secondary">{filtered.length}</Badge>
-                  </div>
-                  <div className="relative">
-                    <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8 pl-9 text-sm"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {filtered.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No scheduled appointments
-                      </p>
-                    ) : (
-                      filtered.map((appointment) => {
-                        const client = findClientForPet(appointment.petId);
-                        return (
-                          <div
-                            key={appointment.id}
-                            className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(appointment)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                <PawPrint className="size-5 text-blue-600" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="truncate font-medium hover:underline"
-                                  >
-                                    {appointment.petName}
-                                  </Link>
-                                  {appointment.status === "checked-in" && (
-                                    <Badge className="h-5 bg-green-100 text-[10px] text-green-800 dark:bg-green-900 dark:text-green-200">
-                                      Arrived
-                                    </Badge>
-                                  )}
+          {showScheduled &&
+            (() => {
+              const scheduled = todayAppointments
+                .filter(
+                  (apt) =>
+                    apt.status === "scheduled" || apt.status === "checked-in",
+                )
+                .filter(
+                  (apt) =>
+                    groomerFilter === "all" || apt.stylistId === groomerFilter,
+                );
+              const filtered = searchQuery.trim()
+                ? scheduled.filter((apt) => {
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      apt.petName.toLowerCase().includes(q) ||
+                      apt.ownerName.toLowerCase().includes(q) ||
+                      apt.stylistName.toLowerCase().includes(q)
+                    );
+                  })
+                : scheduled;
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Calendar className="size-4 text-blue-600" />
+                        Scheduled
+                      </CardTitle>
+                      <Badge variant="secondary">{filtered.length}</Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No scheduled appointments
+                        </p>
+                      ) : (
+                        filtered.map((appointment) => {
+                          const client = findClientForPet(appointment.petId);
+                          return (
+                            <div
+                              key={appointment.id}
+                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(appointment)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                  <PawPrint className="size-5 text-blue-600" />
                                 </div>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {appointment.ownerName} •{" "}
-                                  {formatTime(appointment.startTime)}
-                                </p>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Link
+                                      href={
+                                        client
+                                          ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                          : "#"
+                                      }
+                                      className="truncate font-medium hover:underline"
+                                    >
+                                      {appointment.petName}
+                                    </Link>
+                                    {appointment.status === "checked-in" && (
+                                      <Badge className="h-5 bg-green-100 text-[10px] text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        Arrived
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {appointment.ownerName} •{" "}
+                                    {formatTime(appointment.startTime)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                {getActionButton(appointment)}
                               </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {getActionButton(appointment)}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           {/* In Progress Column */}
-          {(() => {
-            const inProgress = todayAppointments.filter(
-              (apt) =>
-                apt.status === "in-progress" ||
-                apt.status === "ready-for-pickup",
-            );
-            const filtered = searchQuery.trim()
-              ? inProgress.filter((apt) => {
-                  const q = searchQuery.toLowerCase();
-                  return (
-                    apt.petName.toLowerCase().includes(q) ||
-                    apt.ownerName.toLowerCase().includes(q) ||
-                    apt.stylistName.toLowerCase().includes(q)
-                  );
-                })
-              : inProgress;
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Scissors className="size-4 text-amber-600" />
-                      In Progress
-                    </CardTitle>
-                    <Badge variant="secondary">{filtered.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {filtered.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No active grooming
-                      </p>
-                    ) : (
-                      filtered.map((appointment) => {
-                        const client = findClientForPet(appointment.petId);
-                        return (
-                          <div
-                            key={appointment.id}
-                            className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(appointment)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                <Scissors className="size-5 text-amber-600" />
+          {showInProgress &&
+            (() => {
+              const inProgress = todayAppointments
+                .filter(
+                  (apt) =>
+                    apt.status === "in-progress" ||
+                    apt.status === "ready-for-pickup",
+                )
+                .filter(
+                  (apt) =>
+                    groomerFilter === "all" || apt.stylistId === groomerFilter,
+                );
+              const filtered = searchQuery.trim()
+                ? inProgress.filter((apt) => {
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      apt.petName.toLowerCase().includes(q) ||
+                      apt.ownerName.toLowerCase().includes(q) ||
+                      apt.stylistName.toLowerCase().includes(q)
+                    );
+                  })
+                : inProgress;
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Scissors className="size-4 text-amber-600" />
+                        In Progress
+                      </CardTitle>
+                      <Badge variant="secondary">{filtered.length}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No active grooming
+                        </p>
+                      ) : (
+                        filtered.map((appointment) => {
+                          const client = findClientForPet(appointment.petId);
+                          return (
+                            <div
+                              key={appointment.id}
+                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(appointment)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                                  <Scissors className="size-5 text-amber-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Link
+                                      href={
+                                        client
+                                          ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                          : "#"
+                                      }
+                                      className="truncate font-medium hover:underline"
+                                    >
+                                      {appointment.petName}
+                                    </Link>
+                                    {appointment.status ===
+                                      "ready-for-pickup" && (
+                                      <Badge className="h-5 bg-green-100 text-[10px] text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        Ready for Pickup
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {appointment.stylistName} •{" "}
+                                    {appointment.ownerName}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                              <div className="flex shrink-0 items-center gap-2">
+                                {getActionButton(appointment)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+          {/* Completed Column */}
+          {showCompleted &&
+            (() => {
+              const completed = todayAppointments
+                .filter((apt) => apt.status === "completed")
+                .filter(
+                  (apt) =>
+                    groomerFilter === "all" || apt.stylistId === groomerFilter,
+                );
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <CheckCircle className="size-4 text-green-600" />
+                        Completed
+                      </CardTitle>
+                      <Badge variant="secondary">{completed.length}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {completed.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No completed today
+                        </p>
+                      ) : (
+                        completed.map((appointment) => {
+                          const client = findClientForPet(appointment.petId);
+                          return (
+                            <div
+                              key={appointment.id}
+                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(appointment)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                                  <CheckCircle className="size-5 text-green-600" />
+                                </div>
+                                <div className="min-w-0">
                                   <Link
                                     href={
                                       client
@@ -659,93 +813,21 @@ export function GroomingSection() {
                                   >
                                     {appointment.petName}
                                   </Link>
-                                  {appointment.status ===
-                                    "ready-for-pickup" && (
-                                    <Badge className="h-5 bg-green-100 text-[10px] text-green-800 dark:bg-green-900 dark:text-green-200">
-                                      Ready for Pickup
-                                    </Badge>
-                                  )}
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {appointment.ownerName} •{" "}
+                                    {appointment.stylistName}
+                                  </p>
                                 </div>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {appointment.stylistName} •{" "}
-                                  {appointment.ownerName}
-                                </p>
                               </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {getActionButton(appointment)}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* Completed Column */}
-          {(() => {
-            const completed = todayAppointments.filter(
-              (apt) => apt.status === "completed",
-            );
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <CheckCircle className="size-4 text-green-600" />
-                      Completed
-                    </CardTitle>
-                    <Badge variant="secondary">{completed.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {completed.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No completed today
-                      </p>
-                    ) : (
-                      completed.map((appointment) => {
-                        const client = findClientForPet(appointment.petId);
-                        return (
-                          <div
-                            key={appointment.id}
-                            className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(appointment)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                <CheckCircle className="size-5 text-green-600" />
-                              </div>
-                              <div className="min-w-0">
-                                <Link
-                                  href={
-                                    client
-                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                      : "#"
-                                  }
-                                  className="truncate font-medium hover:underline"
-                                >
-                                  {appointment.petName}
-                                </Link>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {appointment.ownerName} •{" "}
-                                  {appointment.stylistName}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
         </div>
 
         {/* Check-In Modal */}

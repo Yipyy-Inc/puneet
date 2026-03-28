@@ -9,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui/modal";
 
 import {
@@ -21,6 +30,7 @@ import {
   PlayCircle,
   Calendar,
   Hourglass,
+  Filter,
 } from "lucide-react";
 import { trainingSessions, trainers, enrollments } from "@/data/training";
 import { clients } from "@/data/clients";
@@ -95,6 +105,10 @@ export function TrainingSection() {
 
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [trainerFilter, setTrainerFilter] = useState<string>("all");
+  const [showScheduled, setShowScheduled] = useState(true);
+  const [showInProgress, setShowInProgress] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(true);
 
   // For undo functionality
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -433,221 +447,287 @@ export function TrainingSection() {
     <Card>
       <CardContent className="space-y-4 pt-6">
         {/* Header with Filters */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <GraduationCap className="text-primary size-5" />
             <h3 className="text-lg font-semibold">Training</h3>
-            <Badge variant="outline">{todaySessions.length} today</Badge>
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Filter className="size-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>Trainer</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={trainerFilter}
+                onValueChange={setTrainerFilter}
+              >
+                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                {trainers.map((t) => (
+                  <DropdownMenuRadioItem key={t.id} value={t.id}>
+                    {t.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Show sections</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem
+                checked={showScheduled}
+                onCheckedChange={(v) => setShowScheduled(!!v)}
+              >
+                Scheduled
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showInProgress}
+                onCheckedChange={(v) => setShowInProgress(!!v)}
+              >
+                In Progress
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={showCompleted}
+                onCheckedChange={(v) => setShowCompleted(!!v)}
+              >
+                Completed
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Column-based layout matching CheckInOutSection */}
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div
+          className={`grid gap-4 ${
+            [showScheduled, showInProgress, showCompleted].filter(Boolean)
+              .length === 1
+              ? "lg:grid-cols-1"
+              : [showScheduled, showInProgress, showCompleted].filter(Boolean)
+                    .length === 2
+                ? "lg:grid-cols-2"
+                : "lg:grid-cols-3"
+          } `}
+        >
           {/* Scheduled Column */}
-          {(() => {
-            const scheduled = todaySessions.filter(
-              (s) => s.status === "scheduled" || s.status === "pending",
-            );
-            const filtered = searchQuery.trim()
-              ? scheduled.filter((s) => {
-                  const q = searchQuery.toLowerCase();
-                  return (
-                    s.className.toLowerCase().includes(q) ||
-                    s.trainerName.toLowerCase().includes(q)
-                  );
-                })
-              : scheduled;
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Calendar className="size-4 text-blue-600" />
-                      Scheduled
-                    </CardTitle>
-                    <Badge variant="secondary">{filtered.length}</Badge>
-                  </div>
-                  <div className="relative">
-                    <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
-                    <Input
-                      placeholder="Search..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-8 pl-9 text-sm"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {filtered.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No scheduled sessions
-                      </p>
-                    ) : (
-                      filtered.map((session) => {
-                        const sessionEnrollments = getSessionEnrollments(
-                          session.attendees,
-                        );
-                        return (
-                          <div
-                            key={session.id}
-                            className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(session)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                <GraduationCap className="size-5 text-blue-600" />
+          {showScheduled &&
+            (() => {
+              const scheduled = todaySessions
+                .filter(
+                  (s) => s.status === "scheduled" || s.status === "pending",
+                )
+                .filter(
+                  (s) =>
+                    trainerFilter === "all" || s.trainerId === trainerFilter,
+                );
+              const filtered = searchQuery.trim()
+                ? scheduled.filter((s) => {
+                    const q = searchQuery.toLowerCase();
+                    return (
+                      s.className.toLowerCase().includes(q) ||
+                      s.trainerName.toLowerCase().includes(q)
+                    );
+                  })
+                : scheduled;
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Calendar className="size-4 text-blue-600" />
+                        Scheduled
+                      </CardTitle>
+                      <Badge variant="secondary">{filtered.length}</Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {filtered.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No scheduled sessions
+                        </p>
+                      ) : (
+                        filtered.map((session) => {
+                          const sessionEnrollments = getSessionEnrollments(
+                            session.attendees,
+                          );
+                          return (
+                            <div
+                              key={session.id}
+                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(session)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                                  <GraduationCap className="size-5 text-blue-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="truncate font-medium">
+                                      {session.className}
+                                    </p>
+                                    {session.status === "pending" && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="h-5 text-[10px]"
+                                      >
+                                        Pending
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {session.trainerName} •{" "}
+                                    {sessionEnrollments.length} attendees •{" "}
+                                    {formatTime(session.startTime)}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                              <div className="flex shrink-0 items-center gap-2">
+                                {getActionButton(session)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+          {/* In Progress Column */}
+          {showInProgress &&
+            (() => {
+              const inProgress = todaySessions
+                .filter((s) => s.status === "in-progress")
+                .filter(
+                  (s) =>
+                    trainerFilter === "all" || s.trainerId === trainerFilter,
+                );
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <GraduationCap className="size-4 text-amber-600" />
+                        In Progress
+                      </CardTitle>
+                      <Badge variant="secondary">{inProgress.length}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {inProgress.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No active sessions
+                        </p>
+                      ) : (
+                        inProgress.map((session) => {
+                          const sessionEnrollments = getSessionEnrollments(
+                            session.attendees,
+                          );
+                          return (
+                            <div
+                              key={session.id}
+                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(session)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                                  <GraduationCap className="size-5 text-amber-600" />
+                                </div>
+                                <div className="min-w-0">
                                   <p className="truncate font-medium">
                                     {session.className}
                                   </p>
-                                  {session.status === "pending" && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="h-5 text-[10px]"
-                                    >
-                                      Pending
-                                    </Badge>
-                                  )}
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {session.trainerName} •{" "}
+                                    {sessionEnrollments.length} attendees
+                                  </p>
                                 </div>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {session.trainerName} •{" "}
-                                  {sessionEnrollments.length} attendees •{" "}
-                                  {formatTime(session.startTime)}
-                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                {getActionButton(session)}
                               </div>
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {getActionButton(session)}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {/* In Progress Column */}
-          {(() => {
-            const inProgress = todaySessions.filter(
-              (s) => s.status === "in-progress",
-            );
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <GraduationCap className="size-4 text-amber-600" />
-                      In Progress
-                    </CardTitle>
-                    <Badge variant="secondary">{inProgress.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {inProgress.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No active sessions
-                      </p>
-                    ) : (
-                      inProgress.map((session) => {
-                        const sessionEnrollments = getSessionEnrollments(
-                          session.attendees,
-                        );
-                        return (
-                          <div
-                            key={session.id}
-                            className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(session)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                <GraduationCap className="size-5 text-amber-600" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate font-medium">
-                                  {session.className}
-                                </p>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {session.trainerName} •{" "}
-                                  {sessionEnrollments.length} attendees
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {getActionButton(session)}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           {/* Completed Column */}
-          {(() => {
-            const completed = todaySessions.filter(
-              (s) => s.status === "completed",
-            );
-            return (
-              <Card>
-                <CardHeader className="space-y-3 pb-4">
-                  <div className="flex flex-row items-center justify-between space-y-0">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <CheckCircle className="size-4 text-green-600" />
-                      Completed
-                    </CardTitle>
-                    <Badge variant="secondary">{completed.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                    {completed.length === 0 ? (
-                      <p className="text-muted-foreground py-6 text-center text-sm">
-                        No completed today
-                      </p>
-                    ) : (
-                      completed.map((session) => {
-                        const sessionEnrollments = getSessionEnrollments(
-                          session.attendees,
-                        );
-                        return (
-                          <div
-                            key={session.id}
-                            className="hover:bg-muted/50 rounded-lg border p-3 transition-colors"
-                            onClick={() => handleViewDetails(session)}
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                <CheckCircle className="size-5 text-green-600" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate font-medium">
-                                  {session.className}
-                                </p>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {session.trainerName} •{" "}
-                                  {sessionEnrollments.length} attendees
-                                </p>
+          {showCompleted &&
+            (() => {
+              const completed = todaySessions
+                .filter((s) => s.status === "completed")
+                .filter(
+                  (s) =>
+                    trainerFilter === "all" || s.trainerId === trainerFilter,
+                );
+              return (
+                <Card>
+                  <CardHeader className="space-y-3 pb-4">
+                    <div className="flex flex-row items-center justify-between space-y-0">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <CheckCircle className="size-4 text-green-600" />
+                        Completed
+                      </CardTitle>
+                      <Badge variant="secondary">{completed.length}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {completed.length === 0 ? (
+                        <p className="text-muted-foreground py-6 text-center text-sm">
+                          No completed today
+                        </p>
+                      ) : (
+                        completed.map((session) => {
+                          const sessionEnrollments = getSessionEnrollments(
+                            session.attendees,
+                          );
+                          return (
+                            <div
+                              key={session.id}
+                              className="hover:bg-muted/50 rounded-lg border p-3 transition-colors"
+                              onClick={() => handleViewDetails(session)}
+                            >
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                                  <CheckCircle className="size-5 text-green-600" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">
+                                    {session.className}
+                                  </p>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {session.trainerName} •{" "}
+                                    {sessionEnrollments.length} attendees
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })()}
+                          );
+                        })
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
         </div>
 
         {/* Check-In Modal */}
