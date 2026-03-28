@@ -22,6 +22,7 @@ import {
   Globe,
   Ticket,
   ToggleRight,
+  Puzzle,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -136,6 +137,12 @@ export function AppSidebar() {
     {
       label: "Platform Operations",
       items: [
+        {
+          title: "Custom Modules",
+          url: "/dashboard/services/custom-modules",
+          icon: Puzzle,
+          disabled: false,
+        },
         {
           title: "Subscription & Modules",
           url: "/dashboard/subscriptions",

@@ -10,6 +10,7 @@ import {
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
+import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -49,7 +50,9 @@ export default async function DashboardLayout({
             <UserProfileSheet showNotifications={false} />
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          <SettingsProviderWrapper>{children}</SettingsProviderWrapper>
+        </main>
         <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs">
           © 2026 Yipyy. All rights reserved.
         </footer>

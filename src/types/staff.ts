@@ -73,6 +73,9 @@ export const permissionEnum = z.enum([
   "manage_notes",
   "view_internal_notes",
   "delete_notes",
+  // Custom Modules (super admin only)
+  "create_custom_modules",
+  "edit_custom_modules",
   // Forms
   "forms_create",
   "forms_edit",

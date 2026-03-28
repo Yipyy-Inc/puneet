@@ -40,6 +40,8 @@ interface CustomServiceModuleCardProps {
   onDelete?: (id: string) => void;
   onToggleStatus?: (module: CustomServiceModule) => void;
   onArchive?: (id: string) => void;
+  /** Facility name to show on card (super admin context) */
+  facilityName?: string;
 }
 
 export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
@@ -49,6 +51,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
   onDelete,
   onToggleStatus,
   onArchive,
+  facilityName,
 }: CustomServiceModuleCardProps) {
   const router = useRouter();
   const catMeta = getCategoryMeta(module.category);
@@ -168,6 +171,14 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
               className="border-blue-200 bg-blue-50 text-xs text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
             >
               Online
+            </Badge>
+          )}
+          {facilityName && (
+            <Badge
+              variant="outline"
+              className="border-violet-200 bg-violet-50 text-xs text-violet-600 dark:border-violet-800 dark:bg-violet-900/20 dark:text-violet-400"
+            >
+              {facilityName}
             </Badge>
           )}
         </div>

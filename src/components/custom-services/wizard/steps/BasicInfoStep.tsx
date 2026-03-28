@@ -4,9 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Building } from "lucide-react";
 import { IconPicker } from "../IconPicker";
 import { CategorySelector } from "../CategorySelector";
 import { generateSlug } from "@/lib/service-registry";
+import { facilities } from "@/data/facilities";
 import type {
   CustomServiceModule,
   CustomServiceCategory,
@@ -15,9 +24,15 @@ import type {
 interface BasicInfoStepProps {
   data: CustomServiceModule;
   onChange: (updates: Partial<CustomServiceModule>) => void;
+  /** Show facility selector (super admin only) */
+  showFacilitySelector?: boolean;
 }
 
-export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
+export function BasicInfoStep({
+  data,
+  onChange,
+  showFacilitySelector = false,
+}: BasicInfoStepProps) {
   // Auto-generate slug from name (only if slug hasn't been manually changed)
   const handleNameChange = (name: string) => {
     const autoSlug = generateSlug(name);
@@ -61,6 +76,36 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
           </p>
         </div>
       )}
+
+      {/* Facility selector — super admin only */}
+      {showFacilitySelector && (
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">
+            <Building className="mr-1.5 inline size-4" />
+            Assign to Facility <span className="text-destructive">*</span>
+          </Label>
+          <p className="text-muted-foreground text-xs">
+            Select which facility this custom module will be available to.
+          </p>
+          <Select
+            value={String(data.facilityId)}
+            onValueChange={(v) => onChange({ facilityId: parseInt(v) })}
+          >
+            <SelectTrigger className="w-full sm:w-[320px]">
+              <SelectValue placeholder="Select a facility" />
+            </SelectTrigger>
+            <SelectContent>
+              {facilities.map((f) => (
+                <SelectItem key={f.id} value={String(f.id)}>
+                  {f.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {showFacilitySelector && <Separator />}
 
       {/* Category selection */}
       <div className="space-y-2">

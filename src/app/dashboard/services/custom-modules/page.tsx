@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Plus,
   Search,
   LayoutGrid,
   List,
   SlidersHorizontal,
-  RefreshCw,
   AlertTriangle,
+  Building,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ import {
   getCategoryMeta,
   PRICING_MODEL_LABELS,
 } from "@/data/custom-services";
+import { facilities } from "@/data/facilities";
 import type {
   CustomServiceModule,
   CustomServiceStatus,
@@ -59,10 +62,14 @@ const STATUS_COLORS: Record<CustomServiceStatus, string> = {
     "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700",
 };
 
+function getFacilityName(facilityId: number): string {
+  const facility = facilities.find((f) => f.id === facilityId);
+  return facility?.name ?? `Facility #${facilityId}`;
+}
+
 function ModuleListRow({
-  module,
+  module: mod,
   onEdit,
-  onDuplicate: _onDuplicate,
   onDelete: _onDelete,
   onToggleStatus: _onToggleStatus,
   onArchive: _onArchive,
@@ -74,22 +81,26 @@ function ModuleListRow({
   onToggleStatus: (m: CustomServiceModule) => void;
   onArchive: (id: string) => void;
 }) {
-  const catMeta = getCategoryMeta(module.category);
+  const catMeta = getCategoryMeta(mod.category);
 
   return (
     <div className="border-border bg-card flex items-center gap-4 rounded-xl border px-4 py-3 transition-shadow hover:shadow-sm">
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="truncate text-sm font-medium">{module.name}</div>
+        <div className="truncate text-sm font-medium">{mod.name}</div>
         <span className="text-muted-foreground hidden truncate text-xs sm:inline">
-          /{module.slug}
+          /{mod.slug}
         </span>
+      </div>
+      <div className="text-muted-foreground hidden items-center gap-1.5 text-xs lg:flex">
+        <Building className="size-3" />
+        {getFacilityName(mod.facilityId)}
       </div>
       <div className="shrink-0">
         <Badge
           variant="outline"
-          className={`text-xs ${STATUS_COLORS[module.status]} `}
+          className={`text-xs ${STATUS_COLORS[mod.status]} `}
         >
-          {module.status}
+          {mod.status}
         </Badge>
       </div>
       {catMeta && (
@@ -100,13 +111,13 @@ function ModuleListRow({
         </Badge>
       )}
       <div className="text-muted-foreground hidden shrink-0 text-xs lg:block">
-        {PRICING_MODEL_LABELS[module.pricing.model]} · $
-        {module.pricing.basePrice.toFixed(2)}
+        {PRICING_MODEL_LABELS[mod.pricing.model]} · $
+        {mod.pricing.basePrice.toFixed(2)}
       </div>
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onEdit(module)}
+        onClick={() => onEdit(mod)}
         className="shrink-0"
       >
         Edit
@@ -119,15 +130,10 @@ function ModuleListRow({
 // MAIN PAGE
 // ========================================
 
-export default function CustomServicesListPage() {
+export default function SuperAdminCustomModulesPage() {
   const router = useRouter();
-  const {
-    modules,
-    deleteModule,
-    duplicateModule,
-    setModuleStatus,
-    resetCustomServices,
-  } = useCustomServices();
+  const { modules, deleteModule, duplicateModule, setModuleStatus } =
+    useCustomServices();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CustomServiceStatus | "all">(
@@ -136,17 +142,19 @@ export default function CustomServicesListPage() {
   const [categoryFilter, setCategoryFilter] = useState<
     CustomServiceCategory | "all"
   >("all");
+  const [facilityFilter, setFacilityFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [deleteTarget, setDeleteTarget] = useState<CustomServiceModule | null>(
     null,
   );
-  const [isResetting, setIsResetting] = useState(false);
 
   // Filtered modules
   const filtered = useMemo(() => {
     return modules.filter((m) => {
       if (statusFilter !== "all" && m.status !== statusFilter) return false;
       if (categoryFilter !== "all" && m.category !== categoryFilter)
+        return false;
+      if (facilityFilter !== "all" && m.facilityId !== parseInt(facilityFilter))
         return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -159,7 +167,7 @@ export default function CustomServicesListPage() {
       }
       return true;
     });
-  }, [modules, statusFilter, categoryFilter, search]);
+  }, [modules, statusFilter, categoryFilter, facilityFilter, search]);
 
   // Stats
   const stats = useMemo(() => {
@@ -171,9 +179,15 @@ export default function CustomServicesListPage() {
     };
   }, [modules]);
 
+  // Unique facility IDs from modules
+  const facilityIds = useMemo(() => {
+    const ids = [...new Set(modules.map((m) => m.facilityId))];
+    return ids.sort((a, b) => a - b);
+  }, [modules]);
+
   const handleEdit = useCallback(
     (module: CustomServiceModule) => {
-      router.push(`/facility/dashboard/services/custom/${module.slug}/edit`);
+      router.push(`/dashboard/services/custom-modules/${module.slug}/edit`);
     },
     [router],
   );
@@ -215,14 +229,12 @@ export default function CustomServicesListPage() {
     [setModuleStatus],
   );
 
-  const handleReset = useCallback(() => {
-    setIsResetting(false);
-    resetCustomServices();
-  }, [resetCustomServices]);
-
   const activeFiltersCount = useMemo(
-    () => (statusFilter !== "all" ? 1 : 0) + (categoryFilter !== "all" ? 1 : 0),
-    [statusFilter, categoryFilter],
+    () =>
+      (statusFilter !== "all" ? 1 : 0) +
+      (categoryFilter !== "all" ? 1 : 0) +
+      (facilityFilter !== "all" ? 1 : 0),
+    [statusFilter, categoryFilter, facilityFilter],
   );
 
   return (
@@ -236,21 +248,16 @@ export default function CustomServicesListPage() {
                 Custom Service Modules
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Build and manage custom services tailored to your
-                facility&apos;s unique offerings.
+                Create and manage custom modules for facilities across the
+                platform.
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsResetting(true)}
-                className="text-muted-foreground"
-              >
-                <RefreshCw className="size-3.5" />
-                <span className="hidden sm:inline">Reset Demo</span>
-              </Button>
-            </div>
+            <Button asChild>
+              <Link href="/dashboard/services/custom-modules/create">
+                <Plus className="size-4" />
+                New Module
+              </Link>
+            </Button>
           </div>
 
           {/* Stats row */}
@@ -299,14 +306,33 @@ export default function CustomServicesListPage() {
           <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
             <div className="relative min-w-[180px] flex-1 sm:min-w-48">
-              <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 placeholder="Search modules..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-sm"
+                className="pl-9"
               />
             </div>
+
+            {/* Facility filter */}
+            <Select
+              value={facilityFilter}
+              onValueChange={(v) => setFacilityFilter(v)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <Building className="mr-2 size-3.5" />
+                <SelectValue placeholder="All Facilities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Facilities</SelectItem>
+                {facilityIds.map((id) => (
+                  <SelectItem key={id} value={String(id)}>
+                    {getFacilityName(id)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Status filter */}
             <Select
@@ -315,13 +341,13 @@ export default function CustomServicesListPage() {
                 setStatusFilter(v as CustomServiceStatus | "all")
               }
             >
-              <SelectTrigger className="h-8 w-full text-sm sm:w-36">
-                <SelectValue placeholder="All statuses" />
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="disabled">Disabled</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
@@ -334,8 +360,8 @@ export default function CustomServicesListPage() {
                 setCategoryFilter(v as CustomServiceCategory | "all")
               }
             >
-              <SelectTrigger className="h-8 w-full text-sm sm:w-44">
-                <SelectValue placeholder="All categories" />
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
@@ -347,137 +373,105 @@ export default function CustomServicesListPage() {
               </SelectContent>
             </Select>
 
-            {/* Active filter count */}
             {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="h-8 px-3">
-                <SlidersHorizontal className="mr-1 size-3" />
-                {activeFiltersCount} filter{activeFiltersCount > 1 ? "s" : ""}
+              <Badge variant="secondary" className="gap-1">
+                <SlidersHorizontal className="size-3" />
+                {activeFiltersCount}
               </Badge>
             )}
 
-            {/* View toggle */}
-            <div className="border-border ml-auto flex items-center gap-0.5 rounded-lg border p-0.5">
+            {/* View mode toggle */}
+            <div className="ml-auto flex items-center gap-1">
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
-                size="icon-sm"
+                size="icon"
+                className="size-8"
                 onClick={() => setViewMode("grid")}
-                className="size-10"
-                aria-label="Grid view"
-                aria-pressed={viewMode === "grid"}
               >
-                <LayoutGrid className="size-3.5" />
+                <LayoutGrid className="size-4" />
               </Button>
               <Button
                 variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="icon-sm"
+                size="icon"
+                className="size-8"
                 onClick={() => setViewMode("list")}
-                className="size-10"
-                aria-label="List view"
-                aria-pressed={viewMode === "list"}
               >
-                <List className="size-3.5" />
+                <List className="size-4" />
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Content */}
       <div className="mx-auto max-w-7xl px-4 py-6">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            {modules.length === 0 ? (
-              <div className="animate-in fade-in max-w-lg duration-500">
-                <div className="bg-muted mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl">
-                  <Search className="text-muted-foreground size-8" />
-                </div>
-                <h3 className="text-xl font-semibold">
-                  No custom modules assigned
-                </h3>
-                <p className="text-muted-foreground mt-2 text-sm/relaxed">
-                  Custom service modules are created and assigned by your
-                  platform administrator. Contact your admin to set up custom
-                  services for your facility.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Search className="text-muted-foreground size-8" />
-                </div>
-                <h3 className="text-lg font-semibold">No results found</h3>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  Try adjusting your search or filter criteria.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setSearch("");
-                    setStatusFilter("all");
-                    setCategoryFilter("all");
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="bg-muted mb-4 rounded-full p-4">
+              <Search className="text-muted-foreground size-8" />
+            </div>
+            <h3 className="text-lg font-semibold">No modules found</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {modules.length === 0
+                ? "Create your first custom service module to get started."
+                : "Try adjusting your search or filters."}
+            </p>
+            {modules.length === 0 && (
+              <Button asChild className="mt-4">
+                <Link href="/dashboard/services/custom-modules/create">
+                  <Plus className="size-4" />
+                  Create Module
+                </Link>
+              </Button>
             )}
           </div>
         ) : viewMode === "grid" ? (
-          <>
-            <p className="text-muted-foreground mb-4 text-xs">
-              {filtered.length} module{filtered.length !== 1 ? "s" : ""}
-              {(search || statusFilter !== "all" || categoryFilter !== "all") &&
-                " matching filters"}
-            </p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filtered.map((module) => (
-                <CustomServiceModuleCard
-                  key={module.id}
-                  module={module}
-                  onEdit={handleEdit}
-                  onDuplicate={handleDuplicate}
-                  onDelete={handleSetDeleteTarget}
-                  onToggleStatus={handleToggleStatus}
-                  onArchive={handleArchive}
-                />
-              ))}
-            </div>
-          </>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((mod) => (
+              <CustomServiceModuleCard
+                key={mod.id}
+                module={mod}
+                onEdit={() => handleEdit(mod)}
+                onDuplicate={() => handleDuplicate(mod.id)}
+                onDelete={() => handleSetDeleteTarget(mod.id)}
+                onToggleStatus={() => handleToggleStatus(mod)}
+                onArchive={() => handleArchive(mod.id)}
+                facilityName={getFacilityName(mod.facilityId)}
+              />
+            ))}
+          </div>
         ) : (
-          <>
-            <p className="text-muted-foreground mb-3 text-xs">
-              {filtered.length} module{filtered.length !== 1 ? "s" : ""}
-            </p>
-            <div className="space-y-2">
-              {filtered.map((module) => (
-                <ModuleListRow
-                  key={module.id}
-                  module={module}
-                  onEdit={handleEdit}
-                  onDuplicate={handleDuplicate}
-                  onDelete={handleSetDeleteTarget}
-                  onToggleStatus={handleToggleStatus}
-                  onArchive={handleArchive}
-                />
-              ))}
-            </div>
-          </>
+          <div className="space-y-2">
+            {filtered.map((mod) => (
+              <ModuleListRow
+                key={mod.id}
+                module={mod}
+                onEdit={handleEdit}
+                onDuplicate={handleDuplicate}
+                onDelete={handleSetDeleteTarget}
+                onToggleStatus={handleToggleStatus}
+                onArchive={handleArchive}
+              />
+            ))}
+          </div>
         )}
       </div>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="text-destructive size-5" />
+              <AlertTriangle className="size-5 text-red-500" />
               Delete Module
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete{" "}
-              <strong>{deleteTarget?.name}</strong>? This action cannot be
-              undone and will remove all associated data.
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">{deleteTarget?.name}</span>? This
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -485,27 +479,8 @@ export default function CustomServicesListPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete Module
+              Delete
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reset demo dialog */}
-      <Dialog open={isResetting} onOpenChange={setIsResetting}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Demo Data</DialogTitle>
-            <DialogDescription>
-              This will restore the 3 seed modules (Yoda&apos;s Splash, Paws
-              Express, Birthday Pawty) and discard all your changes. Continue?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResetting(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleReset}>Reset to Defaults</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

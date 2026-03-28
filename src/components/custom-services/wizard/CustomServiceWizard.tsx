@@ -100,6 +100,10 @@ interface CustomServiceWizardProps {
   onSaved?: (module: CustomServiceModule) => void;
   /** Called when user cancels */
   onCancel?: () => void;
+  /** Show facility selector dropdown (super admin context) */
+  showFacilitySelector?: boolean;
+  /** Override the default redirect path after save/cancel */
+  redirectPath?: string;
 }
 
 // ========================================
@@ -110,6 +114,8 @@ export function CustomServiceWizard({
   initialData,
   onSaved,
   onCancel,
+  showFacilitySelector = false,
+  redirectPath = "/facility/dashboard/services/custom",
 }: CustomServiceWizardProps) {
   const router = useRouter();
   const { addModule, updateModule, resources } = useCustomServices();
@@ -162,7 +168,7 @@ export function CustomServiceWizard({
         addModule({ ...formData, createdAt: now, updatedAt: now });
       }
       onSaved?.(formData);
-      router.push("/facility/dashboard/services/custom");
+      router.push(redirectPath);
     } finally {
       setIsSaving(false);
     }
@@ -170,7 +176,7 @@ export function CustomServiceWizard({
 
   const handleCancel = () => {
     onCancel?.();
-    router.push("/facility/dashboard/services/custom");
+    router.push(redirectPath);
   };
 
   const stepDetail = STEP_DETAILS[currentStep];
@@ -209,7 +215,11 @@ export function CustomServiceWizard({
               className="animate-in fade-in slide-in-from-right-2 duration-200"
             >
               {currentStep === 0 && (
-                <BasicInfoStep data={formData} onChange={handleChange} />
+                <BasicInfoStep
+                  data={formData}
+                  onChange={handleChange}
+                  showFacilitySelector={showFacilitySelector}
+                />
               )}
               {currentStep === 1 && (
                 <CalendarAvailabilityStep

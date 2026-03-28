@@ -98,6 +98,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_notes: "Manage Notes Settings",
   view_internal_notes: "View Internal Notes",
   delete_notes: "Delete Notes",
+  create_custom_modules: "Create Custom Modules",
+  edit_custom_modules: "Edit Custom Modules",
   forms_create: "Create Forms",
   forms_edit: "Edit Forms",
   forms_publish: "Publish Forms",
@@ -159,6 +161,8 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
     "manage_incidents",
     "manage_permissions",
     "delete_records",
+    "create_custom_modules",
+    "edit_custom_modules",
   ],
   "Pet Care": ["add_pet_notes", "add_grooming_notes", "add_training_notes"],
   "Tags & Notes": [
