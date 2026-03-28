@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
-import { getGradientStyle, getCategoryMeta } from "@/data/custom-services";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -60,7 +59,6 @@ export default function CustomServiceLayout({
     );
   }
 
-  const catMeta = getCategoryMeta(serviceModule.category);
   const basePath = `/facility/dashboard/services/custom/${serviceModule.slug}`;
   const isEnabled = serviceModule.status === "active";
 
@@ -147,47 +145,27 @@ export default function CustomServiceLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="bg-background sticky top-16 z-10 border-b">
-        <div className="p-4 sm:px-6">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 items-center gap-3">
-              <div
-                className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                style={{
-                  ...getGradientStyle(
-                    serviceModule.iconColor,
-                    serviceModule.iconColorTo,
-                  ),
-                }}
-              >
+      <div className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-16 z-10 border-b backdrop-blur-sm">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-teal-500">
                 <DynamicIcon
                   name={serviceModule.icon}
                   className="size-5 text-white"
                 />
               </div>
-              <div className="min-w-0">
-                <h1 className="flex items-center gap-2 truncate text-xl font-bold tracking-tight sm:text-2xl">
+              <div>
+                <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
                   {serviceModule.name}
-                  <Badge variant={statusVariant} className="shrink-0">
-                    {statusLabel}
-                  </Badge>
+                  <Badge variant={statusVariant}>{statusLabel}</Badge>
                 </h1>
-                <p className="text-muted-foreground flex items-center truncate text-sm">
-                  {catMeta && (
-                    <Badge
-                      className={cn(
-                        "mr-2 shrink-0 text-[10px]",
-                        catMeta.badgeClass,
-                      )}
-                    >
-                      {catMeta.name}
-                    </Badge>
-                  )}
+                <p className="text-muted-foreground text-sm">
                   {serviceModule.description}
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+            <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Enabled</span>
               <Switch
                 checked={isEnabled}
@@ -196,11 +174,7 @@ export default function CustomServiceLayout({
             </div>
           </div>
         </div>
-
-        <nav
-          aria-label="Service navigation"
-          className="scrollbar-none flex gap-1 overflow-x-auto px-4 sm:px-6"
-        >
+        <nav className="flex gap-1 overflow-x-auto px-6">
           {tabs.map((tab) => {
             const isActive =
               pathname === tab.href ||
@@ -215,10 +189,7 @@ export default function CustomServiceLayout({
                   `flex items-center gap-2 rounded-t-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors`,
                   "hover:bg-muted/50",
                   isActive
-                    ? cn(
-                        "border-primary bg-background border-b-2",
-                        catMeta?.textClass ?? "text-primary",
-                      )
+                    ? "border-primary bg-background text-primary border-b-2"
                     : "text-muted-foreground",
                 )}
               >
@@ -230,7 +201,7 @@ export default function CustomServiceLayout({
         </nav>
       </div>
 
-      <div className="flex-1 p-4 sm:p-6">{children}</div>
+      <div className="flex-1 p-6">{children}</div>
 
       <Modal
         open={modalOpen}

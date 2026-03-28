@@ -27,11 +27,7 @@ import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import type { CustomServiceModule } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
-import {
-  getCategoryMeta,
-  getGradientStyle,
-  PRICING_MODEL_LABELS,
-} from "@/data/custom-services";
+import { getCategoryMeta, PRICING_MODEL_LABELS } from "@/data/custom-services";
 
 interface CustomServiceModuleCardProps {
   module: CustomServiceModule;
@@ -55,7 +51,6 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
 }: CustomServiceModuleCardProps) {
   const router = useRouter();
   const catMeta = getCategoryMeta(module.category);
-  const gradientStyle = getGradientStyle(module.iconColor, module.iconColorTo);
 
   const handleEdit = useCallback(() => {
     if (onEdit) {
@@ -67,24 +62,15 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
 
   return (
     <Card
-      className="group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      className="group hover:bg-muted/50 relative overflow-hidden transition-colors"
       aria-label={module.name}
       role="article"
     >
-      {/* Gradient accent bar */}
-      <div
-        className="absolute top-0 right-0 left-0 h-1 rounded-t-2xl"
-        style={gradientStyle}
-      />
-
-      <CardHeader className="pt-6 pb-3">
+      <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           {/* Icon + Title */}
           <div className="flex min-w-0 items-center gap-3">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
-              style={gradientStyle}
-            >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-teal-500 text-white">
               <DynamicIcon name={module.icon} className="size-5" />
             </div>
             <div className="min-w-0">
@@ -193,43 +179,15 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
           </div>
         </div>
 
-        {/* Feature flags */}
-        <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
-          {module.calendar.enabled && (
-            <span className="flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-              Calendar
-            </span>
-          )}
-          {module.checkInOut.enabled && (
-            <span className="flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-              Check-In/Out
-            </span>
-          )}
-          {module.stayBased.enabled && (
-            <span className="flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-              Stay-Based
-            </span>
-          )}
-          {module.staffAssignment.autoAssign && (
-            <span className="flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-              Auto-Assign
-            </span>
-          )}
-        </div>
-
-        {/* Edit button */}
+        {/* View button */}
         <Button
           variant="outline"
           size="sm"
-          className="mt-1 w-full transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+          className="w-full"
           onClick={handleEdit}
         >
           <Eye className="size-3.5" />
-          View & Edit
+          View
         </Button>
       </CardContent>
     </Card>

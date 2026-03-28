@@ -28,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { CustomServiceModuleCard } from "@/components/custom-services/CustomServiceModuleCard";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -161,16 +160,6 @@ export default function CustomServicesListPage() {
     });
   }, [modules, statusFilter, categoryFilter, search]);
 
-  // Stats
-  const stats = useMemo(() => {
-    return {
-      total: modules.length,
-      active: modules.filter((m) => m.status === "active").length,
-      draft: modules.filter((m) => m.status === "draft").length,
-      disabled: modules.filter((m) => m.status === "disabled").length,
-    };
-  }, [modules]);
-
   const handleEdit = useCallback(
     (module: CustomServiceModule) => {
       router.push(`/facility/dashboard/services/custom/${module.slug}/edit`);
@@ -236,8 +225,7 @@ export default function CustomServicesListPage() {
                 Custom Service Modules
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Build and manage custom services tailored to your
-                facility&apos;s unique offerings.
+                Manage custom services assigned to your facility.
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -251,44 +239,6 @@ export default function CustomServicesListPage() {
                 <span className="hidden sm:inline">Reset Demo</span>
               </Button>
             </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-bold">{stats.total}</span>
-              <span className="text-muted-foreground text-xs">total</span>
-            </div>
-            <Separator orientation="vertical" className="h-5" />
-            <div className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-green-500" />
-              <span className="text-sm">
-                <span className="font-medium text-emerald-600">
-                  {stats.active}
-                </span>{" "}
-                active
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-yellow-500" />
-              <span className="text-sm">
-                <span className="font-medium text-amber-600">
-                  {stats.draft}
-                </span>{" "}
-                draft
-              </span>
-            </div>
-            {stats.disabled > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-red-500" />
-                <span className="text-sm">
-                  <span className="font-medium text-red-500">
-                    {stats.disabled}
-                  </span>{" "}
-                  disabled
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -304,7 +254,7 @@ export default function CustomServicesListPage() {
                 placeholder="Search modules..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-sm"
+                className="pl-8"
               />
             </div>
 
@@ -315,7 +265,7 @@ export default function CustomServicesListPage() {
                 setStatusFilter(v as CustomServiceStatus | "all")
               }
             >
-              <SelectTrigger className="h-8 w-full text-sm sm:w-36">
+              <SelectTrigger className="w-full sm:w-36">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
@@ -334,7 +284,7 @@ export default function CustomServicesListPage() {
                 setCategoryFilter(v as CustomServiceCategory | "all")
               }
             >
-              <SelectTrigger className="h-8 w-full text-sm sm:w-44">
+              <SelectTrigger className="w-full sm:w-44">
                 <SelectValue placeholder="All categories" />
               </SelectTrigger>
               <SelectContent>
@@ -387,14 +337,12 @@ export default function CustomServicesListPage() {
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             {modules.length === 0 ? (
-              <div className="animate-in fade-in max-w-lg duration-500">
-                <div className="bg-muted mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl">
-                  <Search className="text-muted-foreground size-8" />
-                </div>
-                <h3 className="text-xl font-semibold">
+              <div className="max-w-lg">
+                <Search className="text-muted-foreground mx-auto mb-3 size-12 opacity-50" />
+                <h3 className="text-lg font-semibold">
                   No custom modules assigned
                 </h3>
-                <p className="text-muted-foreground mt-2 text-sm/relaxed">
+                <p className="text-muted-foreground mt-1 text-sm">
                   Custom service modules are created and assigned by your
                   platform administrator. Contact your admin to set up custom
                   services for your facility.
@@ -402,9 +350,7 @@ export default function CustomServicesListPage() {
               </div>
             ) : (
               <>
-                <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                  <Search className="text-muted-foreground size-8" />
-                </div>
+                <Search className="text-muted-foreground mx-auto mb-3 size-12 opacity-50" />
                 <h3 className="text-lg font-semibold">No results found</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
                   Try adjusting your search or filter criteria.
