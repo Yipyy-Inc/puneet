@@ -53,6 +53,9 @@ export interface FilterDef {
   key: string;
   label: string;
   options: { value: string; label: string }[];
+  /** Custom filter function. If provided, used instead of simple key matching. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  filterFn?: (item: any, value: string) => boolean;
 }
 
 interface DataTableProps<T> {
@@ -134,7 +137,9 @@ export function DataTable<T extends object>({
     for (const filter of filters) {
       const filterValue = filterValues[filter.key];
       if (filterValue && filterValue !== "all") {
-        if (
+        if (filter.filterFn) {
+          if (!filter.filterFn(item, filterValue)) return false;
+        } else if (
           String((item as Record<string, unknown>)[filter.key]) !== filterValue
         ) {
           return false;

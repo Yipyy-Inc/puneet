@@ -15,8 +15,10 @@ import {
   Mail as MailIcon,
   Eye,
   Plus,
-  Heart,
+  PawPrint,
 } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 const exportClientsToCSV = (clientsData: typeof clients) => {
   const headers = ["ID", "Name", "Email", "Phone", "Status", "Pets Count"];
@@ -152,9 +154,39 @@ export default function FacilityClientsPage() {
     {
       key: "pets",
       label: "Pets",
-      icon: Heart,
+      icon: PawPrint,
       defaultVisible: true,
-      render: (client) => client.pets.length,
+      render: (client) => {
+        if (client.pets.length === 0) {
+          return <span className="text-muted-foreground text-xs">No pets</span>;
+        }
+        const visible = client.pets.slice(0, 2);
+        const remaining = client.pets.length - visible.length;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visible.map((pet) => (
+              <Link
+                key={pet.id}
+                href={`/facility/dashboard/clients/${client.id}/pets/${pet.id}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Badge
+                  variant="outline"
+                  className="hover:bg-muted cursor-pointer text-xs"
+                >
+                  {pet.name}{" "}
+                  {pet.type === "Dog" ? "🐕" : pet.type === "Cat" ? "🐱" : "🐾"}
+                </Badge>
+              </Link>
+            ))}
+            {remaining > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                +{remaining} more
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -167,6 +199,40 @@ export default function FacilityClientsPage() {
         { value: "active", label: "Active" },
         { value: "inactive", label: "Inactive" },
       ],
+    },
+    {
+      key: "petType",
+      label: "Pet Type",
+      options: [
+        { value: "all", label: "All Types" },
+        { value: "Dog", label: "Dog" },
+        { value: "Cat", label: "Cat" },
+        { value: "Other", label: "Other" },
+      ],
+      filterFn: (client, value) => {
+        if (value === "all") return true;
+        return client.pets.some((p: { type: string }) =>
+          value === "Other"
+            ? p.type !== "Dog" && p.type !== "Cat"
+            : p.type === value,
+        );
+      },
+    },
+    {
+      key: "petCount",
+      label: "Pet Count",
+      options: [
+        { value: "all", label: "All" },
+        { value: "0", label: "No Pets" },
+        { value: "1", label: "1 Pet" },
+        { value: "2+", label: "2+ Pets" },
+      ],
+      filterFn: (client, value) => {
+        if (value === "all") return true;
+        if (value === "0") return client.pets.length === 0;
+        if (value === "1") return client.pets.length === 1;
+        return client.pets.length >= 2;
+      },
     },
   ];
 
@@ -248,8 +314,10 @@ export default function FacilityClientsPage() {
         data={facilityClients}
         columns={columns}
         filters={filters}
-        searchKey="name"
-        searchPlaceholder="Search clients..."
+        getSearchValue={(client) =>
+          [client.name, ...client.pets.map((p) => p.name)].join(" ")
+        }
+        searchPlaceholder="Search by client or pet name..."
         itemsPerPage={10}
         actions={(client) => (
           <Button

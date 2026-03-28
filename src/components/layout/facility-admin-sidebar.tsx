@@ -87,16 +87,6 @@ export function FacilitySidebar() {
       {
         items: [
           {
-            title: "Pets",
-            url: "/facility/dashboard/clients",
-            icon: PawPrint,
-            disabled: false,
-          },
-        ],
-      },
-      {
-        items: [
-          {
             title: "Grooming",
             url: "/facility/dashboard/services/grooming",
             icon: Scissors,
