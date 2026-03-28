@@ -29,7 +29,6 @@ import {
   FileText,
   GraduationCap,
   ClipboardList,
-  Inbox,
   LayoutTemplate,
   PlusCircle,
 } from "lucide-react";
@@ -299,12 +298,6 @@ export function FacilitySidebar() {
             title: "Intake Forms",
             url: "/facility/dashboard/forms",
             icon: ClipboardList,
-            disabled: false,
-          },
-          {
-            title: "Submissions Inbox",
-            url: "/facility/dashboard/forms/submissions",
-            icon: Inbox,
             disabled: false,
           },
           {

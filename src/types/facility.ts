@@ -108,6 +108,17 @@ export const facilityNotificationTypeEnum = z.enum([
   "form_submission_new",
   "form_submission_red_flag",
   "form_submission_has_files",
+  "booking_new",
+  "booking_cancelled",
+  "checkin",
+  "checkout",
+  "attendance_alert",
+  "appointment_confirmed",
+  "appointment_completed",
+  "session_update",
+  "customer_registered",
+  "customer_message",
+  "incident",
   "info",
   "warning",
 ]);
@@ -702,6 +713,18 @@ export type FacilityResource = z.infer<typeof facilityResourceSchema>;
 // Facility Notification (from facility-notifications.ts)
 // ============================================================================
 
+export const facilityNotificationCategoryEnum = z.enum([
+  "customers",
+  "boarding",
+  "daycare",
+  "grooming",
+  "training",
+  "forms",
+]);
+export type FacilityNotificationCategory = z.infer<
+  typeof facilityNotificationCategoryEnum
+>;
+
 export const facilityNotificationSchema = z.object({
   id: z.string(),
   type: facilityNotificationTypeEnum,
@@ -709,6 +732,12 @@ export const facilityNotificationSchema = z.object({
   message: z.string(),
   read: z.boolean(),
   timestamp: z.string(),
+  /** Category for filtering in notification center */
+  category: z.string().optional(),
+  /** Navigation link when clicking the notification */
+  link: z.string().optional(),
+  /** Custom service module ID for custom service notifications */
+  serviceModuleId: z.string().optional(),
   bookingId: z.number().optional(),
   facilityId: z.number().optional(),
   submissionId: z.string().optional(),

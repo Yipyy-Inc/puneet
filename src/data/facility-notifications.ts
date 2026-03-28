@@ -12,35 +12,233 @@ export type {
 } from "@/types/facility";
 import type { FacilityNotification } from "@/types/facility";
 
-// Seed example notifications so staff see YipyyGo submissions on the dashboard
+// Helper to create timestamps relative to now
+function ago(minutes: number): string {
+  return new Date(Date.now() - minutes * 60 * 1000).toISOString();
+}
+
+// Seed notifications across all categories
 const notifications: FacilityNotification[] = [
+  // --- Customers ---
+  {
+    id: "fn-cust-1",
+    type: "customer_registered",
+    title: "New customer registered",
+    message: "Emily Chen created an account and added 2 pets",
+    read: false,
+    timestamp: ago(5),
+    facilityId: 11,
+    category: "customers",
+    link: "/facility/dashboard/clients",
+  },
+  {
+    id: "fn-cust-2",
+    type: "customer_message",
+    title: "Customer message",
+    message: "Sarah Johnson sent a message about Bella's pickup time",
+    read: false,
+    timestamp: ago(15),
+    facilityId: 11,
+    category: "customers",
+    link: "/facility/dashboard/messaging",
+  },
+  // --- Boarding ---
+  {
+    id: "fn-board-1",
+    type: "checkin",
+    title: "Boarding check-in",
+    message: "Max (Golden Retriever) checked in for 3-night stay",
+    read: false,
+    timestamp: ago(10),
+    facilityId: 11,
+    category: "boarding",
+    link: "/facility/dashboard/services/boarding",
+    meta: { petName: "Max" },
+  },
+  {
+    id: "fn-board-2",
+    type: "checkout",
+    title: "Boarding departure today",
+    message: "Luna's checkout scheduled for 4:00 PM — Suite 3",
+    read: true,
+    timestamp: ago(60),
+    facilityId: 11,
+    category: "boarding",
+    link: "/facility/dashboard/services/boarding/check-in",
+    meta: { petName: "Luna" },
+  },
+  {
+    id: "fn-board-3",
+    type: "booking_new",
+    title: "New boarding request",
+    message: "Charlie (Labrador) — 5 nights starting Mar 30",
+    read: false,
+    timestamp: ago(30),
+    facilityId: 11,
+    category: "boarding",
+    link: "/facility/dashboard/bookings",
+    meta: { petName: "Charlie" },
+  },
+  // --- Daycare ---
+  {
+    id: "fn-day-1",
+    type: "checkin",
+    title: "Daycare check-in",
+    message: "Bella checked in for full-day daycare",
+    read: false,
+    timestamp: ago(8),
+    facilityId: 11,
+    category: "daycare",
+    link: "/facility/dashboard/services/daycare",
+    meta: { petName: "Bella" },
+  },
+  {
+    id: "fn-day-2",
+    type: "attendance_alert",
+    title: "Daycare at 90% capacity",
+    message: "18 of 20 spots filled for today — consider waitlist",
+    read: false,
+    timestamp: ago(45),
+    facilityId: 11,
+    category: "daycare",
+    link: "/facility/dashboard/services/daycare",
+  },
+  {
+    id: "fn-day-3",
+    type: "incident",
+    title: "Daycare incident report",
+    message: "Minor scrape reported for Rocky during group play",
+    read: true,
+    timestamp: ago(120),
+    facilityId: 11,
+    category: "daycare",
+    link: "/facility/dashboard/incidents",
+    meta: { petName: "Rocky" },
+  },
+  // --- Grooming ---
+  {
+    id: "fn-groom-1",
+    type: "appointment_confirmed",
+    title: "Grooming confirmed",
+    message: "Daisy — Full groom at 11:00 AM with Sarah",
+    read: false,
+    timestamp: ago(20),
+    facilityId: 11,
+    category: "grooming",
+    link: "/facility/dashboard/services/grooming",
+    meta: { petName: "Daisy" },
+  },
+  {
+    id: "fn-groom-2",
+    type: "appointment_completed",
+    title: "Grooming completed",
+    message: "Buddy's bath & trim done — ready for pickup",
+    read: true,
+    timestamp: ago(90),
+    facilityId: 11,
+    category: "grooming",
+    link: "/facility/dashboard/services/grooming/check-out",
+    meta: { petName: "Buddy" },
+  },
+  // --- Training ---
+  {
+    id: "fn-train-1",
+    type: "session_update",
+    title: "Training session note",
+    message: "Rex completed Level 2 obedience — passed all markers",
+    read: false,
+    timestamp: ago(55),
+    facilityId: 11,
+    category: "training",
+    link: "/facility/dashboard/services/training",
+    meta: { petName: "Rex" },
+  },
+  {
+    id: "fn-train-2",
+    type: "booking_new",
+    title: "Training enrollment",
+    message: "Coco enrolled in Puppy Basics (4-week series)",
+    read: true,
+    timestamp: ago(180),
+    facilityId: 11,
+    category: "training",
+    link: "/facility/dashboard/services/training",
+    meta: { petName: "Coco" },
+  },
+  // --- Forms ---
+  {
+    id: "fn-form-1",
+    type: "form_submission_new",
+    title: "New form submission",
+    message: "New Client Intake — Emily Chen",
+    read: false,
+    timestamp: ago(12),
+    facilityId: 11,
+    category: "forms",
+    link: "/facility/dashboard/forms/submissions",
+    submissionId: "sub-1",
+    meta: {
+      formName: "New Client Intake",
+      formId: "form-1",
+      submissionId: "sub-1",
+      hasRedFlag: false,
+      hasFiles: false,
+    },
+  },
+  {
+    id: "fn-form-2",
+    type: "form_submission_red_flag",
+    title: "Red flag on submission",
+    message: "Boarding Intake — aggressive behavior reported for Duke",
+    read: false,
+    timestamp: ago(25),
+    facilityId: 11,
+    category: "forms",
+    link: "/facility/dashboard/forms/submissions",
+    submissionId: "sub-2",
+    meta: {
+      formName: "Boarding Intake",
+      formId: "form-2",
+      submissionId: "sub-2",
+      hasRedFlag: true,
+      hasFiles: false,
+    },
+  },
+  {
+    id: "fn-form-3",
+    type: "form_submission_has_files",
+    title: "Submission with attachments",
+    message: "Vaccination records uploaded for Milo",
+    read: true,
+    timestamp: ago(200),
+    facilityId: 11,
+    category: "forms",
+    link: "/facility/dashboard/forms/submissions",
+    submissionId: "sub-3",
+    meta: {
+      formName: "Pet Profile",
+      formId: "form-3",
+      submissionId: "sub-3",
+      hasRedFlag: false,
+      hasFiles: true,
+    },
+  },
+  // --- YipyyGo (legacy — maps to forms category) ---
   {
     id: "fn-yipyygo-3",
     type: "yipyygo_submitted",
     title: "YipyyGo form submitted",
     message: "Max – Booking #3 · Arrival 2024-03-10 08:00",
     read: false,
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    timestamp: ago(130),
     facilityId: 11,
+    category: "forms",
     bookingId: 3,
+    link: "/facility/dashboard/bookings/3#yipyygo",
     meta: { petName: "Max", arrivalTime: "2024-03-10 08:00", bookingRef: "#3" },
   },
-  {
-    id: "fn-yipyygo-4",
-    type: "yipyygo_submitted",
-    title: "YipyyGo form submitted",
-    message: "Luna – Booking #4 · Arrival 2024-03-13 07:30",
-    read: false,
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    facilityId: 11,
-    bookingId: 4,
-    meta: {
-      petName: "Luna",
-      arrivalTime: "2024-03-13 07:30",
-      bookingRef: "#4",
-    },
-  },
 ];
+
 const listeners = new Set<() => void>();
 
 function notifyListeners() {
@@ -115,8 +313,7 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
   arrivalTime?: string;
   sendEmail?: boolean;
 }): void {
-  const { facilityId, bookingId, petName, clientName, arrivalTime, sendEmail } =
-    params;
+  const { facilityId, bookingId, petName, arrivalTime, sendEmail } = params;
   const bookingRef = `#${bookingId}`;
   addFacilityNotification({
     type: "yipyygo_submitted",
@@ -124,17 +321,12 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
     message: `${petName} – Booking ${bookingRef}${arrivalTime ? ` · Arrival ${arrivalTime}` : ""}`,
     facilityId,
     bookingId,
+    category: "forms",
+    link: `/facility/dashboard/bookings/${bookingId}#yipyygo`,
     meta: { petName, arrivalTime, bookingRef },
   });
   if (sendEmail) {
-    // TODO: integrate with email service; for now just log
-    console.log("[YipyyGo] Staff email notification (not sent):", {
-      facilityId,
-      bookingId,
-      petName,
-      clientName,
-      arrivalTime,
-    });
+    console.log("[YipyyGo] Staff email notification (not sent):", params);
   }
 }
 
@@ -160,6 +352,8 @@ export function notifyStaffOnFormSubmission(params: {
       message: `${formName} – new submission`,
       facilityId,
       submissionId,
+      category: "forms",
+      link: `/facility/dashboard/forms/submissions/${submissionId}`,
       meta: { ...baseMeta },
     });
   }
@@ -170,6 +364,8 @@ export function notifyStaffOnFormSubmission(params: {
       message: `${formName} – review submission`,
       facilityId,
       submissionId,
+      category: "forms",
+      link: `/facility/dashboard/forms/submissions/${submissionId}`,
       meta: { ...baseMeta, hasRedFlag: true },
     });
   }
@@ -180,6 +376,8 @@ export function notifyStaffOnFormSubmission(params: {
       message: `${formName} – attachment(s) to review`,
       facilityId,
       submissionId,
+      category: "forms",
+      link: `/facility/dashboard/forms/submissions/${submissionId}`,
       meta: { ...baseMeta, hasFiles: true },
     });
   }
