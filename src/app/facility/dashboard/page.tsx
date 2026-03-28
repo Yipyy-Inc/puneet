@@ -5,7 +5,6 @@ import { facilities } from "@/data/facilities";
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
-import { YipyyGoPendingWidget } from "@/components/yipyygo/YipyyGoPendingWidget";
 import { CustomServiceDashboardSection } from "@/components/facility/CustomServiceDashboardSection";
 import { useCustomServices } from "@/hooks/use-custom-services";
 
@@ -21,9 +20,6 @@ export default function FacilityDashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
-      {/* YipyyGo Pending (when facility has pending forms) */}
-      <YipyyGoPendingWidget facilityId={facilityId} maxItems={5} />
-
       {/* Daycare & Boarding Check-In/Out Section */}
       <CheckInOutSection facilityId={facilityId} />
 
