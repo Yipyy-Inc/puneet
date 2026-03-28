@@ -20,7 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CreateFormModal } from "@/components/forms/CreateFormModal";
-import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import {
   getFormsByFacility,
   duplicateForm,
@@ -353,8 +352,19 @@ function FormCard({
         </CardContent>
       </Card>
 
-      {/* Permissions & Access overview (Section 8) */}
-      <FormPermissionsPanel />
+      {/* Permissions link — moved to Settings */}
+      <div className="bg-muted/50 flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
+        <Shield className="text-muted-foreground size-4" />
+        <span className="text-muted-foreground">
+          Manage form permissions in{" "}
+          <Link
+            href="/facility/dashboard/settings?section=form-permissions"
+            className="text-primary hover:underline"
+          >
+            Settings → Forms &amp; Intake → Permissions
+          </Link>
+        </span>
+      </div>
 
       <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
         <DialogContent className="max-w-lg">

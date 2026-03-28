@@ -60,7 +60,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/services/daycare/settings",
+    href: "/facility/dashboard/settings?section=daycare",
     icon: Settings,
   },
 ];

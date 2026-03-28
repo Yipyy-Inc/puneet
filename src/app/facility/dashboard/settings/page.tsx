@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
 import type {
   ServiceDateBlock,
@@ -15,9 +16,10 @@ import { MobileAppSettings } from "@/components/additional-features/MobileAppSet
 import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSettings";
+import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
-import { Shield, Tag } from "lucide-react";
+import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,24 +27,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Building2,
-  DollarSign,
   Bell,
-  Plug,
-  CreditCard,
-  History,
+  DollarSign,
   MapPin,
   Mail,
   Phone,
   Zap,
   Download,
-  Smartphone,
   CalendarX,
   Clock,
   Plus,
   Timer,
   Trash2,
-  FileText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -2762,6 +2758,18 @@ function NotificationSettingsCard() {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialSection = searchParams.get("section") ?? "business";
+  const [activeSection, setActiveSection] = useState(initialSection);
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section);
+    router.replace(`/facility/dashboard/settings?section=${section}`, {
+      scroll: false,
+    });
+  };
+
   const { integrations, updateIntegrations, addons, updateAddons } =
     useSettings();
 
@@ -2836,717 +2844,825 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Settings Tabs */}
-      <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-10 lg:flex lg:flex-wrap">
-          <TabsTrigger value="business">
-            <Building2 className="mr-2 size-4" />
-            Business
-          </TabsTrigger>
-          <TabsTrigger value="financial">
-            <DollarSign className="mr-2 size-4" />
-            Financial
-          </TabsTrigger>
+      {/* Sidebar + Content layout */}
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <SettingsSidebar
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+        />
 
-          <TabsTrigger value="notifications">
-            <Bell className="mr-2 size-4" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="integrations">
-            <Plug className="mr-2 size-4" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger value="mobile-app">
-            <Smartphone className="mr-2 size-4" />
-            Mobile App
-          </TabsTrigger>
-          <TabsTrigger value="subscription">
-            <CreditCard className="mr-2 size-4" />
-            Subscription
-          </TabsTrigger>
-          <TabsTrigger value="audit">
-            <History className="mr-2 size-4" />
-            Audit Log
-          </TabsTrigger>
-          <TabsTrigger value="yipyygo">
-            <FileText className="mr-2 size-4" />
-            YipyyGo
-          </TabsTrigger>
-          <TabsTrigger value="form-requirements">
-            <Shield className="mr-2 size-4" />
-            Forms
-          </TabsTrigger>
-          <TabsTrigger value="tags-notes">
-            <Tag className="mr-2 size-4" />
-            Tags &amp; Notes
-          </TabsTrigger>
-        </TabsList>
+        <div className="min-w-0 flex-1 space-y-6">
+          {/* Business Configuration */}
+          {activeSection === "business" && (
+            <div className="space-y-6">
+              <BusinessProfileCard />
 
-        {/* Business Configuration Tab */}
-        <TabsContent value="business" className="space-y-6">
-          <BusinessProfileCard />
+              <BusinessHoursCard />
 
-          <BusinessHoursCard />
+              <ServiceDayBlockingCard />
+              <OneDayScheduleOverrideCard />
+              <DropOffPickUpOverrideCard />
 
-          <ServiceDayBlockingCard />
-          <OneDayScheduleOverrideCard />
-          <DropOffPickUpOverrideCard />
-
-          {/* Locations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="size-5" />
-                Locations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {locations.map((location) => (
-                <div key={location.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 font-semibold">
-                        {location.name}
-                        {location.isActive && (
-                          <Badge variant="default">Active</Badge>
-                        )}
-                      </div>
-                      <div className="text-muted-foreground mt-1 text-sm">
-                        {location.address}
-                      </div>
-                      <div className="mt-2 text-sm">
-                        Phone: {location.phone} • Capacity: {location.capacity}{" "}
-                        pets
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        alert(
-                          `Edit location "${location.name}" - Opens location editor`,
-                        );
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <BookingRulesCard />
-
-          <FacilityBookingFlowCard />
-
-          {/* Vaccination Rules */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Vaccination Requirements</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {vaccinationRules.map((vax) => (
-                <div key={vax.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold">{vax.vaccineName}</div>
-                      <div className="text-muted-foreground mt-1 text-sm">
-                        Expiry warning: {vax.expiryWarningDays} days before
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {vax.applicableServices.map((service, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-xs capitalize"
-                          >
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <EvaluationSettingsCard />
-
-          <ReportCardSettingsCard />
-        </TabsContent>
-
-        {/* Financial Settings Tab */}
-        <TabsContent value="financial" className="space-y-6">
-          {/* Payment Gateways */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Gateways</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {paymentGateways.map((gateway, idx) => (
-                <div key={idx} className="space-y-3 rounded-lg border p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="font-semibold capitalize">
-                        {gateway.provider}
-                      </div>
-                      {gateway.isEnabled && (
-                        <Badge variant="default">Active</Badge>
-                      )}
-                      {gateway.testMode && (
-                        <Badge variant="secondary">Test Mode</Badge>
-                      )}
-                    </div>
-                    <Switch checked={gateway.isEnabled} />
-                  </div>
-                  {gateway.isEnabled && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs">API Key</Label>
-                        <Input
-                          type="password"
-                          value={gateway.apiKey}
-                          readOnly
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Webhook Secret</Label>
-                        <Input
-                          type="password"
-                          value={gateway.webhookSecret}
-                          readOnly
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Tax Rates */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tax Rates</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {taxRates.map((tax) => (
-                <div key={tax.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{tax.name}</span>
-                        {tax.isDefault && (
-                          <Badge variant="default">Default</Badge>
-                        )}
-                      </div>
-                      <div className="mt-2 text-2xl font-bold">{tax.rate}%</div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {tax.applicableServices.map((service, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-xs capitalize"
-                          >
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        alert(
-                          `Edit tax rate "${tax.name}" - Opens tax rate editor`,
-                        );
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Currency Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Currency Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Currency</Label>
-                  <Select value={currencySettings.currency}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD - US Dollar</SelectItem>
-                      <SelectItem value="EUR">EUR - Euro</SelectItem>
-                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                      <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Currency Symbol</Label>
-                  <Input value={currencySettings.symbol} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>Decimal Places</Label>
-                  <Input
-                    type="number"
-                    value={currencySettings.decimalPlaces}
-                    readOnly
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Format Preview</Label>
-                  <div className="bg-muted rounded-sm border p-2 font-mono">
-                    {currencySettings.symbol}1
-                    {currencySettings.thousandSeparator}234
-                    {currencySettings.decimalSeparator}56
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Financial Data Lock-down */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Data Lock-down</CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Prevent editing of financial records after a certain period
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <div className="font-medium">Enable Financial Lock-down</div>
-                  <div className="text-muted-foreground text-sm">
-                    Lock financial data after end of month
-                  </div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="space-y-2">
-                <Label>Lock Period (days after month end)</Label>
-                <Input type="number" defaultValue={7} />
-                <p className="text-muted-foreground text-xs">
-                  Financial records will be locked 7 days after the month ends
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <NotificationSettingsCard />
-
-          {/* Template Editor */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Template Editor</CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Customize email and SMS templates (linked to Communications →
-                Templates)
-              </p>
-            </CardHeader>
-            <CardContent>
-              <Link href="/facility/dashboard/communications">
-                <Button variant="outline">Open Template Editor</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Integrations Tab */}
-        <TabsContent value="integrations" className="space-y-6">
-          {/* Communication Integrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="size-5" />
-                Communication Integrations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations
-                .filter((i) => i.category === "communication")
-                .map((integration) => (
-                  <div
-                    key={integration.id}
-                    className="space-y-3 rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="font-semibold">{integration.name}</div>
-                        {integration.isEnabled && (
-                          <Badge variant="default">Connected</Badge>
-                        )}
-                      </div>
-                      <Switch
-                        checked={integration.isEnabled}
-                        onCheckedChange={(checked) =>
-                          updateIntegrations(
-                            integrations.map((i) =>
-                              i.id === integration.id
-                                ? { ...i, isEnabled: checked }
-                                : i,
-                            ),
-                          )
-                        }
-                      />
-                    </div>
-                    {integration.isEnabled && (
-                      <div className="text-muted-foreground text-sm">
-                        Connected and operational
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          {/* Phone Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Phone className="size-5" />
-                VOIP & Phone System
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations
-                .filter((i) => i.category === "phone")
-                .map((integration) => (
-                  <div
-                    key={integration.id}
-                    className="space-y-3 rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="font-semibold">{integration.name}</div>
-                        {integration.isEnabled && (
-                          <Badge variant="default">Connected</Badge>
-                        )}
-                      </div>
-                      <Switch checked={integration.isEnabled} />
-                    </div>
-                    {integration.isEnabled && (
-                      <div className="space-y-2">
-                        <div className="text-sm">
-                          <strong>Phone Number:</strong>{" "}
-                          {String(integration.config.phoneNumber)}
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <strong>Call Recording:</strong>
-                          {integration.config.recordCalls ? (
-                            <Badge variant="default" className="text-xs">
-                              Enabled
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">
-                              Disabled
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          {/* Accounting Integration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="size-5" />
-                Accounting Integration
-              </CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                QuickBooks Online integration (Phase 2)
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations
-                .filter((i) => i.category === "accounting")
-                .map((integration) => (
-                  <div
-                    key={integration.id}
-                    className="space-y-3 rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="font-semibold">{integration.name}</div>
-                        {integration.isEnabled ? (
-                          <Badge variant="default">Connected</Badge>
-                        ) : (
-                          <Badge variant="secondary">Not Connected</Badge>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          updateIntegrations(
-                            integrations.map((i) =>
-                              i.id === integration.id
-                                ? { ...i, isEnabled: !i.isEnabled }
-                                : i,
-                            ),
-                          );
-                          alert(
-                            `${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`,
-                          );
-                        }}
-                      >
-                        {integration.isEnabled ? "Disconnect" : "Connect"}
-                      </Button>
-                    </div>
-                    <div className="text-muted-foreground text-sm">
-                      Sync frequency: Daily
-                    </div>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-
-          {/* AI Tools */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="size-5" />
-                AI Tools
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {integrations
-                .filter((i) => i.category === "ai")
-                .map((integration) => (
-                  <div
-                    key={integration.id}
-                    className="space-y-3 rounded-lg border p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="font-semibold">{integration.name}</div>
-                        {integration.isEnabled && (
-                          <Badge variant="default">Active</Badge>
-                        )}
-                      </div>
-                      <Switch checked={integration.isEnabled} />
-                    </div>
-                    {integration.isEnabled && (
-                      <div className="space-y-2">
-                        <div className="text-sm">
-                          <strong>Model:</strong>{" "}
-                          {String(integration.config.model)}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm font-medium">
-                            Enabled Features:
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(integration.config.features).map(
-                              ([feature, enabled]) =>
-                                enabled ? (
-                                  <Badge
-                                    key={feature}
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    {feature.replace(/([A-Z])/g, " $1").trim()}
-                                  </Badge>
-                                ) : null,
+              {/* Locations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="size-5" />
+                    Locations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {locations.map((location) => (
+                    <div key={location.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 font-semibold">
+                            {location.name}
+                            {location.isActive && (
+                              <Badge variant="default">Active</Badge>
                             )}
                           </div>
+                          <div className="text-muted-foreground mt-1 text-sm">
+                            {location.address}
+                          </div>
+                          <div className="mt-2 text-sm">
+                            Phone: {location.phone} • Capacity:{" "}
+                            {location.capacity} pets
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            alert(
+                              `Edit location "${location.name}" - Opens location editor`,
+                            );
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <BookingRulesCard />
+
+              <FacilityBookingFlowCard />
+
+              {/* Vaccination Rules */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Vaccination Requirements</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {vaccinationRules.map((vax) => (
+                    <div key={vax.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold">{vax.vaccineName}</div>
+                          <div className="text-muted-foreground mt-1 text-sm">
+                            Expiry warning: {vax.expiryWarningDays} days before
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {vax.applicableServices.map((service, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
+                                {service}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
-        {/* Mobile App Tab */}
-        <TabsContent value="mobile-app" className="space-y-6">
-          <MobileAppSettings />
-        </TabsContent>
+              <EvaluationSettingsCard />
 
-        {/* Subscription Tab */}
-        <TabsContent value="subscription" className="space-y-6">
-          {/* Current Plan */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Subscription</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start justify-between rounded-lg bg-linear-to-br from-blue-50 to-purple-50 p-6">
-                <div>
-                  <div className="text-2xl font-bold">
-                    {subscription.planName}
-                  </div>
-                  <div className="text-muted-foreground mt-1 capitalize">
-                    {subscription.billingCycle} billing
-                  </div>
-                  <div className="mt-4">
-                    <Badge
-                      variant={
-                        subscription.status === "active"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="capitalize"
-                    >
-                      {subscription.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold">
-                    ${subscription.price}
-                  </div>
-                  <div className="text-muted-foreground text-sm">
-                    per{" "}
-                    {subscription.billingCycle === "monthly" ? "month" : "year"}
-                  </div>
-                  <div className="text-muted-foreground mt-2 text-xs">
-                    Next billing:{" "}
-                    {new Date(
-                      subscription.nextBillingDate,
-                    ).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    alert(
-                      "Opens plan selection modal - Choose from Starter, Professional, and Enterprise plans",
-                    );
-                  }}
-                >
-                  Change Plan
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    alert(
-                      "Opens billing history - Shows all past invoices and payment history",
-                    );
-                  }}
-                >
-                  Billing History
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              <ReportCardSettingsCard />
+            </div>
+          )}
 
-          {/* Module Add-ons */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Module Add-ons</CardTitle>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Enable additional modules to extend functionality
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {addons.map((addon) => (
-                <div key={addon.id} className="rounded-lg border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{addon.name}</span>
-                        {addon.isIncludedInPlan && (
-                          <Badge variant="default">Included in Plan</Badge>
-                        )}
-                        {addon.isEnabled && !addon.isIncludedInPlan && (
-                          <Badge variant="secondary">Active Add-on</Badge>
-                        )}
+          {/* Financial Settings */}
+          {activeSection === "financial" && (
+            <div className="space-y-6">
+              {/* Payment Gateways */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Gateways</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {paymentGateways.map((gateway, idx) => (
+                    <div key={idx} className="space-y-3 rounded-lg border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="font-semibold capitalize">
+                            {gateway.provider}
+                          </div>
+                          {gateway.isEnabled && (
+                            <Badge variant="default">Active</Badge>
+                          )}
+                          {gateway.testMode && (
+                            <Badge variant="secondary">Test Mode</Badge>
+                          )}
+                        </div>
+                        <Switch checked={gateway.isEnabled} />
                       </div>
-                      <div className="text-muted-foreground mt-1 text-sm">
-                        {addon.description}
-                      </div>
-                      {!addon.isIncludedInPlan && (
-                        <div className="mt-2 text-sm font-medium">
-                          ${addon.monthlyPrice}/month
+                      {gateway.isEnabled && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs">API Key</Label>
+                            <Input
+                              type="password"
+                              value={gateway.apiKey}
+                              readOnly
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Webhook Secret</Label>
+                            <Input
+                              type="password"
+                              value={gateway.webhookSecret}
+                              readOnly
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
-                    <Switch
-                      checked={addon.isEnabled}
-                      disabled={addon.isIncludedInPlan}
-                      onCheckedChange={(checked) =>
-                        updateAddons(
-                          addons.map((a) =>
-                            a.id === addon.id
-                              ? { ...a, isEnabled: checked }
-                              : a,
-                          ),
-                        )
-                      }
-                    />
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Tax Rates */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tax Rates</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {taxRates.map((tax) => (
+                    <div key={tax.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{tax.name}</span>
+                            {tax.isDefault && (
+                              <Badge variant="default">Default</Badge>
+                            )}
+                          </div>
+                          <div className="mt-2 text-2xl font-bold">
+                            {tax.rate}%
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {tax.applicableServices.map((service, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="text-xs capitalize"
+                              >
+                                {service}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            alert(
+                              `Edit tax rate "${tax.name}" - Opens tax rate editor`,
+                            );
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Currency Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Currency Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Currency</Label>
+                      <Select value={currencySettings.currency}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">
+                            GBP - British Pound
+                          </SelectItem>
+                          <SelectItem value="CAD">
+                            CAD - Canadian Dollar
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency Symbol</Label>
+                      <Input value={currencySettings.symbol} readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Decimal Places</Label>
+                      <Input
+                        type="number"
+                        value={currencySettings.decimalPlaces}
+                        readOnly
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Format Preview</Label>
+                      <div className="bg-muted rounded-sm border p-2 font-mono">
+                        {currencySettings.symbol}1
+                        {currencySettings.thousandSeparator}234
+                        {currencySettings.decimalSeparator}56
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
 
-        {/* Audit Log Tab */}
-        <TabsContent value="audit" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Audit Log</CardTitle>
+              {/* Financial Data Lock-down */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Data Lock-down</CardTitle>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    Complete history of all setting changes
+                    Prevent editing of financial records after a certain period
                   </p>
-                </div>
-                <Button variant="outline">
-                  <Download className="mr-2 size-4" />
-                  Export Log
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <DataTable
-                columns={auditColumns}
-                data={auditLog}
-                searchColumn="settingName"
-                searchPlaceholder="Search audit log..."
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <div className="font-medium">
+                        Enable Financial Lock-down
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        Lock financial data after end of month
+                      </div>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Lock Period (days after month end)</Label>
+                    <Input type="number" defaultValue={7} />
+                    <p className="text-muted-foreground text-xs">
+                      Financial records will be locked 7 days after the month
+                      ends
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-        {/* YipyyGo Tab */}
-        <TabsContent value="yipyygo" className="space-y-6">
-          <YipyyGoSettingsWrapper />
-        </TabsContent>
+          {/* Notifications */}
+          {activeSection === "notifications" && (
+            <div className="space-y-6">
+              <NotificationSettingsCard />
 
-        {/* Form Requirements & Notifications Tab */}
-        <TabsContent value="form-requirements" className="space-y-6">
-          <FormRequirementsSettings />
-          <FormNotificationSettings />
-        </TabsContent>
+              {/* Template Editor */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notification Template Editor</CardTitle>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Customize email and SMS templates (linked to Communications
+                    → Templates)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/facility/dashboard/communications">
+                    <Button variant="outline">Open Template Editor</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-        <TabsContent value="tags-notes" className="space-y-6">
-          <TagNotesSettings />
-        </TabsContent>
-      </Tabs>
+          {/* Integrations */}
+          {activeSection === "integrations" && (
+            <div className="space-y-6">
+              {/* Communication Integrations */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="size-5" />
+                    Communication Integrations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations
+                    .filter((i) => i.category === "communication")
+                    .map((integration) => (
+                      <div
+                        key={integration.id}
+                        className="space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="font-semibold">
+                              {integration.name}
+                            </div>
+                            {integration.isEnabled && (
+                              <Badge variant="default">Connected</Badge>
+                            )}
+                          </div>
+                          <Switch
+                            checked={integration.isEnabled}
+                            onCheckedChange={(checked) =>
+                              updateIntegrations(
+                                integrations.map((i) =>
+                                  i.id === integration.id
+                                    ? { ...i, isEnabled: checked }
+                                    : i,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        {integration.isEnabled && (
+                          <div className="text-muted-foreground text-sm">
+                            Connected and operational
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+
+              {/* Phone Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="size-5" />
+                    VOIP & Phone System
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations
+                    .filter((i) => i.category === "phone")
+                    .map((integration) => (
+                      <div
+                        key={integration.id}
+                        className="space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="font-semibold">
+                              {integration.name}
+                            </div>
+                            {integration.isEnabled && (
+                              <Badge variant="default">Connected</Badge>
+                            )}
+                          </div>
+                          <Switch checked={integration.isEnabled} />
+                        </div>
+                        {integration.isEnabled && (
+                          <div className="space-y-2">
+                            <div className="text-sm">
+                              <strong>Phone Number:</strong>{" "}
+                              {String(integration.config.phoneNumber)}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <strong>Call Recording:</strong>
+                              {integration.config.recordCalls ? (
+                                <Badge variant="default" className="text-xs">
+                                  Enabled
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  Disabled
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+
+              {/* Accounting Integration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="size-5" />
+                    Accounting Integration
+                  </CardTitle>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    QuickBooks Online integration (Phase 2)
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations
+                    .filter((i) => i.category === "accounting")
+                    .map((integration) => (
+                      <div
+                        key={integration.id}
+                        className="space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="font-semibold">
+                              {integration.name}
+                            </div>
+                            {integration.isEnabled ? (
+                              <Badge variant="default">Connected</Badge>
+                            ) : (
+                              <Badge variant="secondary">Not Connected</Badge>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              updateIntegrations(
+                                integrations.map((i) =>
+                                  i.id === integration.id
+                                    ? { ...i, isEnabled: !i.isEnabled }
+                                    : i,
+                                ),
+                              );
+                              alert(
+                                `${integration.name} ${integration.isEnabled ? "disconnected" : "connected"} successfully!`,
+                              );
+                            }}
+                          >
+                            {integration.isEnabled ? "Disconnect" : "Connect"}
+                          </Button>
+                        </div>
+                        <div className="text-muted-foreground text-sm">
+                          Sync frequency: Daily
+                        </div>
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+
+              {/* AI Tools */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="size-5" />
+                    AI Tools
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {integrations
+                    .filter((i) => i.category === "ai")
+                    .map((integration) => (
+                      <div
+                        key={integration.id}
+                        className="space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="font-semibold">
+                              {integration.name}
+                            </div>
+                            {integration.isEnabled && (
+                              <Badge variant="default">Active</Badge>
+                            )}
+                          </div>
+                          <Switch checked={integration.isEnabled} />
+                        </div>
+                        {integration.isEnabled && (
+                          <div className="space-y-2">
+                            <div className="text-sm">
+                              <strong>Model:</strong>{" "}
+                              {String(integration.config.model)}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">
+                                Enabled Features:
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(
+                                  integration.config.features,
+                                ).map(([feature, enabled]) =>
+                                  enabled ? (
+                                    <Badge
+                                      key={feature}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {feature
+                                        .replace(/([A-Z])/g, " $1")
+                                        .trim()}
+                                    </Badge>
+                                  ) : null,
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Mobile App */}
+          {activeSection === "mobile-app" && (
+            <div className="space-y-6">
+              <MobileAppSettings />
+            </div>
+          )}
+
+          {/* Subscription */}
+          {activeSection === "subscription" && (
+            <div className="space-y-6">
+              {/* Current Plan */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Subscription</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start justify-between rounded-lg bg-linear-to-br from-blue-50 to-purple-50 p-6">
+                    <div>
+                      <div className="text-2xl font-bold">
+                        {subscription.planName}
+                      </div>
+                      <div className="text-muted-foreground mt-1 capitalize">
+                        {subscription.billingCycle} billing
+                      </div>
+                      <div className="mt-4">
+                        <Badge
+                          variant={
+                            subscription.status === "active"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="capitalize"
+                        >
+                          {subscription.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-4xl font-bold">
+                        ${subscription.price}
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        per{" "}
+                        {subscription.billingCycle === "monthly"
+                          ? "month"
+                          : "year"}
+                      </div>
+                      <div className="text-muted-foreground mt-2 text-xs">
+                        Next billing:{" "}
+                        {new Date(
+                          subscription.nextBillingDate,
+                        ).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        alert(
+                          "Opens plan selection modal - Choose from Starter, Professional, and Enterprise plans",
+                        );
+                      }}
+                    >
+                      Change Plan
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        alert(
+                          "Opens billing history - Shows all past invoices and payment history",
+                        );
+                      }}
+                    >
+                      Billing History
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Module Add-ons */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Module Add-ons</CardTitle>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Enable additional modules to extend functionality
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {addons.map((addon) => (
+                    <div key={addon.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{addon.name}</span>
+                            {addon.isIncludedInPlan && (
+                              <Badge variant="default">Included in Plan</Badge>
+                            )}
+                            {addon.isEnabled && !addon.isIncludedInPlan && (
+                              <Badge variant="secondary">Active Add-on</Badge>
+                            )}
+                          </div>
+                          <div className="text-muted-foreground mt-1 text-sm">
+                            {addon.description}
+                          </div>
+                          {!addon.isIncludedInPlan && (
+                            <div className="mt-2 text-sm font-medium">
+                              ${addon.monthlyPrice}/month
+                            </div>
+                          )}
+                        </div>
+                        <Switch
+                          checked={addon.isEnabled}
+                          disabled={addon.isIncludedInPlan}
+                          onCheckedChange={(checked) =>
+                            updateAddons(
+                              addons.map((a) =>
+                                a.id === addon.id
+                                  ? { ...a, isEnabled: checked }
+                                  : a,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Audit Log */}
+          {activeSection === "audit" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Audit Log</CardTitle>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        Complete history of all setting changes
+                      </p>
+                    </div>
+                    <Button variant="outline">
+                      <Download className="mr-2 size-4" />
+                      Export Log
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <DataTable
+                    columns={auditColumns}
+                    data={auditLog}
+                    searchColumn="settingName"
+                    searchPlaceholder="Search audit log..."
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* YipyyGo */}
+          {activeSection === "yipyygo" && (
+            <div className="space-y-6">
+              <YipyyGoSettingsWrapper />
+            </div>
+          )}
+
+          {/* Form Requirements */}
+          {activeSection === "form-requirements" && (
+            <div className="space-y-6">
+              <FormRequirementsSettings />
+            </div>
+          )}
+
+          {/* Form Permissions */}
+          {activeSection === "form-permissions" && (
+            <div className="space-y-6">
+              <FormPermissionsPanel />
+            </div>
+          )}
+
+          {/* Form Notifications */}
+          {activeSection === "form-notifications" && (
+            <div className="space-y-6">
+              <FormNotificationSettings />
+            </div>
+          )}
+
+          {/* Tags & Notes */}
+          {activeSection === "tags-notes" && (
+            <div className="space-y-6">
+              <TagNotesSettings />
+            </div>
+          )}
+
+          {/* Service settings placeholder sections */}
+          {activeSection === "boarding" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Boarding Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">
+                    Boarding module configuration — pricing, evaluation, media,
+                    and basic info.
+                  </p>
+                  <Link
+                    href="/facility/dashboard/services/boarding"
+                    className="text-primary mt-2 inline-block text-sm hover:underline"
+                  >
+                    Go to Boarding Module →
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeSection === "daycare" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daycare Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">
+                    Daycare module configuration — pricing, evaluation, media,
+                    and basic info.
+                  </p>
+                  <Link
+                    href="/facility/dashboard/services/daycare"
+                    className="text-primary mt-2 inline-block text-sm hover:underline"
+                  >
+                    Go to Daycare Module →
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeSection === "grooming" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Grooming Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">
+                    Grooming module configuration — scheduling, pricing,
+                    add-ons, stylists, and policies.
+                  </p>
+                  <Link
+                    href="/facility/dashboard/services/grooming"
+                    className="text-primary mt-2 inline-block text-sm hover:underline"
+                  >
+                    Go to Grooming Module →
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeSection === "training" && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Training Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">
+                    Training module configuration — courses, session types, and
+                    trainer management.
+                  </p>
+                  <Link
+                    href="/facility/dashboard/services/training"
+                    className="text-primary mt-2 inline-block text-sm hover:underline"
+                  >
+                    Go to Training Module →
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

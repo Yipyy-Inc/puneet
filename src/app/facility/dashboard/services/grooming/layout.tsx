@@ -53,7 +53,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/services/grooming/settings",
+    href: "/facility/dashboard/settings?section=grooming",
     icon: Settings,
   },
 ];
