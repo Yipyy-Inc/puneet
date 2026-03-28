@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { TagList } from "@/components/shared/TagList";
 import { getTagsForEntity } from "@/data/tags-notes";
 import type { KennelStatus } from "@/types/base";
+import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
 
 interface Kennel {
   id: string;
@@ -50,6 +51,9 @@ interface KennelCalendarViewProps {
     checkIn: string,
     checkOut: string,
   ) => void;
+  customServicesMap?: Map<number, CustomServiceCheckIn[]>;
+  moduleColorMap?: Map<string, string>;
+  showCustomServices?: boolean;
 }
 
 type TimeFrame = "1week" | "2weeks";
@@ -59,6 +63,9 @@ export function KennelCalendarView({
   onKennelClick,
   onAddBooking,
   onUpdateBooking,
+  customServicesMap,
+  moduleColorMap,
+  showCustomServices,
 }: KennelCalendarViewProps) {
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
@@ -68,6 +75,15 @@ export function KennelCalendarView({
   });
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("2weeks");
   const [filterType, setFilterType] = useState<string>("all");
+
+  // Format ISO time string to readable format
+  const formatServiceTime = (isoStr: string): string => {
+    return new Date(isoStr).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
 
   // Drag state for resizing
   const [dragging, setDragging] = useState<{
@@ -575,6 +591,31 @@ export function KennelCalendarView({
                               maxVisible={2}
                             />
                           )}
+
+                          {/* Service Indicators */}
+                          {showCustomServices &&
+                            booking.petId &&
+                            (() => {
+                              const services =
+                                customServicesMap?.get(booking.petId!) ?? [];
+                              if (!services.length) return null;
+                              return (
+                                <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                                  {services.slice(0, 3).map((s) => (
+                                    <div
+                                      key={s.id}
+                                      title={`${s.moduleName} @ ${formatServiceTime(s.checkInTime)}`}
+                                      className="size-2 shrink-0 rounded-full ring-1 ring-white/60"
+                                      style={{
+                                        backgroundColor:
+                                          moduleColorMap?.get(s.moduleId) ??
+                                          "#6366f1",
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              );
+                            })()}
 
                           {/* Right drag handle */}
                           <div

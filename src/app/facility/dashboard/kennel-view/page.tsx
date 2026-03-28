@@ -70,8 +70,13 @@ import {
 } from "./daycare-calendar";
 import { TagList } from "@/components/shared/TagList";
 import { hasCriticalTags, getNoteCount } from "@/data/tags-notes";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Sparkles } from "lucide-react";
 import type { KennelStatus } from "@/types/base";
+import { Switch } from "@/components/ui/switch";
+import { customServiceCheckIns } from "@/data/custom-service-checkins";
+import type { CustomServiceCheckIn } from "@/data/custom-service-checkins";
+import { COLOR_HEX_MAP } from "@/data/custom-services";
+import { useCustomServices } from "@/hooks/use-custom-services";
 
 interface Kennel {
   id: string;
@@ -86,8 +91,6 @@ interface Kennel {
   checkIn?: string;
   checkOut?: string;
   dailyRate: number;
-  /** Custom service bookings for this pet/kennel (e.g., "Pool @ 2:00 PM") */
-  customServiceNotes?: string[];
 }
 
 const initialKennels: Kennel[] = [
@@ -98,7 +101,7 @@ const initialKennels: Kennel[] = [
     status: "occupied",
     bookingId: 13,
     petId: 1,
-    petName: "Buddy",
+    petName: "Bella",
     clientName: "Alice Johnson",
     clientPhone: "123-456-7890",
     checkIn: "2024-03-12",
@@ -133,7 +136,7 @@ const initialKennels: Kennel[] = [
     status: "occupied",
     bookingId: 2,
     petId: 3,
-    petName: "Max",
+    petName: "Charlie",
     clientName: "Bob Smith",
     clientPhone: "098-765-4321",
     checkIn: "2024-03-08",
@@ -161,7 +164,7 @@ const initialKennels: Kennel[] = [
     status: "occupied",
     bookingId: 5,
     petId: 4,
-    petName: "Luna",
+    petName: "Daisy",
     clientName: "Diana Prince",
     clientPhone: "111-222-3333",
     checkIn: "2024-03-10",
@@ -182,7 +185,7 @@ const initialKennels: Kennel[] = [
     status: "occupied",
     bookingId: 8,
     petId: 6,
-    petName: "Charlie",
+    petName: "Cooper",
     clientName: "Eve Adams",
     clientPhone: "555-666-7777",
     checkIn: "2024-03-09",
@@ -485,6 +488,41 @@ export default function KennelViewPage() {
   const [formCheckOut, setFormCheckOut] = useState("");
   const [formCheckInTime, setFormCheckInTime] = useState("");
   const [formCheckOutTime, setFormCheckOutTime] = useState("");
+  const [showCustomServices, setShowCustomServices] = useState(true);
+
+  // Get active modules for color mapping
+  const { activeModules } = useCustomServices();
+
+  // Map petId → their custom service check-ins
+  const petServicesMap = useMemo(() => {
+    const map = new Map<number, CustomServiceCheckIn[]>();
+    for (const csc of customServiceCheckIns) {
+      const existing = map.get(csc.petId) ?? [];
+      map.set(csc.petId, [...existing, csc]);
+    }
+    return map;
+  }, []);
+
+  // Map moduleId → hex color for badge styling
+  const moduleColorMap = useMemo(
+    () =>
+      new Map(
+        activeModules.map((m) => [
+          m.id,
+          COLOR_HEX_MAP[m.iconColor] ?? "#6366f1",
+        ]),
+      ),
+    [activeModules],
+  );
+
+  // Format ISO time string to readable format
+  function formatServiceTime(isoStr: string): string {
+    return new Date(isoStr).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
 
   const selectedClient = useMemo(() => {
     return clients.find((c) => c.id.toString() === selectedClientId);
@@ -794,6 +832,20 @@ export default function KennelViewPage() {
               </>
             )}
           </div>
+          {/* Custom Services Toggle (Boarding Only) */}
+          {serviceType === "boarding" && (
+            <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
+              <Sparkles className="text-muted-foreground size-3.5" />
+              <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
+                Add-ons
+              </span>
+              <Switch
+                checked={showCustomServices}
+                onCheckedChange={setShowCustomServices}
+                className="scale-75"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -929,6 +981,9 @@ export default function KennelViewPage() {
                     ),
                   );
                 }}
+                customServicesMap={petServicesMap}
+                moduleColorMap={moduleColorMap}
+                showCustomServices={showCustomServices}
               />
             </Card>
           ) : (
@@ -1033,6 +1088,36 @@ export default function KennelViewPage() {
                                   </div>
                                 ) : null;
                               })()}
+                              {showCustomServices &&
+                                kennel.petId &&
+                                (() => {
+                                  const services =
+                                    petServicesMap.get(kennel.petId!) ?? [];
+                                  if (!services.length) return null;
+                                  return (
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                      {services.map((s) => {
+                                        const color =
+                                          moduleColorMap.get(s.moduleId) ??
+                                          "#6366f1";
+                                        return (
+                                          <span
+                                            key={s.id}
+                                            className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                            style={{
+                                              backgroundColor: `${color}20`,
+                                              color,
+                                            }}
+                                          >
+                                            <Sparkles className="size-2" />
+                                            {s.moduleName} @{" "}
+                                            {formatServiceTime(s.checkInTime)}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
                             </div>
                           ) : (
                             <span className="text-muted-foreground">—</span>
