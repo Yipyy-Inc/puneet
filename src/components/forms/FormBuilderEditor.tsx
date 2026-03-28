@@ -50,6 +50,7 @@ import {
   type FormAppliesTo,
   type FormLogicRule,
   type LogicActionType,
+  shouldShowQuestion,
 } from "@/data/forms";
 import {
   Plus,
@@ -65,9 +66,16 @@ import {
   Monitor,
   Smartphone,
   History,
+  Play,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
+import {
+  InlineFollowUpButton,
+  FollowUpConditionBadge,
+  supportsFollowUp,
+  countFollowUps,
+} from "@/components/forms/InlineFollowUp";
 import type { FormScoringConfig } from "@/data/forms-phase2-types";
 
 const FORM_TYPES: { value: FormType; label: string }[] = [
@@ -107,16 +115,6 @@ const LOGIC_ACTIONS: {
   label: string;
   description: string;
 }[] = [
-  {
-    value: "show",
-    label: "Show question(s)",
-    description: "Make target questions visible",
-  },
-  {
-    value: "hide",
-    label: "Hide question(s)",
-    description: "Hide target questions",
-  },
   {
     value: "require",
     label: "Make required",
@@ -243,22 +241,30 @@ function SortableQuestionRow({
   total,
   selectedQuestionId,
   mappingTarget,
+  allQuestions,
   onSelect,
   onUpdateLabel,
   onMoveUp,
   onMoveDown,
   onRemove,
+  onAddFollowUp,
 }: {
   q: FormQuestion;
   idx: number;
   total: number;
   selectedQuestionId: string | null;
   mappingTarget?: string;
+  allQuestions: FormQuestion[];
   onSelect: () => void;
   onUpdateLabel: (v: string) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
+  onAddFollowUp: (
+    parentId: string,
+    condition: FormCondition,
+    sectionId?: string,
+  ) => void;
 }) {
   const {
     attributes,
@@ -274,63 +280,98 @@ function SortableQuestionRow({
         (t) => t.value === mappingTarget,
       )?.label ?? mappingTarget)
     : null;
+
+  const isFollowUp = !!q.parentQuestionId;
+  const parentQuestion = isFollowUp
+    ? allQuestions.find((p) => p.id === q.parentQuestionId)
+    : undefined;
+  const followUpCount = countFollowUps(q.id, allQuestions);
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? `opacity-50 shadow-md` : ""} ${selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""} `}
-    >
+    <div>
       <div
-        {...attributes}
-        {...listeners}
-        className="shrink-0 cursor-grab touch-none active:cursor-grabbing"
+        ref={setNodeRef}
+        style={style}
+        className={`flex items-center gap-2 rounded-md border p-2 ${isDragging ? `opacity-50 shadow-md` : ""} ${selectedQuestionId === q.id ? "border-primary bg-muted/50" : ""} ${isFollowUp ? "ml-8 border-l-2 border-l-indigo-200 dark:border-l-indigo-800" : ""} `}
       >
-        <GripVertical className="text-muted-foreground size-4" />
+        <div
+          {...attributes}
+          {...listeners}
+          className="shrink-0 cursor-grab touch-none active:cursor-grabbing"
+        >
+          <GripVertical className="text-muted-foreground size-4" />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <Input
+              value={q.label || ""}
+              onChange={(e) => onUpdateLabel(e.target.value)}
+              onFocus={onSelect}
+              onClick={onSelect}
+              className="h-8 min-w-0 flex-1 border-0 text-sm shadow-none focus-visible:ring-0"
+              placeholder="Question text"
+            />
+            {mappingLabel && (
+              <Badge
+                variant="secondary"
+                className="h-5 shrink-0 border-blue-200 bg-blue-50 px-1.5 text-[10px] font-normal text-blue-700"
+              >
+                {mappingLabel}
+              </Badge>
+            )}
+            {followUpCount > 0 && (
+              <Badge
+                variant="outline"
+                className="h-5 shrink-0 border-indigo-200 bg-indigo-50 px-1.5 text-[10px] font-normal text-indigo-600"
+              >
+                {followUpCount} follow-up{followUpCount > 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
+          {isFollowUp && parentQuestion && (
+            <FollowUpConditionBadge
+              question={q}
+              parentQuestion={parentQuestion}
+            />
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={onMoveUp}
+          disabled={idx === 0}
+        >
+          <ChevronUp className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={onMoveDown}
+          disabled={idx === total - 1}
+        >
+          <ChevronDown className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive size-8"
+          onClick={onRemove}
+        >
+          <Trash2 className="size-4" />
+        </Button>
       </div>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <Input
-          value={q.label || ""}
-          onChange={(e) => onUpdateLabel(e.target.value)}
-          onFocus={onSelect}
-          onClick={onSelect}
-          className="h-8 min-w-0 flex-1 border-0 text-sm shadow-none focus-visible:ring-0"
-          placeholder="Question text"
-        />
-        {mappingLabel && (
-          <Badge
-            variant="secondary"
-            className="h-5 shrink-0 border-blue-200 bg-blue-50 px-1.5 text-[10px] font-normal text-blue-700"
-          >
-            {mappingLabel}
-          </Badge>
-        )}
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={onMoveUp}
-        disabled={idx === 0}
-      >
-        <ChevronUp className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={onMoveDown}
-        disabled={idx === total - 1}
-      >
-        <ChevronDown className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-destructive size-8"
-        onClick={onRemove}
-      >
-        <Trash2 className="size-4" />
-      </Button>
+      {/* Inline follow-up button for yes/no, radio, select questions */}
+      {supportsFollowUp(q) && !isFollowUp && (
+        <div className="mt-1 ml-8">
+          <InlineFollowUpButton
+            parentQuestion={q}
+            allQuestions={allQuestions}
+            onAddFollowUp={onAddFollowUp}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -421,6 +462,8 @@ export function FormBuilderEditor({
   const [previewAudience, setPreviewAudience] = useState<"customer" | "staff">(
     "customer",
   );
+  const [testMode, setTestMode] = useState(false);
+  const [testAnswers, setTestAnswers] = useState<Record<string, string>>({});
   // Phase 2 state
   const [scoringConfig, setScoringConfig] = useState<FormScoringConfig>(
     existing?.settings?.scoring ?? {
@@ -500,6 +543,39 @@ export function FormBuilderEditor({
     };
     const at = insertIndexForSection(secId);
     setQuestions((prev) => [...prev.slice(0, at), q, ...prev.slice(at)]);
+    setSelectedQuestionId(q.id);
+  };
+
+  const addFollowUpQuestion = (
+    parentId: string,
+    condition: FormCondition,
+    sectionId?: string,
+  ) => {
+    const secId = sectionId ?? sortedSections[0]?.id;
+    if (!secId) return;
+    const q: FormQuestion = {
+      id: generateQuestionId(),
+      type: "text",
+      label: "Follow-up question",
+      required: false,
+      sectionId: secId,
+      parentQuestionId: parentId,
+      condition,
+    };
+    // Insert right after the parent question (and any existing follow-ups)
+    setQuestions((prev) => {
+      const parentIdx = prev.findIndex((p) => p.id === parentId);
+      if (parentIdx === -1) return [...prev, q];
+      // Find last follow-up of this parent
+      let insertAt = parentIdx + 1;
+      while (
+        insertAt < prev.length &&
+        prev[insertAt].parentQuestionId === parentId
+      ) {
+        insertAt++;
+      }
+      return [...prev.slice(0, insertAt), q, ...prev.slice(insertAt)];
+    });
     setSelectedQuestionId(q.id);
   };
 
@@ -1002,6 +1078,7 @@ export function FormBuilderEditor({
                                       (m) => m.questionId === q.id,
                                     )?.target
                                   }
+                                  allQuestions={questions}
                                   onSelect={() => setSelectedQuestionId(q.id)}
                                   onUpdateLabel={(v) =>
                                     updateQuestion(q.id, { label: v })
@@ -1009,6 +1086,7 @@ export function FormBuilderEditor({
                                   onMoveUp={() => moveQuestion(q.id, "up")}
                                   onMoveDown={() => moveQuestion(q.id, "down")}
                                   onRemove={() => removeQuestion(q.id)}
+                                  onAddFollowUp={addFollowUpQuestion}
                                 />
                               ))}
                             </SortableContext>
@@ -1169,12 +1247,12 @@ export function FormBuilderEditor({
           </CardContent>
         </Card>
 
-        {/* Logic Rules */}
+        {/* Advanced Rules */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
               <Zap className="size-4" />
-              Logic Rules
+              Advanced Rules
             </CardTitle>
             <Button
               variant="outline"
@@ -1187,7 +1265,7 @@ export function FormBuilderEditor({
                     triggerQuestionId: questions[0]?.id ?? "",
                     operator: "eq" as const,
                     value: "",
-                    action: "show" as const,
+                    action: "require" as const,
                     targetQuestionIds: [],
                   },
                 ]);
@@ -1199,10 +1277,11 @@ export function FormBuilderEditor({
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-3 text-xs">
-              IF a question&apos;s answer matches a condition, THEN perform an
-              action on other questions or sections.
+              For complex branching like skip-to-section, end form, or tagging.
+              Use &ldquo;Add follow-up&rdquo; on questions for simple
+              conditional visibility.
               {questions.length === 0 &&
-                " Add questions first, then create logic rules."}
+                " Add questions first, then create rules."}
             </p>
             {formLogicRules.length === 0 ? (
               <p className="text-muted-foreground text-sm">
@@ -1242,7 +1321,7 @@ export function FormBuilderEditor({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={previewMode === "desktop" ? "default" : "outline"}
                 size="sm"
@@ -1263,6 +1342,19 @@ export function FormBuilderEditor({
                 <Smartphone className="mr-1 size-3.5" />
                 Mobile
               </Button>
+              <Button
+                variant={testMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setTestMode(!testMode);
+                  if (!testMode && previewMode === "none")
+                    setPreviewMode("desktop");
+                  if (testMode) setTestAnswers({});
+                }}
+              >
+                <Play className="mr-1 size-3.5" />
+                Test Form
+              </Button>
             </div>
             <div className="flex gap-2">
               <Button
@@ -1282,6 +1374,12 @@ export function FormBuilderEditor({
                 Staff view
               </Button>
             </div>
+            {testMode && (
+              <p className="text-muted-foreground text-xs">
+                Fill in answers below to test conditional branching. Questions
+                will appear/disappear based on your answers.
+              </p>
+            )}
             {previewMode !== "none" && (
               <div
                 className={`bg-background overflow-hidden rounded-lg border ${
@@ -1305,6 +1403,9 @@ export function FormBuilderEditor({
                         ? q.visibility !== "staff"
                         : true,
                     )
+                    .filter((q) =>
+                      testMode ? shouldShowQuestion(q, testAnswers) : true,
+                    )
                     .map((q) => (
                       <div key={q.id} className="space-y-1.5">
                         <p className="text-sm font-medium">
@@ -1318,25 +1419,89 @@ export function FormBuilderEditor({
                             {q.helpText}
                           </p>
                         )}
-                        <div className="border-input bg-muted/30 text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
-                          {q.type === "yes_no"
-                            ? "Yes / No"
-                            : q.type === "textarea"
-                              ? "Long text..."
-                              : q.type === "select"
-                                ? "Select..."
-                                : q.type === "radio"
-                                  ? "Radio buttons"
-                                  : q.type === "multiselect"
-                                    ? "Checkboxes"
-                                    : q.type === "file"
-                                      ? "File upload"
-                                      : q.type === "signature"
-                                        ? "Signature"
-                                        : q.type === "address"
-                                          ? "Address block"
-                                          : q.placeholder || q.type}
-                        </div>
+                        {testMode ? (
+                          /* Interactive inputs for test mode */
+                          q.type === "yes_no" ? (
+                            <div className="flex gap-2">
+                              {["yes", "no"].map((val) => (
+                                <Button
+                                  key={val}
+                                  variant={
+                                    testAnswers[q.id] === val
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    setTestAnswers((prev) => ({
+                                      ...prev,
+                                      [q.id]: val,
+                                    }))
+                                  }
+                                >
+                                  {val === "yes" ? "Yes" : "No"}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : q.type === "radio" || q.type === "select" ? (
+                            <div className="flex flex-wrap gap-2">
+                              {(q.options ?? []).map((opt) => (
+                                <Button
+                                  key={opt.value}
+                                  variant={
+                                    testAnswers[q.id] === opt.value
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    setTestAnswers((prev) => ({
+                                      ...prev,
+                                      [q.id]: opt.value,
+                                    }))
+                                  }
+                                >
+                                  {opt.label}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <Input
+                              className="h-9"
+                              placeholder={
+                                q.placeholder || `Enter ${q.type}...`
+                              }
+                              value={String(testAnswers[q.id] ?? "")}
+                              onChange={(e) =>
+                                setTestAnswers((prev) => ({
+                                  ...prev,
+                                  [q.id]: e.target.value,
+                                }))
+                              }
+                            />
+                          )
+                        ) : (
+                          /* Static placeholder for layout preview */
+                          <div className="border-input bg-muted/30 text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
+                            {q.type === "yes_no"
+                              ? "Yes / No"
+                              : q.type === "textarea"
+                                ? "Long text..."
+                                : q.type === "select"
+                                  ? "Select..."
+                                  : q.type === "radio"
+                                    ? "Radio buttons"
+                                    : q.type === "multiselect"
+                                      ? "Checkboxes"
+                                      : q.type === "file"
+                                        ? "File upload"
+                                        : q.type === "signature"
+                                          ? "Signature"
+                                          : q.type === "address"
+                                            ? "Address block"
+                                            : q.placeholder || q.type}
+                          </div>
+                        )}
                         {q.visibility === "staff" && (
                           <Badge variant="secondary" className="text-[10px]">
                             Staff only
@@ -1665,7 +1830,7 @@ function LogicRuleEditor({
 function QuestionEditor({
   question,
   allQuestions,
-  currentQuestionId,
+  currentQuestionId: _currentQuestionId,
   mappingTarget,
   onMappingChange,
   onChange,
@@ -1945,20 +2110,15 @@ function QuestionEditor({
           />
         </div>
       )}
-      <div className="space-y-2">
-        <Label>Show when (conditional)</Label>
-        <ConditionEditor
-          condition={question.condition}
-          allQuestions={allQuestions}
-          currentQuestionId={currentQuestionId}
-          onChange={(c) => onChange({ condition: c })}
-        />
-        {question.condition && (
-          <p className="bg-muted/50 text-muted-foreground mt-1 rounded-sm px-2 py-1.5 text-xs">
+      {/* Condition info (read-only — conditions are set via inline follow-up) */}
+      {question.condition && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground">Condition (auto-set)</Label>
+          <p className="bg-muted/50 text-muted-foreground rounded-sm px-2 py-1.5 text-xs">
             {formatConditionPlainLanguage(question.condition, allQuestions)}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

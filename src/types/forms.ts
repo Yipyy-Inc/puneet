@@ -451,6 +451,8 @@ export interface FormQuestion {
   labelI18n?: Partial<Record<SupportedFormLocale, string>>;
   placeholderI18n?: Partial<Record<SupportedFormLocale, string>>;
   paymentConfig?: FormPaymentBlockConfig;
+  /** ID of the parent question this is a follow-up to (builder nesting concept) */
+  parentQuestionId?: string;
 }
 
 export interface FormSectionDTO {
