@@ -3,20 +3,25 @@
 import { cn } from "@/lib/utils";
 import { Mail, MessageSquare, Smartphone } from "lucide-react";
 
-const CHANNEL_CONFIG = {
+const CHANNEL_CONFIG: Record<
+  string,
+  { icon: typeof Mail; label: string; class: string }
+> = {
   email: { icon: Mail, label: "Email", class: "text-blue-600" },
   sms: { icon: Smartphone, label: "SMS", class: "text-green-600" },
   "in-app": { icon: MessageSquare, label: "Chat", class: "text-violet-600" },
-} as const;
+  call: { icon: Smartphone, label: "Call", class: "text-amber-600" },
+  note: { icon: MessageSquare, label: "Note", class: "text-zinc-500" },
+};
 
 export function ChannelBadge({
   channel,
   size = "sm",
 }: {
-  channel: "email" | "sms" | "in-app";
+  channel: string;
   size?: "xs" | "sm";
 }) {
-  const config = CHANNEL_CONFIG[channel];
+  const config = CHANNEL_CONFIG[channel] ?? CHANNEL_CONFIG["in-app"];
   const Icon = config.icon;
   return (
     <span

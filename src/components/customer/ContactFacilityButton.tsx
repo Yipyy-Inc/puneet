@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,8 +17,9 @@ import Link from "next/link";
 export function ContactFacilityButton() {
   const { selectedFacility } = useCustomerFacility();
   const [open, setOpen] = useState(false);
+  const hydrated = useHydrated();
 
-  if (!selectedFacility) return null;
+  if (!hydrated || !selectedFacility) return null;
 
   const contact = selectedFacility.contact;
   const hasPhone = !!contact?.phone;
