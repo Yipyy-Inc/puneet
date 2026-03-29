@@ -95,6 +95,7 @@ export default function IntakeFormsPage() {
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
           facilityId={FACILITY_ID}
+          defaultCategory={category}
         />
       </div>
 

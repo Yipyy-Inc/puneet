@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -49,15 +49,22 @@ export interface CreateFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   facilityId: number;
+  /** Pre-select form category (from active tab) */
+  defaultCategory?: FormType;
 }
 
 export function CreateFormModal({
   open,
   onOpenChange,
   facilityId,
+  defaultCategory = "intake",
 }: CreateFormModalProps) {
   const router = useRouter();
-  const [formType, setFormType] = useState<FormType>("intake");
+  const [formType, setFormType] = useState<FormType>(defaultCategory);
+  // Sync when defaultCategory changes (user switches tab)
+  useEffect(() => {
+    setFormType(defaultCategory);
+  }, [defaultCategory]);
   const [name, setName] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [themeColor, setThemeColor] = useState("");
