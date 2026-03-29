@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import Link from "next/link";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export function CustomerHeader() {
   const { selectedFacility } = useCustomerFacility();
@@ -86,6 +87,7 @@ export function CustomerHeader() {
   return (
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm md:px-6">
       <div className="flex items-center gap-4">
+        <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
         {/* Facility Logo and Name */}
         <Link href="/customer/dashboard" className="flex items-center gap-3">
           {selectedFacility?.logo ? (

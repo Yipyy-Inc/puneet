@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { FacilitySidebar } from "@/components/layout/facility-admin-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { FacilityHeader } from "@/components/layout/FacilityHeader";
 import { BookingModalProviderWrapper } from "@/components/providers/BookingModalProviderWrapper";
@@ -32,19 +36,21 @@ export default async function FacilityLayout({
         <SidebarProvider>
           <FacilitySidebar />
           <SidebarInset className="flex min-h-screen flex-col">
-            <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-6 backdrop-blur-sm">
-              <GlobalSearchNext
-                className="max-w-[520px]"
-                canCreateCustomer={userRole === "facility_admin"}
-              />
+            <header className="from-background to-muted/20 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-4 border-b bg-linear-to-r px-4 backdrop-blur-sm sm:px-6">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
+                <GlobalSearchNext
+                  className="hidden max-w-[520px] sm:flex"
+                  canCreateCustomer={userRole === "facility_admin"}
+                />
+              </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  {/* Calling Button - Static on top bar */}
+                <div className="hidden items-center gap-1 sm:flex">
                   <CallingButton />
                   <TopBarIconsNext />
-                  <FacilityNotificationsDropdown facilityId={11} />
-                  <BookingRequestsTopbarDropdown />
                 </div>
+                <FacilityNotificationsDropdown facilityId={11} />
+                <BookingRequestsTopbarDropdown />
                 <FacilityHeader />
                 <UserProfileSheet showNotifications={false} />
               </div>
