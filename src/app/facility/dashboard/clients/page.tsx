@@ -4,13 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import { bookings } from "@/data/bookings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
+import {
+  ClientFilterPanel,
+  ActiveFilterChips,
+} from "@/components/clients/ClientFilterPanel";
+import { useClientFilters } from "@/hooks/use-client-filters";
 import {
   Download,
   User,
@@ -19,6 +23,7 @@ import {
   Plus,
   PawPrint,
   CircleDot,
+  Filter,
   Mail as MailIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -57,9 +62,17 @@ const exportClientsToCSV = (clientsData: typeof clients) => {
 
 export default function FacilityClientsPage() {
   const router = useRouter();
-  // Static facility ID for now (would come from user token in production)
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const {
+    filters,
+    setFilter,
+    toggleArrayItem,
+    clearAll,
+    activeCount,
+    applyFilters,
+  } = useClientFilters();
 
   const [clientsData, setClientsData] = useState(clients);
   const [creatingClient, setCreatingClient] = useState(false);
@@ -201,100 +214,8 @@ export default function FacilityClientsPage() {
     },
   ];
 
-  const filters: FilterDef[] = [
-    {
-      key: "status",
-      label: "Status",
-      options: [
-        { value: "all", label: "All Status" },
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-      ],
-    },
-    {
-      key: "petType",
-      label: "Pet Type",
-      options: [
-        { value: "all", label: "All Types" },
-        { value: "Dog", label: "Dog" },
-        { value: "Cat", label: "Cat" },
-        { value: "Other", label: "Other" },
-      ],
-      filterFn: (client, value) => {
-        if (value === "all") return true;
-        return client.pets.some((p: { type: string }) =>
-          value === "Other"
-            ? p.type !== "Dog" && p.type !== "Cat"
-            : p.type === value,
-        );
-      },
-    },
-    {
-      key: "petCount",
-      label: "Pet Count",
-      options: [
-        { value: "all", label: "All" },
-        { value: "0", label: "No Pets" },
-        { value: "1", label: "1 Pet" },
-        { value: "2+", label: "2+ Pets" },
-      ],
-      filterFn: (client, value) => {
-        if (value === "all") return true;
-        if (value === "0") return client.pets.length === 0;
-        if (value === "1") return client.pets.length === 1;
-        return client.pets.length >= 2;
-      },
-    },
-    {
-      key: "serviceHistory",
-      label: "Service",
-      options: [
-        { value: "all", label: "All Services" },
-        { value: "daycare", label: "Daycare" },
-        { value: "boarding", label: "Boarding" },
-        { value: "grooming", label: "Grooming" },
-        { value: "training", label: "Training" },
-      ],
-      filterFn: (client, value) => {
-        if (value === "all") return true;
-        return bookings.some(
-          (b) =>
-            b.clientId === client.id &&
-            b.service.toLowerCase() === value,
-        );
-      },
-    },
-    {
-      key: "lastVisit",
-      label: "Last Visit",
-      options: [
-        { value: "all", label: "Any Time" },
-        { value: "7", label: "Last 7 days" },
-        { value: "30", label: "Last 30 days" },
-        { value: "90", label: "Last 90 days" },
-        { value: "inactive", label: "Inactive (90+ days)" },
-      ],
-      filterFn: (client, value) => {
-        if (value === "all") return true;
-        const clientBookings = bookings.filter(
-          (b) => b.clientId === client.id,
-        );
-        if (clientBookings.length === 0)
-          return value === "inactive";
-        const latest = Math.max(
-          ...clientBookings.map((b) =>
-            new Date(b.startDate).getTime(),
-          ),
-        );
-        const daysAgo =
-          (Date.now() - latest) / (1000 * 60 * 60 * 24);
-        if (value === "inactive") return daysAgo > 90;
-        return daysAgo <= parseInt(value);
-      },
-    },
-  ];
-
-  const activeCount = facilityClients.filter(
+  const filteredClients = applyFilters(facilityClients);
+  const activeClientCount = facilityClients.filter(
     (c) => c.status === "active",
   ).length;
 
@@ -308,6 +229,19 @@ export default function FacilityClientsPage() {
             <p className="text-muted-foreground text-sm">{facility.name}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFilterPanelOpen(true)}
+            >
+              <Filter className="mr-2 size-4" />
+              Filters
+              {activeCount > 0 && (
+                <Badge variant="secondary" className="ml-1.5">
+                  {activeCount}
+                </Badge>
+              )}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -336,7 +270,7 @@ export default function FacilityClientsPage() {
           <Separator orientation="vertical" className="h-4" />
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground text-sm">Active</span>
-            <span className="text-sm font-semibold">{activeCount}</span>
+            <span className="text-sm font-semibold">{activeClientCount}</span>
           </div>
           <Separator orientation="vertical" className="h-4" />
           <div className="flex items-center gap-1.5">
@@ -355,10 +289,18 @@ export default function FacilityClientsPage() {
         </CardContent>
       </Card>
 
-      <DataTable
-        data={facilityClients}
-        columns={columns}
+      {/* Active filter chips */}
+      <ActiveFilterChips
         filters={filters}
+        setFilter={setFilter}
+        toggleArrayItem={toggleArrayItem}
+        clearAll={clearAll}
+        activeCount={activeCount}
+      />
+
+      <DataTable
+        data={filteredClients}
+        columns={columns}
         getSearchValue={(client) =>
           [client.name, ...client.pets.map((p) => p.name)].join(" ")
         }
@@ -375,6 +317,17 @@ export default function FacilityClientsPage() {
             <Eye className="size-4" />
           </Button>
         )}
+      />
+
+      {/* Filter Panel (Sheet) */}
+      <ClientFilterPanel
+        open={filterPanelOpen}
+        onOpenChange={setFilterPanelOpen}
+        filters={filters}
+        setFilter={setFilter}
+        toggleArrayItem={toggleArrayItem}
+        clearAll={clearAll}
+        activeCount={activeCount}
       />
 
       {/* Create Client Modal */}
