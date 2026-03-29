@@ -8,16 +8,16 @@ import {
   Clock,
   ArrowRight,
   PawPrint,
-  Scissors,
   LogIn,
   CheckCircle,
+  Search,
+  Calendar,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { TagList } from "@/components/shared/TagList";
-import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
 import { clients } from "@/data/clients";
 import type { CustomServiceModule } from "@/types/facility";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
@@ -102,16 +102,129 @@ export const CustomServiceDashboardSection = memo(
       if (item) toast.success(`${item.petName} — ${label}`);
     };
 
-    const todaysCount = moduleCheckIns.length;
-    const scheduledCount = moduleCheckIns.filter(
-      (c) => c.status === "scheduled",
-    ).length;
-    const inProgressCount = moduleCheckIns.filter(
-      (c) => c.status === "in-progress" || c.status === "checked-in",
-    ).length;
-    const completedCount = moduleCheckIns.filter(
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const scheduled = moduleCheckIns.filter(
+      (c) => c.status === "scheduled" || c.status === "checked-in",
+    );
+    const inProgress = moduleCheckIns.filter((c) => c.status === "in-progress");
+    const completed = moduleCheckIns.filter(
       (c) => c.status === "completed" || c.status === "checked-out",
-    ).length;
+    );
+
+    const filterBySearch = (items: typeof moduleCheckIns) => {
+      if (!searchQuery.trim()) return items;
+      const q = searchQuery.toLowerCase();
+      return items.filter(
+        (c) =>
+          c.petName.toLowerCase().includes(q) ||
+          c.ownerName.toLowerCase().includes(q),
+      );
+    };
+
+    const renderCard = (checkIn: (typeof moduleCheckIns)[number]) => {
+      const client = findClientForPet(checkIn.petId);
+      return (
+        <div
+          key={checkIn.id}
+          className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+        >
+          {getPetImage(checkIn.petId) ? (
+            <Link
+              href={
+                client
+                  ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                  : "#"
+              }
+              className="shrink-0"
+            >
+              <div className="size-10 overflow-hidden rounded-full">
+                <Image
+                  src={getPetImage(checkIn.petId)!}
+                  alt={checkIn.petName}
+                  width={40}
+                  height={40}
+                  className="size-full object-cover"
+                />
+              </div>
+            </Link>
+          ) : (
+            <Link
+              href={
+                client
+                  ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                  : "#"
+              }
+              className="shrink-0"
+            >
+              <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                <PawPrint className="text-primary size-5" />
+              </div>
+            </Link>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Link
+                href={
+                  client
+                    ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                    : "#"
+                }
+                className="text-sm font-semibold hover:underline"
+              >
+                {checkIn.petName}
+              </Link>
+              <Badge variant="outline" className="text-[10px] font-normal">
+                {module.name}
+              </Badge>
+              <TagList
+                entityType="pet"
+                entityId={checkIn.petId}
+                compact
+                maxVisible={2}
+              />
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {checkIn.ownerName} · {formatTime(checkIn.checkInTime)}
+              {checkIn.staffAssigned && ` · ${checkIn.staffAssigned}`}
+              {checkIn.resourceName && ` · ${checkIn.resourceName}`}
+            </p>
+          </div>
+          {module.checkInOut.enabled && (
+            <div className="shrink-0">
+              {(checkIn.status === "scheduled" ||
+                checkIn.status === "checked-in") && (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(checkIn.id, "in-progress", "Checked In");
+                  }}
+                  className="gap-1 bg-green-600 hover:bg-green-700"
+                >
+                  <LogIn className="size-3" />
+                  Check In
+                </Button>
+              )}
+              {checkIn.status === "in-progress" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(checkIn.id, "completed", "Checked Out");
+                  }}
+                  className="gap-1"
+                >
+                  <CheckCircle className="size-3" />
+                  Check Out
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     return (
       <Card className="animate-in fade-in duration-300">
@@ -119,20 +232,10 @@ export const CustomServiceDashboardSection = memo(
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ backgroundColor: accentColor }}
-              >
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-500">
                 <DynamicIcon name={module.icon} className="size-5 text-white" />
               </div>
-              <div>
-                <h3 className={cn("text-lg font-semibold", catMeta?.textClass)}>
-                  {module.name}
-                </h3>
-                <p className="text-muted-foreground text-xs">
-                  {module.description}
-                </p>
-              </div>
+              <h3 className="text-lg font-semibold">{module.name}</h3>
             </div>
             <Link href={viewAllUrl}>
               <Button variant="outline" size="sm" className="gap-1.5">
@@ -142,185 +245,88 @@ export const CustomServiceDashboardSection = memo(
             </Link>
           </div>
 
-          {/* Stats Row */}
-          <div className="flex gap-3">
-            <div className="bg-muted/50 flex-1 rounded-lg px-4 py-3 text-center">
-              <p className="text-2xl font-bold">{todaysCount}</p>
-              <p className="text-muted-foreground mt-0.5 text-xs">Today</p>
-            </div>
-            <div className="flex-1 rounded-lg bg-orange-50 px-4 py-3 text-center dark:bg-orange-950/20">
-              <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-                {scheduledCount}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Not Checked-In
-              </p>
-            </div>
-            <div className="flex-1 rounded-lg bg-amber-50 px-4 py-3 text-center dark:bg-amber-950/20">
-              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
-                {inProgressCount}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                In Progress
-              </p>
-            </div>
-            <div className="flex-1 rounded-lg bg-emerald-50 px-4 py-3 text-center dark:bg-emerald-950/20">
-              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">
-                {completedCount}
-              </p>
-              <p className="text-muted-foreground mt-0.5 text-xs">Completed</p>
-            </div>
-          </div>
+          {/* 3-column layout */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Scheduled */}
+            <Card>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Calendar className="size-4 text-blue-600" />
+                    Scheduled
+                  </CardTitle>
+                  <Badge variant="secondary">{scheduled.length}</Badge>
+                </div>
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                  <Input
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 pl-9 text-sm"
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                  {filterBySearch(scheduled).length === 0 ? (
+                    <p className="text-muted-foreground py-6 text-center text-sm">
+                      No scheduled sessions
+                    </p>
+                  ) : (
+                    filterBySearch(scheduled).map(renderCard)
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Today's Check-ins */}
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-sm font-medium">
-              Today&apos;s Sessions
-            </p>
-            {moduleCheckIns.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center text-sm">
-                No sessions scheduled for today.
-              </p>
-            ) : (
-              moduleCheckIns.map((checkIn) => {
-                const client = findClientForPet(checkIn.petId);
-                const isCritical = hasCriticalTags("pet", checkIn.petId);
-                const isWarning =
-                  !isCritical && hasWarningTags("pet", checkIn.petId);
-                return (
-                  <div
-                    key={checkIn.id}
-                    className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
-                  >
-                    {getPetImage(checkIn.petId) ? (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                            : "#"
-                        }
-                        className="shrink-0"
-                      >
-                        <div className="size-10 overflow-hidden rounded-full">
-                          <Image
-                            src={getPetImage(checkIn.petId)!}
-                            alt={checkIn.petName}
-                            width={40}
-                            height={40}
-                            className="size-full object-cover"
-                          />
-                        </div>
-                      </Link>
-                    ) : (
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                            : "#"
-                        }
-                        className="shrink-0"
-                      >
-                        <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                          <PawPrint className="text-primary size-5" />
-                        </div>
-                      </Link>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={
-                          client
-                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                            : "#"
-                        }
-                        className="text-sm font-semibold hover:underline"
-                      >
-                        {checkIn.petName}
-                      </Link>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-                          <Scissors className="mr-1 size-3" />
-                          {module.name}
-                        </Badge>
-                        <Badge
-                          className={cn(
-                            "text-[10px] capitalize",
-                            STATUS_STYLES[checkIn.status] ?? "bg-secondary",
-                          )}
-                        >
-                          {STATUS_LABELS[checkIn.status]}
-                        </Badge>
-                        <TagList
-                          entityType="pet"
-                          entityId={checkIn.petId}
-                          compact
-                          maxVisible={2}
-                        />
-                      </div>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {checkIn.ownerName} · {checkIn.petBreed}
-                      </p>
-                      <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                        <Clock className="size-3" />
-                        <span>{formatTime(checkIn.checkInTime)}</span>
-                        {checkIn.staffAssigned && (
-                          <>
-                            <span>·</span>
-                            <span>{checkIn.staffAssigned}</span>
-                          </>
-                        )}
-                        {checkIn.resourceName && (
-                          <>
-                            <span>·</span>
-                            <span>{checkIn.resourceName}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {/* Action buttons */}
-                    {module.checkInOut.enabled && (
-                      <div className="shrink-0">
-                        {(checkIn.status === "scheduled" ||
-                          checkIn.status === "checked-in") && (
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(
-                                checkIn.id,
-                                "in-progress",
-                                "Checked In",
-                              );
-                            }}
-                            className="gap-1 bg-green-600 hover:bg-green-700"
-                          >
-                            <LogIn className="size-3" />
-                            Check In
-                          </Button>
-                        )}
-                        {checkIn.status === "in-progress" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(
-                                checkIn.id,
-                                "completed",
-                                "Checked Out",
-                              );
-                            }}
-                            className="gap-1"
-                          >
-                            <CheckCircle className="size-3" />
-                            Check Out
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+            {/* In Progress */}
+            <Card>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Clock className="size-4 text-amber-600" />
+                    In Progress
+                  </CardTitle>
+                  <Badge variant="secondary">{inProgress.length}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                  {inProgress.length === 0 ? (
+                    <p className="text-muted-foreground py-6 text-center text-sm">
+                      No active sessions
+                    </p>
+                  ) : (
+                    inProgress.map(renderCard)
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Completed */}
+            <Card>
+              <CardHeader className="space-y-3 pb-4">
+                <div className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CheckCircle className="size-4 text-green-600" />
+                    Completed
+                  </CardTitle>
+                  <Badge variant="secondary">{completed.length}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[400px] space-y-2 overflow-y-auto">
+                  {completed.length === 0 ? (
+                    <p className="text-muted-foreground py-6 text-center text-sm">
+                      No completed today
+                    </p>
+                  ) : (
+                    completed.map(renderCard)
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </CardContent>
       </Card>
