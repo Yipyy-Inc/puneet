@@ -285,6 +285,16 @@
   }
 }
 
+@keyframes tag-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 /* Shadow utilities */
 .shadow-soft {
   box-shadow:
