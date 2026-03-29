@@ -7,12 +7,13 @@ import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,6 @@ import {
   DollarSign,
   CheckCircle,
   Clock,
-  TrendingUp,
   MoreVertical,
   Eye,
   X,
@@ -48,6 +48,9 @@ import {
   CheckSquare,
   Pencil,
   FileText,
+  Hash,
+  User,
+  CircleDot,
 } from "lucide-react";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
@@ -275,11 +278,23 @@ export default function FacilityBookingsPage() {
       {} as Record<string, number>,
     );
 
+  const fmtDate = (d: string) => {
+    try {
+      return new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return d;
+    }
+  };
+
   const columns: ColumnDef<(typeof bookings)[number]>[] = [
     {
       key: "id",
       label: "ID",
-      icon: Calendar,
+      icon: Hash,
       defaultVisible: true,
       render: (booking) => (
         <span className="font-mono text-sm">#{booking.id}</span>
@@ -288,7 +303,7 @@ export default function FacilityBookingsPage() {
     {
       key: "client",
       label: "Client",
-      icon: Calendar,
+      icon: User,
       defaultVisible: true,
       sortable: true,
       sortValue: (booking) =>
@@ -309,7 +324,7 @@ export default function FacilityBookingsPage() {
     {
       key: "service",
       label: "Service",
-      icon: Calendar,
+      icon: CalendarDays,
       defaultVisible: true,
       render: (booking) => (
         <Badge variant="outline" className="capitalize">
@@ -328,10 +343,10 @@ export default function FacilityBookingsPage() {
         const duration = calculateDuration(booking.startDate, booking.endDate);
         return (
           <div className="flex flex-col">
-            <span className="text-sm">{booking.startDate}</span>
+            <span className="text-sm">{fmtDate(booking.startDate)}</span>
             {booking.startDate !== booking.endDate && (
               <span className="text-muted-foreground text-xs">
-                to {booking.endDate}
+                to {fmtDate(booking.endDate)}
               </span>
             )}
             <span className="text-muted-foreground mt-0.5 text-xs">
@@ -360,21 +375,25 @@ export default function FacilityBookingsPage() {
     {
       key: "status",
       label: "Status",
-      icon: Calendar,
+      icon: CircleDot,
       defaultVisible: true,
       sortable: true,
       sortValue: (booking) => booking.status,
+      render: (booking) => <StatusBadge type="status" value={booking.status} />,
+    },
+    {
+      key: "payment",
+      label: "Payment",
+      icon: DollarSign,
+      defaultVisible: true,
       render: (booking) => (
-        <div className="flex flex-col gap-1">
-          <StatusBadge type="status" value={booking.status} />
-          <StatusBadge type="status" value={booking.paymentStatus} />
-        </div>
+        <StatusBadge type="status" value={booking.paymentStatus} />
       ),
     },
     {
       key: "tags",
       label: "Tags",
-      icon: Calendar,
+      icon: FileText,
       defaultVisible: true,
       render: (booking) => (
         <TagList
@@ -457,14 +476,7 @@ export default function FacilityBookingsPage() {
       render: (booking) => {
         const taskCount = calculateTaskCount(booking);
         return (
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{taskCount}</span>
-            {taskCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {taskCount === 1 ? "task" : "tasks"}
-              </Badge>
-            )}
-          </div>
+          <span className="text-muted-foreground text-sm">{taskCount}</span>
         );
       },
     },
@@ -476,7 +488,9 @@ export default function FacilityBookingsPage() {
       sortable: true,
       sortValue: (booking) => booking.totalCost,
       render: (booking) => (
-        <span className="font-semibold">${booking.totalCost}</span>
+        <span className="font-[tabular-nums] font-medium">
+          ${booking.totalCost.toFixed(2)}
+        </span>
       ),
     },
   ];
@@ -699,14 +713,13 @@ export default function FacilityBookingsPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+      {/* Header */}
+      <div className="space-y-3">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {"Bookings Management"}
-          </h2>
-          <p className="text-muted-foreground">{facility.name}</p>
+          <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
+          <p className="text-muted-foreground text-sm">{facility.name}</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Button
             variant={viewMode === "calendar" ? "default" : "outline"}
             size="sm"
@@ -723,107 +736,43 @@ export default function FacilityBookingsPage() {
             onClick={() => exportBookingsToCSV(getDataForTab())}
           >
             <Download className="mr-2 size-4" />
-            {"Export"}
+            Export
           </Button>
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"All Bookings"}
-            </CardTitle>
-            <Calendar className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-muted-foreground text-xs">
-              {upcomingBookings.length} upcoming bookings
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Today's Bookings"}
-            </CardTitle>
-            <CalendarDays className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayBookings.length}</div>
-            <p className="text-muted-foreground text-xs">{"Active today"}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Completed Bookings"}
-            </CardTitle>
-            <CheckCircle className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedBookings}</div>
-            <p className="text-muted-foreground text-xs">
-              {totalBookings > 0
-                ? Math.round((completedBookings / totalBookings) * 100)
-                : 0}
-              % {"completion rate"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Pending Bookings"}
-            </CardTitle>
-            <Clock className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingBookings.length}</div>
-            <p className="text-muted-foreground text-xs">
-              ${pendingRevenue} pending revenue
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {"Total Revenue"}
-            </CardTitle>
-            <DollarSign className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalRevenue}</div>
-            <p className="text-muted-foreground flex items-center text-xs">
-              <TrendingUp className="mr-1 size-3" />
-              {"Total received"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Revenue by Service */}
+      {/* Compact Stats Row */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{"Revenue by Service"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            {Object.entries(revenueByService).map(
-              ([service, revenue]: [string, number]) => (
-                <div
-                  key={service}
-                  className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2"
-                >
-                  <Badge variant="outline" className="capitalize">
-                    {service}
-                  </Badge>
-                  <span className="font-semibold">${revenue}</span>
-                </div>
-              ),
-            )}
+        <CardContent className="flex flex-wrap items-center gap-6 py-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">All</span>
+            <span className="text-sm font-semibold">{totalBookings}</span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Today</span>
+            <span className="text-sm font-semibold">
+              {todayBookings.length}
+            </span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Completed</span>
+            <span className="text-sm font-semibold">{completedBookings}</span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Pending</span>
+            <span className="text-sm font-semibold">
+              {pendingBookings.length}
+            </span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Revenue</span>
+            <span className="font-[tabular-nums] text-sm font-semibold">
+              ${totalRevenue.toLocaleString()}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -839,27 +788,27 @@ export default function FacilityBookingsPage() {
             onItemClick: (booking) => setSelectedBooking(booking),
             getItemColor: (booking) => {
               const colors: Record<string, string> = {
-                daycare: "bg-blue-500",
-                boarding: "bg-purple-500",
-                grooming: "bg-pink-500",
-                vet: "bg-green-500",
+                daycare: "bg-blue-200 dark:bg-blue-900/40",
+                boarding: "bg-purple-200 dark:bg-purple-900/40",
+                grooming: "bg-pink-200 dark:bg-pink-900/40",
+                vet: "bg-green-200 dark:bg-green-900/40",
               };
-              return colors[booking.service] || "bg-gray-500";
+              return colors[booking.service] || "bg-gray-200";
             },
             getItemBorderColor: (booking) => {
               const colors: Record<string, string> = {
-                pending: "border-yellow-500",
-                confirmed: "border-blue-500",
-                completed: "border-green-500",
-                cancelled: "border-gray-500",
+                pending: "border-amber-300",
+                confirmed: "border-blue-300",
+                completed: "border-green-300",
+                cancelled: "border-gray-300",
               };
-              return colors[booking.status] || "border-gray-500";
+              return colors[booking.status] || "border-gray-300";
             },
             legendItems: [
-              { color: "bg-blue-500", label: "Daycare" },
-              { color: "bg-purple-500", label: "Boarding" },
-              { color: "bg-pink-500", label: "Grooming" },
-              { color: "bg-green-500", label: "Vet" },
+              { color: "bg-blue-200", label: "Daycare" },
+              { color: "bg-purple-200", label: "Boarding" },
+              { color: "bg-pink-200", label: "Grooming" },
+              { color: "bg-green-200", label: "Vet" },
             ],
           }}
           view="month"
@@ -867,51 +816,36 @@ export default function FacilityBookingsPage() {
       ) : (
         /* Tabs for filtering bookings */
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="all" className="relative">
-              {"All"}
-              <Badge
-                variant="secondary"
-                className="ml-2 h-5 px-1.5 py-0 text-xs"
-              >
+          <TabsList className="w-auto">
+            <TabsTrigger value="all">
+              All
+              <span className="text-muted-foreground ml-1.5 text-xs">
                 {allBookings.length}
-              </Badge>
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="today" className="relative">
-              {"Today"}
-              <Badge
-                variant="secondary"
-                className="ml-2 h-5 px-1.5 py-0 text-xs"
-              >
+            <TabsTrigger value="today">
+              Today
+              <span className="text-muted-foreground ml-1.5 text-xs">
                 {todayBookings.length}
-              </Badge>
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="upcoming" className="relative">
-              {"Upcoming"}
-              <Badge
-                variant="secondary"
-                className="ml-2 h-5 px-1.5 py-0 text-xs"
-              >
+            <TabsTrigger value="upcoming">
+              Upcoming
+              <span className="text-muted-foreground ml-1.5 text-xs">
                 {upcomingBookings.length}
-              </Badge>
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="past" className="relative">
-              {"Past"}
-              <Badge
-                variant="secondary"
-                className="ml-2 h-5 px-1.5 py-0 text-xs"
-              >
+            <TabsTrigger value="past">
+              Past
+              <span className="text-muted-foreground ml-1.5 text-xs">
                 {pastBookings.length}
-              </Badge>
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="pending" className="relative">
-              {"Pending"}
-              <Badge
-                variant="secondary"
-                className="ml-2 h-5 px-1.5 py-0 text-xs"
-              >
+            <TabsTrigger value="pending">
+              Pending
+              <span className="text-muted-foreground ml-1.5 text-xs">
                 {pendingBookings.length}
-              </Badge>
+              </span>
             </TabsTrigger>
           </TabsList>
 
