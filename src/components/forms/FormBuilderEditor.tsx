@@ -70,7 +70,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
-import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import { VariableRichInput } from "@/components/forms/VariableRichInput";
 import {
   resolveTemplate,
   getMockPreviewData,
@@ -1899,59 +1899,21 @@ function QuestionEditor({
   const resolvedLabel = question.label.includes("{{")
     ? resolveTemplate(question.label, mockData)
     : null;
-  const resolvedHelp = question.helpText?.includes("{{")
-    ? resolveTemplate(question.helpText, mockData)
-    : null;
-
-  const insertVar = (
-    field: "label" | "helpText" | "placeholder",
-    v: string,
-  ) => {
-    const tag = `{{${v}}}`;
-    if (field === "label") onChange({ label: question.label + tag });
-    else if (field === "helpText")
-      onChange({ helpText: (question.helpText ?? "") + tag });
-    else onChange({ placeholder: (question.placeholder ?? "") + tag });
-  };
-
-  const QUICK_VARS = [
-    { key: "pet_name", label: "Pet Name" },
-    { key: "customer_first_name", label: "Customer" },
-    { key: "facility_name", label: "Facility" },
-  ];
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Label</Label>
-          <VariableInsertDropdown
-            context="general"
-            onInsert={(v) => insertVar("label", v)}
-          />
-        </div>
-        <Input
+      <div className="space-y-1">
+        <Label>Label</Label>
+        <VariableRichInput
           value={question.label}
-          onChange={(e) => onChange({ label: e.target.value })}
-          placeholder="Question text — use {{pet_name}} for variables"
+          onChange={(v) => onChange({ label: v })}
+          placeholder="Question text"
         />
         {resolvedLabel && (
           <p className="text-muted-foreground text-xs italic">
             Preview: {resolvedLabel}
           </p>
         )}
-        <div className="flex flex-wrap gap-1">
-          {QUICK_VARS.map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              onClick={() => insertVar("label", v.key)}
-              className="border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md border px-2 py-0.5 text-[10px] transition-colors"
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
       </div>
       <div className="space-y-2">
         <Label>Type</Label>
@@ -1980,23 +1942,12 @@ function QuestionEditor({
         <Label htmlFor="required">Required</Label>
       </div>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Help text (optional)</Label>
-          <VariableInsertDropdown
-            context="general"
-            onInsert={(v) => insertVar("helpText", v)}
-          />
-        </div>
+        <Label>Help text (optional)</Label>
         <Input
           value={question.helpText ?? ""}
           onChange={(e) => onChange({ helpText: e.target.value || undefined })}
-          placeholder="Help text — supports {{variables}}"
+          placeholder="Help text shown below the question"
         />
-        {resolvedHelp && (
-          <p className="text-muted-foreground text-xs italic">
-            Preview: {resolvedHelp}
-          </p>
-        )}
       </div>
       <div className="space-y-2">
         <Label>Default value (optional)</Label>
