@@ -72,14 +72,17 @@ export function PageAuditTrail({
   if (entries.length === 0) return null;
 
   return (
-    <div className="border-t pt-4">
+    <div className="mt-6 border-t pt-4">
       <Collapsible>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-medium transition-colors">
-          <span className="flex items-center gap-1.5">
-            <Shield className="size-3" />
-            Recent Changes ({entries.length})
+        <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border px-4 py-2.5 transition-colors">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <Shield className="text-muted-foreground size-4" />
+            Recent Changes
+            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
+              {entries.length}
+            </span>
           </span>
-          <ChevronDown className="size-3" />
+          <ChevronDown className="text-muted-foreground size-4" />
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-3 space-y-2">
           {entries.map((entry) => (
