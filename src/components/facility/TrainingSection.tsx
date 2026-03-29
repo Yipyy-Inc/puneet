@@ -20,6 +20,9 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import { Modal } from "@/components/ui/modal";
+import { TagList } from "@/components/shared/TagList";
+import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
+import { cn } from "@/lib/utils";
 
 import {
   Search,
@@ -30,6 +33,7 @@ import {
   PlayCircle,
   Calendar,
   Hourglass,
+  Clock,
   Filter,
 } from "lucide-react";
 import { trainingSessions, trainers, enrollments } from "@/data/training";
@@ -560,21 +564,72 @@ export function TrainingSection() {
                           const sessionEnrollments = getSessionEnrollments(
                             session.attendees,
                           );
+                          const firstPet = sessionEnrollments[0];
+                          const client = firstPet
+                            ? findClientForPet(firstPet.petId)
+                            : undefined;
+                          const hasCritical =
+                            firstPet && hasCriticalTags("pet", firstPet.petId);
+                          const hasWarn =
+                            firstPet &&
+                            !hasCritical &&
+                            hasWarningTags("pet", firstPet.petId);
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              className={cn(
+                                "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
+                                hasCritical &&
+                                  "border-l-4 border-l-red-500 dark:border-l-red-400",
+                                hasWarn &&
+                                  "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                              )}
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                  <GraduationCap className="size-5 text-blue-600" />
-                                </div>
-                                <div className="min-w-0">
+                              <div className="flex items-start gap-3">
+                                {firstPet && getPetImage(firstPet.petId) ? (
+                                  <Link
+                                    href={
+                                      client
+                                        ? `/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`
+                                        : "#"
+                                    }
+                                    className="shrink-0"
+                                  >
+                                    <div className="size-10 overflow-hidden rounded-full">
+                                      <Image
+                                        src={getPetImage(firstPet.petId)!}
+                                        alt={firstPet.petName}
+                                        width={40}
+                                        height={40}
+                                        className="size-full object-cover"
+                                      />
+                                    </div>
+                                  </Link>
+                                ) : (
+                                  <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                                    <GraduationCap className="text-primary size-5" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <p className="truncate font-medium">
-                                      {session.className}
-                                    </p>
+                                    <span className="truncate text-sm font-semibold">
+                                      {firstPet?.petName ?? session.className}
+                                    </span>
+                                    {sessionEnrollments.length > 1 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="h-5 text-[10px]"
+                                      >
+                                        +{sessionEnrollments.length - 1} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                      <GraduationCap className="mr-1 size-3" />
+                                      Training
+                                    </Badge>
                                     {session.status === "pending" && (
                                       <Badge
                                         variant="secondary"
@@ -583,15 +638,34 @@ export function TrainingSection() {
                                         Pending
                                       </Badge>
                                     )}
+                                    {firstPet && (
+                                      <TagList
+                                        entityType="pet"
+                                        entityId={firstPet.petId}
+                                        compact
+                                        maxVisible={2}
+                                      />
+                                    )}
                                   </div>
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {session.trainerName} •{" "}
-                                    {sessionEnrollments.length} attendees •{" "}
-                                    {formatTime(session.startTime)}
+                                  <p className="text-muted-foreground mt-1 text-xs">
+                                    {firstPet?.ownerName ?? ""}
+                                    {firstPet?.petBreed
+                                      ? ` · ${firstPet.petBreed}`
+                                      : ""}{" "}
+                                    · {session.className}
                                   </p>
+                                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+                                    <Clock className="size-3" />
+                                    <span>
+                                      {formatTime(session.startTime)} -{" "}
+                                      {formatTime(session.endTime)}
+                                    </span>
+                                    <span>·</span>
+                                    <span>{session.trainerName}</span>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex shrink-0 items-center gap-2">
+                              <div className="flex justify-end">
                                 {getActionButton(session)}
                               </div>
                             </div>
@@ -635,27 +709,85 @@ export function TrainingSection() {
                           const sessionEnrollments = getSessionEnrollments(
                             session.attendees,
                           );
+                          const firstPet = sessionEnrollments[0];
+                          const client = firstPet
+                            ? findClientForPet(firstPet.petId)
+                            : undefined;
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
+                              className="hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors"
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                                  <GraduationCap className="size-5 text-amber-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate font-medium">
+                              <div className="flex items-start gap-3">
+                                {firstPet && getPetImage(firstPet.petId) ? (
+                                  <Link
+                                    href={
+                                      client
+                                        ? `/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`
+                                        : "#"
+                                    }
+                                    className="shrink-0"
+                                  >
+                                    <div className="size-10 overflow-hidden rounded-full">
+                                      <Image
+                                        src={getPetImage(firstPet.petId)!}
+                                        alt={firstPet.petName}
+                                        width={40}
+                                        height={40}
+                                        className="size-full object-cover"
+                                      />
+                                    </div>
+                                  </Link>
+                                ) : (
+                                  <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                                    <GraduationCap className="text-primary size-5" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate text-sm font-semibold">
+                                      {firstPet?.petName ?? session.className}
+                                    </span>
+                                    {sessionEnrollments.length > 1 && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="h-5 text-[10px]"
+                                      >
+                                        +{sessionEnrollments.length - 1} more
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                      <GraduationCap className="mr-1 size-3" />
+                                      Training
+                                    </Badge>
+                                    {firstPet && (
+                                      <TagList
+                                        entityType="pet"
+                                        entityId={firstPet.petId}
+                                        compact
+                                        maxVisible={2}
+                                      />
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground mt-1 text-xs">
+                                    {firstPet?.ownerName ?? ""} ·{" "}
                                     {session.className}
                                   </p>
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {session.trainerName} •{" "}
-                                    {sessionEnrollments.length} attendees
-                                  </p>
+                                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+                                    <Clock className="size-3" />
+                                    <span>
+                                      {formatTime(session.startTime)} -{" "}
+                                      {formatTime(session.endTime)}
+                                    </span>
+                                    <span>·</span>
+                                    <span>{session.trainerName}</span>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex shrink-0 items-center gap-2">
+                              <div className="flex justify-end">
                                 {getActionButton(session)}
                               </div>
                             </div>
@@ -699,23 +831,62 @@ export function TrainingSection() {
                           const sessionEnrollments = getSessionEnrollments(
                             session.attendees,
                           );
+                          const firstPet = sessionEnrollments[0];
+                          const client = firstPet
+                            ? findClientForPet(firstPet.petId)
+                            : undefined;
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 rounded-lg border p-3 transition-colors"
+                              className="hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors"
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                                  <CheckCircle className="size-5 text-green-600" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate font-medium">
-                                    {session.className}
-                                  </p>
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {session.trainerName} •{" "}
-                                    {sessionEnrollments.length} attendees
+                              <div className="flex items-start gap-3">
+                                {firstPet && getPetImage(firstPet.petId) ? (
+                                  <Link
+                                    href={
+                                      client
+                                        ? `/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`
+                                        : "#"
+                                    }
+                                    className="shrink-0"
+                                  >
+                                    <div className="size-10 overflow-hidden rounded-full">
+                                      <Image
+                                        src={getPetImage(firstPet.petId)!}
+                                        alt={firstPet.petName}
+                                        width={40}
+                                        height={40}
+                                        className="size-full object-cover"
+                                      />
+                                    </div>
+                                  </Link>
+                                ) : (
+                                  <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                                    <GraduationCap className="text-primary size-5" />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <span className="truncate text-sm font-semibold">
+                                    {firstPet?.petName ?? session.className}
+                                  </span>
+                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                                      <GraduationCap className="mr-1 size-3" />
+                                      Training
+                                    </Badge>
+                                    {firstPet && (
+                                      <TagList
+                                        entityType="pet"
+                                        entityId={firstPet.petId}
+                                        compact
+                                        maxVisible={2}
+                                      />
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground mt-1 text-xs">
+                                    {firstPet?.ownerName ?? ""} ·{" "}
+                                    {session.className} · {session.trainerName}
                                   </p>
                                 </div>
                               </div>

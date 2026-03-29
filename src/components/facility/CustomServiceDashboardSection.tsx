@@ -2,11 +2,15 @@
 
 import { memo, useMemo } from "react";
 import Link from "next/link";
-import { Clock, User, ArrowRight, MapPin, CheckCircle } from "lucide-react";
+import Image from "next/image";
+import { Clock, ArrowRight, PawPrint, Scissors } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TagList } from "@/components/shared/TagList";
+import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
+import { clients } from "@/data/clients";
 import type { CustomServiceModule } from "@/types/facility";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { getCategoryMeta, COLOR_HEX_MAP } from "@/data/custom-services";
@@ -14,6 +18,22 @@ import {
   customServiceCheckIns,
   type CustomServiceCheckInStatus,
 } from "@/data/custom-service-checkins";
+
+const petImages: Record<number, string> = {
+  1: "/dogs/dog-1.jpg",
+  2: "/dogs/dog-2.jpg",
+  3: "/dogs/dog-3.jpg",
+  4: "/dogs/dog-4.jpg",
+  5: "/dogs/dog-1.jpg",
+  6: "/dogs/dog-2.jpg",
+  7: "/dogs/dog-3.jpg",
+  8: "/dogs/dog-4.jpg",
+};
+
+const getPetImage = (petId: number): string | null => petImages[petId] || null;
+
+const findClientForPet = (petId: number) =>
+  clients.find((c) => c.pets.some((p) => p.id === petId));
 
 interface CustomServiceDashboardSectionProps {
   module: CustomServiceModule;
@@ -141,56 +161,111 @@ export const CustomServiceDashboardSection = memo(
                 No sessions scheduled for today.
               </p>
             ) : (
-              moduleCheckIns.map((checkIn) => (
-                <div
-                  key={checkIn.id}
-                  className="bg-card hover:bg-muted/30 flex items-center justify-between rounded-lg border p-3 transition-colors"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className="flex size-8 shrink-0 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: accentColor
-                          ? `${accentColor}20`
-                          : undefined,
-                      }}
-                    >
-                      <User className="size-4" style={{ color: accentColor }} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {checkIn.petName}
-                      </p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {checkIn.ownerName}
-                        {checkIn.resourceName && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5">
-                            <MapPin className="inline size-2.5" />
-                            {checkIn.resourceName}
-                          </span>
-                        )}
-                      </p>
+              moduleCheckIns.map((checkIn) => {
+                const client = findClientForPet(checkIn.petId);
+                const isCritical = hasCriticalTags("pet", checkIn.petId);
+                const isWarning =
+                  !isCritical && hasWarningTags("pet", checkIn.petId);
+                return (
+                  <div
+                    key={checkIn.id}
+                    className={cn(
+                      "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
+                      isCritical &&
+                        "border-l-4 border-l-red-500 dark:border-l-red-400",
+                      isWarning &&
+                        "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      {getPetImage(checkIn.petId) ? (
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                              : "#"
+                          }
+                          className="shrink-0"
+                        >
+                          <div className="size-10 overflow-hidden rounded-full">
+                            <Image
+                              src={getPetImage(checkIn.petId)!}
+                              alt={checkIn.petName}
+                              width={40}
+                              height={40}
+                              className="size-full object-cover"
+                            />
+                          </div>
+                        </Link>
+                      ) : (
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                              : "#"
+                          }
+                          className="shrink-0"
+                        >
+                          <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                            <PawPrint className="text-primary size-5" />
+                          </div>
+                        </Link>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={
+                            client
+                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                              : "#"
+                          }
+                          className="text-sm font-semibold hover:underline"
+                        >
+                          {checkIn.petName}
+                        </Link>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                          <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                            <Scissors className="mr-1 size-3" />
+                            {module.name}
+                          </Badge>
+                          <Badge
+                            className={cn(
+                              "text-[10px] capitalize",
+                              STATUS_STYLES[checkIn.status] ?? "bg-secondary",
+                            )}
+                          >
+                            {STATUS_LABELS[checkIn.status]}
+                          </Badge>
+                          <TagList
+                            entityType="pet"
+                            entityId={checkIn.petId}
+                            compact
+                            maxVisible={2}
+                          />
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {checkIn.ownerName} · {checkIn.petBreed}
+                        </p>
+                        <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+                          <Clock className="size-3" />
+                          <span>{formatTime(checkIn.checkInTime)}</span>
+                          {checkIn.staffAssigned && (
+                            <>
+                              <span>·</span>
+                              <span>{checkIn.staffAssigned}</span>
+                            </>
+                          )}
+                          {checkIn.resourceName && (
+                            <>
+                              <span>·</span>
+                              <span>{checkIn.resourceName}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="ml-2 flex shrink-0 items-center gap-2">
-                    <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <Clock className="size-3" />
-                      {formatTime(checkIn.checkInTime)}
-                    </div>
-                    <Badge
-                      className={cn(
-                        "text-[10px] capitalize",
-                        STATUS_STYLES[checkIn.status] ?? "bg-secondary",
-                      )}
-                    >
-                      {checkIn.status === "completed" && (
-                        <CheckCircle className="mr-0.5 size-2.5" />
-                      )}
-                      {STATUS_LABELS[checkIn.status]}
-                    </Badge>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>
