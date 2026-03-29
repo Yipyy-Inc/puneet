@@ -517,7 +517,7 @@ export function GroomingSection() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <Scissors className="text-primary size-5" />
-            <h3 className="text-lg font-semibold">Grooming</h3>
+            <h3 className="text-base font-semibold md:text-lg">Grooming</h3>
           </div>
 
           <DropdownMenu>
@@ -637,7 +637,7 @@ export function GroomingSection() {
                           return (
                             <div
                               key={appointment.id}
-                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                               onClick={() => handleViewDetails(appointment)}
                             >
                               {getPetImage(appointment.petId) ? (
@@ -772,7 +772,7 @@ export function GroomingSection() {
                             <div
                               key={appointment.id}
                               className={cn(
-                                "hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
+                                "hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5",
                               )}
                               onClick={() => handleViewDetails(appointment)}
                             >
@@ -895,7 +895,7 @@ export function GroomingSection() {
                           return (
                             <div
                               key={appointment.id}
-                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                               onClick={() => handleViewDetails(appointment)}
                             >
                               {getPetImage(appointment.petId) ? (
@@ -995,7 +995,9 @@ export function GroomingSection() {
             <div className="space-y-6">
               {/* Pet Information */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">Pet Information</h3>
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
+                  Pet Information
+                </h3>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="bg-muted/50 flex items-center gap-4 rounded-lg p-4">
                     {getPetImage(selectedAppointment.petId) ? (
@@ -1026,7 +1028,7 @@ export function GroomingSection() {
 
               {/* Owner Information */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
                   Owner Information
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -1052,7 +1054,9 @@ export function GroomingSection() {
 
               {/* Booking Details */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">Booking Details</h3>
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
+                  Booking Details
+                </h3>
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -1244,7 +1248,7 @@ export function GroomingSection() {
                               ? `/facility/dashboard/clients/${client.id}/pets/${selectedAppointment.petId}`
                               : "#"
                           }
-                          className="text-lg font-semibold hover:underline"
+                          className="text-base font-semibold hover:underline md:text-lg"
                         >
                           {selectedAppointment.petName}
                         </Link>

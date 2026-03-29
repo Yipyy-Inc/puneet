@@ -190,7 +190,7 @@ export function FacilityNotificationsDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="max-h-[420px] w-80 overflow-y-auto"
+        className="max-h-[420px] w-[calc(100vw-2rem)] overflow-y-auto sm:w-80"
       >
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-medium">Notifications</span>

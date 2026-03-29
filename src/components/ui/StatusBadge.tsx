@@ -103,10 +103,10 @@ export function StatusBadge({
 
   const sizeClass =
     size === "sm"
-      ? "text-[10px] px-1.5 py-0"
+      ? "text-[9px] md:text-[10px] px-1 md:px-1.5 py-0"
       : size === "lg"
-        ? "text-sm px-3 py-1"
-        : "text-xs px-2 py-0.5";
+        ? "text-xs md:text-sm px-2 md:px-3 py-0.5 md:py-1"
+        : "text-[10px] md:text-xs px-1.5 md:px-2 py-0 md:py-0.5";
 
   // For roles and plans, use slightly different styling
   if (type === "plan" || type === "role" || type === "adminRole") {

@@ -195,7 +195,7 @@ export function TopBarIcons({
           badge={msgBadge}
           onClick={() => nav(inboxHref)}
         >
-          <Inbox className="text-muted-foreground size-5" />
+          <Inbox className="text-muted-foreground size-4 md:size-5" />
         </IconButton>
 
         {showQuickCreate && (

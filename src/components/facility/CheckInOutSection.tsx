@@ -854,7 +854,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                         onClick={() => handleViewDetails(item)}
                       >
                         {getPetImage(item.petId) ? (
@@ -997,7 +997,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                         onClick={() => handleViewDetails(item)}
                       >
                         {getPetImage(item.petId) ? (
@@ -1135,7 +1135,7 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                         onClick={() => handleViewDetails(item)}
                       >
                         {getPetImage(item.petId) ? (

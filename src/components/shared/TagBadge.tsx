@@ -17,15 +17,15 @@ interface TagBadgeProps {
 }
 
 const SIZE_CLASSES = {
-  sm: "text-[10px] px-1.5 py-0 gap-0.5 h-5",
-  md: "text-xs px-2 py-0.5 gap-1 h-6",
-  lg: "text-sm px-2.5 py-1 gap-1.5 h-7",
+  sm: "text-[9px] md:text-[10px] px-1 md:px-1.5 py-0 gap-0.5 h-4 md:h-5",
+  md: "text-[10px] md:text-xs px-1.5 md:px-2 py-0 md:py-0.5 gap-0.5 md:gap-1 h-5 md:h-6",
+  lg: "text-xs md:text-sm px-2 md:px-2.5 py-0.5 md:py-1 gap-1 md:gap-1.5 h-6 md:h-7",
 } as const;
 
 const ICON_SIZES = {
-  sm: "h-2.5 w-2.5",
-  md: "size-3",
-  lg: "size-3.5",
+  sm: "h-2 w-2 md:h-2.5 md:w-2.5",
+  md: "size-2.5 md:size-3",
+  lg: "size-3 md:size-3.5",
 } as const;
 
 export function TagBadge({

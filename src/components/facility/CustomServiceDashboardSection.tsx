@@ -127,7 +127,7 @@ export const CustomServiceDashboardSection = memo(
       return (
         <div
           key={checkIn.id}
-          className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+          className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
         >
           {getPetImage(checkIn.petId) ? (
             <Link
@@ -235,7 +235,9 @@ export const CustomServiceDashboardSection = memo(
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-teal-500">
                 <DynamicIcon name={module.icon} className="size-5 text-white" />
               </div>
-              <h3 className="text-lg font-semibold">{module.name}</h3>
+              <h3 className="text-base font-semibold md:text-lg">
+                {module.name}
+              </h3>
             </div>
             <Link href={viewAllUrl}>
               <Button variant="outline" size="sm" className="gap-1.5">

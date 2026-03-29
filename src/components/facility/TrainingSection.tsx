@@ -453,7 +453,7 @@ export function TrainingSection() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-2">
             <GraduationCap className="text-primary size-5" />
-            <h3 className="text-lg font-semibold">Training</h3>
+            <h3 className="text-base font-semibold md:text-lg">Training</h3>
           </div>
 
           <DropdownMenu>
@@ -577,7 +577,7 @@ export function TrainingSection() {
                             <div
                               key={session.id}
                               className={cn(
-                                "hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
+                                "hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5",
                               )}
                               onClick={() => handleViewDetails(session)}
                             >
@@ -711,7 +711,7 @@ export function TrainingSection() {
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                               onClick={() => handleViewDetails(session)}
                             >
                               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -833,7 +833,7 @@ export function TrainingSection() {
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors md:gap-3 md:p-2.5"
                               onClick={() => handleViewDetails(session)}
                             >
                               <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -927,7 +927,9 @@ export function TrainingSection() {
             <div className="space-y-6">
               {/* Pet Information */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">Pet Information</h3>
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
+                  Pet Information
+                </h3>
                 <div className="grid grid-cols-1 gap-4">
                   {getSessionEnrollments(selectedSession.attendees).map(
                     (enrollment) => {
@@ -978,7 +980,7 @@ export function TrainingSection() {
 
               {/* Owner Information */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
                   Owner Information
                 </h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -1016,7 +1018,9 @@ export function TrainingSection() {
 
               {/* Booking Details */}
               <div>
-                <h3 className="mb-3 text-lg font-semibold">Booking Details</h3>
+                <h3 className="mb-3 text-base font-semibold md:text-lg">
+                  Booking Details
+                </h3>
                 <div className="bg-muted/50 rounded-lg p-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -1142,7 +1146,7 @@ export function TrainingSection() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-lg font-semibold">
+                    <p className="text-base font-semibold md:text-lg">
                       {selectedSession.className}
                     </p>
                     {getStatusBadge(selectedSession.status)}
