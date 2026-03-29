@@ -70,6 +70,10 @@ interface DataTableProps<T> {
   actions?: (item: T) => React.ReactNode;
   rowClassName?: (item: T) => string;
   onRowClick?: (item: T) => void;
+  /** Custom filter button callback — renders filter icon that calls this instead of built-in filters */
+  onFilterClick?: () => void;
+  /** Badge count to show on the custom filter button */
+  filterCount?: number;
 }
 
 export function DataTable<T extends object>({
@@ -84,6 +88,8 @@ export function DataTable<T extends object>({
   actions,
   rowClassName,
   onRowClick,
+  onFilterClick,
+  filterCount,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -215,7 +221,22 @@ export function DataTable<T extends object>({
               </SelectContent>
             </Select>
           ))}
-        {filters.length > 0 && (
+        {onFilterClick && (
+          <Button
+            variant={filterCount ? "default" : "outline"}
+            size="icon"
+            className="relative"
+            onClick={onFilterClick}
+          >
+            <Filter className="size-4" />
+            {!!filterCount && filterCount > 0 && (
+              <span className="bg-primary-foreground text-primary absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
+                {filterCount}
+              </span>
+            )}
+          </Button>
+        )}
+        {!onFilterClick && filters.length > 0 && (
           <Button
             variant={showFilters ? "default" : "outline"}
             size="icon"

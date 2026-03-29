@@ -23,7 +23,6 @@ import {
   Plus,
   PawPrint,
   CircleDot,
-  Filter,
   Mail as MailIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -232,19 +231,6 @@ export default function FacilityClientsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFilterPanelOpen(true)}
-            >
-              <Filter className="mr-2 size-4" />
-              Filters
-              {activeCount > 0 && (
-                <Badge variant="secondary" className="ml-1.5">
-                  {activeCount}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => exportClientsToCSV(facilityClients)}
             >
               <Download className="mr-2 size-4" />
@@ -306,6 +292,8 @@ export default function FacilityClientsPage() {
         }
         searchPlaceholder="Search by client or pet name..."
         itemsPerPage={10}
+        onFilterClick={() => setFilterPanelOpen(true)}
+        filterCount={activeCount}
         actions={(client) => (
           <Button
             variant="outline"
