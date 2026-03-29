@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Inbox, Bell, Plus } from "lucide-react";
+import { Inbox, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import {
 
 export interface TopBarCounts {
   unreadMessages: number;
-  unreadAlerts: number;
 }
 
 export interface TopBarIconsProps {
@@ -22,7 +21,6 @@ export interface TopBarIconsProps {
   navigate?: (to: string) => void;
 
   inboxHref?: string;
-  notificationsHref?: string;
 
   /** Optional quick-create icon. */
   onQuickCreate?: () => void;
@@ -54,15 +52,11 @@ function formatBadge(count: number) {
 }
 
 async function defaultGetCounts(): Promise<TopBarCounts> {
-  if (typeof window === "undefined")
-    return { unreadMessages: 0, unreadAlerts: 0 };
+  if (typeof window === "undefined") return { unreadMessages: 0 };
   const msg = clampCount(
     Number(localStorage.getItem("unread_messages_count") ?? 0),
   );
-  const al = clampCount(
-    Number(localStorage.getItem("unread_alerts_count") ?? 0),
-  );
-  return { unreadMessages: msg, unreadAlerts: al };
+  return { unreadMessages: msg };
 }
 
 function usePollingCounts(
@@ -71,7 +65,6 @@ function usePollingCounts(
 ) {
   const [counts, setCounts] = React.useState<TopBarCounts>({
     unreadMessages: 0,
-    unreadAlerts: 0,
   });
 
   const refresh = React.useCallback(async () => {
@@ -79,7 +72,6 @@ function usePollingCounts(
       const next = await getCounts();
       setCounts({
         unreadMessages: clampCount(next.unreadMessages),
-        unreadAlerts: clampCount(next.unreadAlerts),
       });
     } catch {
       // ignore (frontend-only)
@@ -166,7 +158,6 @@ function IconButton({
 export function TopBarIcons({
   navigate,
   inboxHref = "/facility/dashboard/communications",
-  notificationsHref = "/facility/dashboard/notifications",
   onQuickCreate,
   quickCreateClickTargetId,
   pollIntervalMs = 45_000,
@@ -186,7 +177,6 @@ export function TopBarIcons({
     pollIntervalMs,
   );
   const msgBadge = formatBadge(counts.unreadMessages);
-  const alertBadge = formatBadge(counts.unreadAlerts);
 
   const handleQuickCreate = React.useCallback(() => {
     if (onQuickCreate) return onQuickCreate();
@@ -206,14 +196,6 @@ export function TopBarIcons({
           onClick={() => nav(inboxHref)}
         >
           <Inbox className="text-muted-foreground size-5" />
-        </IconButton>
-
-        <IconButton
-          label="Notifications"
-          badge={alertBadge}
-          onClick={() => nav(notificationsHref)}
-        >
-          <Bell className="text-muted-foreground size-5" />
         </IconButton>
 
         {showQuickCreate && (
