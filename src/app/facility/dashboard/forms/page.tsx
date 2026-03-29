@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -361,6 +362,8 @@ function FormCard({
           </Link>
         </span>
       </div>
+
+      <PageAuditTrail area="forms" />
 
       <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
         <DialogContent className="max-w-lg">

@@ -76,11 +76,6 @@ import {
   getMockPreviewData,
 } from "@/lib/template-variable-resolver";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   InlineFollowUpButton,
   FollowUpConditionBadge,
   supportsFollowUp,
@@ -1997,15 +1992,15 @@ function QuestionEditor({
           </Select>
         </div>
       </div>
-      <Collapsible>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-lg border p-3 text-xs font-medium transition-colors">
-          Validation (advanced)
-          <ChevronDown className="size-3" />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-2 rounded-b-lg border-x border-b p-3">
+      {/* Friendly validation — only for types that need it */}
+      {(question.type === "text" || question.type === "textarea") && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-xs">
+            Character limits
+          </Label>
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label className="text-xs">Min</Label>
+              <Label className="text-[11px]">At least</Label>
               <Input
                 type="number"
                 value={question.validation?.min ?? ""}
@@ -2017,12 +2012,12 @@ function QuestionEditor({
                     },
                   })
                 }
-                placeholder="Min value/length"
+                placeholder="No min"
                 className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Max</Label>
+              <Label className="text-[11px]">No more than</Label>
               <Input
                 type="number"
                 value={question.validation?.max ?? ""}
@@ -2034,54 +2029,82 @@ function QuestionEditor({
                     },
                   })
                 }
-                placeholder="Max value/length"
+                placeholder="No max"
                 className="h-8 text-xs"
               />
             </div>
           </div>
-          {question.type === "file" && (
+        </div>
+      )}
+      {question.type === "number" && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-xs">Value range</Label>
+          <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label className="text-xs">
-                Allowed file types (comma-separated)
-              </Label>
+              <Label className="text-[11px]">Must be at least</Label>
               <Input
-                value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
+                type="number"
+                value={question.validation?.min ?? ""}
                 onChange={(e) =>
                   onChange({
                     validation: {
                       ...question.validation,
-                      allowedFileTypes: e.target.value
-                        ? e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                        : undefined,
+                      min: e.target.value ? Number(e.target.value) : undefined,
                     },
                   })
                 }
-                placeholder=".pdf, .jpg, .png"
+                placeholder="No min"
                 className="h-8 text-xs"
               />
             </div>
-          )}
+            <div className="space-y-1">
+              <Label className="text-[11px]">No more than</Label>
+              <Input
+                type="number"
+                value={question.validation?.max ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    validation: {
+                      ...question.validation,
+                      max: e.target.value ? Number(e.target.value) : undefined,
+                    },
+                  })
+                }
+                placeholder="No max"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      {question.type === "file" && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-xs">
+            File restrictions
+          </Label>
           <div className="space-y-1">
-            <Label className="text-xs">Regex pattern</Label>
+            <Label className="text-[11px]">Allowed types</Label>
             <Input
-              value={question.validation?.regex ?? ""}
+              value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
               onChange={(e) =>
                 onChange({
                   validation: {
                     ...question.validation,
-                    regex: e.target.value || undefined,
+                    allowedFileTypes: e.target.value
+                      ? e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                      : undefined,
                   },
                 })
               }
-              placeholder="e.g. ^[a-zA-Z]+$"
+              placeholder="e.g. .pdf, .jpg, .png"
               className="h-8 text-xs"
             />
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </div>
+      )}
       {onMappingChange && (
         <div className="space-y-2">
           <div className="flex items-center space-x-2">

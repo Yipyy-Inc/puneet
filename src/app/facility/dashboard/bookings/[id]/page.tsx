@@ -4,6 +4,7 @@ import { use, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, AlertTriangle, Ban } from "lucide-react";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -378,6 +379,8 @@ export default function FacilityBookingDetailPage({
           )}
         </div>
       </div>
+
+      <PageAuditTrail area="bookings" entityId={String(bookingId)} />
 
       <YipyyGoStaffReviewModal
         open={reviewModalOpen}
