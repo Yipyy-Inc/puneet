@@ -3,20 +3,51 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Filter, X } from "lucide-react";
+import {
+  SlidersHorizontal,
+  X,
+  User,
+  PawPrint,
+  Calendar,
+  Clock,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ClientFilters } from "@/hooks/use-client-filters";
+
+// ========================================
+// Section Header
+// ========================================
+
+function SectionHeader({
+  icon: Icon,
+  label,
+  count,
+}: {
+  icon: React.ElementType;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <div className="flex items-center gap-2 pt-1 pb-3">
+      <Icon className="text-muted-foreground size-3.5" />
+      <span className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
+        {label}
+      </span>
+      {!!count && count > 0 && (
+        <span className="bg-primary text-primary-foreground flex size-4 items-center justify-center rounded-full text-[9px] font-medium">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
 
 // ========================================
 // TriState Toggle (Yes / No / Any)
@@ -32,18 +63,19 @@ function TriToggle({
   label: string;
 }) {
   return (
-    <div className="flex items-center justify-between py-1">
-      <span className="text-sm">{label}</span>
-      <div className="flex gap-0.5 rounded-md border p-0.5">
+    <div className="flex items-center justify-between py-1.5">
+      <span className="text-[13px]">{label}</span>
+      <div className="border-border/60 flex rounded-md border bg-transparent p-0.5">
         {(["yes", "no", "any"] as const).map((v) => (
           <button
             key={v}
             onClick={() => onChange(v)}
-            className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+            className={cn(
+              "rounded-sm px-3 py-1 text-[11px] font-medium tracking-wide transition-all",
               value === v
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             {v === "any" ? "Any" : v === "yes" ? "Yes" : "No"}
           </button>
@@ -58,68 +90,64 @@ function TriToggle({
 // ========================================
 
 function CheckboxGroup({
-  label,
   options,
   selected,
   onToggle,
 }: {
-  label: string;
   options: { value: string; label: string }[];
   selected: string[];
   onToggle: (value: string) => void;
 }) {
   return (
-    <div className="space-y-2 py-1">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="space-y-1.5">
-        {options.map((opt) => (
-          <label
-            key={opt.value}
-            className="flex cursor-pointer items-center gap-2"
-          >
-            <Checkbox
-              checked={selected.includes(opt.value)}
-              onCheckedChange={() => onToggle(opt.value)}
-            />
-            <span className="text-sm">{opt.label}</span>
-          </label>
-        ))}
-      </div>
+    <div className="space-y-1">
+      {options.map((opt) => (
+        <label
+          key={opt.value}
+          className={cn(
+            "flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
+            selected.includes(opt.value) ? "bg-muted/60" : "hover:bg-muted/40",
+          )}
+        >
+          <Checkbox
+            checked={selected.includes(opt.value)}
+            onCheckedChange={() => onToggle(opt.value)}
+          />
+          <span className="text-[13px]">{opt.label}</span>
+        </label>
+      ))}
     </div>
   );
 }
 
 // ========================================
-// Preset Button Group (Last Visit)
+// Preset Pill Group (Last Visit)
 // ========================================
 
-function PresetButtons({
-  label,
+function PillGroup({
   options,
   value,
   onChange,
 }: {
-  label: string;
   options: { value: number | null; label: string }[];
   value: number | null;
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="space-y-2 py-1">
-      <span className="text-sm font-medium">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => (
-          <Button
-            key={String(opt.value)}
-            variant={value === opt.value ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onChange(value === opt.value ? null : opt.value)}
-          >
-            {opt.label}
-          </Button>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => (
+        <button
+          key={String(opt.value)}
+          onClick={() => onChange(value === opt.value ? null : opt.value)}
+          className={cn(
+            "rounded-full border px-3 py-1 text-[11px] font-medium tracking-wide transition-all",
+            value === opt.value
+              ? "bg-foreground text-background border-transparent"
+              : "border-border/60 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -157,78 +185,76 @@ export function ClientFilterPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[340px] overflow-y-auto sm:w-[380px]"
+        className="flex w-[360px] flex-col gap-0 p-0 sm:w-[400px]"
       >
-        <SheetHeader className="pb-4">
+        {/* Fixed Header */}
+        <SheetHeader className="border-b px-6 py-4">
           <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <Filter className="size-4" />
+            <SheetTitle className="flex items-center gap-2.5 text-base font-semibold tracking-tight">
+              <SlidersHorizontal className="size-4" />
               Filters
+            </SheetTitle>
+            <div className="flex items-center gap-2">
               {activeCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
+                <button
+                  onClick={clearAll}
+                  className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+                >
+                  Reset
+                </button>
+              )}
+              {activeCount > 0 && (
+                <Badge
+                  variant="outline"
+                  className="border-foreground/20 font-mono text-[10px]"
+                >
                   {activeCount}
                 </Badge>
               )}
-            </SheetTitle>
-            {activeCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground h-auto text-xs"
-                onClick={clearAll}
-              >
-                Clear all
-              </Button>
-            )}
+            </div>
           </div>
         </SheetHeader>
 
-        <Accordion
-          type="multiple"
-          defaultValue={["client-info", "pets"]}
-          className="w-full"
-        >
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {/* Client Info */}
-          <AccordionItem value="client-info">
-            <AccordionTrigger className="text-sm font-medium">
-              Client Info
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pb-4">
-              <CheckboxGroup
-                label="Status"
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                ]}
-                selected={filters.status}
-                onToggle={(v) => toggleArrayItem("status", v)}
-              />
-              <TriToggle
-                label="Has Address"
-                value={filters.hasAddress}
-                onChange={(v) => setFilter("hasAddress", v)}
-              />
-              <TriToggle
-                label="Has Emergency Contact"
-                value={filters.hasEmergencyContact}
-                onChange={(v) => setFilter("hasEmergencyContact", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
+          <SectionHeader icon={User} label="Client" />
+          <div className="space-y-1 pb-5">
+            <CheckboxGroup
+              options={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ]}
+              selected={filters.status}
+              onToggle={(v) => toggleArrayItem("status", v)}
+            />
+            <TriToggle
+              label="Has address on file"
+              value={filters.hasAddress}
+              onChange={(v) => setFilter("hasAddress", v)}
+            />
+            <TriToggle
+              label="Emergency contact"
+              value={filters.hasEmergencyContact}
+              onChange={(v) => setFilter("hasEmergencyContact", v)}
+            />
+          </div>
+
+          <Separator className="mb-4" />
 
           {/* Pets */}
-          <AccordionItem value="pets">
-            <AccordionTrigger className="text-sm font-medium">
-              Pets
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pb-4">
-              <TriToggle
-                label="Has Pets"
-                value={filters.hasPets}
-                onChange={(v) => setFilter("hasPets", v)}
-              />
+          <SectionHeader icon={PawPrint} label="Pets" />
+          <div className="space-y-1 pb-5">
+            <TriToggle
+              label="Has registered pets"
+              value={filters.hasPets}
+              onChange={(v) => setFilter("hasPets", v)}
+            />
+            <div className="pt-1">
+              <p className="text-muted-foreground pb-1.5 text-[11px] font-medium tracking-widest uppercase">
+                Type
+              </p>
               <CheckboxGroup
-                label="Pet Type"
                 options={[
                   { value: "Dog", label: "Dog" },
                   { value: "Cat", label: "Cat" },
@@ -237,63 +263,73 @@ export function ClientFilterPanel({
                 selected={filters.petTypes}
                 onToggle={(v) => toggleArrayItem("petTypes", v)}
               />
-              <TriToggle
-                label="Has Allergies"
-                value={filters.hasAllergies}
-                onChange={(v) => setFilter("hasAllergies", v)}
-              />
-              <TriToggle
-                label="Has Special Needs"
-                value={filters.hasSpecialNeeds}
-                onChange={(v) => setFilter("hasSpecialNeeds", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
+            </div>
+            <TriToggle
+              label="Known allergies"
+              value={filters.hasAllergies}
+              onChange={(v) => setFilter("hasAllergies", v)}
+            />
+            <TriToggle
+              label="Special needs"
+              value={filters.hasSpecialNeeds}
+              onChange={(v) => setFilter("hasSpecialNeeds", v)}
+            />
+          </div>
 
-          {/* Services & Bookings */}
-          <AccordionItem value="services">
-            <AccordionTrigger className="text-sm font-medium">
-              Services & Bookings
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pb-4">
-              <CheckboxGroup
-                label="Has Used Service"
-                options={[
-                  { value: "daycare", label: "Daycare" },
-                  { value: "boarding", label: "Boarding" },
-                  { value: "grooming", label: "Grooming" },
-                  { value: "training", label: "Training" },
-                ]}
-                selected={filters.services}
-                onToggle={(v) => toggleArrayItem("services", v)}
-              />
-              <TriToggle
-                label="Has Active Booking"
-                value={filters.hasActiveBooking}
-                onChange={(v) => setFilter("hasActiveBooking", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
+          <Separator className="mb-4" />
+
+          {/* Services */}
+          <SectionHeader icon={Calendar} label="Services" />
+          <div className="space-y-1 pb-5">
+            <CheckboxGroup
+              options={[
+                { value: "daycare", label: "Daycare" },
+                { value: "boarding", label: "Boarding" },
+                { value: "grooming", label: "Grooming" },
+                { value: "training", label: "Training" },
+              ]}
+              selected={filters.services}
+              onToggle={(v) => toggleArrayItem("services", v)}
+            />
+            <TriToggle
+              label="Has active booking"
+              value={filters.hasActiveBooking}
+              onChange={(v) => setFilter("hasActiveBooking", v)}
+            />
+          </div>
+
+          <Separator className="mb-4" />
 
           {/* Activity */}
-          <AccordionItem value="activity">
-            <AccordionTrigger className="text-sm font-medium">
-              Activity
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pb-4">
-              <PresetButtons
-                label="Last Visit"
-                options={[
-                  { value: 7, label: "7 days" },
-                  { value: 30, label: "30 days" },
-                  { value: 90, label: "90 days" },
-                ]}
-                value={filters.lastVisitDays}
-                onChange={(v) => setFilter("lastVisitDays", v)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+          <SectionHeader icon={Clock} label="Activity" />
+          <div className="pb-5">
+            <p className="text-muted-foreground pb-2 text-[11px] font-medium tracking-widest uppercase">
+              Last visit within
+            </p>
+            <PillGroup
+              options={[
+                { value: 7, label: "7 days" },
+                { value: 30, label: "30 days" },
+                { value: 90, label: "90 days" },
+              ]}
+              value={filters.lastVisitDays}
+              onChange={(v) => setFilter("lastVisitDays", v)}
+            />
+          </div>
+        </div>
+
+        {/* Fixed Footer */}
+        {activeCount > 0 && (
+          <div className="border-t px-6 py-3">
+            <Button
+              className="w-full"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+            >
+              Show results
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -326,17 +362,17 @@ export function ActiveFilterChips({
     });
   if (filters.hasEmergencyContact !== "any")
     chips.push({
-      label: `Emergency Contact: ${filters.hasEmergencyContact}`,
+      label: `Emergency: ${filters.hasEmergencyContact}`,
       onRemove: () => setFilter("hasEmergencyContact", "any"),
     });
   if (filters.hasPets !== "any")
     chips.push({
-      label: `Has Pets: ${filters.hasPets}`,
+      label: `Pets: ${filters.hasPets}`,
       onRemove: () => setFilter("hasPets", "any"),
     });
   if (filters.petTypes.length > 0)
     chips.push({
-      label: `Pet: ${filters.petTypes.join(", ")}`,
+      label: filters.petTypes.join(", "),
       onRemove: () => setFilter("petTypes", []),
     });
   if (filters.hasAllergies !== "any")
@@ -346,17 +382,17 @@ export function ActiveFilterChips({
     });
   if (filters.hasSpecialNeeds !== "any")
     chips.push({
-      label: `Special Needs: ${filters.hasSpecialNeeds}`,
+      label: `Special needs: ${filters.hasSpecialNeeds}`,
       onRemove: () => setFilter("hasSpecialNeeds", "any"),
     });
   if (filters.services.length > 0)
     chips.push({
-      label: `Service: ${filters.services.join(", ")}`,
+      label: filters.services.join(", "),
       onRemove: () => setFilter("services", []),
     });
   if (filters.hasActiveBooking !== "any")
     chips.push({
-      label: `Active Booking: ${filters.hasActiveBooking}`,
+      label: `Active booking: ${filters.hasActiveBooking}`,
       onRemove: () => setFilter("hasActiveBooking", "any"),
     });
   if (filters.lastVisitDays !== null)
@@ -368,23 +404,22 @@ export function ActiveFilterChips({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {chips.map((chip) => (
-        <Badge
+        <span
           key={chip.label}
-          variant="secondary"
-          className="gap-1 pr-1 text-xs font-normal"
+          className="border-border/60 text-foreground inline-flex items-center gap-1 rounded-full border bg-transparent px-2.5 py-0.5 text-[11px] font-medium"
         >
           {chip.label}
           <button
             onClick={chip.onRemove}
-            className="hover:bg-muted ml-0.5 rounded-full p-0.5"
+            className="hover:bg-muted -mr-0.5 rounded-full p-0.5 transition-colors"
           >
             <X className="size-2.5" />
           </button>
-        </Badge>
+        </span>
       ))}
       <button
         onClick={clearAll}
-        className="text-muted-foreground text-xs hover:underline"
+        className="text-muted-foreground text-[11px] hover:underline"
       >
         Clear all
       </button>
