@@ -20,6 +20,7 @@ import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -3696,6 +3697,8 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <PageAuditTrail area="settings" />
     </div>
   );
 }

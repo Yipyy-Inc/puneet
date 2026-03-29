@@ -38,6 +38,7 @@ import {
   LogIn,
   Package,
 } from "lucide-react";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
 import { toast } from "sonner";
 import {
@@ -1030,6 +1031,8 @@ export default function GroomingCalendarPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PageAuditTrail area="services" />
 
       {/* Grooming Booking Flow */}
       <GroomingBookingFlow

@@ -11,6 +11,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import {
   daycareCheckIns,
   daycareCapacity,
@@ -258,6 +259,8 @@ export default function DaycareDashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      <PageAuditTrail area="services" />
     </div>
   );
 }
