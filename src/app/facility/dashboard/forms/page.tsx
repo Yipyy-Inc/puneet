@@ -80,11 +80,6 @@ export default function IntakeFormsPage() {
             Create New
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/facility/dashboard/forms/builder?new=1">
-              New from scratch
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
             <Link href="/facility/dashboard/forms/templates">
               From template
             </Link>
