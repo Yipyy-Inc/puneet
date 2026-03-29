@@ -562,11 +562,200 @@ export function getTenantAuditLogs(facilityId: number): TenantAuditLog[] {
     ],
   };
 
+  // Facility 11 — realistic staff-only audit entries
+  facilityAuditLogs[11] = [
+    {
+      id: "audit-11-001",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      userId: "user-101",
+      userName: "Sarah Mitchell",
+      userRole: "Manager",
+      action: "Published Form",
+      category: "Configuration",
+      entityType: "Form",
+      entityId: "form-intake-demo",
+      entityName: "New Client Intake Form",
+      changes: [{ field: "Version", oldValue: "v2", newValue: "v3" }],
+      ipAddress: "192.168.1.10",
+      userAgent: "Mozilla/5.0",
+      severity: "Medium",
+      status: "Success",
+      description:
+        "Published New Client Intake Form v3 — added emergency contact section",
+    },
+    {
+      id: "audit-11-002",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+      userId: "user-100",
+      userName: "John Smith",
+      userRole: "Owner",
+      action: "Updated Settings",
+      category: "Configuration",
+      entityType: "Setting",
+      entityId: "business-hours",
+      entityName: "Business Hours",
+      changes: [
+        { field: "Monday Open", oldValue: "7:00 AM", newValue: "8:00 AM" },
+      ],
+      ipAddress: "192.168.1.5",
+      userAgent: "Mozilla/5.0",
+      severity: "Low",
+      status: "Success",
+      description: "Changed Monday opening hour from 7:00 AM to 8:00 AM",
+    },
+    {
+      id: "audit-11-003",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-105",
+      userName: "Amy Chen",
+      userRole: "Front Desk",
+      action: "Updated Client",
+      category: "Client",
+      entityType: "Client",
+      entityId: "client-204",
+      entityName: "Michael Brown",
+      changes: [
+        {
+          field: "Phone",
+          oldValue: "(514) 555-0199",
+          newValue: "(514) 555-0234",
+        },
+      ],
+      ipAddress: "192.168.1.22",
+      userAgent: "Mozilla/5.0",
+      severity: "Low",
+      status: "Success",
+      description: "Updated phone number for Michael Brown",
+    },
+    {
+      id: "audit-11-004",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-101",
+      userName: "Sarah Mitchell",
+      userRole: "Manager",
+      action: "Added Question",
+      category: "Configuration",
+      entityType: "Form",
+      entityId: "form-boarding-agreement",
+      entityName: "Boarding Agreement",
+      changes: [
+        {
+          field: "Question Added",
+          oldValue: "",
+          newValue: "Does your pet have food allergies?",
+        },
+      ],
+      ipAddress: "192.168.1.10",
+      userAgent: "Mozilla/5.0",
+      severity: "Low",
+      status: "Success",
+      description:
+        "Added question 'Does your pet have food allergies?' to Boarding Agreement",
+    },
+    {
+      id: "audit-11-005",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-100",
+      userName: "John Smith",
+      userRole: "Owner",
+      action: "Updated Pricing",
+      category: "Financial",
+      entityType: "Service",
+      entityId: "boarding-standard",
+      entityName: "Standard Boarding",
+      changes: [
+        { field: "Nightly Rate", oldValue: "$42.00", newValue: "$45.00" },
+        { field: "Weekend Surcharge", oldValue: "$5.00", newValue: "$8.00" },
+      ],
+      ipAddress: "192.168.1.5",
+      userAgent: "Mozilla/5.0",
+      severity: "Medium",
+      status: "Success",
+      description:
+        "Updated Standard Boarding nightly rate and weekend surcharge",
+    },
+    {
+      id: "audit-11-006",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-105",
+      userName: "Amy Chen",
+      userRole: "Front Desk",
+      action: "Added Vaccination",
+      category: "Client",
+      entityType: "Pet",
+      entityId: "pet-3",
+      entityName: "Max (Golden Retriever)",
+      changes: [
+        {
+          field: "Rabies Vaccine",
+          oldValue: "",
+          newValue: "Expires 2027-03-15",
+        },
+      ],
+      ipAddress: "192.168.1.22",
+      userAgent: "Mozilla/5.0",
+      severity: "Low",
+      status: "Success",
+      description: "Added rabies vaccination record for Max",
+    },
+    {
+      id: "audit-11-007",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-101",
+      userName: "Sarah Mitchell",
+      userRole: "Manager",
+      action: "Changed Role",
+      category: "User Access",
+      entityType: "Staff",
+      entityId: "user-108",
+      entityName: "Jessica Martinez",
+      changes: [
+        { field: "Role", oldValue: "Kennel Tech", newValue: "Front Desk" },
+      ],
+      ipAddress: "192.168.1.10",
+      userAgent: "Mozilla/5.0",
+      severity: "High",
+      status: "Success",
+      description:
+        "Changed Jessica Martinez role from Kennel Tech to Front Desk",
+    },
+    {
+      id: "audit-11-008",
+      facilityId: 11,
+      timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      userId: "user-100",
+      userName: "John Smith",
+      userRole: "Owner",
+      action: "Enabled Module",
+      category: "Configuration",
+      entityType: "Module",
+      entityId: "grooming",
+      entityName: "Grooming Module",
+      changes: [{ field: "Status", oldValue: "Disabled", newValue: "Enabled" }],
+      ipAddress: "192.168.1.5",
+      userAgent: "Mozilla/5.0",
+      severity: "Medium",
+      status: "Success",
+      description: "Enabled Grooming Module for facility",
+    },
+  ];
+
   const baseLogs =
     facilityAuditLogs[facilityId] || generateDefaultAuditLogs(facilityId);
-  const formEntries = getFormAuditLog({ facilityId }).map(
-    formAuditEntryToTenantAuditLog,
-  ) as TenantAuditLog[];
+  // Only include form structure changes (published, edits), not submissions
+  const formEntries = getFormAuditLog({ facilityId })
+    .filter(
+      (e) =>
+        e.action !== "submission_received" && e.action !== "merge_decision",
+    )
+    .map(formAuditEntryToTenantAuditLog) as TenantAuditLog[];
   return [...baseLogs, ...formEntries].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   );

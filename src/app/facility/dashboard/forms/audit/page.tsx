@@ -1,9 +1,9 @@
 "use client";
 
-import { FormAuditTrail } from "@/components/forms/FormAuditTrail";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { AuditTrail } from "@/components/facility/AuditTrail";
 
 export default function FormAuditPage() {
   return (
@@ -15,15 +15,14 @@ export default function FormAuditPage() {
           </Link>
         </Button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            Audit & Compliance
-          </h2>
-          <p className="text-muted-foreground">
-            Immutable log of every form change for compliance review.
+          <h2 className="text-2xl font-semibold tracking-tight">Audit Trail</h2>
+          <p className="text-muted-foreground text-sm">
+            Staff and admin changes across all areas — forms, settings, clients,
+            and more.
           </p>
         </div>
       </div>
-      <FormAuditTrail facilityId={11} />
+      <AuditTrail facilityId={11} />
     </div>
   );
 }
