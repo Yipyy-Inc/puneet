@@ -53,10 +53,6 @@ export const CustomServiceDashboardSection = memo(
   }: CustomServiceDashboardSectionProps) {
     const catMeta = getCategoryMeta(module.category);
     const viewAllUrl = `/facility/dashboard/services/custom/${module.slug}`;
-    const borderStyle = useMemo(
-      () => ({ borderLeftColor: COLOR_HEX_MAP[module.iconColor] ?? undefined }),
-      [module.iconColor],
-    );
     const accentColor = COLOR_HEX_MAP[module.iconColor] ?? catMeta?.color;
 
     // Real check-in data for this module
@@ -77,10 +73,7 @@ export const CustomServiceDashboardSection = memo(
     ).length;
 
     return (
-      <Card
-        className="animate-in fade-in border-l-4 duration-300"
-        style={borderStyle}
-      >
+      <Card className="animate-in fade-in duration-300">
         <CardContent className="space-y-4 pt-6">
           {/* Header */}
           <div className="flex items-center justify-between">
