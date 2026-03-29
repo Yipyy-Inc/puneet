@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { bookings } from "@/data/bookings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -242,6 +243,53 @@ export default function FacilityClientsPage() {
         if (value === "0") return client.pets.length === 0;
         if (value === "1") return client.pets.length === 1;
         return client.pets.length >= 2;
+      },
+    },
+    {
+      key: "serviceHistory",
+      label: "Service",
+      options: [
+        { value: "all", label: "All Services" },
+        { value: "daycare", label: "Daycare" },
+        { value: "boarding", label: "Boarding" },
+        { value: "grooming", label: "Grooming" },
+        { value: "training", label: "Training" },
+      ],
+      filterFn: (client, value) => {
+        if (value === "all") return true;
+        return bookings.some(
+          (b) =>
+            b.clientId === client.id &&
+            b.service.toLowerCase() === value,
+        );
+      },
+    },
+    {
+      key: "lastVisit",
+      label: "Last Visit",
+      options: [
+        { value: "all", label: "Any Time" },
+        { value: "7", label: "Last 7 days" },
+        { value: "30", label: "Last 30 days" },
+        { value: "90", label: "Last 90 days" },
+        { value: "inactive", label: "Inactive (90+ days)" },
+      ],
+      filterFn: (client, value) => {
+        if (value === "all") return true;
+        const clientBookings = bookings.filter(
+          (b) => b.clientId === client.id,
+        );
+        if (clientBookings.length === 0)
+          return value === "inactive";
+        const latest = Math.max(
+          ...clientBookings.map((b) =>
+            new Date(b.startDate).getTime(),
+          ),
+        );
+        const daysAgo =
+          (Date.now() - latest) / (1000 * 60 * 60 * 24);
+        if (value === "inactive") return daysAgo > 90;
+        return daysAgo <= parseInt(value);
       },
     },
   ];
