@@ -107,8 +107,8 @@ export function CustomerHeader() {
               className="h-8 w-auto"
             />
           )}
-          <div className="hidden sm:block">
-            <div className="text-sm font-semibold">
+          <div className="hidden sm:block" suppressHydrationWarning>
+            <div className="text-sm font-semibold" suppressHydrationWarning>
               {selectedFacility?.name ?? "Yipyy"}
             </div>
             <div className="text-muted-foreground text-xs">Customer Portal</div>
