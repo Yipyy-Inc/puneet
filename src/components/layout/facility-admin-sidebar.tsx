@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import { useHydrated } from "@/hooks/use-hydrated";
 import {
   Home,
@@ -322,11 +323,31 @@ export function FacilitySidebar() {
   return (
     <GenericSidebar
       header={
-        <div>
-          <h2 className="text-lg font-semibold">
-            {facility?.name || "Facility Dashboard"}
-          </h2>
-          <p className="text-muted-foreground mt-1 text-xs">{dateLabel}</p>
+        <div className="flex items-center gap-3">
+          {facility?.logo ? (
+            <Image
+              src={facility.logo}
+              alt={facility.name}
+              width={40}
+              height={40}
+              className="size-8 rounded-lg object-contain md:size-10"
+            />
+          ) : (
+            <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold md:size-10 md:text-sm">
+              {(facility?.name || "F")
+                .split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold md:text-base">
+              {facility?.name || "Facility Dashboard"}
+            </h2>
+            <p className="text-muted-foreground text-xs">{dateLabel}</p>
+          </div>
         </div>
       }
       menuSections={filteredMenuSections}

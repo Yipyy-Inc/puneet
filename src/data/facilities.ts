@@ -801,6 +801,7 @@ export const facilities = [
   {
     id: 11,
     name: "Example Pet Care Facility",
+    logo: "/yipyy-transparent.png",
     status: "active",
     plan: "Basic",
     dayJoined: "2025-01-01",

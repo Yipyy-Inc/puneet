@@ -81,6 +81,39 @@ function BusinessProfileCard() {
     >
       {(isEditing, localProfile, setLocalProfile) => (
         <div className="space-y-4">
+          {/* Facility Logo */}
+          <div className="space-y-2">
+            <Label>Facility Logo</Label>
+            <div className="flex items-center gap-4">
+              <div className="bg-muted text-muted-foreground flex size-14 items-center justify-center rounded-lg text-lg font-semibold">
+                {(localProfile.businessName || "F")
+                  .split(" ")
+                  .map((w: string) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+              </div>
+              <div className="space-y-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!isEditing}
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "image/png,image/jpeg,image/svg+xml";
+                    input.click();
+                  }}
+                >
+                  Upload Logo
+                </Button>
+                <p className="text-muted-foreground text-xs">
+                  Recommended: 200×200px, square format
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="businessName">Business Name *</Label>
