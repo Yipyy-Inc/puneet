@@ -31,7 +31,6 @@ import {
   GraduationCap,
   ClipboardList,
   LayoutTemplate,
-  PlusCircle,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -163,12 +162,6 @@ export function FacilitySidebar() {
             disabled: false,
           },
           ...customServiceItems,
-          {
-            title: "Custom Services",
-            url: "/facility/dashboard/services/custom",
-            icon: PlusCircle,
-            disabled: false,
-          },
         ],
       },
       {
