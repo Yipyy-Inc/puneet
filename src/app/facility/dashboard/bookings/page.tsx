@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -165,6 +166,7 @@ const isPast = (dateString: string): boolean => {
 };
 
 export default function FacilityBookingsPage() {
+  const router = useRouter();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
@@ -947,7 +949,9 @@ export default function FacilityBookingsPage() {
                       <DropdownMenuLabel>{"Actions"}</DropdownMenuLabel>
                       <DropdownMenuItem
                         onClick={() =>
-                          setSelectedBooking(booking as unknown as Booking)
+                          router.push(
+                            `/facility/dashboard/bookings/${booking.id}`,
+                          )
                         }
                       >
                         <Eye className="mr-2 size-4" />
