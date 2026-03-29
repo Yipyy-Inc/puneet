@@ -1,9 +1,17 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, ArrowRight, PawPrint, Scissors } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Clock,
+  ArrowRight,
+  PawPrint,
+  Scissors,
+  LogIn,
+  CheckCircle,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,11 +83,24 @@ export const CustomServiceDashboardSection = memo(
     const viewAllUrl = `/facility/dashboard/services/custom/${module.slug}`;
     const accentColor = COLOR_HEX_MAP[module.iconColor] ?? catMeta?.color;
 
-    // Real check-in data for this module
-    const moduleCheckIns = useMemo(
+    // Real check-in data for this module with local state for transitions
+    const initialCheckIns = useMemo(
       () => customServiceCheckIns.filter((c) => c.moduleId === module.id),
       [module.id],
     );
+    const [moduleCheckIns, setModuleCheckIns] = useState(initialCheckIns);
+
+    const handleStatusChange = (
+      id: string,
+      newStatus: CustomServiceCheckInStatus,
+      label: string,
+    ) => {
+      setModuleCheckIns((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c)),
+      );
+      const item = moduleCheckIns.find((c) => c.id === id);
+      if (item) toast.success(`${item.petName} — ${label}`);
+    };
 
     const todaysCount = moduleCheckIns.length;
     const scheduledCount = moduleCheckIns.filter(
@@ -169,100 +190,133 @@ export const CustomServiceDashboardSection = memo(
                 return (
                   <div
                     key={checkIn.id}
-                    className={cn(
-                      "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
-                      isCritical &&
-                        "border-l-4 border-l-red-500 dark:border-l-red-400",
-                      isWarning &&
-                        "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
-                    )}
+                    className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                   >
-                    <div className="flex items-start gap-3">
-                      {getPetImage(checkIn.petId) ? (
-                        <Link
-                          href={
-                            client
-                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                              : "#"
-                          }
-                          className="shrink-0"
-                        >
-                          <div className="size-10 overflow-hidden rounded-full">
-                            <Image
-                              src={getPetImage(checkIn.petId)!}
-                              alt={checkIn.petName}
-                              width={40}
-                              height={40}
-                              className="size-full object-cover"
-                            />
-                          </div>
-                        </Link>
-                      ) : (
-                        <Link
-                          href={
-                            client
-                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                              : "#"
-                          }
-                          className="shrink-0"
-                        >
-                          <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                            <PawPrint className="text-primary size-5" />
-                          </div>
-                        </Link>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={
-                            client
-                              ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
-                              : "#"
-                          }
-                          className="text-sm font-semibold hover:underline"
-                        >
-                          {checkIn.petName}
-                        </Link>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                          <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-                            <Scissors className="mr-1 size-3" />
-                            {module.name}
-                          </Badge>
-                          <Badge
-                            className={cn(
-                              "text-[10px] capitalize",
-                              STATUS_STYLES[checkIn.status] ?? "bg-secondary",
-                            )}
-                          >
-                            {STATUS_LABELS[checkIn.status]}
-                          </Badge>
-                          <TagList
-                            entityType="pet"
-                            entityId={checkIn.petId}
-                            compact
-                            maxVisible={2}
+                    {getPetImage(checkIn.petId) ? (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                            : "#"
+                        }
+                        className="shrink-0"
+                      >
+                        <div className="size-10 overflow-hidden rounded-full">
+                          <Image
+                            src={getPetImage(checkIn.petId)!}
+                            alt={checkIn.petName}
+                            width={40}
+                            height={40}
+                            className="size-full object-cover"
                           />
                         </div>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {checkIn.ownerName} · {checkIn.petBreed}
-                        </p>
-                        <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                          <Clock className="size-3" />
-                          <span>{formatTime(checkIn.checkInTime)}</span>
-                          {checkIn.staffAssigned && (
-                            <>
-                              <span>·</span>
-                              <span>{checkIn.staffAssigned}</span>
-                            </>
-                          )}
-                          {checkIn.resourceName && (
-                            <>
-                              <span>·</span>
-                              <span>{checkIn.resourceName}</span>
-                            </>
-                          )}
+                      </Link>
+                    ) : (
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                            : "#"
+                        }
+                        className="shrink-0"
+                      >
+                        <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                          <PawPrint className="text-primary size-5" />
                         </div>
+                      </Link>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={
+                          client
+                            ? `/facility/dashboard/clients/${client.id}/pets/${checkIn.petId}`
+                            : "#"
+                        }
+                        className="text-sm font-semibold hover:underline"
+                      >
+                        {checkIn.petName}
+                      </Link>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                          <Scissors className="mr-1 size-3" />
+                          {module.name}
+                        </Badge>
+                        <Badge
+                          className={cn(
+                            "text-[10px] capitalize",
+                            STATUS_STYLES[checkIn.status] ?? "bg-secondary",
+                          )}
+                        >
+                          {STATUS_LABELS[checkIn.status]}
+                        </Badge>
+                        <TagList
+                          entityType="pet"
+                          entityId={checkIn.petId}
+                          compact
+                          maxVisible={2}
+                        />
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {checkIn.ownerName} · {checkIn.petBreed}
+                      </p>
+                      <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+                        <Clock className="size-3" />
+                        <span>{formatTime(checkIn.checkInTime)}</span>
+                        {checkIn.staffAssigned && (
+                          <>
+                            <span>·</span>
+                            <span>{checkIn.staffAssigned}</span>
+                          </>
+                        )}
+                        {checkIn.resourceName && (
+                          <>
+                            <span>·</span>
+                            <span>{checkIn.resourceName}</span>
+                          </>
+                        )}
                       </div>
                     </div>
+                    {/* Action buttons */}
+                    {module.checkInOut.enabled && (
+                      <div className="shrink-0">
+                        {(checkIn.status === "scheduled" ||
+                          checkIn.status === "checked-in") && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(
+                                checkIn.id,
+                                "in-progress",
+                                "Checked In",
+                              );
+                            }}
+                            className="gap-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <LogIn className="size-3" />
+                            Check In
+                          </Button>
+                        )}
+                        {checkIn.status === "in-progress" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(
+                                checkIn.id,
+                                "completed",
+                                "Checked Out",
+                              );
+                            }}
+                            className="gap-1"
+                          >
+                            <CheckCircle className="size-3" />
+                            Check Out
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })

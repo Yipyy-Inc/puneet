@@ -475,37 +475,36 @@ export function GroomingSection() {
   const getActionButton = (appointment: GroomingAppointmentWithPending) => {
     switch (appointment.status) {
       case "scheduled":
+      case "checked-in":
+        return (
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              executeAction(appointment, "in-progress", "Checked In");
+            }}
+            className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
+          >
+            <LogIn className="size-3" />
+            Check In
+          </Button>
+        );
+      case "in-progress":
+      case "ready-for-pickup":
         return (
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleMarkPending(appointment)}
-            className="gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              executeAction(appointment, "completed", "Checked Out");
+            }}
+            className="shrink-0 gap-1"
           >
-            <Hourglass className="size-3" />
-            Arrived
+            <CheckCircle className="size-3" />
+            Check Out
           </Button>
         );
-      case "scheduled":
-        const available = isGroomerAvailable(appointment.stylistId);
-        return (
-          <Button
-            size="sm"
-            onClick={() => handleStartGrooming(appointment)}
-            className="gap-1 bg-blue-600 hover:bg-blue-700"
-            disabled={!available}
-            title={
-              !available
-                ? `${appointment.stylistName} is currently busy`
-                : undefined
-            }
-          >
-            <PlayCircle className="size-3" />
-            Start
-          </Button>
-        );
-      case "in-progress":
-        return null;
       default:
         return null;
     }

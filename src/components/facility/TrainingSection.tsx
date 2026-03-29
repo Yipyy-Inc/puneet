@@ -34,6 +34,7 @@ import {
   Calendar,
   Hourglass,
   Clock,
+  LogIn,
   Filter,
 } from "lucide-react";
 import { trainingSessions, trainers, enrollments } from "@/data/training";
@@ -411,37 +412,35 @@ export function TrainingSection() {
   const getActionButton = (session: TrainingSessionLocal) => {
     switch (session.status) {
       case "scheduled":
+      case "pending":
+        return (
+          <Button
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              executeAction(session, "in-progress", "Checked In");
+            }}
+            className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
+          >
+            <LogIn className="size-3" />
+            Check In
+          </Button>
+        );
+      case "in-progress":
         return (
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleMarkPending(session)}
-            className="gap-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              executeAction(session, "completed", "Checked Out");
+            }}
+            className="shrink-0 gap-1"
           >
-            <Hourglass className="size-3" />
-            Ready
+            <CheckCircle className="size-3" />
+            Check Out
           </Button>
         );
-      case "pending":
-        const available = isTrainerAvailable(session.trainerId);
-        return (
-          <Button
-            size="sm"
-            onClick={() => handleStartSession(session)}
-            className="gap-1 bg-blue-600 hover:bg-blue-700"
-            disabled={!available}
-            title={
-              !available
-                ? `${session.trainerName} is currently busy`
-                : undefined
-            }
-          >
-            <PlayCircle className="size-3" />
-            Start
-          </Button>
-        );
-      case "in-progress":
-        return null;
       default:
         return null;
     }
