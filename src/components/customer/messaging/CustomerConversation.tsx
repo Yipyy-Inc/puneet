@@ -15,9 +15,17 @@ import type { Message } from "@/types/communications";
 
 /** Convert CommunicationRecord to the Message format used by MessageBubble */
 function toMessage(rec: CommunicationRecord): Message {
+  // Map call/note types to in-app for rendering
+  const typeMap: Record<string, Message["type"]> = {
+    email: "email",
+    sms: "sms",
+    "in-app": "in-app",
+    call: "in-app",
+    note: "in-app",
+  };
   return {
     id: rec.id,
-    type: (rec.type === "in-app" ? "in-app" : rec.type) as Message["type"],
+    type: typeMap[rec.type] ?? "in-app",
     direction: rec.direction as Message["direction"],
     from: rec.direction === "outbound" ? "facility" : "customer",
     to: rec.direction === "outbound" ? "customer" : "facility",
