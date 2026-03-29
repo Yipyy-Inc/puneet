@@ -2,7 +2,6 @@
 
 import { createElement } from "react";
 import { resolveIcon } from "@/lib/service-registry";
-import { getContrastTextColor } from "@/lib/color-utils";
 import type { Tag } from "@/data/tags-notes";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,11 +27,10 @@ const ICON_SIZES = {
   lg: "size-3.5",
 } as const;
 
-const PRIORITY_RING = {
-  critical:
-    "ring-2 ring-red-400/60 dark:ring-red-500/60 motion-safe:animate-pulse",
-  warning: "ring-1 ring-yellow-400/50 dark:ring-yellow-500/50",
-  informational: "",
+const PRIORITY_STYLES = {
+  critical: "border-red-300 dark:border-red-800",
+  warning: "border-amber-300 dark:border-amber-800",
+  informational: "border-border/60",
 } as const;
 
 export function TagBadge({
@@ -43,23 +41,26 @@ export function TagBadge({
   onRemove,
   className,
 }: TagBadgeProps) {
-  const textColor = getContrastTextColor(tag.color);
-
   return (
     <span
       className={cn(
-        `inline-flex shrink-0 items-center rounded-full font-medium whitespace-nowrap transition-all`,
+        "text-foreground inline-flex shrink-0 items-center rounded-full border bg-transparent font-normal whitespace-nowrap transition-all",
         SIZE_CLASSES[size],
-        PRIORITY_RING[tag.priority],
+        PRIORITY_STYLES[tag.priority],
         className,
       )}
-      style={{ backgroundColor: tag.color, color: textColor }}
       title={tag.description ?? tag.name}
     >
-      {showIcon &&
-        createElement(resolveIcon(tag.icon), {
-          className: ICON_SIZES[size],
-        })}
+      {showIcon && (
+        <span
+          className="flex shrink-0 items-center justify-center"
+          style={{ color: tag.color }}
+        >
+          {createElement(resolveIcon(tag.icon), {
+            className: ICON_SIZES[size],
+          })}
+        </span>
+      )}
       <span
         className={cn(
           "truncate",
@@ -80,7 +81,7 @@ export function TagBadge({
             e.stopPropagation();
             onRemove();
           }}
-          className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+          className="hover:bg-muted ml-0.5 rounded-full p-0.5 transition-colors"
           aria-label={`Remove ${tag.name} tag`}
         >
           <X className={size === "sm" ? "size-2" : "h-2.5 w-2.5"} />
