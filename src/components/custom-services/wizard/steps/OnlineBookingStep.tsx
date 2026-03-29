@@ -2,6 +2,7 @@
 
 import { Globe, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -221,22 +222,60 @@ export function OnlineBookingStep({ data, onChange }: OnlineBookingStepProps) {
           </div>
 
           {ob.depositRequired && (
-            <div className="space-y-1.5">
-              <Label htmlFor="deposit-amount">Deposit Amount ($)</Label>
-              <Input
-                id="deposit-amount"
-                type="number"
-                min={0}
-                step={0.5}
-                value={ob.depositAmount ?? ""}
-                onChange={(e) =>
-                  updateOb({
-                    depositAmount: parseFloat(e.target.value) || undefined,
-                  })
-                }
-                placeholder="e.g. 25.00"
-                className="w-36"
-              />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    (ob.depositType ?? "fixed") === "fixed"
+                      ? "default"
+                      : "outline"
+                  }
+                  onClick={() => updateOb({ depositType: "fixed" })}
+                >
+                  $ Fixed
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={
+                    ob.depositType === "percentage" ? "default" : "outline"
+                  }
+                  onClick={() => updateOb({ depositType: "percentage" })}
+                >
+                  % Percentage
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="deposit-amount">
+                  {ob.depositType === "percentage"
+                    ? "Deposit Percentage (%)"
+                    : "Deposit Amount ($)"}
+                </Label>
+                <Input
+                  id="deposit-amount"
+                  type="number"
+                  min={0}
+                  max={ob.depositType === "percentage" ? 100 : undefined}
+                  step={ob.depositType === "percentage" ? 1 : 0.5}
+                  value={ob.depositAmount ?? ""}
+                  onChange={(e) =>
+                    updateOb({
+                      depositAmount: parseFloat(e.target.value) || undefined,
+                    })
+                  }
+                  placeholder={
+                    ob.depositType === "percentage" ? "e.g. 25" : "e.g. 25.00"
+                  }
+                  className="w-36"
+                />
+                <p className="text-muted-foreground text-xs">
+                  {ob.depositType === "percentage"
+                    ? "Percentage of the booking total"
+                    : "Fixed dollar amount"}
+                </p>
+              </div>
             </div>
           )}
         </div>

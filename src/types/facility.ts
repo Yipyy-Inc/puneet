@@ -665,6 +665,7 @@ export interface CustomServiceModule {
     cancellationPolicy: { hoursBeforeBooking: number; feePercentage: number };
     depositRequired: boolean;
     depositAmount?: number;
+    depositType?: "fixed" | "percentage";
   };
   pricing: {
     model: PricingModelType;
