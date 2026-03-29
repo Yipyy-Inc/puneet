@@ -202,12 +202,48 @@ export type NewBooking = z.infer<typeof newBookingSchema>;
 export const bookingPaymentMethodEnum = z.enum(["cash", "card"]);
 export const bookingRefundMethodEnum = z.enum(["card", "store_credit"]);
 
+export const invoiceLineItemSchema = z.object({
+  name: z.string(),
+  unitPrice: z.number(),
+  quantity: z.number(),
+  price: z.number(),
+});
+export type InvoiceLineItem = z.infer<typeof invoiceLineItemSchema>;
+
+export const invoicePaymentSchema = z.object({
+  date: z.string(),
+  method: z.string(),
+  amount: z.number(),
+});
+export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
+
+export const invoiceStatusEnum = z.enum(["estimate", "open", "closed"]);
+export type InvoiceStatus = z.infer<typeof invoiceStatusEnum>;
+
+export const invoiceSchema = z.object({
+  id: z.string(),
+  status: invoiceStatusEnum,
+  items: z.array(invoiceLineItemSchema),
+  fees: z.array(invoiceLineItemSchema),
+  subtotal: z.number(),
+  discount: z.number(),
+  discountLabel: z.string().optional(),
+  taxRate: z.number(),
+  taxAmount: z.number(),
+  total: z.number(),
+  depositCollected: z.number(),
+  remainingDue: z.number(),
+  payments: z.array(invoicePaymentSchema),
+});
+export type Invoice = z.infer<typeof invoiceSchema>;
+
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
   paymentMethod: bookingPaymentMethodEnum.optional(),
   refundMethod: bookingRefundMethodEnum.optional(),
   refundAmount: z.number().optional(),
   cancellationReason: z.string().optional(),
+  invoice: invoiceSchema.optional(),
 });
 
 export type Booking = z.infer<typeof bookingSchema>;

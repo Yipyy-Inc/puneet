@@ -73,6 +73,22 @@ export const bookings: Booking[] = [
     discount: 0,
     totalCost: 50,
     paymentStatus: "paid",
+    invoice: {
+      id: "INV-1003",
+      status: "open",
+      items: [
+        { name: "Full Day Daycare", unitPrice: 50, quantity: 1, price: 50 },
+      ],
+      fees: [{ name: "Insurance fee", unitPrice: 1, quantity: 1, price: 1 }],
+      subtotal: 51,
+      discount: 0,
+      taxRate: 14.975,
+      taxAmount: 7.64,
+      total: 58.64,
+      depositCollected: 0,
+      remainingDue: 58.64,
+      payments: [],
+    },
     daycareSelectedDates: ["2024-03-10"],
     daycareDateTimes: [
       {
@@ -183,6 +199,32 @@ export const bookings: Booking[] = [
     totalCost: 135,
     paymentStatus: "paid",
     kennel: "Suite A1",
+    invoice: {
+      id: "INV-1007",
+      status: "closed",
+      items: [
+        {
+          name: "Standard Boarding (3 nights)",
+          unitPrice: 45,
+          quantity: 3,
+          price: 135,
+        },
+        { name: "Bath add-on", unitPrice: 25, quantity: 1, price: 25 },
+      ],
+      fees: [{ name: "Insurance fee", unitPrice: 1, quantity: 3, price: 3 }],
+      subtotal: 163,
+      discount: 10,
+      discountLabel: "Loyalty 10%",
+      taxRate: 14.975,
+      taxAmount: 22.91,
+      total: 175.91,
+      depositCollected: 30,
+      remainingDue: 0,
+      payments: [
+        { date: "2024-01-20", method: "Visa ••4242", amount: 30 },
+        { date: "2024-01-22", method: "Visa ••4242", amount: 145.91 },
+      ],
+    },
     feedingSchedule: [
       {
         id: "fs1",
