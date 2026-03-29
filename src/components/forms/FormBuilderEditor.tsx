@@ -70,6 +70,16 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
+import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
+import {
+  resolveTemplate,
+  getMockPreviewData,
+} from "@/lib/template-variable-resolver";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   InlineFollowUpButton,
   FollowUpConditionBadge,
@@ -1885,15 +1895,63 @@ function QuestionEditor({
     }
   };
 
+  const mockData = getMockPreviewData();
+  const resolvedLabel = question.label.includes("{{")
+    ? resolveTemplate(question.label, mockData)
+    : null;
+  const resolvedHelp = question.helpText?.includes("{{")
+    ? resolveTemplate(question.helpText, mockData)
+    : null;
+
+  const insertVar = (
+    field: "label" | "helpText" | "placeholder",
+    v: string,
+  ) => {
+    const tag = `{{${v}}}`;
+    if (field === "label") onChange({ label: question.label + tag });
+    else if (field === "helpText")
+      onChange({ helpText: (question.helpText ?? "") + tag });
+    else onChange({ placeholder: (question.placeholder ?? "") + tag });
+  };
+
+  const QUICK_VARS = [
+    { key: "pet_name", label: "Pet Name" },
+    { key: "customer_first_name", label: "Customer" },
+    { key: "facility_name", label: "Facility" },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label>Label</Label>
+        <div className="flex items-center justify-between">
+          <Label>Label</Label>
+          <VariableInsertDropdown
+            context="general"
+            onInsert={(v) => insertVar("label", v)}
+          />
+        </div>
         <Input
           value={question.label}
           onChange={(e) => onChange({ label: e.target.value })}
-          placeholder="Question text"
+          placeholder="Question text — use {{pet_name}} for variables"
         />
+        {resolvedLabel && (
+          <p className="text-muted-foreground text-xs italic">
+            Preview: {resolvedLabel}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1">
+          {QUICK_VARS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              onClick={() => insertVar("label", v.key)}
+              className="border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md border px-2 py-0.5 text-[10px] transition-colors"
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Type</Label>
@@ -1922,12 +1980,23 @@ function QuestionEditor({
         <Label htmlFor="required">Required</Label>
       </div>
       <div className="space-y-2">
-        <Label>Help text (optional)</Label>
+        <div className="flex items-center justify-between">
+          <Label>Help text (optional)</Label>
+          <VariableInsertDropdown
+            context="general"
+            onInsert={(v) => insertVar("helpText", v)}
+          />
+        </div>
         <Input
           value={question.helpText ?? ""}
           onChange={(e) => onChange({ helpText: e.target.value || undefined })}
-          placeholder="Help text shown below the question"
+          placeholder="Help text — supports {{variables}}"
         />
+        {resolvedHelp && (
+          <p className="text-muted-foreground text-xs italic">
+            Preview: {resolvedHelp}
+          </p>
+        )}
       </div>
       <div className="space-y-2">
         <Label>Default value (optional)</Label>
@@ -1977,88 +2046,91 @@ function QuestionEditor({
           </Select>
         </div>
       </div>
-      <div className="space-y-2 rounded-lg border p-3">
-        <Label className="text-muted-foreground text-xs font-medium">
-          Validation rules
-        </Label>
-        <div className="grid gap-2 sm:grid-cols-2">
+      <Collapsible>
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-lg border p-3 text-xs font-medium transition-colors">
+          Validation (advanced)
+          <ChevronDown className="size-3" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-2 rounded-b-lg border-x border-b p-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Min</Label>
+              <Input
+                type="number"
+                value={question.validation?.min ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    validation: {
+                      ...question.validation,
+                      min: e.target.value ? Number(e.target.value) : undefined,
+                    },
+                  })
+                }
+                placeholder="Min value/length"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max</Label>
+              <Input
+                type="number"
+                value={question.validation?.max ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    validation: {
+                      ...question.validation,
+                      max: e.target.value ? Number(e.target.value) : undefined,
+                    },
+                  })
+                }
+                placeholder="Max value/length"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+          {question.type === "file" && (
+            <div className="space-y-1">
+              <Label className="text-xs">
+                Allowed file types (comma-separated)
+              </Label>
+              <Input
+                value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    validation: {
+                      ...question.validation,
+                      allowedFileTypes: e.target.value
+                        ? e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                        : undefined,
+                    },
+                  })
+                }
+                placeholder=".pdf, .jpg, .png"
+                className="h-8 text-xs"
+              />
+            </div>
+          )}
           <div className="space-y-1">
-            <Label className="text-xs">Min</Label>
+            <Label className="text-xs">Regex pattern</Label>
             <Input
-              type="number"
-              value={question.validation?.min ?? ""}
+              value={question.validation?.regex ?? ""}
               onChange={(e) =>
                 onChange({
                   validation: {
                     ...question.validation,
-                    min: e.target.value ? Number(e.target.value) : undefined,
+                    regex: e.target.value || undefined,
                   },
                 })
               }
-              placeholder="Min value/length"
+              placeholder="e.g. ^[a-zA-Z]+$"
               className="h-8 text-xs"
             />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Max</Label>
-            <Input
-              type="number"
-              value={question.validation?.max ?? ""}
-              onChange={(e) =>
-                onChange({
-                  validation: {
-                    ...question.validation,
-                    max: e.target.value ? Number(e.target.value) : undefined,
-                  },
-                })
-              }
-              placeholder="Max value/length"
-              className="h-8 text-xs"
-            />
-          </div>
-        </div>
-        {question.type === "file" && (
-          <div className="space-y-1">
-            <Label className="text-xs">
-              Allowed file types (comma-separated)
-            </Label>
-            <Input
-              value={question.validation?.allowedFileTypes?.join(", ") ?? ""}
-              onChange={(e) =>
-                onChange({
-                  validation: {
-                    ...question.validation,
-                    allowedFileTypes: e.target.value
-                      ? e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                      : undefined,
-                  },
-                })
-              }
-              placeholder=".pdf, .jpg, .png"
-              className="h-8 text-xs"
-            />
-          </div>
-        )}
-        <div className="space-y-1">
-          <Label className="text-xs">Regex pattern (advanced)</Label>
-          <Input
-            value={question.validation?.regex ?? ""}
-            onChange={(e) =>
-              onChange({
-                validation: {
-                  ...question.validation,
-                  regex: e.target.value || undefined,
-                },
-              })
-            }
-            placeholder="e.g. ^[a-zA-Z]+$"
-            className="h-8 text-xs"
-          />
-        </div>
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
       {onMappingChange && (
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
