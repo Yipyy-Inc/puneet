@@ -50,10 +50,8 @@ import {
   getYipyyGoDisplayStatusForBooking,
   type YipyyGoDisplayStatus,
 } from "@/data/yipyygo-forms";
-import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
 import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
-import { cn } from "@/lib/utils";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -856,54 +854,44 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className={cn(
-                          `cursor-pointer space-y-2.5 rounded-lg border bg-orange-50/50 p-3 transition-colors hover:bg-orange-100/50 dark:bg-orange-950/20 dark:hover:bg-orange-950/30`,
-                          isCritical &&
-                            `border-l-4 border-l-red-500 dark:border-l-red-400`,
-                          isWarning &&
-                            `border-l-4 border-l-yellow-500 dark:border-l-yellow-400`,
-                        )}
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                         onClick={() => handleViewDetails(item)}
                       >
-                        {isCritical && (
-                          <span className="sr-only">Critical alert</span>
+                        {getPetImage(item.petId) ? (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="size-10 overflow-hidden rounded-full">
+                              <Image
+                                src={getPetImage(item.petId)!}
+                                alt={item.petName}
+                                width={40}
+                                height={40}
+                                className="size-full object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-5" />
+                            </div>
+                          </Link>
                         )}
-                        {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex items-start gap-3">
-                          {getPetImage(item.petId) ? (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="size-10 overflow-hidden rounded-full">
-                                <Image
-                                  src={getPetImage(item.petId)!}
-                                  alt={item.petName}
-                                  width={40}
-                                  height={40}
-                                  className="size-full object-cover"
-                                />
-                              </div>
-                            </Link>
-                          ) : (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
-                                <PawPrint className="size-5 text-orange-600" />
-                              </div>
-                            </Link>
-                          )}
-                          <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <Link
                               href={
                                 client
@@ -914,50 +902,38 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             >
                               {item.petName}
                             </Link>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              {getServiceBadge(item.serviceType, item)}
-                              <TagList
-                                entityType="pet"
-                                entityId={item.petId}
-                                compact
-                                maxVisible={2}
-                              />
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {item.ownerName}
-                            </p>
-                            {item.serviceType === "boarding" &&
-                              item.totalNights && (
-                                <p className="text-muted-foreground text-xs">
-                                  {item.totalNights} night
-                                  {item.totalNights > 1 ? "s" : ""}
-                                </p>
-                              )}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          {scheduledYipyyGoByItemId.get(item.id) ? (
-                            <YipyyGoStatusBadge
-                              status={
-                                scheduledYipyyGoByItemId.get(item.id)!.status
-                              }
-                              showIcon={false}
+                            {getServiceBadge(item.serviceType, item)}
+                            <TagList
+                              entityType="pet"
+                              entityId={item.petId}
+                              compact
+                              maxVisible={2}
                             />
-                          ) : (
-                            <span />
-                          )}
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckIn(item);
-                            }}
-                            className="gap-1 bg-green-600 hover:bg-green-700"
-                          >
-                            <LogIn className="size-3" />
-                            Check In
-                          </Button>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {item.ownerName}
+                            {item.serviceType === "boarding" &&
+                              item.kennelName &&
+                              ` · ${item.kennelName}`}
+                            {item.serviceType === "daycare" &&
+                              item.playGroup &&
+                              ` · ${item.playGroup}`}
+                            {item.serviceType === "boarding" &&
+                              item.totalNights &&
+                              ` · ${item.totalNights} night${item.totalNights > 1 ? "s" : ""}`}
+                          </p>
                         </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckIn(item);
+                          }}
+                          className="shrink-0 gap-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <LogIn className="size-3" />
+                          Check In
+                        </Button>
                       </div>
                     );
                   })
@@ -1021,54 +997,44 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className={cn(
-                          `bg-card hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors`,
-                          isCritical &&
-                            `border-l-4 border-l-red-500 dark:border-l-red-400`,
-                          isWarning &&
-                            `border-l-4 border-l-yellow-500 dark:border-l-yellow-400`,
-                        )}
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                         onClick={() => handleViewDetails(item)}
                       >
-                        {isCritical && (
-                          <span className="sr-only">Critical alert</span>
+                        {getPetImage(item.petId) ? (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="size-10 overflow-hidden rounded-full">
+                              <Image
+                                src={getPetImage(item.petId)!}
+                                alt={item.petName}
+                                width={40}
+                                height={40}
+                                className="size-full object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-5" />
+                            </div>
+                          </Link>
                         )}
-                        {isWarning && <span className="sr-only">Warning</span>}
-                        <div className="flex items-start gap-3">
-                          {getPetImage(item.petId) ? (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="size-10 overflow-hidden rounded-full">
-                                <Image
-                                  src={getPetImage(item.petId)!}
-                                  alt={item.petName}
-                                  width={40}
-                                  height={40}
-                                  className="size-full object-cover"
-                                />
-                              </div>
-                            </Link>
-                          ) : (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                                <PawPrint className="text-primary size-5" />
-                              </div>
-                            </Link>
-                          )}
-                          <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <Link
                               href={
                                 client
@@ -1079,58 +1045,37 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             >
                               {item.petName}
                             </Link>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              {getServiceBadge(item.serviceType, item)}
-                              <TagList
-                                entityType="pet"
-                                entityId={item.petId}
-                                compact
-                                maxVisible={2}
-                              />
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {item.ownerName}
-                            </p>
-                            <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-                              <Clock className="size-3" />
-                              <span>In: {formatTime(item.checkInTime)}</span>
-                              <span>•</span>
-                              <span>
-                                Out:{" "}
-                                {formatExpectedDeparture(
-                                  item.scheduledCheckOut,
-                                  item.serviceType,
-                                )}
-                              </span>
-                            </div>
-                            {item.serviceType === "boarding" &&
-                              item.kennelName && (
-                                <p className="text-muted-foreground text-xs">
-                                  {item.kennelName}
-                                </p>
-                              )}
-                            {item.serviceType === "daycare" &&
-                              item.playGroup && (
-                                <p className="text-muted-foreground text-xs">
-                                  {item.playGroup}
-                                </p>
-                              )}
+                            {getServiceBadge(item.serviceType, item)}
+                            <TagList
+                              entityType="pet"
+                              entityId={item.petId}
+                              compact
+                              maxVisible={2}
+                            />
                           </div>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {item.ownerName}
+                            {item.serviceType === "boarding" &&
+                              item.kennelName &&
+                              ` · ${item.kennelName}`}
+                            {item.serviceType === "daycare" &&
+                              item.playGroup &&
+                              ` · ${item.playGroup}`}
+                            {` · In: ${formatTime(item.checkInTime)} · Out: ${formatExpectedDeparture(item.scheduledCheckOut, item.serviceType)}`}
+                          </p>
                         </div>
-                        <div className="flex justify-end">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCheckOut(item);
-                            }}
-                            className="gap-1"
-                          >
-                            <LogOut className="size-3" />
-                            Check Out
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCheckOut(item);
+                          }}
+                          className="shrink-0 gap-1"
+                        >
+                          <LogOut className="size-3" />
+                          Check Out
+                        </Button>
                       </div>
                     );
                   })
@@ -1190,44 +1135,44 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                     return (
                       <div
                         key={item.id}
-                        className="cursor-pointer space-y-2 rounded-lg border bg-gray-50/50 p-3 transition-colors hover:bg-gray-100/50 dark:bg-gray-950/20 dark:hover:bg-gray-950/30"
+                        className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                         onClick={() => handleViewDetails(item)}
                       >
-                        <div className="flex items-start gap-3">
-                          {getPetImage(item.petId) ? (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="size-10 overflow-hidden rounded-full">
-                                <Image
-                                  src={getPetImage(item.petId)!}
-                                  alt={item.petName}
-                                  width={40}
-                                  height={40}
-                                  className="size-full object-cover"
-                                />
-                              </div>
-                            </Link>
-                          ) : (
-                            <Link
-                              href={
-                                client
-                                  ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
-                                  : "#"
-                              }
-                              className="shrink-0"
-                            >
-                              <div className="flex size-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
-                                <PawPrint className="size-5 text-gray-600" />
-                              </div>
-                            </Link>
-                          )}
-                          <div className="min-w-0 flex-1">
+                        {getPetImage(item.petId) ? (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="size-10 overflow-hidden rounded-full">
+                              <Image
+                                src={getPetImage(item.petId)!}
+                                alt={item.petName}
+                                width={40}
+                                height={40}
+                                className="size-full object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : (
+                          <Link
+                            href={
+                              client
+                                ? `/facility/dashboard/clients/${client.id}/pets/${item.petId}`
+                                : "#"
+                            }
+                            className="shrink-0"
+                          >
+                            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                              <PawPrint className="text-primary size-5" />
+                            </div>
+                          </Link>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <Link
                               href={
                                 client
@@ -1238,22 +1183,12 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             >
                               {item.petName}
                             </Link>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                              {getServiceBadge(item.serviceType, item)}
-                            </div>
-                            <p className="text-muted-foreground mt-1 text-xs">
-                              {item.ownerName}
-                            </p>
-                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                              <Clock className="size-3" />
-                              <span>
-                                Out:{" "}
-                                {item.checkOutTime
-                                  ? formatTime(item.checkOutTime)
-                                  : "—"}
-                              </span>
-                            </div>
+                            {getServiceBadge(item.serviceType, item)}
                           </div>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {item.ownerName}
+                            {` · Out: ${item.checkOutTime ? formatTime(item.checkOutTime) : "—"}`}
+                          </p>
                         </div>
                       </div>
                     );

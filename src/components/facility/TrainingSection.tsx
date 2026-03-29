@@ -578,15 +578,11 @@ export function TrainingSection() {
                             <div
                               key={session.id}
                               className={cn(
-                                "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
-                                hasCritical &&
-                                  "border-l-4 border-l-red-500 dark:border-l-red-400",
-                                hasWarn &&
-                                  "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                                "hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
                               )}
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
                                 {firstPet && getPetImage(firstPet.petId) ? (
                                   <Link
                                     href={
@@ -665,7 +661,7 @@ export function TrainingSection() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex justify-end">
+                              <div className="shrink-0">
                                 {getActionButton(session)}
                               </div>
                             </div>
@@ -716,10 +712,10 @@ export function TrainingSection() {
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
                                 {firstPet && getPetImage(firstPet.petId) ? (
                                   <Link
                                     href={
@@ -787,7 +783,7 @@ export function TrainingSection() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex justify-end">
+                              <div className="shrink-0">
                                 {getActionButton(session)}
                               </div>
                             </div>
@@ -838,10 +834,10 @@ export function TrainingSection() {
                           return (
                             <div
                               key={session.id}
-                              className="hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                               onClick={() => handleViewDetails(session)}
                             >
-                              <div className="flex items-start gap-3">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
                                 {firstPet && getPetImage(firstPet.petId) ? (
                                   <Link
                                     href={

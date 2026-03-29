@@ -33,7 +33,6 @@ import {
   Hourglass,
   Calendar,
   LogIn,
-  Clock,
   Filter,
 } from "lucide-react";
 import {
@@ -639,50 +638,44 @@ export function GroomingSection() {
                           return (
                             <div
                               key={appointment.id}
-                              className={cn(
-                                "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
-                                isCritical &&
-                                  "border-l-4 border-l-red-500 dark:border-l-red-400",
-                                isWarning &&
-                                  "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
-                              )}
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                               onClick={() => handleViewDetails(appointment)}
                             >
-                              <div className="flex items-start gap-3">
-                                {getPetImage(appointment.petId) ? (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="size-10 overflow-hidden rounded-full">
-                                      <Image
-                                        src={getPetImage(appointment.petId)!}
-                                        alt={appointment.petName}
-                                        width={40}
-                                        height={40}
-                                        className="size-full object-cover"
-                                      />
-                                    </div>
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                                      <PawPrint className="text-primary size-5" />
-                                    </div>
-                                  </Link>
-                                )}
-                                <div className="min-w-0 flex-1">
+                              {getPetImage(appointment.petId) ? (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="size-10 overflow-hidden rounded-full">
+                                    <Image
+                                      src={getPetImage(appointment.petId)!}
+                                      alt={appointment.petName}
+                                      width={40}
+                                      height={40}
+                                      className="size-full object-cover"
+                                    />
+                                  </div>
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                                    <PawPrint className="text-primary size-5" />
+                                  </div>
+                                </Link>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Link
                                     href={
                                       client
@@ -693,34 +686,27 @@ export function GroomingSection() {
                                   >
                                     {appointment.petName}
                                   </Link>
-                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                                    <Badge className="bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
-                                      <Scissors className="mr-1 size-3" />
-                                      Grooming
-                                    </Badge>
-                                    <TagList
-                                      entityType="pet"
-                                      entityId={appointment.petId}
-                                      compact
-                                      maxVisible={2}
-                                    />
-                                  </div>
-                                  <p className="text-muted-foreground mt-1 text-xs">
-                                    {appointment.ownerName} ·{" "}
-                                    {appointment.petBreed}
-                                  </p>
-                                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                                    <Clock className="size-3" />
-                                    <span>
-                                      {formatTime(appointment.startTime)} -{" "}
-                                      {formatTime(appointment.endTime)}
-                                    </span>
-                                    <span>·</span>
-                                    <span>{appointment.stylistName}</span>
-                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-normal"
+                                  >
+                                    Grooming
+                                  </Badge>
+                                  <TagList
+                                    entityType="pet"
+                                    entityId={appointment.petId}
+                                    compact
+                                    maxVisible={2}
+                                  />
                                 </div>
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  {appointment.ownerName} ·{" "}
+                                  {appointment.stylistName} ·{" "}
+                                  {formatTime(appointment.startTime)} -{" "}
+                                  {formatTime(appointment.endTime)}
+                                </p>
                               </div>
-                              <div className="flex justify-end">
+                              <div className="shrink-0">
                                 {getActionButton(appointment)}
                               </div>
                             </div>
@@ -787,49 +773,45 @@ export function GroomingSection() {
                             <div
                               key={appointment.id}
                               className={cn(
-                                "hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors",
-                                isCritical &&
-                                  "border-l-4 border-l-red-500 dark:border-l-red-400",
-                                isWarning &&
-                                  "border-l-4 border-l-yellow-500 dark:border-l-yellow-400",
+                                "hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors",
                               )}
                               onClick={() => handleViewDetails(appointment)}
                             >
-                              <div className="flex items-start gap-3">
-                                {getPetImage(appointment.petId) ? (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="size-10 overflow-hidden rounded-full">
-                                      <Image
-                                        src={getPetImage(appointment.petId)!}
-                                        alt={appointment.petName}
-                                        width={40}
-                                        height={40}
-                                        className="size-full object-cover"
-                                      />
-                                    </div>
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                                      <PawPrint className="text-primary size-5" />
-                                    </div>
-                                  </Link>
-                                )}
-                                <div className="min-w-0 flex-1">
+                              {getPetImage(appointment.petId) ? (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="size-10 overflow-hidden rounded-full">
+                                    <Image
+                                      src={getPetImage(appointment.petId)!}
+                                      alt={appointment.petName}
+                                      width={40}
+                                      height={40}
+                                      className="size-full object-cover"
+                                    />
+                                  </div>
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                                    <PawPrint className="text-primary size-5" />
+                                  </div>
+                                </Link>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Link
                                     href={
                                       client
@@ -840,40 +822,36 @@ export function GroomingSection() {
                                   >
                                     {appointment.petName}
                                   </Link>
-                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                                    <Badge className="bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
-                                      <Scissors className="mr-1 size-3" />
-                                      Grooming
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-normal"
+                                  >
+                                    Grooming
+                                  </Badge>
+                                  {appointment.status ===
+                                    "ready-for-pickup" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] font-normal"
+                                    >
+                                      Ready
                                     </Badge>
-                                    {appointment.status ===
-                                      "ready-for-pickup" && (
-                                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                        Ready for Pickup
-                                      </Badge>
-                                    )}
-                                    <TagList
-                                      entityType="pet"
-                                      entityId={appointment.petId}
-                                      compact
-                                      maxVisible={2}
-                                    />
-                                  </div>
-                                  <p className="text-muted-foreground mt-1 text-xs">
-                                    {appointment.ownerName} ·{" "}
-                                    {appointment.petBreed}
-                                  </p>
-                                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                                    <Clock className="size-3" />
-                                    <span>
-                                      {formatTime(appointment.startTime)} -{" "}
-                                      {formatTime(appointment.endTime)}
-                                    </span>
-                                    <span>·</span>
-                                    <span>{appointment.stylistName}</span>
-                                  </div>
+                                  )}
+                                  <TagList
+                                    entityType="pet"
+                                    entityId={appointment.petId}
+                                    compact
+                                    maxVisible={2}
+                                  />
                                 </div>
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  {appointment.ownerName} ·{" "}
+                                  {appointment.stylistName} ·{" "}
+                                  {formatTime(appointment.startTime)} -{" "}
+                                  {formatTime(appointment.endTime)}
+                                </p>
                               </div>
-                              <div className="flex justify-end">
+                              <div className="shrink-0">
                                 {getActionButton(appointment)}
                               </div>
                             </div>
@@ -918,44 +896,44 @@ export function GroomingSection() {
                           return (
                             <div
                               key={appointment.id}
-                              className="hover:bg-muted/50 cursor-pointer space-y-2.5 rounded-lg border p-3 transition-colors"
+                              className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-colors"
                               onClick={() => handleViewDetails(appointment)}
                             >
-                              <div className="flex items-start gap-3">
-                                {getPetImage(appointment.petId) ? (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="size-10 overflow-hidden rounded-full">
-                                      <Image
-                                        src={getPetImage(appointment.petId)!}
-                                        alt={appointment.petName}
-                                        width={40}
-                                        height={40}
-                                        className="size-full object-cover"
-                                      />
-                                    </div>
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={
-                                      client
-                                        ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
-                                        : "#"
-                                    }
-                                    className="shrink-0"
-                                  >
-                                    <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                                      <PawPrint className="text-primary size-5" />
-                                    </div>
-                                  </Link>
-                                )}
-                                <div className="min-w-0 flex-1">
+                              {getPetImage(appointment.petId) ? (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="size-10 overflow-hidden rounded-full">
+                                    <Image
+                                      src={getPetImage(appointment.petId)!}
+                                      alt={appointment.petName}
+                                      width={40}
+                                      height={40}
+                                      className="size-full object-cover"
+                                    />
+                                  </div>
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={
+                                    client
+                                      ? `/facility/dashboard/clients/${client.id}/pets/${appointment.petId}`
+                                      : "#"
+                                  }
+                                  className="shrink-0"
+                                >
+                                  <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                                    <PawPrint className="text-primary size-5" />
+                                  </div>
+                                </Link>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
                                   <Link
                                     href={
                                       client
@@ -966,26 +944,23 @@ export function GroomingSection() {
                                   >
                                     {appointment.petName}
                                   </Link>
-                                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                                    <Badge className="bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
-                                      <Scissors className="mr-1 size-3" />
-                                      Grooming
-                                    </Badge>
-                                    <TagList
-                                      entityType="pet"
-                                      entityId={appointment.petId}
-                                      compact
-                                      maxVisible={2}
-                                    />
-                                  </div>
-                                  <p className="text-muted-foreground mt-1 text-xs">
-                                    {appointment.ownerName} ·{" "}
-                                    {appointment.petBreed}
-                                  </p>
-                                  <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                                    <span>{appointment.stylistName}</span>
-                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] font-normal"
+                                  >
+                                    Grooming
+                                  </Badge>
+                                  <TagList
+                                    entityType="pet"
+                                    entityId={appointment.petId}
+                                    compact
+                                    maxVisible={2}
+                                  />
                                 </div>
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  {appointment.ownerName} ·{" "}
+                                  {appointment.stylistName}
+                                </p>
                               </div>
                             </div>
                           );
