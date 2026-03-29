@@ -114,7 +114,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Boarding inquiry",
-    content: "Hi! I wanted to ask about boarding rates for Buddy next week. Do you have availability Mar 15-18?",
+    content:
+      "Hi! I wanted to ask about boarding rates for Buddy next week. Do you have availability Mar 15-18?",
     direction: "inbound",
     timestamp: "2024-03-12T10:15:00Z",
     status: "read",
@@ -125,7 +126,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Re: Boarding inquiry",
-    content: "Hi Alice! Yes, we have availability. Our standard boarding rate is $45/night for Buddy's size. Would you like to book?",
+    content:
+      "Hi Alice! Yes, we have availability. Our standard boarding rate is $45/night for Buddy's size. Would you like to book?",
     direction: "outbound",
     timestamp: "2024-03-12T10:30:00Z",
     staffName: "Jessica Martinez",
@@ -149,7 +151,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Re: Boarding inquiry",
-    content: "Of course! I've added a bath add-on to the booking. Your total for 3 nights + bath is $160. Kennel 12 - Premium is reserved for Buddy.",
+    content:
+      "Of course! I've added a bath add-on to the booking. Your total for 3 nights + bath is $160. Kennel 12 - Premium is reserved for Buddy.",
     direction: "outbound",
     timestamp: "2024-03-12T11:00:00Z",
     staffName: "Jessica Martinez",
@@ -162,7 +165,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Re: Boarding inquiry",
-    content: "Perfect, thanks so much! One more thing — Buddy needs his medication at 8am and 6pm. Is that possible?",
+    content:
+      "Perfect, thanks so much! One more thing — Buddy needs his medication at 8am and 6pm. Is that possible?",
     direction: "inbound",
     timestamp: "2024-03-12T11:15:00Z",
     status: "read",
@@ -173,7 +177,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Re: Boarding inquiry",
-    content: "Absolutely! We'll make sure Buddy gets his medication on schedule. Please bring the medication labeled with instructions at check-in. See you on the 15th!",
+    content:
+      "Absolutely! We'll make sure Buddy gets his medication on schedule. Please bring the medication labeled with instructions at check-in. See you on the 15th!",
     direction: "outbound",
     timestamp: "2024-03-12T11:22:00Z",
     staffName: "Jessica Martinez",
@@ -186,7 +191,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "sms",
     subject: "Booking Confirmed",
-    content: "Your boarding reservation for Buddy (Mar 15-18) at Example Pet Care Facility is confirmed. Kennel 12 - Premium. Total: $160.",
+    content:
+      "Your boarding reservation for Buddy (Mar 15-18) at Example Pet Care Facility is confirmed. Kennel 12 - Premium. Total: $160.",
     direction: "outbound",
     timestamp: "2024-03-12T11:30:00Z",
     status: "delivered",
@@ -220,7 +226,8 @@ export const clientCommunications: CommunicationRecord[] = [
     facilityId: 11,
     type: "in-app",
     subject: "Re: Buddy update",
-    content: "Buddy is having a wonderful time! He played in the yard this morning and ate all his breakfast. I'll send you some photos later today.",
+    content:
+      "Buddy is having a wonderful time! He played in the yard this morning and ate all his breakfast. I'll send you some photos later today.",
     direction: "outbound",
     timestamp: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
     staffName: "Amy Chen",
