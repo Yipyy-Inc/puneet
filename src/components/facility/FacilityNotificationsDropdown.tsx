@@ -190,7 +190,7 @@ export function FacilityNotificationsDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="max-h-[420px] w-[calc(100vw-2rem)] overflow-y-auto sm:w-80"
+        className="flex w-[calc(100vw-2rem)] flex-col sm:w-80"
       >
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-sm font-medium">Notifications</span>
@@ -205,22 +205,24 @@ export function FacilityNotificationsDropdown({
             </Button>
           )}
         </div>
-        {notifications.length === 0 ? (
-          <div className="text-muted-foreground py-8 text-center text-sm">
-            No notifications
-          </div>
-        ) : (
-          <div className="py-1">
-            {notifications.slice(0, 15).map((n) => (
-              <NotificationRow
-                key={n.id}
-                n={n}
-                onMarkRead={markRead}
-                onClose={() => setOpen(false)}
-              />
-            ))}
-          </div>
-        )}
+        <div className="max-h-[340px] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="text-muted-foreground py-8 text-center text-sm">
+              No notifications
+            </div>
+          ) : (
+            <div className="py-1">
+              {notifications.slice(0, 15).map((n) => (
+                <NotificationRow
+                  key={n.id}
+                  n={n}
+                  onMarkRead={markRead}
+                  onClose={() => setOpen(false)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
         <div className="border-t px-3 py-2">
           <Link
             href="/facility/dashboard/notifications"
