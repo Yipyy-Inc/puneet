@@ -4,18 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 import {
   Download,
   User,
-  Mail as MailIcon,
+  Phone,
   Eye,
   Plus,
   PawPrint,
+  CircleDot,
+  Mail as MailIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -130,24 +133,32 @@ export default function FacilityClientsPage() {
       label: "Name",
       icon: User,
       defaultVisible: true,
+      render: (client) => <span className="font-medium">{client.name}</span>,
     },
     {
       key: "email",
       label: "Email",
       icon: MailIcon,
       defaultVisible: true,
+      render: (client) => (
+        <span className="text-muted-foreground text-sm">{client.email}</span>
+      ),
     },
     {
       key: "phone",
       label: "Phone",
-      icon: MailIcon,
+      icon: Phone,
       defaultVisible: true,
-      render: (client) => client.phone || "N/A",
+      render: (client) => (
+        <span className="text-muted-foreground text-sm">
+          {client.phone || "—"}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
-      icon: MailIcon,
+      icon: CircleDot,
       defaultVisible: true,
       render: (client) => <StatusBadge type="status" value={client.status} />,
     },
@@ -158,7 +169,7 @@ export default function FacilityClientsPage() {
       defaultVisible: true,
       render: (client) => {
         if (client.pets.length === 0) {
-          return <span className="text-muted-foreground text-xs">No pets</span>;
+          return <span className="text-muted-foreground text-xs">—</span>;
         }
         const visible = client.pets.slice(0, 2);
         const remaining = client.pets.length - visible.length;
@@ -172,17 +183,16 @@ export default function FacilityClientsPage() {
               >
                 <Badge
                   variant="outline"
-                  className="hover:bg-muted cursor-pointer text-xs"
+                  className="hover:bg-muted/50 cursor-pointer text-xs font-normal"
                 >
-                  {pet.name}{" "}
-                  {pet.type === "Dog" ? "🐕" : pet.type === "Cat" ? "🐱" : "🐾"}
+                  {pet.name}
                 </Badge>
               </Link>
             ))}
             {remaining > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                +{remaining} more
-              </Badge>
+              <span className="text-muted-foreground text-xs">
+                +{remaining}
+              </span>
             )}
           </div>
         );
@@ -236,79 +246,66 @@ export default function FacilityClientsPage() {
     },
   ];
 
+  const activeCount = facilityClients.filter(
+    (c) => c.status === "active",
+  ).length;
+
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">
-          Clients - {facility.name}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => exportClientsToCSV(facilityClients)}
-          >
-            <Download className="mr-2 size-4" />
-            Export
-          </Button>
-          <Button onClick={() => setCreatingClient(true)}>
-            <Plus className="mr-2 size-4" />
-            New Client
-          </Button>
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">Clients</h2>
+            <p className="text-muted-foreground text-sm">{facility.name}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportClientsToCSV(facilityClients)}
+            >
+              <Download className="mr-2 size-4" />
+              Export
+            </Button>
+            <Button size="sm" onClick={() => setCreatingClient(true)}>
+              <Plus className="mr-2 size-4" />
+              New Client
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{facilityClients.length}</div>
-            <p className="text-muted-foreground text-xs">
-              {facilityClients.filter((c) => c.status === "active").length}{" "}
-              active
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Clients
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {facilityClients.filter((c) => c.status === "active").length}
-            </div>
-            <p className="text-muted-foreground text-xs">Currently active</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pets</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPets}</div>
-            <p className="text-muted-foreground text-xs">Across all clients</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg Pets/Client
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+      {/* Compact Stats Row */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-6 py-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Total</span>
+            <span className="text-sm font-semibold">
+              {facilityClients.length}
+            </span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Active</span>
+            <span className="text-sm font-semibold">{activeCount}</span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Pets</span>
+            <span className="text-sm font-semibold">{totalPets}</span>
+          </div>
+          <Separator orientation="vertical" className="h-4" />
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">Avg/Client</span>
+            <span className="text-sm font-semibold">
               {facilityClients.length > 0
                 ? Math.round((totalPets / facilityClients.length) * 10) / 10
                 : 0}
-            </div>
-            <p className="text-muted-foreground text-xs">Per client</p>
-          </CardContent>
-        </Card>
-      </div>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       <DataTable
         data={facilityClients}
