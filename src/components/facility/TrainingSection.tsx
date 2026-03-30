@@ -104,6 +104,8 @@ const findClientForPet = (petId: number) => {
 
 export function TrainingSection() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [inProgressQuery, setInProgressQuery] = useState("");
+  const [completedQuery, setCompletedQuery] = useState("");
   const [selectedSession, setSelectedSession] =
     useState<TrainingSessionLocal | null>(null);
   const [arrivedPets, setArrivedPets] = useState<Set<number>>(new Set());
@@ -682,6 +684,15 @@ export function TrainingSection() {
                   (s) =>
                     trainerFilter === "all" || s.trainerId === trainerFilter,
                 );
+              const filteredInProgress = inProgressQuery.trim()
+                ? inProgress.filter((s) => {
+                    const q = inProgressQuery.toLowerCase();
+                    return (
+                      s.className.toLowerCase().includes(q) ||
+                      s.trainerName.toLowerCase().includes(q)
+                    );
+                  })
+                : inProgress;
               return (
                 <Card>
                   <CardHeader className="space-y-3 pb-4">
@@ -690,17 +701,28 @@ export function TrainingSection() {
                         <GraduationCap className="size-4 text-amber-600" />
                         In Progress
                       </CardTitle>
-                      <Badge variant="secondary">{inProgress.length}</Badge>
+                      <Badge variant="secondary">
+                        {filteredInProgress.length}
+                      </Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search in progress..."
+                        value={inProgressQuery}
+                        onChange={(e) => setInProgressQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                      {inProgress.length === 0 ? (
+                      {filteredInProgress.length === 0 ? (
                         <p className="text-muted-foreground py-6 text-center text-sm">
                           No active sessions
                         </p>
                       ) : (
-                        inProgress.map((session) => {
+                        filteredInProgress.map((session) => {
                           const sessionEnrollments = getSessionEnrollments(
                             session.attendees,
                           );
@@ -804,6 +826,15 @@ export function TrainingSection() {
                   (s) =>
                     trainerFilter === "all" || s.trainerId === trainerFilter,
                 );
+              const filteredCompleted = completedQuery.trim()
+                ? completed.filter((s) => {
+                    const q = completedQuery.toLowerCase();
+                    return (
+                      s.className.toLowerCase().includes(q) ||
+                      s.trainerName.toLowerCase().includes(q)
+                    );
+                  })
+                : completed;
               return (
                 <Card>
                   <CardHeader className="space-y-3 pb-4">
@@ -812,17 +843,28 @@ export function TrainingSection() {
                         <CheckCircle className="size-4 text-green-600" />
                         Completed
                       </CardTitle>
-                      <Badge variant="secondary">{completed.length}</Badge>
+                      <Badge variant="secondary">
+                        {filteredCompleted.length}
+                      </Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search completed..."
+                        value={completedQuery}
+                        onChange={(e) => setCompletedQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                      {completed.length === 0 ? (
+                      {filteredCompleted.length === 0 ? (
                         <p className="text-muted-foreground py-6 text-center text-sm">
                           No completed today
                         </p>
                       ) : (
-                        completed.map((session) => {
+                        filteredCompleted.map((session) => {
                           const sessionEnrollments = getSessionEnrollments(
                             session.attendees,
                           );

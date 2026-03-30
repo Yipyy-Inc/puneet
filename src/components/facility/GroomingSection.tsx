@@ -75,6 +75,8 @@ const findClientForPet = (petId: number) => {
 
 export function GroomingSection() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [inProgressQuery, setInProgressQuery] = useState("");
+  const [completedQuery, setCompletedQuery] = useState("");
   const [selectedAppointment, setSelectedAppointment] =
     useState<GroomingAppointmentWithPending | null>(null);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
@@ -731,9 +733,9 @@ export function GroomingSection() {
                   (apt) =>
                     groomerFilter === "all" || apt.stylistId === groomerFilter,
                 );
-              const filtered = searchQuery.trim()
+              const filtered = inProgressQuery.trim()
                 ? inProgress.filter((apt) => {
-                    const q = searchQuery.toLowerCase();
+                    const q = inProgressQuery.toLowerCase();
                     return (
                       apt.petName.toLowerCase().includes(q) ||
                       apt.ownerName.toLowerCase().includes(q) ||
@@ -750,6 +752,15 @@ export function GroomingSection() {
                         In Progress
                       </CardTitle>
                       <Badge variant="secondary">{filtered.length}</Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search in progress..."
+                        value={inProgressQuery}
+                        onChange={(e) => setInProgressQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -872,6 +883,16 @@ export function GroomingSection() {
                   (apt) =>
                     groomerFilter === "all" || apt.stylistId === groomerFilter,
                 );
+              const filteredCompleted = completedQuery.trim()
+                ? completed.filter((apt) => {
+                    const q = completedQuery.toLowerCase();
+                    return (
+                      apt.petName.toLowerCase().includes(q) ||
+                      apt.ownerName.toLowerCase().includes(q) ||
+                      apt.stylistName.toLowerCase().includes(q)
+                    );
+                  })
+                : completed;
               return (
                 <Card>
                   <CardHeader className="space-y-3 pb-4">
@@ -880,17 +901,28 @@ export function GroomingSection() {
                         <CheckCircle className="size-4 text-green-600" />
                         Completed
                       </CardTitle>
-                      <Badge variant="secondary">{completed.length}</Badge>
+                      <Badge variant="secondary">
+                        {filteredCompleted.length}
+                      </Badge>
+                    </div>
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
+                      <Input
+                        placeholder="Search completed..."
+                        value={completedQuery}
+                        onChange={(e) => setCompletedQuery(e.target.value)}
+                        className="h-8 pl-9 text-sm"
+                      />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="max-h-[400px] space-y-2 overflow-y-auto">
-                      {completed.length === 0 ? (
+                      {filteredCompleted.length === 0 ? (
                         <p className="text-muted-foreground py-6 text-center text-sm">
                           No completed today
                         </p>
                       ) : (
-                        completed.map((appointment) => {
+                        filteredCompleted.map((appointment) => {
                           const client = findClientForPet(appointment.petId);
                           return (
                             <div
