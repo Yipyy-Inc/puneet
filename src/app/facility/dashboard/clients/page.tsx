@@ -14,6 +14,7 @@ import {
   ActiveFilterChips,
 } from "@/components/clients/ClientFiltersInline";
 import { BulkActionsToolbar } from "@/components/clients/BulkActionsToolbar";
+import { cn } from "@/lib/utils";
 import { useClientFilters } from "@/hooks/use-client-filters";
 import {
   Download,
@@ -311,13 +312,20 @@ export default function FacilityClientsPage() {
         activeCount={activeCount}
       />
 
-      {filtersExpanded && (
-        <ClientFiltersInline
-          filters={filters}
-          setFilter={setFilter}
-          toggleArrayItem={toggleArrayItem}
-        />
-      )}
+      <div
+        className={cn(
+          "grid transition-all duration-300 ease-in-out",
+          filtersExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">
+          <ClientFiltersInline
+            filters={filters}
+            setFilter={setFilter}
+            toggleArrayItem={toggleArrayItem}
+          />
+        </div>
+      </div>
 
       <DataTable
         data={filteredClients}

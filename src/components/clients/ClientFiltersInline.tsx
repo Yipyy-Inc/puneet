@@ -4,13 +4,12 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientFilters } from "@/hooks/use-client-filters";
 
 // ========================================
-// Shared filter sub-components
+// Sub-components
 // ========================================
 
 function TriRadio({
@@ -23,31 +22,24 @@ function TriRadio({
   onChange: (v: "any" | "yes" | "no") => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium">{label}</p>
-      <div className="space-y-1">
+    <div>
+      <p className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wider uppercase">
+        {label}
+      </p>
+      <div className="border-border/50 inline-flex rounded-md border p-0.5">
         {(["any", "yes", "no"] as const).map((v) => (
-          <label
+          <button
             key={v}
+            onClick={() => onChange(v)}
             className={cn(
-              "flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs transition-colors",
-              value === v ? "bg-muted/60" : "hover:bg-muted/40",
+              "rounded-sm px-3 py-1 text-[11px] font-medium transition-all",
+              value === v
+                ? "bg-foreground text-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span
-              className={cn(
-                "flex size-3.5 items-center justify-center rounded-full border",
-                value === v
-                  ? "border-foreground bg-foreground"
-                  : "border-border",
-              )}
-            >
-              {value === v && (
-                <span className="bg-background size-1.5 rounded-full" />
-              )}
-            </span>
             {v === "any" ? "Any" : v === "yes" ? "Yes" : "No"}
-          </label>
+          </button>
         ))}
       </div>
     </div>
@@ -66,23 +58,25 @@ function CheckGroup({
   onToggle: (v: string) => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium">{label}</p>
-      <div className="space-y-1">
+    <div>
+      <p className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wider uppercase">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
         {options.map((opt) => (
           <label
             key={opt.value}
             className={cn(
-              "flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs transition-colors",
+              "flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-all",
               selected.includes(opt.value)
-                ? "bg-muted/60"
-                : "hover:bg-muted/40",
+                ? "border-foreground/30 bg-foreground/5 font-medium"
+                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
             )}
           >
             <Checkbox
               checked={selected.includes(opt.value)}
               onCheckedChange={() => onToggle(opt.value)}
-              className="size-3.5"
+              className="size-3"
             />
             {opt.label}
           </label>
@@ -104,18 +98,20 @@ function PresetPills({
   onChange: (v: number | null) => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium">{label}</p>
-      <div className="flex flex-wrap gap-1">
+    <div>
+      <p className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wider uppercase">
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
         {options.map((opt) => (
           <button
             key={String(opt.value)}
             onClick={() => onChange(value === opt.value ? null : opt.value)}
             className={cn(
-              "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all",
+              "rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
               value === opt.value
                 ? "bg-foreground text-background border-transparent"
-                : "border-border/60 text-muted-foreground hover:text-foreground",
+                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
             )}
           >
             {opt.label}
@@ -125,6 +121,17 @@ function PresetPills({
     </div>
   );
 }
+
+// ========================================
+// Category navigation
+// ========================================
+
+const CATEGORIES = [
+  { id: "client", label: "Client & Account" },
+  { id: "pets", label: "Pets & Health" },
+  { id: "services", label: "Services & Bookings" },
+  { id: "activity", label: "Activity" },
+] as const;
 
 // ========================================
 // Active Filter Chips
@@ -223,7 +230,7 @@ export function ActiveFilterChips({
 }
 
 // ========================================
-// Inline Filter Panel — 10 Categories
+// Main Inline Filter Panel
 // ========================================
 
 export function ClientFiltersInline({
@@ -238,72 +245,44 @@ export function ClientFiltersInline({
     item: string,
   ) => void;
 }) {
-  const [tab, setTab] = useState("account");
+  const [activeCategory, setActiveCategory] = useState("client");
 
   return (
-    <Card>
-      <CardContent className="py-3">
-        <Tabs value={tab} onValueChange={setTab}>
-          <div className="overflow-x-auto">
-            <TabsList className="w-auto">
-              <TabsTrigger value="account" className="text-xs">
-                Account
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="text-xs">
-                Profile
-              </TabsTrigger>
-              <TabsTrigger value="household" className="text-xs">
-                Household
-              </TabsTrigger>
-              <TabsTrigger value="pets" className="text-xs">
-                Pets
-              </TabsTrigger>
-              <TabsTrigger value="health" className="text-xs">
-                Health
-              </TabsTrigger>
-              <TabsTrigger value="services" className="text-xs">
-                Services
-              </TabsTrigger>
-              <TabsTrigger value="financial" className="text-xs">
-                Financial
-              </TabsTrigger>
-              <TabsTrigger value="forms" className="text-xs">
-                Forms
-              </TabsTrigger>
-              <TabsTrigger value="comms" className="text-xs">
-                Comms
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="text-xs">
-                Activity
-              </TabsTrigger>
-            </TabsList>
-          </div>
+    <Card className="overflow-hidden">
+      <div className="flex">
+        {/* Left: category nav */}
+        <div className="bg-muted/30 border-r py-2">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={cn(
+                "block w-full px-4 py-2 text-left text-xs font-medium whitespace-nowrap transition-colors",
+                activeCategory === cat.id
+                  ? "bg-background text-foreground border-r-foreground border-r-2"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+              )}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
 
-          {/* 1. Account Status */}
-          <TabsContent value="account" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+        {/* Right: filter content */}
+        <CardContent className="flex-1 py-4">
+          {activeCategory === "client" && (
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
-                label="Account Status"
+                label="Status"
                 options={[
                   { value: "active", label: "Active" },
                   { value: "inactive", label: "Inactive" },
-                  { value: "new", label: "New Client" },
+                  { value: "new", label: "New" },
                   { value: "archived", label: "Archived" },
                   { value: "blacklisted", label: "Blacklisted" },
                 ]}
                 selected={filters.status}
                 onToggle={(v) => toggleArrayItem("status", v)}
-              />
-            </div>
-          </TabsContent>
-
-          {/* 2. Client Profile */}
-          <TabsContent value="profile" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
-              <TriRadio
-                label="Email on file"
-                value={filters.hasAddress}
-                onChange={(v) => setFilter("hasAddress", v)}
               />
               <TriRadio
                 label="Address on file"
@@ -315,25 +294,18 @@ export function ClientFiltersInline({
                 value={filters.hasEmergencyContact}
                 onChange={(v) => setFilter("hasEmergencyContact", v)}
               />
-            </div>
-          </TabsContent>
-
-          {/* 3. Household */}
-          <TabsContent value="household" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <TriRadio
                 label="Has pets"
                 value={filters.hasPets}
                 onChange={(v) => setFilter("hasPets", v)}
               />
             </div>
-          </TabsContent>
+          )}
 
-          {/* 4. Pets */}
-          <TabsContent value="pets" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+          {activeCategory === "pets" && (
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
-                label="Pet Type"
+                label="Pet type"
                 options={[
                   { value: "Dog", label: "Dog" },
                   { value: "Cat", label: "Cat" },
@@ -353,29 +325,12 @@ export function ClientFiltersInline({
                 onChange={(v) => setFilter("hasSpecialNeeds", v)}
               />
             </div>
-          </TabsContent>
+          )}
 
-          {/* 5. Vaccinations & Health */}
-          <TabsContent value="health" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
-              <TriRadio
-                label="Has allergies"
-                value={filters.hasAllergies}
-                onChange={(v) => setFilter("hasAllergies", v)}
-              />
-              <TriRadio
-                label="Special needs"
-                value={filters.hasSpecialNeeds}
-                onChange={(v) => setFilter("hasSpecialNeeds", v)}
-              />
-            </div>
-          </TabsContent>
-
-          {/* 6. Services & Bookings */}
-          <TabsContent value="services" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+          {activeCategory === "services" && (
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
-                label="Service Used"
+                label="Service used"
                 options={[
                   { value: "daycare", label: "Daycare" },
                   { value: "boarding", label: "Boarding" },
@@ -386,42 +341,17 @@ export function ClientFiltersInline({
                 onToggle={(v) => toggleArrayItem("services", v)}
               />
               <TriRadio
-                label="Has active booking"
+                label="Active booking"
                 value={filters.hasActiveBooking}
                 onChange={(v) => setFilter("hasActiveBooking", v)}
               />
             </div>
-          </TabsContent>
+          )}
 
-          {/* 7. Financial */}
-          <TabsContent value="financial" className="mt-3">
-            <p className="text-muted-foreground text-xs">
-              Financial filters will be available when payment data is
-              connected.
-            </p>
-          </TabsContent>
-
-          {/* 8. Forms & Compliance */}
-          <TabsContent value="forms" className="mt-3">
-            <p className="text-muted-foreground text-xs">
-              Form compliance filters will be available when form submission
-              tracking is connected.
-            </p>
-          </TabsContent>
-
-          {/* 9. Communication */}
-          <TabsContent value="comms" className="mt-3">
-            <p className="text-muted-foreground text-xs">
-              Communication filters will be available when messaging data is
-              connected.
-            </p>
-          </TabsContent>
-
-          {/* 10. Activity & Engagement */}
-          <TabsContent value="activity" className="mt-3">
-            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+          {activeCategory === "activity" && (
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 md:grid-cols-3 lg:grid-cols-4">
               <PresetPills
-                label="Last Visit"
+                label="Last visit within"
                 options={[
                   { value: 7, label: "7 days" },
                   { value: 30, label: "30 days" },
@@ -431,9 +361,9 @@ export function ClientFiltersInline({
                 onChange={(v) => setFilter("lastVisitDays", v)}
               />
             </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+          )}
+        </CardContent>
+      </div>
     </Card>
   );
 }
