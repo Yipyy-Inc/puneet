@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, StickyNote } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Note {
@@ -64,69 +63,65 @@ export function BookingNotes() {
   };
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            <StickyNote className="mr-1.5 inline size-3" />
-            Notes
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground h-6 gap-1 text-[10px]"
-            onClick={() => setAdding(true)}
-          >
-            <Plus className="size-3" />
-            Add
-          </Button>
+    <div className="space-y-3">
+      {/* Add note — always visible input */}
+      {adding ? (
+        <div className="space-y-2">
+          <Textarea
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder="Write a note..."
+            className="min-h-[80px] text-sm"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={handleAdd}>
+              <Plus className="size-3" />
+              Save Note
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => {
+                setAdding(false);
+                setNewNote("");
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="border-muted hover:border-foreground/20 hover:bg-muted/50 flex w-full items-center gap-2 rounded-md border border-dashed px-3 py-2.5 text-sm transition-colors"
+        >
+          <Plus className="text-muted-foreground size-4" />
+          <span className="text-muted-foreground">Add a note...</span>
+        </button>
+      )}
 
-        {adding && (
-          <div className="mb-3 space-y-2">
-            <Textarea
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Add a note..."
-              className="min-h-[60px] text-sm"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <Button size="sm" className="h-7 text-xs" onClick={handleAdd}>
-                Save
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setAdding(false);
-                  setNewNote("");
-                }}
-              >
-                Cancel
-              </Button>
+      {/* Notes list */}
+      {notes.length === 0 ? (
+        <p className="text-muted-foreground py-2 text-center text-xs">
+          No notes yet
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {notes.map((note) => (
+            <div
+              key={note.id}
+              className="rounded-md border bg-muted/20 px-3 py-2"
+            >
+              <p className="text-sm">{note.content}</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {note.staffName} · {formatRelative(note.timestamp)}
+              </p>
             </div>
-          </div>
-        )}
-
-        {notes.length === 0 && !adding ? (
-          <p className="text-muted-foreground py-4 text-center text-xs">
-            No notes yet
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {notes.map((note) => (
-              <div key={note.id} className="text-sm">
-                <p>{note.content}</p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {note.staffName} · {formatRelative(note.timestamp)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
