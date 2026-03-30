@@ -139,8 +139,9 @@ export function ComposeBar({
           {channel === "sms" && credits && (
             <Popover>
               <PopoverTrigger asChild>
-                <button className="text-muted-foreground hover:text-foreground text-[10px] transition-colors">
-                  {smsRemaining.toLocaleString()} left
+                <button className="border-border/60 hover:bg-muted/50 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors">
+                  <span className="bg-success size-1.5 rounded-full" />
+                  {smsRemaining.toLocaleString()} SMS left
                 </button>
               </PopoverTrigger>
               <PopoverContent side="top" align="end" className="w-56 text-xs">
