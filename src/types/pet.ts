@@ -49,6 +49,7 @@ export const petSchema = z.object({
   type: z.string(),
   breed: z.string(),
   age: z.number(),
+  dateOfBirth: z.string().optional(), // ISO date: "2023-03-15"
   weight: z.number(),
   color: z.string(),
   microchip: z.string(),

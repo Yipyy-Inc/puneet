@@ -39,6 +39,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculatePetAge } from "@/lib/pet-utils";
 
 // ========================================
 // Types
@@ -48,7 +49,7 @@ interface PetForm {
   name: string;
   type: string;
   breed: string;
-  age: string;
+  dateOfBirth: string;
   weight: string;
   sex: string;
   spayedNeutered: string;
@@ -68,7 +69,7 @@ const EMPTY_PET: PetForm = {
   name: "",
   type: "Dog",
   breed: "",
-  age: "",
+  dateOfBirth: "",
   weight: "",
   sex: "",
   spayedNeutered: "",
@@ -314,7 +315,8 @@ export function CreateClientModal({
     const e: Record<string, string> = {};
     if (!petForm.name.trim()) e.petName = "Pet name is required";
     if (!petForm.breed.trim()) e.petBreed = "Breed is required";
-    if (!petForm.age.trim()) e.petAge = "Age is required";
+    if (!petForm.dateOfBirth.trim())
+      e.petDateOfBirth = "Date of birth is required";
     if (!petForm.weight.trim()) e.petWeight = "Weight is required";
     if (!petForm.sex) e.petSex = "Sex is required";
     if (!petForm.spayedNeutered) e.petSpayedNeutered = "This field is required";
@@ -360,7 +362,8 @@ export function CreateClientModal({
         name: p.name,
         type: p.type,
         breed: p.breed,
-        age: parseInt(p.age) || 0,
+        age: calculatePetAge(p.dateOfBirth).years,
+        dateOfBirth: p.dateOfBirth || undefined,
         weight: parseFloat(p.weight) || 0,
         color: p.color,
         microchip: p.microchip,
@@ -630,8 +633,9 @@ export function CreateClientModal({
                     <div>
                       <p className="text-sm font-medium">{p.name}</p>
                       <p className="text-muted-foreground text-xs">
-                        {p.type} · {p.breed} · {p.age} yrs · {p.weight} lbs ·{" "}
-                        <span className="capitalize">{p.sex}</span>
+                        {p.type} · {p.breed} ·{" "}
+                        {calculatePetAge(p.dateOfBirth).compact} · {p.weight}{" "}
+                        lbs · <span className="capitalize">{p.sex}</span>
                       </p>
                     </div>
                     <Button
@@ -697,14 +701,22 @@ export function CreateClientModal({
               </Field>
 
               <div className="grid grid-cols-4 gap-4">
-                <Field label="Age (years)" required error={errors.petAge}>
+                <Field
+                  label="Date of Birth"
+                  required
+                  error={errors.petDateOfBirth}
+                >
                   <Input
-                    type="number"
-                    min="0"
-                    value={petForm.age}
-                    onChange={(e) => updatePet("age", e.target.value)}
-                    placeholder="3"
+                    type="date"
+                    value={petForm.dateOfBirth}
+                    onChange={(e) => updatePet("dateOfBirth", e.target.value)}
+                    max={new Date().toISOString().split("T")[0]}
                   />
+                  {petForm.dateOfBirth && (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Age: {calculatePetAge(petForm.dateOfBirth).display}
+                    </p>
+                  )}
                 </Field>
                 <Field label="Weight (lbs)" required error={errors.petWeight}>
                   <Input
@@ -1121,7 +1133,8 @@ export function CreateClientModal({
                   </Badge>
                   <span className="text-sm font-medium">{p.name}</span>
                   <span className="text-muted-foreground text-xs">
-                    {p.breed} · {p.age} yrs · {p.weight} lbs
+                    {p.breed} · {calculatePetAge(p.dateOfBirth).compact} ·{" "}
+                    {p.weight} lbs
                   </span>
                 </div>
               ))}

@@ -64,6 +64,7 @@ import {
 } from "@/lib/form-requirements";
 import { TagList } from "@/components/shared/TagList";
 import { cn } from "@/lib/utils";
+import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { toast } from "sonner";
 import type { InvoiceLineItem } from "@/types/booking";
 
@@ -605,7 +606,7 @@ export default function FacilityBookingDetailPage({
                       />
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {pet.type} · {pet.age} yrs · {pet.weight} lbs
+                      {pet.type} · {getPetAgeDisplay(pet)} · {pet.weight} lbs
                       {pet.sex && (
                         <>
                           {" "}
