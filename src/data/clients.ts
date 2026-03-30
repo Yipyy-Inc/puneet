@@ -7,7 +7,7 @@ export const clients: Client[] = [
     email: "alice@example.com",
     phone: "123-456-7890",
     status: "active",
-    facility: "Paws & Play Daycare",
+    facility: "Example Pet Care Facility",
     imageUrl: "/people/person-1.jpg",
     address: {
       street: "123 Main Street",
@@ -57,7 +57,7 @@ export const clients: Client[] = [
     email: "bob@example.com",
     phone: "098-765-4321",
     status: "active",
-    facility: "Paws & Play Daycare",
+    facility: "Example Pet Care Facility",
     imageUrl: "/people/person-2.jpg",
     address: {
       street: "456 Oak Avenue",
@@ -209,7 +209,7 @@ export const clients: Client[] = [
     email: "frank@example.com",
     phone: "444-555-6666",
     status: "active",
-    facility: "Happy Tails Boarding",
+    facility: "Example Pet Care Facility",
     address: {
       street: "567 Comic Street",
       city: "Sin City",
@@ -229,7 +229,7 @@ export const clients: Client[] = [
     name: "Grace Lee",
     email: "grace@example.com",
     status: "inactive",
-    facility: "Happy Tails Boarding",
+    facility: "Example Pet Care Facility",
     address: {
       street: "890 Harmony Road",
       city: "Serenity",
@@ -265,7 +265,7 @@ export const clients: Client[] = [
     email: "henry@example.com",
     phone: "777-888-9999",
     status: "active",
-    facility: "Happy Tails Boarding",
+    facility: "Example Pet Care Facility",
     address: {
       street: "321 Royal Drive",
       city: "Windsor",
