@@ -83,6 +83,8 @@ interface DataTableProps<T> {
   selectedIds?: Set<string | number>;
   /** Selection change callback */
   onSelectionChange?: (ids: Set<string | number>) => void;
+  /** Extra content rendered at the end of the toolbar row */
+  toolbarExtra?: React.ReactNode;
 }
 
 export function DataTable<T extends object>({
@@ -103,6 +105,7 @@ export function DataTable<T extends object>({
   getItemId,
   selectedIds: externalSelectedIds,
   onSelectionChange,
+  toolbarExtra,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -197,7 +200,7 @@ export function DataTable<T extends object>({
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(searchKey || searchKeys || getSearchValue) && (
           <div className="relative max-w-sm flex-1">
             <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
@@ -299,6 +302,7 @@ export function DataTable<T extends object>({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        {toolbarExtra}
       </div>
 
       {/* Table */}

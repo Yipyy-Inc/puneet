@@ -345,15 +345,16 @@ export default function FacilityClientsPage() {
         getItemId={(client) => client.id}
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
-      />
-
-      <BulkActionsToolbar
-        selectedCount={selectedIds.size}
-        onDeselect={() => setSelectedIds(new Set())}
-        onExport={() =>
-          exportClientsToCSV(
-            facilityClients.filter((c) => selectedIds.has(c.id)),
-          )
+        toolbarExtra={
+          <BulkActionsToolbar
+            selectedCount={selectedIds.size}
+            onDeselect={() => setSelectedIds(new Set())}
+            onExport={() =>
+              exportClientsToCSV(
+                facilityClients.filter((c) => selectedIds.has(c.id)),
+              )
+            }
+          />
         }
       />
 
