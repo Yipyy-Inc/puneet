@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientFilters } from "@/hooks/use-client-filters";
 import {
@@ -171,489 +172,864 @@ export function ClientFiltersInline({
   ) => void;
 }) {
   const [activeCategory, setActiveCategory] = useState("account");
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Focus search input on mount
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
+
+  // Build a flat, searchable index of every filter control
+  const filterRegistry = useMemo(() => {
+    const entries: {
+      label: string;
+      categoryId: string;
+      categoryLabel: string;
+      key: string;
+      element: React.ReactNode;
+    }[] = [];
+
+    const add = (
+      label: string,
+      catId: string,
+      catLabel: string,
+      element: React.ReactNode,
+    ) => {
+      entries.push({
+        label,
+        categoryId: catId,
+        categoryLabel: catLabel,
+        key: `${catId}-${label}`,
+        element,
+      });
+    };
+
+    // Account Status
+    add(
+      "Status",
+      "account",
+      "Account Status",
+      <CheckGroup
+        label="Status"
+        options={[
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+          { value: "new", label: "New" },
+          { value: "archived", label: "Archived" },
+          { value: "blacklisted", label: "Blacklisted" },
+        ]}
+        selected={filters.status}
+        onToggle={(v) => toggleArrayItem("status", v)}
+      />,
+    );
+    add(
+      "Blocked from messaging",
+      "account",
+      "Account Status",
+      <TriToggle
+        label="Blocked from messaging"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Blocked from booking",
+      "account",
+      "Account Status",
+      <TriToggle
+        label="Blocked from booking"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Missing profile info",
+      "account",
+      "Account Status",
+      <TriToggle
+        label="Missing profile info"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Client Profile
+    add(
+      "Email on file",
+      "profile",
+      "Client Profile",
+      <TriToggle
+        label="Email on file"
+        value={filters.hasAddress}
+        onChange={(v) => setFilter("hasAddress", v)}
+      />,
+    );
+    add(
+      "Address on file",
+      "profile",
+      "Client Profile",
+      <TriToggle
+        label="Address on file"
+        value={filters.hasAddress}
+        onChange={(v) => setFilter("hasAddress", v)}
+      />,
+    );
+    add(
+      "Emergency contact",
+      "profile",
+      "Client Profile",
+      <TriToggle
+        label="Emergency contact"
+        value={filters.hasEmergencyContact}
+        onChange={(v) => setFilter("hasEmergencyContact", v)}
+      />,
+    );
+    add(
+      "Marketing consent",
+      "profile",
+      "Client Profile",
+      <TriToggle
+        label="Marketing consent"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "SMS consent",
+      "profile",
+      "Client Profile",
+      <TriToggle
+        label="SMS consent"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Household
+    add(
+      "Has pets",
+      "household",
+      "Household",
+      <TriToggle
+        label="Has pets"
+        value={filters.hasPets}
+        onChange={(v) => setFilter("hasPets", v)}
+      />,
+    );
+    add(
+      "Multiple active pets",
+      "household",
+      "Household",
+      <TriToggle
+        label="Multiple active pets"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Has inactive pets",
+      "household",
+      "Household",
+      <TriToggle
+        label="Has inactive pets"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Pet Basics
+    add(
+      "Species",
+      "pets",
+      "Pet Basics",
+      <CheckGroup
+        label="Species"
+        options={[
+          { value: "Dog", label: "Dog" },
+          { value: "Cat", label: "Cat" },
+          { value: "Other", label: "Other" },
+        ]}
+        selected={filters.petTypes}
+        onToggle={(v) => toggleArrayItem("petTypes", v)}
+      />,
+    );
+    add(
+      "Has allergies",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Has allergies"
+        value={filters.hasAllergies}
+        onChange={(v) => setFilter("hasAllergies", v)}
+      />,
+    );
+    add(
+      "Special needs",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Special needs"
+        value={filters.hasSpecialNeeds}
+        onChange={(v) => setFilter("hasSpecialNeeds", v)}
+      />,
+    );
+    add(
+      "Spayed / neutered",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Spayed / neutered"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Health & Safety
+    add(
+      "Has allergies",
+      "health",
+      "Health & Safety",
+      <TriToggle
+        label="Has allergies"
+        value={filters.hasAllergies}
+        onChange={(v) => setFilter("hasAllergies", v)}
+      />,
+    );
+    add(
+      "Special needs",
+      "health",
+      "Health & Safety",
+      <TriToggle
+        label="Special needs"
+        value={filters.hasSpecialNeeds}
+        onChange={(v) => setFilter("hasSpecialNeeds", v)}
+      />,
+    );
+    add(
+      "Medication required",
+      "health",
+      "Health & Safety",
+      <TriToggle
+        label="Medication required"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Senior pet",
+      "health",
+      "Health & Safety",
+      <TriToggle
+        label="Senior pet"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Vaccine expired",
+      "health",
+      "Health & Safety",
+      <TriToggle
+        label="Vaccine expired"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Vaccine expiring within",
+      "health",
+      "Health & Safety",
+      <DayRangePreset
+        label="Vaccine expiring within"
+        presets={[
+          { value: 7, label: "7d" },
+          { value: 30, label: "30d" },
+          { value: 60, label: "60d" },
+          { value: 90, label: "90d" },
+        ]}
+        value={filters.vaccineExpiryDays}
+        onChange={(v) => setFilter("vaccineExpiryDays", v)}
+      />,
+    );
+
+    // Booking Activity
+    add(
+      "Service used",
+      "bookings",
+      "Booking Activity",
+      <CheckGroup
+        label="Service used"
+        options={[
+          { value: "daycare", label: "Daycare" },
+          { value: "boarding", label: "Boarding" },
+          { value: "grooming", label: "Grooming" },
+          { value: "training", label: "Training" },
+        ]}
+        selected={filters.services}
+        onToggle={(v) => toggleArrayItem("services", v)}
+      />,
+    );
+    add(
+      "Active booking",
+      "bookings",
+      "Booking Activity",
+      <TriToggle
+        label="Active booking"
+        value={filters.hasActiveBooking}
+        onChange={(v) => setFilter("hasActiveBooking", v)}
+      />,
+    );
+    add(
+      "No visit in",
+      "bookings",
+      "Booking Activity",
+      <DayRangePreset
+        label="No visit in"
+        presets={[
+          { value: 30, label: "30d" },
+          { value: 60, label: "60d" },
+          { value: 90, label: "90d" },
+          { value: 180, label: "6mo" },
+        ]}
+        value={filters.lastVisitDays}
+        onChange={(v) => setFilter("lastVisitDays", v)}
+      />,
+    );
+    add(
+      "Checked in today",
+      "bookings",
+      "Booking Activity",
+      <TriToggle
+        label="Checked in today"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Forms & Compliance
+    add(
+      "Intake form completed",
+      "forms",
+      "Forms & Compliance",
+      <TriToggle
+        label="Intake form completed"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Waiver signed",
+      "forms",
+      "Forms & Compliance",
+      <TriToggle
+        label="Waiver signed"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Evaluation completed",
+      "forms",
+      "Forms & Compliance",
+      <TriToggle
+        label="Evaluation completed"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Missing required docs",
+      "forms",
+      "Forms & Compliance",
+      <TriToggle
+        label="Missing required docs"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "YipyyGo check-in",
+      "forms",
+      "Forms & Compliance",
+      <TriToggle
+        label="YipyyGo check-in"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Financial
+    add(
+      "Outstanding balance",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Outstanding balance"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Card on file",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Card on file"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Membership active",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Membership active"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Package active",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Package active"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Invoice overdue",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Invoice overdue"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Auto-pay enabled",
+      "financial",
+      "Financial",
+      <TriToggle
+        label="Auto-pay enabled"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Risk & Flags
+    add(
+      "Alert note present",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="Alert note present"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "No-show history",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="No-show history"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Cancellation history",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="Cancellation history"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Complaint history",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="Complaint history"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Requires manager approval",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="Requires manager approval"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Special handling",
+      "risk",
+      "Risk & Flags",
+      <TriToggle
+        label="Special handling"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Marketing
+    add(
+      "VIP client",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="VIP client"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Lapsed client",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="Lapsed client"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Birthday this month",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="Birthday this month"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Referral client",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="Referral client"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Loyalty enrolled",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="Loyalty enrolled"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "SMS subscriber",
+      "marketing",
+      "Marketing",
+      <TriToggle
+        label="SMS subscriber"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Location
+    add(
+      "City",
+      "location",
+      "Location",
+      <TextFilter
+        label="City"
+        value=""
+        onChange={() => {}}
+        placeholder="Enter city..."
+        comingSoon
+      />,
+    );
+    add(
+      "Postal / ZIP code",
+      "location",
+      "Location",
+      <TextFilter
+        label="Postal / ZIP code"
+        value=""
+        onChange={() => {}}
+        placeholder="Enter code..."
+        comingSoon
+      />,
+    );
+    add(
+      "Multi-location client",
+      "location",
+      "Location",
+      <TriToggle
+        label="Multi-location client"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Staff Assignment
+    add(
+      "Staff notes present",
+      "staff",
+      "Staff Assignment",
+      <TriToggle
+        label="Staff notes present"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Needs manager review",
+      "staff",
+      "Staff Assignment",
+      <TriToggle
+        label="Needs manager review"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Internal follow-up",
+      "staff",
+      "Staff Assignment",
+      <TriToggle
+        label="Internal follow-up"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    // Booking Funnel
+    add(
+      "Abandoned booking",
+      "funnel",
+      "Booking Funnel",
+      <TriToggle
+        label="Abandoned booking"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Never booked after signup",
+      "funnel",
+      "Booking Funnel",
+      <TriToggle
+        label="Never booked after signup"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "On waitlist",
+      "funnel",
+      "Booking Funnel",
+      <TriToggle
+        label="On waitlist"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Trial requested",
+      "funnel",
+      "Booking Funnel",
+      <TriToggle
+        label="Trial requested"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+    add(
+      "Online booking only",
+      "funnel",
+      "Booking Funnel",
+      <TriToggle
+        label="Online booking only"
+        value="any"
+        onChange={() => {}}
+        comingSoon
+      />,
+    );
+
+    return entries;
+  }, [filters, setFilter, toggleArrayItem]);
+
+  // Search results grouped by category
+  const isSearching = searchQuery.trim().length > 0;
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
+    const q = searchQuery.toLowerCase();
+    const matched = filterRegistry.filter((f) =>
+      f.label.toLowerCase().includes(q),
+    );
+    const groups: {
+      categoryId: string;
+      categoryLabel: string;
+      items: typeof matched;
+    }[] = [];
+    for (const entry of matched) {
+      let group = groups.find((g) => g.categoryId === entry.categoryId);
+      if (!group) {
+        group = {
+          categoryId: entry.categoryId,
+          categoryLabel: entry.categoryLabel,
+          items: [],
+        };
+        groups.push(group);
+      }
+      group.items.push(entry);
+    }
+    return groups;
+  }, [isSearching, searchQuery, filterRegistry]);
+
+  // Get entries for a specific category (used in tabbed view)
+  const categoryEntries = useMemo(
+    () => filterRegistry.filter((f) => f.categoryId === activeCategory),
+    [filterRegistry, activeCategory],
+  );
 
   return (
     <Card className="overflow-hidden">
-      <div className="flex">
-        {/* Left: category nav */}
-        <div className="bg-muted/30 border-r py-1">
-          <div className="max-h-[280px] overflow-y-auto">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={cn(
-                  "block w-full px-3 py-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors",
-                  activeCategory === cat.id
-                    ? "bg-background text-foreground border-r-foreground border-r-2"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
+      {/* Search bar */}
+      <div className="border-b px-3 py-2">
+        <div className="relative">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 size-3.5 -translate-y-1/2" />
+          <Input
+            ref={searchRef}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearchQuery("");
+            }}
+            placeholder='Search filters... e.g. "vaccine", "balance", "VIP"'
+            className="h-7 border-0 pl-7 text-xs shadow-none focus-visible:ring-0"
+          />
+          {isSearching && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
+      </div>
 
-        {/* Right: filter content */}
-        <CardContent className="max-h-[280px] flex-1 overflow-y-auto py-3">
-          {/* 1. Account Status */}
-          {activeCategory === "account" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <CheckGroup
-                label="Status"
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                  { value: "new", label: "New" },
-                  { value: "archived", label: "Archived" },
-                  { value: "blacklisted", label: "Blacklisted" },
-                ]}
-                selected={filters.status}
-                onToggle={(v) => toggleArrayItem("status", v)}
-              />
-              <TriToggle
-                label="Blocked from messaging"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Blocked from booking"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Missing profile info"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 2. Client Profile */}
-          {activeCategory === "profile" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Email on file"
-                value={filters.hasAddress}
-                onChange={(v) => setFilter("hasAddress", v)}
-              />
-              <TriToggle
-                label="Address on file"
-                value={filters.hasAddress}
-                onChange={(v) => setFilter("hasAddress", v)}
-              />
-              <TriToggle
-                label="Emergency contact"
-                value={filters.hasEmergencyContact}
-                onChange={(v) => setFilter("hasEmergencyContact", v)}
-              />
-              <TriToggle
-                label="Marketing consent"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="SMS consent"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 3. Household */}
-          {activeCategory === "household" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Has pets"
-                value={filters.hasPets}
-                onChange={(v) => setFilter("hasPets", v)}
-              />
-              <TriToggle
-                label="Multiple active pets"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Has inactive pets"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 4. Pet Basics */}
-          {activeCategory === "pets" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <CheckGroup
-                label="Species"
-                options={[
-                  { value: "Dog", label: "Dog" },
-                  { value: "Cat", label: "Cat" },
-                  { value: "Other", label: "Other" },
-                ]}
-                selected={filters.petTypes}
-                onToggle={(v) => toggleArrayItem("petTypes", v)}
-              />
-              <TriToggle
-                label="Has allergies"
-                value={filters.hasAllergies}
-                onChange={(v) => setFilter("hasAllergies", v)}
-              />
-              <TriToggle
-                label="Special needs"
-                value={filters.hasSpecialNeeds}
-                onChange={(v) => setFilter("hasSpecialNeeds", v)}
-              />
-              <TriToggle
-                label="Spayed / neutered"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 5. Health & Safety */}
-          {activeCategory === "health" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Has allergies"
-                value={filters.hasAllergies}
-                onChange={(v) => setFilter("hasAllergies", v)}
-              />
-              <TriToggle
-                label="Special needs"
-                value={filters.hasSpecialNeeds}
-                onChange={(v) => setFilter("hasSpecialNeeds", v)}
-              />
-              <TriToggle
-                label="Medication required"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Senior pet"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Vaccine expired"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <DayRangePreset
-                label="Vaccine expiring within"
-                presets={[
-                  { value: 7, label: "7d" },
-                  { value: 30, label: "30d" },
-                  { value: 60, label: "60d" },
-                  { value: 90, label: "90d" },
-                ]}
-                value={filters.vaccineExpiryDays}
-                onChange={(v) => setFilter("vaccineExpiryDays", v)}
-              />
-            </div>
-          )}
-
-          {/* 6. Booking Activity */}
-          {activeCategory === "bookings" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <CheckGroup
-                label="Service used"
-                options={[
-                  { value: "daycare", label: "Daycare" },
-                  { value: "boarding", label: "Boarding" },
-                  { value: "grooming", label: "Grooming" },
-                  { value: "training", label: "Training" },
-                ]}
-                selected={filters.services}
-                onToggle={(v) => toggleArrayItem("services", v)}
-              />
-              <TriToggle
-                label="Active booking"
-                value={filters.hasActiveBooking}
-                onChange={(v) => setFilter("hasActiveBooking", v)}
-              />
-              <DayRangePreset
-                label="No visit in"
-                presets={[
-                  { value: 30, label: "30d" },
-                  { value: 60, label: "60d" },
-                  { value: 90, label: "90d" },
-                  { value: 180, label: "6mo" },
-                ]}
-                value={filters.lastVisitDays}
-                onChange={(v) => setFilter("lastVisitDays", v)}
-              />
-              <TriToggle
-                label="Checked in today"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 7. Forms & Compliance */}
-          {activeCategory === "forms" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Intake form completed"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Waiver signed"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Evaluation completed"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Missing required docs"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="YipyyGo check-in"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 8. Financial */}
-          {activeCategory === "financial" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Outstanding balance"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Card on file"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Membership active"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Package active"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Invoice overdue"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Auto-pay enabled"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 9. Risk & Flags */}
-          {activeCategory === "risk" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Alert note present"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="No-show history"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Cancellation history"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Complaint history"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Requires manager approval"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Special handling"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 10. Marketing */}
-          {activeCategory === "marketing" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="VIP client"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Lapsed client"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Birthday this month"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Referral client"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Loyalty enrolled"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="SMS subscriber"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 11. Location */}
-          {activeCategory === "location" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TextFilter
-                label="City"
-                value=""
-                onChange={() => {}}
-                placeholder="Enter city..."
-                comingSoon
-              />
-              <TextFilter
-                label="Postal / ZIP code"
-                value=""
-                onChange={() => {}}
-                placeholder="Enter code..."
-                comingSoon
-              />
-              <TriToggle
-                label="Multi-location client"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 12. Staff Assignment */}
-          {activeCategory === "staff" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Staff notes present"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Needs manager review"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Internal follow-up"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-            </div>
-          )}
-
-          {/* 13. Booking Funnel */}
-          {activeCategory === "funnel" && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
-              <TriToggle
-                label="Abandoned booking"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Never booked after signup"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="On waitlist"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Trial requested"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
-              <TriToggle
-                label="Online booking only"
-                value="any"
-                onChange={() => {}}
-                comingSoon
-              />
+      {isSearching ? (
+        /* Search results view */
+        <CardContent className="max-h-[280px] overflow-y-auto py-3">
+          {searchResults.length === 0 ? (
+            <p className="text-muted-foreground py-4 text-center text-xs">
+              No filters matching &ldquo;{searchQuery}&rdquo;
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {searchResults.map((group) => (
+                <div key={group.categoryId}>
+                  <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                    {group.categoryLabel}
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+                    {group.items.map((item) => (
+                      <div key={item.key}>{item.element}</div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
-      </div>
+      ) : (
+        /* Normal tabbed view */
+        <div className="flex">
+          {/* Left: category nav */}
+          <div className="bg-muted/30 border-r py-1">
+            <div className="max-h-[280px] overflow-y-auto">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={cn(
+                    "block w-full px-3 py-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors",
+                    activeCategory === cat.id
+                      ? "bg-background text-foreground border-r-foreground border-r-2"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  )}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: filter content from registry */}
+          <CardContent className="max-h-[280px] flex-1 overflow-y-auto py-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
+              {categoryEntries.map((entry) => (
+                <div key={entry.key}>{entry.element}</div>
+              ))}
+            </div>
+          </CardContent>
+        </div>
+      )}
     </Card>
   );
 }
