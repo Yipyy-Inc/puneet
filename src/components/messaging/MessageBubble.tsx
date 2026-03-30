@@ -16,13 +16,13 @@ function formatTime(iso: string): string {
 function DeliveryIcon({ status }: { status: Message["status"] }) {
   switch (status) {
     case "sent":
-      return <Check className="size-3 text-zinc-400" />;
+      return <Check className="text-muted-foreground size-3" />;
     case "delivered":
-      return <CheckCheck className="size-3 text-zinc-400" />;
+      return <CheckCheck className="text-muted-foreground size-3" />;
     case "read":
-      return <Eye className="size-3 text-blue-400" />;
+      return <Eye className="text-primary size-3" />;
     case "failed":
-      return <AlertCircle className="size-3 text-red-400" />;
+      return <AlertCircle className="text-destructive size-3" />;
     default:
       return null;
   }
