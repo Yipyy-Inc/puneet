@@ -111,7 +111,7 @@ export function DataTable<T extends object>({
                 <TableRow
                   key={index}
                   className={
-                    onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
+                    onRowClick ? "hover:bg-muted/50 cursor-pointer" : ""
                   }
                   onClick={() => onRowClick?.(item)}
                   onKeyDown={(e) => {

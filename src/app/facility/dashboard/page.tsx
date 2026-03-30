@@ -35,7 +35,6 @@ export default function FacilityDashboard() {
         .map((m) => (
           <CustomServiceDashboardSection key={m.id} module={m} />
         ))}
-
     </div>
   );
 }

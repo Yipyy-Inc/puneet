@@ -263,9 +263,7 @@ export default function UserManagementPage() {
         searchKey="name"
         searchPlaceholder={"Search admin users..."}
         itemsPerPage={10}
-        onRowClick={(user) =>
-          setSelectedUser(user as unknown as AdminUser)
-        }
+        onRowClick={(user) => setSelectedUser(user as unknown as AdminUser)}
       />
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">

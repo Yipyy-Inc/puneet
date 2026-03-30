@@ -314,7 +314,9 @@ export default function FacilityClientsPage() {
       <div
         className={cn(
           "grid transition-all duration-300 ease-in-out",
-          filtersExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          filtersExpanded
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0",
         )}
       >
         <div className="overflow-hidden">

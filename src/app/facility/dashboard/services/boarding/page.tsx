@@ -459,7 +459,6 @@ export default function BoardingDashboardPage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }

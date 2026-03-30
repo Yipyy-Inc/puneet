@@ -258,7 +258,6 @@ export default function DaycareDashboardPage() {
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }
