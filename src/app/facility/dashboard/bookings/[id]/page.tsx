@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, AlertTriangle, Ban } from "lucide-react";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
+import { BookingActionBar } from "@/components/bookings/BookingActionBar";
+import { BookingNotes } from "@/components/bookings/BookingNotes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -169,6 +171,9 @@ export default function FacilityBookingDetailPage({
           </p>
         </div>
       </div>
+
+      {/* Action Bar */}
+      <BookingActionBar booking={booking} />
 
       {/* 3-column grid: left 2/3 + right 1/3 */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -343,6 +348,9 @@ export default function FacilityBookingDetailPage({
               </CardContent>
             </Card>
           )}
+
+          {/* Notes */}
+          <BookingNotes />
         </div>
 
         {/* Right panel — Invoice */}

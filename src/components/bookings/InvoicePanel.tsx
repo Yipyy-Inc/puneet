@@ -1,10 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Receipt, Send, Printer, Plus, CreditCard } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Receipt, Plus, X, Percent, DollarSign } from "lucide-react";
+import { toast } from "sonner";
 import type { Invoice } from "@/types/booking";
 
 const STATUS_CONFIG: Record<
@@ -22,6 +30,9 @@ function fmt(n: number): string {
 
 export function InvoicePanel({ invoice }: { invoice: Invoice }) {
   const status = STATUS_CONFIG[invoice.status] ?? STATUS_CONFIG.estimate;
+  const [addingItem, setAddingItem] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
 
   return (
     <Card className="sticky top-20">
@@ -41,14 +52,27 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
         {/* Items */}
         {invoice.items.length > 0 && (
           <div>
-            <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
-              Items
-            </p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+                Services
+              </p>
+              {invoice.status !== "closed" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground h-6 gap-1 px-1.5 text-[10px]"
+                  onClick={() => setAddingItem(true)}
+                >
+                  <Plus className="size-3" />
+                  Add
+                </Button>
+              )}
+            </div>
             <div className="space-y-1.5">
               {invoice.items.map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start justify-between text-sm"
+                  className="group flex items-start justify-between text-sm"
                 >
                   <div className="min-w-0 flex-1">
                     <p>{item.name}</p>
@@ -56,11 +80,70 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                       ${fmt(item.unitPrice)} x {item.quantity}
                     </p>
                   </div>
-                  <span className="font-[tabular-nums]">
-                    ${fmt(item.price)}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-[tabular-nums]">
+                      ${fmt(item.price)}
+                    </span>
+                    {invoice.status !== "closed" && (
+                      <button
+                        className="text-muted-foreground hover:text-destructive hidden size-4 items-center justify-center rounded group-hover:flex"
+                        onClick={() =>
+                          toast.info(`Remove "${item.name}" from invoice`)
+                        }
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add item inline */}
+        {addingItem && (
+          <div className="space-y-2 rounded-lg border border-dashed p-2">
+            <Input
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              placeholder="Service name..."
+              className="h-7 text-xs"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Input
+                value={newItemPrice}
+                onChange={(e) => setNewItemPrice(e.target.value)}
+                placeholder="Price"
+                type="number"
+                className="h-7 w-20 text-xs"
+              />
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  toast.success(`Added "${newItemName}" — $${newItemPrice}`);
+                  setAddingItem(false);
+                  setNewItemName("");
+                  setNewItemPrice("");
+                }}
+                disabled={!newItemName || !newItemPrice}
+              >
+                Add
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setAddingItem(false);
+                  setNewItemName("");
+                  setNewItemPrice("");
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         )}
@@ -125,14 +208,61 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             </div>
           )}
           {invoice.remainingDue > 0 && (
-            <div className="flex justify-between font-medium">
+            <div className="text-destructive flex justify-between font-medium">
               <span>Remaining due</span>
-              <span className="font-[tabular-nums] text-red-600">
+              <span className="font-[tabular-nums]">
                 ${fmt(invoice.remainingDue)}
               </span>
             </div>
           )}
         </div>
+
+        {/* Apply discount (for open invoices) */}
+        {invoice.status !== "closed" && (
+          <>
+            <Separator />
+            <div className="flex gap-1.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-[10px]"
+                  >
+                    <Percent className="size-3" />
+                    Discount
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" className="w-48">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium">Apply Discount</p>
+                    <Input placeholder="Amount or %" className="h-7 text-xs" />
+                    <Input
+                      placeholder="Reason (e.g. Loyalty 10%)"
+                      className="h-7 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      className="h-7 w-full text-xs"
+                      onClick={() => toast.success("Discount applied")}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-[10px]"
+                onClick={() => toast.info("Add custom fee")}
+              >
+                <DollarSign className="size-3" />
+                Add Fee
+              </Button>
+            </div>
+          </>
+        )}
 
         {/* Payments */}
         {invoice.payments.length > 0 && (
@@ -160,48 +290,6 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             </div>
           </>
         )}
-
-        <Separator />
-
-        {/* Actions */}
-        <div className="space-y-2">
-          {invoice.status === "estimate" && (
-            <>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Send className="size-3.5" />
-                Email Estimate
-              </Button>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Printer className="size-3.5" />
-                Print
-              </Button>
-            </>
-          )}
-          {invoice.status === "open" && (
-            <>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Plus className="size-3.5" />
-                Add Item
-              </Button>
-              <Button size="sm" className="w-full gap-2">
-                <CreditCard className="size-3.5" />
-                Start Checkout
-              </Button>
-            </>
-          )}
-          {invoice.status === "closed" && (
-            <>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Send className="size-3.5" />
-                Send Receipt
-              </Button>
-              <Button variant="outline" size="sm" className="w-full gap-2">
-                <Printer className="size-3.5" />
-                Print
-              </Button>
-            </>
-          )}
-        </div>
       </CardContent>
     </Card>
   );
