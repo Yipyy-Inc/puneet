@@ -49,7 +49,7 @@ export function ComposeBar({
               className={cn(
                 "flex items-center gap-1 rounded-sm px-2 py-0.5 text-[10px] font-medium transition-all",
                 channel === "sms"
-                  ? "bg-foreground text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground",
               )}
             >
@@ -61,7 +61,7 @@ export function ComposeBar({
               className={cn(
                 "flex items-center gap-1 rounded-sm px-2 py-0.5 text-[10px] font-medium transition-all",
                 channel === "email"
-                  ? "bg-foreground text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground",
               )}
             >

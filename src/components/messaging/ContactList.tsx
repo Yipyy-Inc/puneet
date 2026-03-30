@@ -162,7 +162,7 @@ export function ContactList({
               className={cn(
                 "rounded-full px-2.5 py-1 text-[11px] font-medium transition-all",
                 filter === f
-                  ? "bg-foreground text-background"
+                  ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted",
               )}
             >

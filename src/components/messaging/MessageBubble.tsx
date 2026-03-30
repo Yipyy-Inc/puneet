@@ -37,7 +37,7 @@ export function MessageBubble({ message }: { message: Message }) {
         className={cn(
           "max-w-[75%] space-y-1 rounded-2xl px-4 py-2.5",
           isOutbound
-            ? "bg-foreground text-background rounded-br-md"
+            ? "bg-primary text-primary-foreground rounded-br-md"
             : "bg-muted rounded-bl-md",
         )}
       >
@@ -52,7 +52,9 @@ export function MessageBubble({ message }: { message: Message }) {
           <span
             className={cn(
               "text-[10px]",
-              isOutbound ? "text-background/60" : "text-muted-foreground",
+              isOutbound
+                ? "text-primary-foreground/60"
+                : "text-muted-foreground",
             )}
           >
             {formatTime(message.timestamp)}
