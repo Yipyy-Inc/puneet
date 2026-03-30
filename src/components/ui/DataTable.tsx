@@ -75,6 +75,14 @@ interface DataTableProps<T> {
   onFilterClick?: () => void;
   /** Badge count to show on the custom filter button */
   filterCount?: number;
+  /** Enable checkbox selection */
+  selectable?: boolean;
+  /** Get unique ID from each item for selection tracking */
+  getItemId?: (item: T) => string | number;
+  /** Controlled selected IDs */
+  selectedIds?: Set<string | number>;
+  /** Selection change callback */
+  onSelectionChange?: (ids: Set<string | number>) => void;
 }
 
 export function DataTable<T extends object>({
@@ -91,6 +99,10 @@ export function DataTable<T extends object>({
   onRowClick,
   onFilterClick,
   filterCount,
+  selectable = false,
+  getItemId,
+  selectedIds: externalSelectedIds,
+  onSelectionChange,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterValues, setFilterValues] = useState<Record<string, string>>(
@@ -294,6 +306,30 @@ export function DataTable<T extends object>({
         <Table>
           <TableHeader>
             <TableRow>
+              {selectable && getItemId && (
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      filteredData.length > 0 &&
+                      filteredData.every((item) =>
+                        (externalSelectedIds ?? new Set()).has(getItemId(item)),
+                      )
+                    }
+                    onCheckedChange={(checked) => {
+                      if (!onSelectionChange || !getItemId) return;
+                      if (checked) {
+                        const all = new Set(externalSelectedIds);
+                        filteredData.forEach((item) =>
+                          all.add(getItemId(item)),
+                        );
+                        onSelectionChange(all);
+                      } else {
+                        onSelectionChange(new Set());
+                      }
+                    }}
+                  />
+                </TableHead>
+              )}
               {visibleColumnDefs.map((col) => (
                 <TableHead
                   key={col.key}
@@ -358,6 +394,23 @@ export function DataTable<T extends object>({
                   tabIndex={onRowClick ? 0 : undefined}
                   role={onRowClick ? "button" : undefined}
                 >
+                  {selectable && getItemId && (
+                    <TableCell className="w-10">
+                      <Checkbox
+                        checked={(externalSelectedIds ?? new Set()).has(
+                          getItemId(item),
+                        )}
+                        onCheckedChange={(checked) => {
+                          if (!onSelectionChange || !getItemId) return;
+                          const next = new Set(externalSelectedIds);
+                          if (checked) next.add(getItemId(item));
+                          else next.delete(getItemId(item));
+                          onSelectionChange(next);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </TableCell>
+                  )}
                   {visibleColumnDefs.map((col) => (
                     <TableCell
                       key={col.key}

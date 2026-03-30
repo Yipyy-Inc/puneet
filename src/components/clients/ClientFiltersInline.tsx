@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { ClientFilters } from "@/hooks/use-client-filters";
 
 // ========================================
-// TriState Radio (Yes / No / Any)
+// Shared filter sub-components
 // ========================================
 
 function TriRadio({
@@ -54,10 +54,6 @@ function TriRadio({
   );
 }
 
-// ========================================
-// Checkbox Group
-// ========================================
-
 function CheckGroup({
   label,
   options,
@@ -95,10 +91,6 @@ function CheckGroup({
     </div>
   );
 }
-
-// ========================================
-// Preset Pills (Last Visit)
-// ========================================
 
 function PresetPills({
   label,
@@ -231,7 +223,7 @@ export function ActiveFilterChips({
 }
 
 // ========================================
-// Inline Filter Panel
+// Inline Filter Panel — 10 Categories
 // ========================================
 
 export function ClientFiltersInline({
@@ -246,58 +238,100 @@ export function ClientFiltersInline({
     item: string,
   ) => void;
 }) {
-  const [tab, setTab] = useState("client");
+  const [tab, setTab] = useState("account");
 
   return (
     <Card>
       <CardContent className="py-3">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="w-auto">
-            <TabsTrigger value="client" className="text-xs">
-              Client Info
-            </TabsTrigger>
-            <TabsTrigger value="pets" className="text-xs">
-              Pets
-            </TabsTrigger>
-            <TabsTrigger value="services" className="text-xs">
-              Services
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="text-xs">
-              Activity
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="w-auto">
+              <TabsTrigger value="account" className="text-xs">
+                Account
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="text-xs">
+                Profile
+              </TabsTrigger>
+              <TabsTrigger value="household" className="text-xs">
+                Household
+              </TabsTrigger>
+              <TabsTrigger value="pets" className="text-xs">
+                Pets
+              </TabsTrigger>
+              <TabsTrigger value="health" className="text-xs">
+                Health
+              </TabsTrigger>
+              <TabsTrigger value="services" className="text-xs">
+                Services
+              </TabsTrigger>
+              <TabsTrigger value="financial" className="text-xs">
+                Financial
+              </TabsTrigger>
+              <TabsTrigger value="forms" className="text-xs">
+                Forms
+              </TabsTrigger>
+              <TabsTrigger value="comms" className="text-xs">
+                Comms
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="text-xs">
+                Activity
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="client" className="mt-3">
+          {/* 1. Account Status */}
+          <TabsContent value="account" className="mt-3">
             <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
-                label="Status"
+                label="Account Status"
                 options={[
                   { value: "active", label: "Active" },
                   { value: "inactive", label: "Inactive" },
+                  { value: "new", label: "New Client" },
+                  { value: "archived", label: "Archived" },
+                  { value: "blacklisted", label: "Blacklisted" },
                 ]}
                 selected={filters.status}
                 onToggle={(v) => toggleArrayItem("status", v)}
               />
+            </div>
+          </TabsContent>
+
+          {/* 2. Client Profile */}
+          <TabsContent value="profile" className="mt-3">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <TriRadio
-                label="Has Address"
+                label="Email on file"
                 value={filters.hasAddress}
                 onChange={(v) => setFilter("hasAddress", v)}
               />
               <TriRadio
-                label="Emergency Contact"
+                label="Address on file"
+                value={filters.hasAddress}
+                onChange={(v) => setFilter("hasAddress", v)}
+              />
+              <TriRadio
+                label="Emergency contact"
                 value={filters.hasEmergencyContact}
                 onChange={(v) => setFilter("hasEmergencyContact", v)}
               />
             </div>
           </TabsContent>
 
-          <TabsContent value="pets" className="mt-3">
+          {/* 3. Household */}
+          <TabsContent value="household" className="mt-3">
             <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <TriRadio
-                label="Has Pets"
+                label="Has pets"
                 value={filters.hasPets}
                 onChange={(v) => setFilter("hasPets", v)}
               />
+            </div>
+          </TabsContent>
+
+          {/* 4. Pets */}
+          <TabsContent value="pets" className="mt-3">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
                 label="Pet Type"
                 options={[
@@ -309,18 +343,35 @@ export function ClientFiltersInline({
                 onToggle={(v) => toggleArrayItem("petTypes", v)}
               />
               <TriRadio
-                label="Has Allergies"
+                label="Has allergies"
                 value={filters.hasAllergies}
                 onChange={(v) => setFilter("hasAllergies", v)}
               />
               <TriRadio
-                label="Special Needs"
+                label="Special needs"
                 value={filters.hasSpecialNeeds}
                 onChange={(v) => setFilter("hasSpecialNeeds", v)}
               />
             </div>
           </TabsContent>
 
+          {/* 5. Vaccinations & Health */}
+          <TabsContent value="health" className="mt-3">
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
+              <TriRadio
+                label="Has allergies"
+                value={filters.hasAllergies}
+                onChange={(v) => setFilter("hasAllergies", v)}
+              />
+              <TriRadio
+                label="Special needs"
+                value={filters.hasSpecialNeeds}
+                onChange={(v) => setFilter("hasSpecialNeeds", v)}
+              />
+            </div>
+          </TabsContent>
+
+          {/* 6. Services & Bookings */}
           <TabsContent value="services" className="mt-3">
             <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <CheckGroup
@@ -335,13 +386,38 @@ export function ClientFiltersInline({
                 onToggle={(v) => toggleArrayItem("services", v)}
               />
               <TriRadio
-                label="Has Active Booking"
+                label="Has active booking"
                 value={filters.hasActiveBooking}
                 onChange={(v) => setFilter("hasActiveBooking", v)}
               />
             </div>
           </TabsContent>
 
+          {/* 7. Financial */}
+          <TabsContent value="financial" className="mt-3">
+            <p className="text-muted-foreground text-xs">
+              Financial filters will be available when payment data is
+              connected.
+            </p>
+          </TabsContent>
+
+          {/* 8. Forms & Compliance */}
+          <TabsContent value="forms" className="mt-3">
+            <p className="text-muted-foreground text-xs">
+              Form compliance filters will be available when form submission
+              tracking is connected.
+            </p>
+          </TabsContent>
+
+          {/* 9. Communication */}
+          <TabsContent value="comms" className="mt-3">
+            <p className="text-muted-foreground text-xs">
+              Communication filters will be available when messaging data is
+              connected.
+            </p>
+          </TabsContent>
+
+          {/* 10. Activity & Engagement */}
           <TabsContent value="activity" className="mt-3">
             <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4">
               <PresetPills

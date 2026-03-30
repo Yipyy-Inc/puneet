@@ -13,6 +13,7 @@ import {
   ClientFiltersInline,
   ActiveFilterChips,
 } from "@/components/clients/ClientFiltersInline";
+import { BulkActionsToolbar } from "@/components/clients/BulkActionsToolbar";
 import { useClientFilters } from "@/hooks/use-client-filters";
 import {
   Download,
@@ -76,6 +77,9 @@ export default function FacilityClientsPage() {
 
   const [clientsData, setClientsData] = useState(clients);
   const [creatingClient, setCreatingClient] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(
+    new Set(),
+  );
 
   if (!facility) {
     return <div>Facility not found</div>;
@@ -327,6 +331,20 @@ export default function FacilityClientsPage() {
         filterCount={activeCount}
         onRowClick={(client) =>
           router.push(`/facility/dashboard/clients/${client.id}`)
+        }
+        selectable
+        getItemId={(client) => client.id}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+      />
+
+      <BulkActionsToolbar
+        selectedCount={selectedIds.size}
+        onDeselect={() => setSelectedIds(new Set())}
+        onExport={() =>
+          exportClientsToCSV(
+            facilityClients.filter((c) => selectedIds.has(c.id)),
+          )
         }
       />
 
