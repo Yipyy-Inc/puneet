@@ -274,11 +274,129 @@ export const breeds: Breed[] = [
   { name: "Other / Unknown", species: "Other" },
 ];
 
-export function getBreedsBySpecies(species: string) {
-  const s = species === "Dog" ? "Dog" : species === "Cat" ? "Cat" : "Other";
-  return breeds.filter((b) => b.species === s);
+// ========================================
+// localStorage persistence for custom breeds
+// ========================================
+
+const STORAGE_KEY = "yipyy_custom_breeds";
+
+function loadCustomBreeds(): Breed[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
 }
 
-export function getPopularBreeds(species: string) {
+function saveCustomBreeds(custom: Breed[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  } catch {
+    /* ignore */
+  }
+}
+
+// Removed breed names (persisted so they stay removed across reloads)
+const REMOVED_KEY = "yipyy_removed_breeds";
+
+function loadRemovedBreeds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const saved = localStorage.getItem(REMOVED_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRemovedBreeds(removed: string[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(REMOVED_KEY, JSON.stringify(removed));
+  } catch {
+    /* ignore */
+  }
+}
+
+// ========================================
+// Read functions (merge defaults + custom, minus removed)
+// ========================================
+
+export function getAllBreeds(): Breed[] {
+  const removed = new Set(loadRemovedBreeds());
+  const base = breeds.filter((b) => !removed.has(b.name));
+  const custom = loadCustomBreeds();
+  return [...base, ...custom].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getBreedsBySpecies(species: string): Breed[] {
+  const s = species === "Dog" ? "Dog" : species === "Cat" ? "Cat" : "Other";
+  return getAllBreeds().filter((b) => b.species === s);
+}
+
+export function getPopularBreeds(species: string): Breed[] {
   return getBreedsBySpecies(species).filter((b) => b.popular);
+}
+
+// ========================================
+// CRUD functions
+// ========================================
+
+export function addBreed(breed: Breed): boolean {
+  const all = getAllBreeds();
+  if (all.some((b) => b.name.toLowerCase() === breed.name.toLowerCase())) {
+    return false; // duplicate
+  }
+  const custom = loadCustomBreeds();
+  custom.push(breed);
+  saveCustomBreeds(custom);
+  // If it was previously removed, un-remove it
+  const removed = loadRemovedBreeds().filter(
+    (n) => n.toLowerCase() !== breed.name.toLowerCase(),
+  );
+  saveRemovedBreeds(removed);
+  return true;
+}
+
+export function updateBreed(oldName: string, updated: Breed): boolean {
+  // Check if it's a custom breed
+  const custom = loadCustomBreeds();
+  const customIdx = custom.findIndex(
+    (b) => b.name.toLowerCase() === oldName.toLowerCase(),
+  );
+  if (customIdx >= 0) {
+    custom[customIdx] = updated;
+    saveCustomBreeds(custom);
+    return true;
+  }
+  // It's a default breed — remove the old, add the updated as custom
+  const removed = loadRemovedBreeds();
+  if (!removed.includes(oldName)) removed.push(oldName);
+  saveRemovedBreeds(removed);
+  custom.push(updated);
+  saveCustomBreeds(custom);
+  return true;
+}
+
+export function removeBreed(name: string): boolean {
+  // Check custom first
+  const custom = loadCustomBreeds();
+  const customIdx = custom.findIndex(
+    (b) => b.name.toLowerCase() === name.toLowerCase(),
+  );
+  if (customIdx >= 0) {
+    custom.splice(customIdx, 1);
+    saveCustomBreeds(custom);
+    return true;
+  }
+  // It's a default breed — add to removed list
+  const removed = loadRemovedBreeds();
+  if (!removed.includes(name)) {
+    removed.push(name);
+    saveRemovedBreeds(removed);
+  }
+  return true;
 }

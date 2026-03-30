@@ -12,6 +12,7 @@ import {
   FileText,
   Shield,
   Tag,
+  PawPrint,
   Bed,
   Sun,
   Scissors,
@@ -63,6 +64,10 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "form-permissions", label: "Form Permissions", icon: Shield },
       { id: "form-notifications", label: "Form Notifications", icon: Bell },
     ],
+  },
+  {
+    label: "Pets",
+    sections: [{ id: "pet-breeds", label: "Pet Breeds", icon: PawPrint }],
   },
   {
     label: "Financial",

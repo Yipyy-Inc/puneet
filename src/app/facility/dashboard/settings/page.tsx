@@ -18,6 +18,7 @@ import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSettings";
 import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
+import { BreedManagement } from "@/components/facility/BreedManagement";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3595,6 +3596,13 @@ export default function SettingsPage() {
           {activeSection === "form-notifications" && (
             <div className="space-y-6">
               <FormNotificationSettings />
+            </div>
+          )}
+
+          {/* Pet Breeds */}
+          {activeSection === "pet-breeds" && (
+            <div className="space-y-6">
+              <BreedManagement />
             </div>
           )}
 
