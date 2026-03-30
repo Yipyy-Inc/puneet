@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Pencil,
   Plus,
+  Minus,
   X,
   Printer,
   Send,
@@ -43,11 +44,16 @@ import {
   CheckCircle,
   AlertTriangle,
   ShieldCheck,
+  MapPin,
+  ShoppingBag,
+  CalendarPlus,
+  CalendarMinus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Booking, InvoiceLineItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
+import { products } from "@/data/retail";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
@@ -55,15 +61,6 @@ import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingMo
 // ========================================
 // Helpers
 // ========================================
-
-function formatDate(dateStr: string) {
-  const date = new Date(dateStr + "T00:00:00");
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function formatDateShort(dateStr: string) {
   const date = new Date(dateStr + "T00:00:00");
@@ -75,6 +72,12 @@ function nightsBetween(start: string, end: string) {
     new Date(end + "T00:00:00").getTime() -
     new Date(start + "T00:00:00").getTime();
   return Math.max(0, Math.round(ms / (1000 * 60 * 60 * 24)));
+}
+
+function addDays(dateStr: string, days: number) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
 }
 
 function statusConfig(status: string) {
@@ -115,6 +118,9 @@ function AddItemPopover({ onAdd }: { onAdd: (item: InvoiceLineItem) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+
+  const retailSuggestions = products.slice(0, 5);
 
   const handleAdd = () => {
     if (!name || !price) return;
@@ -126,8 +132,13 @@ function AddItemPopover({ onAdd }: { onAdd: (item: InvoiceLineItem) => void }) {
     });
     setName("");
     setPrice("");
+    setShowCustom(false);
     setOpen(false);
-    toast.success(`Added "${name}" to invoice`);
+  };
+
+  const handleQuickAdd = (pName: string, pPrice: number) => {
+    onAdd({ name: pName, unitPrice: pPrice, quantity: 1, price: pPrice });
+    setOpen(false);
   };
 
   return (
@@ -138,32 +149,154 @@ function AddItemPopover({ onAdd }: { onAdd: (item: InvoiceLineItem) => void }) {
           Add
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-3">
-        <p className="mb-2 text-xs font-medium">Add Line Item</p>
-        <div className="space-y-2">
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Service or product name"
-            className="h-7 text-xs"
-          />
-          <Input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="Price"
-            className="h-7 text-xs"
-            min={0}
-            step={0.01}
-          />
+      <PopoverContent align="end" className="w-72 p-3">
+        <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+          Quick Add
+        </p>
+        <div className="mb-2 flex flex-wrap gap-1">
+          {retailSuggestions.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handleQuickAdd(p.name, p.basePrice)}
+              className="hover:bg-foreground hover:text-background rounded-full border px-2 py-0.5 text-[10px] font-medium transition-all"
+            >
+              {p.name.length > 20 ? p.name.slice(0, 20) + "…" : p.name} · $
+              {p.basePrice}
+            </button>
+          ))}
+        </div>
+        {!showCustom ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-full text-xs"
+            onClick={() => setShowCustom(true)}
+          >
+            Custom Item
+          </Button>
+        ) : (
+          <div className="animate-in fade-in space-y-2 duration-150">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Item name"
+              className="h-7 text-xs"
+            />
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="Price"
+                className="h-7 flex-1 text-xs"
+                min={0}
+                step={0.01}
+              />
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleAdd}
+                disabled={!name || !price}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ========================================
+// Extend / Shorten Stay Popover
+// ========================================
+
+function ExtendStayPopover({
+  mode,
+  currentEndDate,
+  nightlyRate,
+  onApply,
+}: {
+  mode: "extend" | "shorten";
+  currentEndDate: string;
+  nightlyRate: number;
+  onApply: (newEndDate: string, priceChange: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [extraNights, setExtraNights] = useState(1);
+  const isExtend = mode === "extend";
+  const priceChange = extraNights * nightlyRate * (isExtend ? 1 : -1);
+  const newEndDate = addDays(
+    currentEndDate,
+    isExtend ? extraNights : -extraNights,
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
+          {isExtend ? (
+            <CalendarPlus className="size-3" />
+          ) : (
+            <CalendarMinus className="size-3" />
+          )}
+          {isExtend ? "Extend" : "Shorten"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-56 p-3">
+        <p className="mb-2 text-xs font-medium">
+          {isExtend ? "Add" : "Remove"} nights
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setExtraNights(Math.max(1, extraNights - 1))}
+          >
+            <Minus className="size-3" />
+          </Button>
+          <span className="w-8 text-center text-sm font-semibold">
+            {extraNights}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-7"
+            onClick={() => setExtraNights(extraNights + 1)}
+          >
+            <Plus className="size-3" />
+          </Button>
+          <span className="text-muted-foreground text-xs">nights</span>
+        </div>
+        <div className="mt-2 space-y-1 text-xs">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">New check-out</span>
+            <span className="font-medium">{formatDateShort(newEndDate)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Price change</span>
+            <span
+              className={cn(
+                "font-medium",
+                isExtend ? "text-amber-600" : "text-emerald-600",
+              )}
+            >
+              {isExtend ? "+" : ""}${priceChange.toFixed(2)}
+            </span>
+          </div>
         </div>
         <Button
           size="sm"
-          className="mt-2 h-7 w-full text-xs"
-          onClick={handleAdd}
-          disabled={!name || !price}
+          className="mt-3 h-7 w-full text-xs"
+          onClick={() => {
+            onApply(newEndDate, Math.abs(priceChange));
+            setOpen(false);
+            setExtraNights(1);
+          }}
         >
-          Add Item
+          Apply
         </Button>
       </PopoverContent>
     </Popover>
@@ -177,14 +310,20 @@ function AddItemPopover({ onAdd }: { onAdd: (item: InvoiceLineItem) => void }) {
 function BookingCompactRow({
   booking,
   pet,
+  total,
+  remainingDue,
+  endDate,
   onExpand,
 }: {
   booking: Booking;
   pet?: Pet;
+  total: number;
+  remainingDue: number;
+  endDate: string;
   onExpand: () => void;
 }) {
   const sc = statusConfig(booking.status);
-  const nights = nightsBetween(booking.startDate, booking.endDate);
+  const nights = nightsBetween(booking.startDate, endDate);
   const duration =
     nights > 0 ? `${nights} night${nights !== 1 ? "s" : ""}` : "Same day";
 
@@ -201,7 +340,6 @@ function BookingCompactRow({
       >
         <div className={cn("size-2 rounded-full", sc.dot)} />
       </div>
-
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium capitalize">
@@ -219,27 +357,21 @@ function BookingCompactRow({
         </div>
         <p className="text-muted-foreground mt-0.5 text-xs">
           {formatDateShort(booking.startDate)}
-          {booking.startDate !== booking.endDate &&
-            ` → ${formatDateShort(booking.endDate)}`}{" "}
-          · {duration}
+          {booking.startDate !== endDate &&
+            ` → ${formatDateShort(endDate)}`} · {duration}
         </p>
       </div>
-
       <div className="text-right">
-        <p className="text-sm font-semibold">
-          ${booking.invoice?.total ?? booking.totalCost}
-        </p>
-        {booking.invoice && booking.invoice.remainingDue > 0 && (
+        <p className="text-sm font-semibold">${total.toFixed(2)}</p>
+        {remainingDue > 0 && (
           <p className="text-xs font-medium text-amber-600">
-            Due: ${booking.invoice.remainingDue.toFixed(2)}
+            Due: ${remainingDue.toFixed(2)}
           </p>
         )}
-        {booking.paymentStatus === "paid" &&
-          (!booking.invoice || booking.invoice.remainingDue === 0) && (
-            <p className="text-xs text-emerald-600">Paid</p>
-          )}
+        {booking.paymentStatus === "paid" && remainingDue <= 0 && (
+          <p className="text-xs text-emerald-600">Paid</p>
+        )}
       </div>
-
       <ChevronDown className="text-muted-foreground/50 group-hover:text-foreground size-4 shrink-0 transition-colors" />
     </button>
   );
@@ -265,17 +397,36 @@ function BookingExpandedCard({
   totalBookings: number;
 }) {
   const sc = statusConfig(booking.status);
-  const nights = nightsBetween(booking.startDate, booking.endDate);
   const invoice = booking.invoice;
-  const isEditable =
+  const isCancelled = booking.status === "cancelled";
+  const isPaid = booking.paymentStatus === "paid";
+
+  // Permission model
+  const canAddItems = !isCancelled;
+  const canRemoveItems =
     booking.status === "confirmed" || booking.status === "pending";
+  const canEditDates =
+    booking.status === "confirmed" || booking.status === "pending";
+  const canExtendStay = !isCancelled;
+
+  // Editable state
+  const [startDate, setStartDate] = useState(booking.startDate);
+  const [endDate, setEndDate] = useState(booking.endDate);
+  const [checkInTime, setCheckInTime] = useState(booking.checkInTime ?? "");
+  const [checkOutTime, setCheckOutTime] = useState(booking.checkOutTime ?? "");
+  const [kennel, setKennel] = useState(booking.kennel ?? "");
+  const [selectedPetId, setSelectedPetId] = useState(
+    Array.isArray(booking.petId) ? booking.petId[0] : booking.petId,
+  );
+  const selectedPet = pets.find((p) => p.id === selectedPetId) ?? pet;
+  const nights = nightsBetween(startDate, endDate);
 
   // Modal states
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
 
-  // Inline item state
+  // Invoice line items
   const [items, setItems] = useState<InvoiceLineItem[]>(
     invoice?.items ?? [
       {
@@ -297,39 +448,76 @@ function BookingExpandedCard({
   const total = subtotal - discount + taxAmount;
   const depositCollected = invoice?.depositCollected ?? 0;
   const remainingDue = total - depositCollected;
+  const additionalDue = isPaid && remainingDue > 0 ? remainingDue : 0;
+
+  const nightlyRate =
+    items.length > 0 && items[0].quantity > 0
+      ? items[0].unitPrice
+      : booking.basePrice;
 
   const handleAddItem = (item: InvoiceLineItem) => {
     setItems((prev) => [...prev, item]);
-    toast.success(`Booking updated — "${item.name}" added`);
+    toast.success(`Added "${item.name}" · $${item.price.toFixed(2)}`);
   };
 
   const handleRemoveItem = (idx: number) => {
     const removed = items[idx];
     setItems((prev) => prev.filter((_, i) => i !== idx));
-    toast.success(`Removed "${removed.name}" from invoice`);
+    toast.success(`Removed "${removed.name}"`);
   };
 
-  const handleAddFee = (fee: InvoiceLineItem) => {
-    setFees((prev) => [...prev, fee]);
-    toast.success(`Fee "${fee.name}" added`);
+  const handleExtendStay = (newEnd: string, extraCost: number) => {
+    setEndDate(newEnd);
+    const newNights = nightsBetween(startDate, newEnd);
+    // Update first item quantity
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === 0
+          ? {
+              ...item,
+              quantity: newNights > 0 ? newNights : 1,
+              price: item.unitPrice * (newNights > 0 ? newNights : 1),
+            }
+          : item,
+      ),
+    );
+    toast.success(
+      `Stay extended to ${formatDateShort(newEnd)} · +$${extraCost.toFixed(2)}`,
+    );
   };
 
-  const handleRemoveFee = (idx: number) => {
-    const removed = fees[idx];
-    setFees((prev) => prev.filter((_, i) => i !== idx));
-    toast.success(`Removed fee "${removed.name}"`);
+  const handleShortenStay = (newEnd: string, savings: number) => {
+    setEndDate(newEnd);
+    const newNights = nightsBetween(startDate, newEnd);
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === 0
+          ? {
+              ...item,
+              quantity: newNights > 0 ? newNights : 1,
+              price: item.unitPrice * (newNights > 0 ? newNights : 1),
+            }
+          : item,
+      ),
+    );
+    toast.success(
+      `Stay shortened to ${formatDateShort(newEnd)} · -$${savings.toFixed(2)}`,
+    );
   };
 
-  // Pet form status indicators
+  // Form status
   const formStatuses = [
     { label: "Intake", ok: true },
-    { label: "Vaccination", ok: pet?.petStatus !== "inactive" },
+    {
+      label: "Vaccination",
+      ok: selectedPet?.petStatus !== "inactive",
+    },
     { label: "Waiver", ok: bookingIndex % 3 !== 2 },
   ];
 
   return (
     <div className="animate-in fade-in slide-in-from-top-1 bg-card overflow-hidden rounded-lg border shadow-sm duration-200">
-      {/* Header bar */}
+      {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -349,10 +537,17 @@ function BookingExpandedCard({
               >
                 {booking.status}
               </Badge>
+              {additionalDue > 0 && (
+                <Badge className="border-amber-200 bg-amber-100 text-[10px] text-amber-700">
+                  +${additionalDue.toFixed(2)} due
+                </Badge>
+              )}
             </div>
             <p className="text-muted-foreground text-[11px]">
               {bookingIndex + 1} of {totalBookings} ·{" "}
-              {pet ? `${pet.name} (${pet.breed})` : "Unknown pet"}
+              {selectedPet
+                ? `${selectedPet.name} (${selectedPet.breed})`
+                : "Unknown pet"}
             </p>
           </div>
         </div>
@@ -364,16 +559,19 @@ function BookingExpandedCard({
         </button>
       </div>
 
-      <div className="p-4">
-        {/* Top details grid */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">
+      <div className="space-y-4 p-4">
+        {/* Details grid */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-4">
           {/* Service */}
           <div>
             <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase">
               Service
             </p>
-            {isEditable ? (
-              <Select defaultValue={booking.service}>
+            {canAddItems ? (
+              <Select
+                defaultValue={booking.service}
+                onValueChange={(v) => toast.success(`Service changed to ${v}`)}
+              >
                 <SelectTrigger className="h-8 w-full text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -391,21 +589,45 @@ function BookingExpandedCard({
             )}
           </div>
 
-          {/* Dates */}
+          {/* Dates — editable */}
           <div>
             <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase">
               Dates
             </p>
-            <p className="text-sm font-medium">
-              {formatDateShort(booking.startDate)}
-              {booking.startDate !== booking.endDate &&
-                ` → ${formatDateShort(booking.endDate)}`}
-            </p>
-            <p className="text-muted-foreground text-[11px]">
-              {nights > 0
-                ? `${nights} night${nights !== 1 ? "s" : ""}`
-                : "Same day"}
-            </p>
+            {canEditDates ? (
+              <div className="space-y-1">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    toast.success("Check-in date updated");
+                  }}
+                  className="h-7 text-[11px]"
+                />
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    toast.success("Check-out date updated");
+                  }}
+                  className="h-7 text-[11px]"
+                />
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium">
+                  {formatDateShort(startDate)}
+                  {startDate !== endDate && ` → ${formatDateShort(endDate)}`}
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  {nights > 0
+                    ? `${nights} night${nights !== 1 ? "s" : ""}`
+                    : "Same day"}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Pet */}
@@ -413,8 +635,15 @@ function BookingExpandedCard({
             <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase">
               Pet
             </p>
-            {isEditable && pets.length > 1 ? (
-              <Select defaultValue={String(booking.petId)}>
+            {canAddItems && pets.length > 1 ? (
+              <Select
+                value={String(selectedPetId)}
+                onValueChange={(v) => {
+                  setSelectedPetId(Number(v));
+                  const p = pets.find((pp) => pp.id === Number(v));
+                  toast.success(`Pet changed to ${p?.name}`);
+                }}
+              >
                 <SelectTrigger className="h-8 w-full text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -432,34 +661,106 @@ function BookingExpandedCard({
             ) : (
               <div className="flex items-center gap-1.5">
                 <PawPrint className="text-muted-foreground size-3.5" />
-                <span className="text-sm font-medium">{pet?.name ?? "—"}</span>
+                <span className="text-sm font-medium">
+                  {selectedPet?.name ?? "—"}
+                </span>
               </div>
             )}
-            {pet && (
+            {selectedPet && (
               <p className="text-muted-foreground text-[11px]">
-                {pet.breed} · {pet.weight} lbs
+                {selectedPet.breed} · {selectedPet.weight} lbs
               </p>
             )}
           </div>
 
-          {/* Check-in / Check-out */}
+          {/* Times — editable */}
           <div>
             <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase">
               Times
             </p>
-            <p className="text-sm font-medium">
-              {booking.checkInTime} — {booking.checkOutTime}
-            </p>
-            {booking.specialRequests && (
-              <p className="text-muted-foreground mt-0.5 max-w-[200px] truncate text-[11px] italic">
-                {booking.specialRequests}
+            {canEditDates ? (
+              <div className="space-y-1">
+                <Input
+                  type="time"
+                  value={checkInTime}
+                  onChange={(e) => {
+                    setCheckInTime(e.target.value);
+                    toast.success("Check-in time updated");
+                  }}
+                  className="h-7 text-[11px]"
+                />
+                <Input
+                  type="time"
+                  value={checkOutTime}
+                  onChange={(e) => {
+                    setCheckOutTime(e.target.value);
+                    toast.success("Check-out time updated");
+                  }}
+                  className="h-7 text-[11px]"
+                />
+              </div>
+            ) : (
+              <p className="text-sm font-medium">
+                {checkInTime || "—"} — {checkOutTime || "—"}
               </p>
+            )}
+          </div>
+
+          {/* Room / Kennel */}
+          <div>
+            <p className="text-muted-foreground mb-1 text-[10px] font-semibold tracking-wider uppercase">
+              <MapPin className="mr-0.5 inline size-3" />
+              Room
+            </p>
+            {canAddItems ? (
+              <Select
+                value={kennel || "none"}
+                onValueChange={(v) => {
+                  setKennel(v === "none" ? "" : v);
+                  toast.success(
+                    v === "none" ? "Room unassigned" : `Room → ${v}`,
+                  );
+                }}
+              >
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="Assign..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Unassigned</SelectItem>
+                  <SelectItem value="Kennel 1">Kennel 1</SelectItem>
+                  <SelectItem value="Kennel 2">Kennel 2</SelectItem>
+                  <SelectItem value="Suite A">Suite A</SelectItem>
+                  <SelectItem value="Suite B">Suite B</SelectItem>
+                  <SelectItem value="Run 1">Run 1</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm font-medium">{kennel || "—"}</p>
             )}
           </div>
         </div>
 
-        {/* Forms status row */}
-        <div className="mt-3 flex flex-wrap gap-2">
+        {/* Extend / Shorten + Form status */}
+        <div className="flex flex-wrap items-center gap-2">
+          {canExtendStay && (
+            <>
+              <ExtendStayPopover
+                mode="extend"
+                currentEndDate={endDate}
+                nightlyRate={nightlyRate}
+                onApply={handleExtendStay}
+              />
+              {canEditDates && nights > 1 && (
+                <ExtendStayPopover
+                  mode="shorten"
+                  currentEndDate={endDate}
+                  nightlyRate={nightlyRate}
+                  onApply={handleShortenStay}
+                />
+              )}
+            </>
+          )}
+          <div className="flex-1" />
           {formStatuses.map((f) => (
             <div
               key={f.label}
@@ -478,31 +779,31 @@ function BookingExpandedCard({
               {f.label}
             </div>
           ))}
-          {pet?.allergies && pet.allergies !== "None" && (
+          {selectedPet?.allergies && selectedPet.allergies !== "None" && (
             <div className="flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">
               <ShieldCheck className="size-2.5" />
-              Allergy: {pet.allergies}
+              Allergy: {selectedPet.allergies}
             </div>
           )}
         </div>
 
-        {/* Invoice / Line Items */}
-        <div className="mt-4">
+        {/* Services & Items */}
+        <div>
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+            <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-semibold tracking-wider uppercase">
+              <ShoppingBag className="size-3" />
               Services & Items
             </p>
-            {isEditable && <AddItemPopover onAdd={handleAddItem} />}
+            {canAddItems && <AddItemPopover onAdd={handleAddItem} />}
           </div>
           <div className="bg-muted/30 rounded-md border">
-            {/* Items */}
             {items.map((item, idx) => (
               <div
                 key={`item-${idx}`}
                 className="group flex items-center justify-between border-b px-3 py-2 last:border-b-0"
               >
                 <div className="flex items-center gap-2">
-                  {isEditable && (
+                  {canRemoveItems && (
                     <button
                       onClick={() => handleRemoveItem(idx)}
                       className="text-muted-foreground/0 hover:text-destructive group-hover:text-muted-foreground transition-colors"
@@ -520,21 +821,22 @@ function BookingExpandedCard({
                     )}
                   </span>
                 </div>
-                <span className="text-xs font-medium">
+                <span className="font-[tabular-nums] text-xs font-medium">
                   ${item.price.toFixed(2)}
                 </span>
               </div>
             ))}
-            {/* Fees */}
             {fees.map((fee, idx) => (
               <div
                 key={`fee-${idx}`}
                 className="group flex items-center justify-between border-b px-3 py-2 last:border-b-0"
               >
                 <div className="flex items-center gap-2">
-                  {isEditable && (
+                  {canRemoveItems && (
                     <button
-                      onClick={() => handleRemoveFee(idx)}
+                      onClick={() =>
+                        setFees((prev) => prev.filter((_, i) => i !== idx))
+                      }
                       className="text-muted-foreground/0 hover:text-destructive group-hover:text-muted-foreground transition-colors"
                     >
                       <X className="size-3" />
@@ -544,7 +846,7 @@ function BookingExpandedCard({
                     {fee.name}
                   </span>
                 </div>
-                <span className="text-xs font-medium">
+                <span className="font-[tabular-nums] text-xs font-medium">
                   ${fee.price.toFixed(2)}
                 </span>
               </div>
@@ -553,7 +855,9 @@ function BookingExpandedCard({
             <div className="space-y-1 border-t px-3 py-2">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span className="font-[tabular-nums]">
+                  ${subtotal.toFixed(2)}
+                </span>
               </div>
               {discount > 0 && (
                 <div className="flex justify-between text-xs text-emerald-600">
@@ -561,7 +865,9 @@ function BookingExpandedCard({
                     Discount
                     {invoice?.discountLabel && ` (${invoice.discountLabel})`}
                   </span>
-                  <span>-${discount.toFixed(2)}</span>
+                  <span className="font-[tabular-nums]">
+                    -${discount.toFixed(2)}
+                  </span>
                 </div>
               )}
               {taxRate > 0 && (
@@ -569,22 +875,35 @@ function BookingExpandedCard({
                   <span className="text-muted-foreground">
                     Tax ({(taxRate * 100).toFixed(1)}%)
                   </span>
-                  <span>${taxAmount.toFixed(2)}</span>
+                  <span className="font-[tabular-nums]">
+                    ${taxAmount.toFixed(2)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between border-t pt-1 text-sm font-semibold">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span className="font-[tabular-nums]">${total.toFixed(2)}</span>
               </div>
               {depositCollected > 0 && (
                 <>
                   <div className="flex justify-between text-xs text-emerald-600">
                     <span>Paid</span>
-                    <span>-${depositCollected.toFixed(2)}</span>
+                    <span className="font-[tabular-nums]">
+                      -${depositCollected.toFixed(2)}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-xs font-semibold text-amber-600">
-                    <span>Remaining</span>
-                    <span>${remainingDue.toFixed(2)}</span>
+                  <div
+                    className={cn(
+                      "flex justify-between text-xs font-semibold",
+                      remainingDue > 0 ? "text-amber-600" : "text-emerald-600",
+                    )}
+                  >
+                    <span>{remainingDue > 0 ? "Remaining" : "Fully Paid"}</span>
+                    <span className="font-[tabular-nums]">
+                      {remainingDue > 0
+                        ? `$${remainingDue.toFixed(2)}`
+                        : "$0.00"}
+                    </span>
                   </div>
                 </>
               )}
@@ -593,7 +912,7 @@ function BookingExpandedCard({
         </div>
 
         {/* Action buttons */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
           {/* Print */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -609,19 +928,22 @@ function BookingExpandedCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem
-                onClick={() => toast.success("Printing invoice...")}
+                onClick={() => {
+                  window.print();
+                  toast.success("Print dialog opened");
+                }}
               >
                 <FileText className="size-4" />
                 Invoice / Receipt
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => toast.success("Printing care sheet...")}
+                onClick={() => toast.success("Care sheet sent to printer")}
               >
                 <ClipboardList className="size-4" />
                 Care Sheet
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => toast.success("Printing kennel label...")}
+                onClick={() => toast.success("Kennel label sent to printer")}
               >
                 <Tag className="size-4" />
                 Kennel Label
@@ -638,7 +960,7 @@ function BookingExpandedCard({
                 className="h-7 gap-1.5 text-xs"
               >
                 <Send className="size-3" />
-                Send Invoice
+                Invoice
                 <ChevronDown className="size-2.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -647,58 +969,58 @@ function BookingExpandedCard({
                 onClick={() => toast.success("Invoice emailed")}
               >
                 <Mail className="size-4" />
-                Email Invoice
+                Email
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toast.success("SMS invoice link sent")}
               >
                 <Smartphone className="size-4" />
-                SMS Invoice Link
+                SMS Link
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
                   navigator.clipboard.writeText(
                     `https://yipyy.com/invoice/${booking.id}`,
                   );
-                  toast.success("Invoice link copied");
+                  toast.success("Link copied");
                 }}
               >
                 <Copy className="size-4" />
-                Copy Invoice Link
+                Copy Link
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Accept Payment */}
-          {booking.paymentStatus !== "paid" &&
-            booking.status !== "cancelled" && (
+          {(booking.paymentStatus !== "paid" || remainingDue > 0) &&
+            !isCancelled && (
               <Button
                 size="sm"
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => setPaymentOpen(true)}
               >
                 <CreditCard className="size-3" />
-                Accept Payment
+                {remainingDue > 0 && isPaid
+                  ? `Pay $${remainingDue.toFixed(2)}`
+                  : "Accept Payment"}
               </Button>
             )}
 
           <div className="flex-1" />
 
-          {/* Edit */}
-          {isEditable && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => setEditOpen(true)}
-            >
-              <Pencil className="size-3" />
-              Edit
-            </Button>
-          )}
+          {/* Edit (full modal) */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1.5 text-xs"
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="size-3" />
+            Edit
+          </Button>
 
           {/* Cancel */}
-          {isEditable && (
+          {!isCancelled && booking.status !== "completed" && (
             <Button
               variant="outline"
               size="sm"
@@ -711,18 +1033,17 @@ function BookingExpandedCard({
           )}
 
           {/* Refund */}
-          {booking.paymentStatus === "paid" &&
-            booking.status !== "cancelled" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1.5 text-xs"
-                onClick={() => toast.info("Refund flow would open here")}
-              >
-                <RotateCcw className="size-3" />
-                Refund
-              </Button>
-            )}
+          {isPaid && !isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => setCancelOpen(true)}
+            >
+              <RotateCcw className="size-3" />
+              Refund
+            </Button>
+          )}
         </div>
       </div>
 
@@ -734,7 +1055,7 @@ function BookingExpandedCard({
         onSave={(updated) => {
           setEditOpen(false);
           toast.success(
-            `Booking #${updated.id} updated — total: $${updated.totalCost}`,
+            `Booking #${updated.id} updated — $${updated.totalCost}`,
           );
         }}
       />
@@ -742,18 +1063,18 @@ function BookingExpandedCard({
         booking={booking}
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
-        onConfirm={(id, method) => {
+        onConfirm={(bId, method) => {
           setPaymentOpen(false);
-          toast.success(`Payment accepted via ${method} for booking #${id}`);
+          toast.success(`Payment via ${method} for #${bId}`);
         }}
       />
       <CancelBookingModal
         booking={booking}
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        onConfirm={(id, reason) => {
+        onConfirm={(bId, reason) => {
           setCancelOpen(false);
-          toast.success(`Booking #${id} cancelled: ${reason}`);
+          toast.success(`Booking #${bId} cancelled: ${reason}`);
         }}
       />
     </div>
@@ -761,7 +1082,7 @@ function BookingExpandedCard({
 }
 
 // ========================================
-// Main Export: BookingCard
+// Main Export
 // ========================================
 
 interface BookingCardProps {
@@ -781,6 +1102,13 @@ export function BookingCard({
 }: BookingCardProps) {
   const [expanded, setExpanded] = useState(false);
 
+  // Shared computed values for compact view
+  const invoice = booking.invoice;
+  const nights = nightsBetween(booking.startDate, booking.endDate);
+  const total = invoice?.total ?? booking.basePrice * (nights > 0 ? nights : 1);
+  const depositCollected = invoice?.depositCollected ?? 0;
+  const remainingDue = total - depositCollected;
+
   if (expanded) {
     return (
       <BookingExpandedCard
@@ -798,6 +1126,11 @@ export function BookingCard({
     <BookingCompactRow
       booking={booking}
       pet={pet}
+      total={total}
+      remainingDue={
+        booking.paymentStatus === "paid" && remainingDue <= 0 ? 0 : remainingDue
+      }
+      endDate={booking.endDate}
       onExpand={() => setExpanded(true)}
     />
   );
