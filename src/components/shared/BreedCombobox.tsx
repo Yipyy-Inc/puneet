@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Pencil, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
@@ -34,38 +35,90 @@ export function BreedCombobox({
   error,
 }: BreedComboboxProps) {
   const [open, setOpen] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
 
   const popular = getPopularBreeds(species);
   const all = getBreedsBySpecies(species).filter((b) => !b.popular);
 
+  // If already in manual mode, show a text input + switch-back button
+  if (manualMode) {
+    return (
+      <div>
+        <div className="flex gap-1.5">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder='Type breed, e.g. "Golden Retriever / Poodle Mix"'
+            className={cn("h-9 flex-1 text-sm", error && "border-destructive")}
+            autoFocus
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-9 shrink-0"
+            onClick={() => setManualMode(false)}
+            title="Switch to breed list"
+          >
+            <List className="size-3.5" />
+          </Button>
+        </div>
+        {error && <p className="text-destructive mt-1 text-sm">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <div>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn(
-              "h-9 w-full justify-between text-sm font-normal",
-              !value && "text-muted-foreground",
-              error && "border-destructive",
-            )}
-          >
-            {value || "Select breed..."}
-            <ChevronsUpDown className="text-muted-foreground ml-2 size-3.5 shrink-0" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search breed..." />
-            <CommandList>
-              <CommandEmpty>
-                No breed found. Select &quot;Other&quot; below.
-              </CommandEmpty>
-              {popular.length > 0 && (
-                <CommandGroup heading="Popular">
-                  {popular.map((b) => (
+      <div className="flex gap-1.5">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className={cn(
+                "h-9 flex-1 justify-between text-sm font-normal",
+                !value && "text-muted-foreground",
+                error && "border-destructive",
+              )}
+            >
+              {value || "Select breed..."}
+              <ChevronsUpDown className="text-muted-foreground ml-2 size-3.5 shrink-0" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Search breed..." />
+              <CommandList>
+                <CommandEmpty>
+                  No breed found — click &quot;Type manually&quot; below.
+                </CommandEmpty>
+                {popular.length > 0 && (
+                  <CommandGroup heading="Popular">
+                    {popular.map((b) => (
+                      <CommandItem
+                        key={b.name}
+                        value={b.name}
+                        onSelect={() => {
+                          onChange(b.name);
+                          setOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 size-3.5",
+                            value === b.name ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {b.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+                <CommandSeparator />
+                <CommandGroup heading="All Breeds">
+                  {all.map((b) => (
                     <CommandItem
                       key={b.name}
                       value={b.name}
@@ -84,45 +137,34 @@ export function BreedCombobox({
                     </CommandItem>
                   ))}
                 </CommandGroup>
-              )}
-              <CommandSeparator />
-              <CommandGroup heading="All Breeds">
-                {all.map((b) => (
+                <CommandSeparator />
+                <CommandGroup>
                   <CommandItem
-                    key={b.name}
-                    value={b.name}
+                    value="__type_manually__"
                     onSelect={() => {
-                      onChange(b.name);
                       setOpen(false);
+                      setManualMode(true);
                     }}
                   >
-                    <Check
-                      className={cn(
-                        "mr-2 size-3.5",
-                        value === b.name ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    {b.name}
+                    <Pencil className="mr-2 size-3.5" />
+                    Type manually (mixed / custom breed)
                   </CommandItem>
-                ))}
-              </CommandGroup>
-              <CommandSeparator />
-              <CommandGroup>
-                <CommandItem
-                  value="Other (type manually)"
-                  onSelect={() => {
-                    onChange("Other");
-                    setOpen(false);
-                  }}
-                >
-                  <Search className="mr-2 size-3.5" />
-                  Other (type manually)
-                </CommandItem>
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-9 shrink-0"
+          onClick={() => setManualMode(true)}
+          title="Type breed manually"
+        >
+          <Pencil className="size-3.5" />
+        </Button>
+      </div>
       {error && <p className="text-destructive mt-1 text-sm">{error}</p>}
     </div>
   );
