@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
 import {
   Collapsible,
   CollapsibleContent,
@@ -29,14 +28,12 @@ function formatRelative(iso: string): string {
 interface PageAuditTrailProps {
   area: string;
   entityId?: string;
-  maxItems?: number;
   facilityId?: number;
 }
 
 export function PageAuditTrail({
   area,
   entityId,
-  maxItems = 5,
   facilityId = 11,
 }: PageAuditTrailProps) {
   const { role } = useFacilityRole();
@@ -45,7 +42,6 @@ export function PageAuditTrail({
     const all = getTenantAuditLogs(facilityId);
     let filtered = all;
 
-    // Map area to audit categories
     const categoryMap: Record<string, string[]> = {
       settings: ["Configuration", "Financial"],
       forms: ["Configuration"],
@@ -65,10 +61,9 @@ export function PageAuditTrail({
       filtered = filtered.filter((e) => e.entityId === entityId);
     }
 
-    return filtered.slice(0, maxItems);
-  }, [area, entityId, maxItems, facilityId]);
+    return filtered;
+  }, [area, entityId, facilityId]);
 
-  // Only visible to owner and manager
   if (role !== "owner" && role !== "manager") return null;
   if (entries.length === 0) return null;
 
@@ -78,32 +73,28 @@ export function PageAuditTrail({
         <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border px-4 py-2.5 transition-colors">
           <span className="flex items-center gap-2 text-sm font-medium">
             <Shield className="text-muted-foreground size-4" />
-            Recent Changes
+            Change History
             <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
               {entries.length}
             </span>
           </span>
           <ChevronDown className="text-muted-foreground size-4" />
         </CollapsibleTrigger>
-        <CollapsibleContent className="mt-3 space-y-2">
-          {entries.map((entry) => (
-            <div key={entry.id} className="text-xs">
-              <p>
-                <span className="font-medium">{entry.userName}</span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  ({entry.userRole}) · {formatRelative(entry.timestamp)}
-                </span>
-              </p>
-              <p className="text-muted-foreground">{entry.description}</p>
-            </div>
-          ))}
-          <Link
-            href="/facility/dashboard/forms/audit"
-            className="text-primary inline-block pt-1 text-[11px] hover:underline"
-          >
-            View all →
-          </Link>
+        <CollapsibleContent className="mt-3">
+          <div className="max-h-[400px] space-y-2 overflow-y-auto">
+            {entries.map((entry) => (
+              <div key={entry.id} className="text-xs">
+                <p>
+                  <span className="font-medium">{entry.userName}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({entry.userRole}) · {formatRelative(entry.timestamp)}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">{entry.description}</p>
+              </div>
+            ))}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>
