@@ -23,6 +23,7 @@ import { getTagsForEntity } from "@/data/tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
+import { BookingCard } from "@/components/clients/BookingCard";
 import {
   payments,
   invoices,
@@ -1003,96 +1004,64 @@ export default function ClientDetailPage({
             </CardContent>
           </Card>
 
-          {/* Bookings History */}
+          {/* Bookings History — Interactive Cards */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <History className="size-4" />
-                Bookings History
+                Bookings
+                {clientBookings.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {clientBookings.length}
+                  </Badge>
+                )}
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  if (client && facility) {
+                    openBookingModal({
+                      clients: [client],
+                      facilityId: facility.id,
+                      facilityName: facility.name,
+                      preSelectedClientId: client.id,
+                      onCreateBooking: (booking) => {
+                        console.log("Booking created:", booking);
+                      },
+                    });
+                  }
+                }}
+              >
+                <Plus className="size-3" />
+                New Booking
+              </Button>
             </CardHeader>
             <CardContent>
               {clientBookings.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {clientBookings
                     .sort(
                       (a, b) =>
                         new Date(b.startDate).getTime() -
                         new Date(a.startDate).getTime(),
                     )
-                    .slice(0, 5)
-                    .map((booking) => {
+                    .map((booking, idx) => {
                       const pet = client.pets.find(
                         (p) => p.id === booking.petId,
                       );
                       return (
-                        <div
+                        <BookingCard
                           key={booking.id}
-                          className="bg-card hover:bg-muted flex items-start justify-between rounded-lg border p-4 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={`rounded-lg p-2 ${
-                                booking.status === "completed"
-                                  ? "bg-green-100"
-                                  : booking.status === "confirmed"
-                                    ? "bg-blue-100"
-                                    : booking.status === "pending"
-                                      ? "bg-amber-100"
-                                      : "bg-red-100"
-                              } `}
-                            >
-                              {booking.status === "completed" && (
-                                <CheckCircle className="size-4 text-green-600" />
-                              )}
-                              {booking.status === "confirmed" && (
-                                <Clock className="size-4 text-blue-600" />
-                              )}
-                              {booking.status === "pending" && (
-                                <Clock className="size-4 text-amber-600" />
-                              )}
-                              {booking.status === "cancelled" && (
-                                <X className="size-4 text-red-600" />
-                              )}
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold capitalize">
-                                {booking.service}
-                                {pet && (
-                                  <span className="text-muted-foreground font-normal">
-                                    {" "}
-                                    • {pet.name}
-                                  </span>
-                                )}
-                              </h4>
-                              <p className="text-muted-foreground mt-1 text-xs">
-                                {formatDate(booking.startDate)}
-                                {booking.startDate !== booking.endDate &&
-                                  ` - ${formatDate(booking.endDate)}`}
-                              </p>
-                              {booking.specialRequests && (
-                                <p className="text-muted-foreground mt-1 text-xs italic">
-                                  {booking.specialRequests}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">
-                              ${booking.totalCost}
-                            </p>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {booking.paymentStatus}
-                            </Badge>
-                          </div>
-                        </div>
+                          booking={booking}
+                          pet={pet}
+                          pets={client.pets}
+                          bookingIndex={idx}
+                          totalBookings={clientBookings.length}
+                        />
                       );
                     })}
-                  {clientBookings.length > 5 && (
-                    <p className="text-muted-foreground pt-2 text-center text-xs">
-                      Showing 5 of {clientBookings.length} bookings
-                    </p>
-                  )}
                 </div>
               ) : (
                 <p className="text-muted-foreground py-4 text-center text-sm">
