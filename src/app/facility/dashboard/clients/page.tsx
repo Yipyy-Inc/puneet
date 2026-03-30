@@ -4,9 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
@@ -18,11 +22,13 @@ import { useClientFilters } from "@/hooks/use-client-filters";
 import {
   Download,
   User,
+  UserCheck,
   Phone,
   Eye,
   Plus,
   PawPrint,
   CircleDot,
+  BarChart3,
   Mail as MailIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -245,36 +251,53 @@ export default function FacilityClientsPage() {
         </div>
       </div>
 
-      {/* Compact Stats Row */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-6 py-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Total</span>
-            <span className="text-sm font-semibold">
-              {facilityClients.length}
-            </span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Active</span>
-            <span className="text-sm font-semibold">{activeClientCount}</span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Pets</span>
-            <span className="text-sm font-semibold">{totalPets}</span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Avg/Client</span>
-            <span className="text-sm font-semibold">
+      {/* Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+            <User className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{facilityClients.length}</div>
+            <p className="text-muted-foreground text-xs">All registered clients</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
+            <UserCheck className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeClientCount}</div>
+            <p className="text-muted-foreground text-xs">Currently active</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Pets</CardTitle>
+            <PawPrint className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPets}</div>
+            <p className="text-muted-foreground text-xs">Across all clients</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Pets/Client</CardTitle>
+            <BarChart3 className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
               {facilityClients.length > 0
                 ? Math.round((totalPets / facilityClients.length) * 10) / 10
                 : 0}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+            <p className="text-muted-foreground text-xs">Per client average</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Active filter chips */}
       <ActiveFilterChips
