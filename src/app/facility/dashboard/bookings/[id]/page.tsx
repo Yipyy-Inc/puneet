@@ -153,12 +153,32 @@ export default function FacilityBookingDetailPage({
     ? nightsBetween(booking.startDate, booking.endDate)
     : 0;
 
-  // Editable state
+  // Editable state — every field
   const [service, setService] = useState(booking?.service ?? "daycare");
+  const [startDate, setStartDate] = useState(booking?.startDate ?? "");
+  const [endDate, setEndDate] = useState(booking?.endDate ?? "");
+  const [checkInTime, setCheckInTime] = useState(booking?.checkInTime ?? "");
+  const [checkOutTime, setCheckOutTime] = useState(booking?.checkOutTime ?? "");
+  const [selectedPetId, setSelectedPetId] = useState(
+    booking
+      ? Array.isArray(booking.petId)
+        ? booking.petId[0]
+        : booking.petId
+      : 0,
+  );
+  const [kennel, setKennel] = useState(booking?.kennel ?? "");
+  const [status, setStatus] = useState(booking?.status ?? "pending");
   const [specialRequests, setSpecialRequests] = useState(
     booking?.specialRequests ?? "",
   );
   const [editingRequests, setEditingRequests] = useState(false);
+  const [basePrice, setBasePrice] = useState(booking?.basePrice ?? 0);
+  const [discount, setDiscount] = useState(booking?.discount ?? 0);
+
+  // Derived
+  const editedNights = nightsBetween(startDate, endDate);
+  const editedTotal = basePrice - discount;
+  const selectedPet = client?.pets?.find((p) => p.id === selectedPetId) ?? pet;
 
   // Modal states
   const [editOpen, setEditOpen] = useState(false);
@@ -271,25 +291,50 @@ export default function FacilityBookingDetailPage({
               <h1 className="text-2xl font-bold tracking-tight">
                 Booking #{booking.id}
               </h1>
-              <div className="flex items-center gap-1.5 rounded-full border px-2.5 py-1">
-                <div
-                  className={cn(
-                    "size-2 animate-pulse rounded-full",
-                    statusDot(booking.status),
-                  )}
-                />
-                <span className="text-xs font-medium capitalize">
-                  {booking.status}
-                </span>
-              </div>
+              {isEditable ? (
+                <Select
+                  value={status}
+                  onValueChange={(v) => {
+                    setStatus(v as typeof status);
+                    toast.success(`Status changed to ${v}`);
+                  }}
+                >
+                  <SelectTrigger className="h-7 w-auto gap-1.5 rounded-full border px-2.5 text-xs font-medium">
+                    <div
+                      className={cn(
+                        "size-2 animate-pulse rounded-full",
+                        statusDot(status),
+                      )}
+                    />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-1.5 rounded-full border px-2.5 py-1">
+                  <div
+                    className={cn(
+                      "size-2 animate-pulse rounded-full",
+                      statusDot(booking.status),
+                    )}
+                  />
+                  <span className="text-xs font-medium capitalize">
+                    {booking.status}
+                  </span>
+                </div>
+              )}
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
-              {formatDateLong(booking.startDate)}
-              {booking.startDate !== booking.endDate &&
-                ` → ${formatDateLong(booking.endDate)}`}
-              {nights > 0 && (
+              {formatDateLong(startDate)}
+              {startDate !== endDate && ` → ${formatDateLong(endDate)}`}
+              {editedNights > 0 && (
                 <span className="text-foreground/60 ml-2">
-                  · {nights} night{nights !== 1 ? "s" : ""}
+                  · {editedNights} night{editedNights !== 1 ? "s" : ""}
                 </span>
               )}
             </p>
@@ -360,67 +405,95 @@ export default function FacilityBookingDetailPage({
             </Card>
 
             {/* Pet Card */}
-            {pet && (
-              <Card className="animate-in fade-in slide-in-from-right-2 group overflow-hidden duration-300">
-                <CardHeader className="flex flex-row items-center gap-3 pb-3">
-                  <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
-                    <PawPrint className="text-primary size-5" />
-                  </div>
-                  <div className="flex-1">
+            <Card className="animate-in fade-in slide-in-from-right-2 group overflow-hidden duration-300">
+              <CardHeader className="flex flex-row items-center gap-3 pb-3">
+                <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
+                  <PawPrint className="text-primary size-5" />
+                </div>
+                <div className="flex-1">
+                  {isEditable && client && client.pets.length > 1 ? (
+                    <Select
+                      value={String(selectedPetId)}
+                      onValueChange={(v) => {
+                        setSelectedPetId(Number(v));
+                        const p = client.pets.find((pp) => pp.id === Number(v));
+                        toast.success(`Pet changed to ${p?.name}`);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-full text-xs font-semibold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {client.pets.map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name} — {p.breed}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-sm font-semibold">
-                        {pet.name}
+                        {selectedPet?.name ?? "Unknown"}
                       </CardTitle>
-                      <TagList
-                        entityType="pet"
-                        entityId={pet.id}
-                        compact
-                        maxVisible={2}
-                      />
+                      {selectedPet && (
+                        <TagList
+                          entityType="pet"
+                          entityId={selectedPet.id}
+                          compact
+                          maxVisible={2}
+                        />
+                      )}
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                      {pet.breed} · {pet.type}
-                    </p>
-                  </div>
-                </CardHeader>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    {selectedPet
+                      ? `${selectedPet.breed} · ${selectedPet.type}`
+                      : "No pet"}
+                  </p>
+                </div>
+              </CardHeader>
+              {selectedPet && (
                 <CardContent className="space-y-2 pt-0">
                   <div className="flex gap-4 text-xs">
                     <span>
                       <span className="text-muted-foreground">Age:</span>{" "}
-                      {pet.age} yrs
+                      {selectedPet.age} yrs
                     </span>
                     <span>
                       <span className="text-muted-foreground">Weight:</span>{" "}
-                      {pet.weight} lbs
+                      {selectedPet.weight} lbs
                     </span>
-                    {pet.sex && (
+                    {selectedPet.sex && (
                       <span>
                         <span className="text-muted-foreground">Sex:</span>{" "}
-                        <span className="capitalize">{pet.sex}</span>
+                        <span className="capitalize">{selectedPet.sex}</span>
                       </span>
                     )}
                   </div>
-                  {pet.allergies && pet.allergies !== "None" && (
-                    <div className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[11px] text-red-700">
-                      <ShieldCheck className="size-3 shrink-0" />
-                      <span>
-                        <span className="font-medium">Allergy:</span>{" "}
-                        {pet.allergies}
-                      </span>
-                    </div>
-                  )}
-                  {pet.specialNeeds && pet.specialNeeds !== "None" && (
-                    <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] text-blue-700">
-                      <AlertTriangle className="size-3 shrink-0" />
-                      <span>
-                        <span className="font-medium">Needs:</span>{" "}
-                        {pet.specialNeeds}
-                      </span>
-                    </div>
-                  )}
+                  {selectedPet.allergies &&
+                    selectedPet.allergies !== "None" && (
+                      <div className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[11px] text-red-700">
+                        <ShieldCheck className="size-3 shrink-0" />
+                        <span>
+                          <span className="font-medium">Allergy:</span>{" "}
+                          {selectedPet.allergies}
+                        </span>
+                      </div>
+                    )}
+                  {selectedPet.specialNeeds &&
+                    selectedPet.specialNeeds !== "None" && (
+                      <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-[11px] text-blue-700">
+                        <AlertTriangle className="size-3 shrink-0" />
+                        <span>
+                          <span className="font-medium">Needs:</span>{" "}
+                          {selectedPet.specialNeeds}
+                        </span>
+                      </div>
+                    )}
                 </CardContent>
-              </Card>
-            )}
+              )}
+            </Card>
           </div>
 
           {/* Service Details — Editable grid */}
@@ -441,6 +514,7 @@ export default function FacilityBookingDetailPage({
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-3 lg:grid-cols-4">
+                {/* Service */}
                 <DetailField icon={Scissors} label="Service">
                   {isEditable ? (
                     <Select
@@ -467,28 +541,81 @@ export default function FacilityBookingDetailPage({
                   )}
                 </DetailField>
 
+                {/* Check-in date + time */}
                 <DetailField icon={Calendar} label="Check-in">
-                  <p className="text-sm font-medium">
-                    {formatDateLong(booking.startDate)}
-                  </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    {booking.checkInTime ?? "—"}
-                  </p>
+                  {isEditable ? (
+                    <div className="space-y-1">
+                      <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          toast.success("Check-in date updated");
+                        }}
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={checkInTime}
+                        onChange={(e) => {
+                          setCheckInTime(e.target.value);
+                          toast.success("Check-in time updated");
+                        }}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">
+                        {formatDateLong(booking.startDate)}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {booking.checkInTime ?? "—"}
+                      </p>
+                    </>
+                  )}
                 </DetailField>
 
+                {/* Check-out date + time */}
                 <DetailField icon={Calendar} label="Check-out">
-                  <p className="text-sm font-medium">
-                    {formatDateLong(booking.endDate)}
-                  </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    {booking.checkOutTime ?? "—"}
-                  </p>
+                  {isEditable ? (
+                    <div className="space-y-1">
+                      <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          toast.success("Check-out date updated");
+                        }}
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        type="time"
+                        value={checkOutTime}
+                        onChange={(e) => {
+                          setCheckOutTime(e.target.value);
+                          toast.success("Check-out time updated");
+                        }}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium">
+                        {formatDateLong(booking.endDate)}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {booking.checkOutTime ?? "—"}
+                      </p>
+                    </>
+                  )}
                 </DetailField>
 
+                {/* Duration — auto-calculated */}
                 <DetailField icon={Clock} label="Duration">
                   <p className="text-sm font-medium">
-                    {nights > 0
-                      ? `${nights} night${nights !== 1 ? "s" : ""}`
+                    {editedNights > 0
+                      ? `${editedNights} night${editedNights !== 1 ? "s" : ""}`
                       : "Same day"}
                   </p>
                   <p className="text-muted-foreground text-[11px]">
@@ -496,11 +623,102 @@ export default function FacilityBookingDetailPage({
                   </p>
                 </DetailField>
 
-                {booking.kennel && (
-                  <DetailField icon={MapPin} label="Room / Kennel">
-                    <p className="text-sm font-medium">{booking.kennel}</p>
-                  </DetailField>
-                )}
+                {/* Room / Kennel */}
+                <DetailField icon={MapPin} label="Room / Kennel">
+                  {isEditable ? (
+                    <Select
+                      value={kennel || "none"}
+                      onValueChange={(v) => {
+                        setKennel(v === "none" ? "" : v);
+                        toast.success(
+                          v === "none"
+                            ? "Room unassigned"
+                            : `Room changed to ${v}`,
+                        );
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Assign room..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        <SelectItem value="Kennel 1">Kennel 1</SelectItem>
+                        <SelectItem value="Kennel 2">Kennel 2</SelectItem>
+                        <SelectItem value="Kennel 3">Kennel 3</SelectItem>
+                        <SelectItem value="Suite A">Suite A</SelectItem>
+                        <SelectItem value="Suite B">Suite B</SelectItem>
+                        <SelectItem value="Run 1">Run 1</SelectItem>
+                        <SelectItem value="Run 2">Run 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium">
+                      {booking.kennel || "—"}
+                    </p>
+                  )}
+                </DetailField>
+
+                {/* Base Price */}
+                <DetailField icon={DollarSign} label="Base Price">
+                  {isEditable ? (
+                    <Input
+                      type="number"
+                      value={basePrice}
+                      onChange={(e) =>
+                        setBasePrice(parseFloat(e.target.value) || 0)
+                      }
+                      onBlur={() =>
+                        toast.success(
+                          `Base price set to $${basePrice.toFixed(2)}`,
+                        )
+                      }
+                      className="h-8 text-xs"
+                      min={0}
+                      step={0.01}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">
+                      ${booking.basePrice.toFixed(2)}
+                    </p>
+                  )}
+                </DetailField>
+
+                {/* Discount */}
+                <DetailField icon={DollarSign} label="Discount">
+                  {isEditable ? (
+                    <Input
+                      type="number"
+                      value={discount}
+                      onChange={(e) =>
+                        setDiscount(parseFloat(e.target.value) || 0)
+                      }
+                      onBlur={() =>
+                        toast.success(`Discount set to $${discount.toFixed(2)}`)
+                      }
+                      className="h-8 text-xs"
+                      min={0}
+                      step={0.01}
+                    />
+                  ) : booking.discount > 0 ? (
+                    <p className="text-sm font-medium text-emerald-600">
+                      -${booking.discount.toFixed(2)}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">None</p>
+                  )}
+                </DetailField>
+
+                {/* Total — live-calculated */}
+                <DetailField icon={DollarSign} label="Total">
+                  <p className="font-[tabular-nums] text-lg font-bold">
+                    ${editedTotal.toFixed(2)}
+                  </p>
+                  {editedTotal !== booking.totalCost && (
+                    <p className="text-muted-foreground text-[11px] line-through">
+                      ${booking.totalCost.toFixed(2)}
+                    </p>
+                  )}
+                </DetailField>
 
                 {booking.stylistPreference && (
                   <DetailField icon={Scissors} label="Stylist">
@@ -516,7 +734,7 @@ export default function FacilityBookingDetailPage({
                   </DetailField>
                 )}
 
-                <DetailField icon={DollarSign} label="Payment">
+                <DetailField icon={DollarSign} label="Payment Status">
                   <StatusBadge type="status" value={booking.paymentStatus} />
                 </DetailField>
               </div>
@@ -720,16 +938,16 @@ export default function FacilityBookingDetailPage({
                       Base Price
                     </span>
                     <span className="font-[tabular-nums] text-sm">
-                      ${booking.basePrice.toFixed(2)}
+                      ${basePrice.toFixed(2)}
                     </span>
                   </div>
-                  {booking.discount > 0 && (
+                  {discount > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground text-sm">
                         Discount
                       </span>
                       <span className="font-[tabular-nums] text-sm text-emerald-600">
-                        -${booking.discount.toFixed(2)}
+                        -${discount.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -737,9 +955,14 @@ export default function FacilityBookingDetailPage({
                   <div className="flex justify-between">
                     <span className="text-sm font-semibold">Total</span>
                     <span className="font-[tabular-nums] text-lg font-bold">
-                      ${booking.totalCost.toFixed(2)}
+                      ${editedTotal.toFixed(2)}
                     </span>
                   </div>
+                  {editedTotal !== booking.totalCost && (
+                    <p className="text-muted-foreground text-right text-[11px] line-through">
+                      Was ${booking.totalCost.toFixed(2)}
+                    </p>
+                  )}
                   {booking.paymentStatus !== "paid" && (
                     <Button
                       className="mt-2 w-full gap-1.5"
