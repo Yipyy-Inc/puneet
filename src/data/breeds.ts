@@ -82,7 +82,6 @@ export const breeds: Breed[] = [
   { name: "Curly-Coated Retriever", species: "Dog" },
   { name: "Dalmatian", species: "Dog" },
   { name: "Dandie Dinmont Terrier", species: "Dog" },
-  { name: "Doberman Pinscher", species: "Dog" },
   { name: "Dogo Argentino", species: "Dog" },
   { name: "Dogue de Bordeaux", species: "Dog" },
   { name: "Dutch Shepherd", species: "Dog" },
