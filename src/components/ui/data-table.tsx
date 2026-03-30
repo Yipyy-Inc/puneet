@@ -30,6 +30,7 @@ interface DataTableProps<T> {
   searchColumn?: string;
   searchPlaceholder?: string;
   itemsPerPage?: number;
+  onRowClick?: (item: T) => void;
 }
 
 export function DataTable<T extends object>({
@@ -38,6 +39,7 @@ export function DataTable<T extends object>({
   searchColumn,
   searchPlaceholder = "Search...",
   itemsPerPage = 50,
+  onRowClick,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -106,7 +108,22 @@ export function DataTable<T extends object>({
               </TableRow>
             ) : (
               paginatedData.map((item, index) => (
-                <TableRow key={index}>
+                <TableRow
+                  key={index}
+                  className={
+                    onRowClick ? "cursor-pointer hover:bg-muted/50" : ""
+                  }
+                  onClick={() => onRowClick?.(item)}
+                  onKeyDown={(e) => {
+                    if (!onRowClick) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(item);
+                    }
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? "button" : undefined}
+                >
                   {columns.map((col, colIdx) => (
                     <TableCell key={colIdx}>
                       {col.cell

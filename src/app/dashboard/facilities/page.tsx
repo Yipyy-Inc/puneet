@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { FacilityModal } from "@/components/modals/FacilityModal";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   Plus,
@@ -146,10 +145,6 @@ function StatCard({
 export default function FacilitiesPage() {
   const router = useRouter();
   const [facilitiesState] = useState(initialFacilities);
-  const [selectedFacility, setSelectedFacility] = useState<
-    (typeof initialFacilities)[0] | null
-  >(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [notifySubject, setNotifySubject] = useState("");
   const [notifyMessage, setNotifyMessage] = useState("");
@@ -439,47 +434,12 @@ export default function FacilitiesPage() {
             }}
             searchPlaceholder={"Search facilities..."}
             itemsPerPage={10}
-            actions={(facility) => (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedFacility(facility);
-                    setIsModalOpen(true);
-                  }}
-                >
-                  <Eye className="mr-1.5 size-4" />
-                  Overview
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() =>
-                    router.push(`/dashboard/facilities/${facility.id}`)
-                  }
-                >
-                  Details
-                </Button>
-              </div>
-            )}
+            onRowClick={(facility) =>
+              router.push(`/dashboard/facilities/${facility.id}`)
+            }
           />
         </CardContent>
       </Card>
-
-      {/* Facility Details Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <DialogHeader className="mb-0">
-              <DialogTitle className="sr-only">
-                {selectedFacility?.name} - Facility Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedFacility && <FacilityModal facility={selectedFacility} />}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Notify All Modal */}
       <Dialog open={isNotifyModalOpen} onOpenChange={setIsNotifyModalOpen}>

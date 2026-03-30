@@ -345,32 +345,20 @@ export default function MarketingPage() {
     },
     {
       accessorKey: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+      header: "",
+      cell: ({ row }) =>
+        row.original.status === "draft" ? (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSelectedCampaign(row.original);
-              setShowCampaignModal(true);
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log(`Send campaign "${row.original.name}"`);
             }}
           >
-            <Eye className="size-4" />
+            <Send className="size-4" />
           </Button>
-          {row.original.status === "draft" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                console.log(`Send campaign "${row.original.name}"`);
-              }}
-            >
-              <Send className="size-4" />
-            </Button>
-          )}
-        </div>
-      ),
+        ) : null,
     },
   ];
 
@@ -654,6 +642,10 @@ export default function MarketingPage() {
                 data={campaigns}
                 searchColumn="name"
                 searchPlaceholder="Search campaigns..."
+                onRowClick={(campaign) => {
+                  setSelectedCampaign(campaign);
+                  setShowCampaignModal(true);
+                }}
               />
             </CardContent>
           </Card>

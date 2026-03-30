@@ -19,7 +19,6 @@ import {
   Shield,
   Building,
   Clock,
-  Eye,
   UserCog,
   UserCheck,
   UserX,
@@ -264,15 +263,9 @@ export default function UserManagementPage() {
         searchKey="name"
         searchPlaceholder={"Search admin users..."}
         itemsPerPage={10}
-        actions={(user) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedUser(user as unknown as AdminUser)}
-          >
-            <Eye className="size-4" />
-          </Button>
-        )}
+        onRowClick={(user) =>
+          setSelectedUser(user as unknown as AdminUser)
+        }
       />
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
         <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">

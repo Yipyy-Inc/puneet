@@ -608,26 +608,26 @@ export default function FacilityStaffPage() {
             searchKey="name"
             searchPlaceholder="Search staff..."
             itemsPerPage={10}
+            onRowClick={(staff) => setSelectedStaff(staff)}
             actions={(staff) => (
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setSelectedStaff(staff)}
-                >
-                  <Eye className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEdit(staff)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(staff);
+                  }}
                 >
                   <Edit className="size-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDeleteClick(staff)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(staff);
+                  }}
                 >
                   <Trash2 className="text-destructive size-4" />
                 </Button>

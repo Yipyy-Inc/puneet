@@ -11,7 +11,6 @@ import {
   Clock,
   AlertCircle,
   XCircle,
-  Eye,
   Filter,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
@@ -190,23 +189,6 @@ export default function IncidentsPage() {
             <Badge variant="outline">No</Badge>
           )}
         </div>
-      ),
-    },
-    {
-      accessorKey: "actions",
-      header: "Actions",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setSelectedIncident(row.original);
-            setShowDetailsModal(true);
-          }}
-        >
-          <Eye className="mr-2 size-4" />
-          View
-        </Button>
       ),
     },
   ];
@@ -406,6 +388,10 @@ export default function IncidentsPage() {
                 data={filteredIncidents}
                 searchColumn="title"
                 searchPlaceholder="Search incidents..."
+                onRowClick={(incident) => {
+                  setSelectedIncident(incident);
+                  setShowDetailsModal(true);
+                }}
               />
             </CardContent>
           </Card>
