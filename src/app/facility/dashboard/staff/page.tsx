@@ -56,7 +56,6 @@ import {
   Phone,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 
 // Example staff data for testing
 const exampleStaff = [
@@ -676,8 +675,6 @@ export default function FacilityStaffPage() {
           />
         </TabsContent>
       </Tabs>
-
-      <PageAuditTrail area="staff" />
 
       {/* View Staff Details Modal */}
       <Dialog

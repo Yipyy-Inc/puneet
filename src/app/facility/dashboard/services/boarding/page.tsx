@@ -19,7 +19,6 @@ import {
   Pill,
   Utensils,
 } from "lucide-react";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import {
   boardingGuests,
   boardingCapacity,
@@ -461,7 +460,6 @@ export default function BoardingDashboardPage() {
         </CardContent>
       </Card>
 
-      <PageAuditTrail area="services" />
     </div>
   );
 }

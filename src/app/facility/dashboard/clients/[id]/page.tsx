@@ -22,6 +22,7 @@ import {
 import { getTagsForEntity } from "@/data/tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import {
   payments,
   invoices,
@@ -2186,6 +2187,8 @@ export default function ClientDetailPage({
           </div>
         </TabsContent>
       </Tabs>
+
+      <PageAuditTrail area="clients" entityId={String(id)} />
 
       {/* Pet Details Modal */}
       <Dialog open={!!selectedPet} onOpenChange={() => setSelectedPet(null)}>

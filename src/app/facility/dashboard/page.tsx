@@ -7,7 +7,6 @@ import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
 import { CustomServiceDashboardSection } from "@/components/facility/CustomServiceDashboardSection";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 
 export default function FacilityDashboard() {
   // Static facility ID for now (would come from user token in production)
@@ -37,7 +36,6 @@ export default function FacilityDashboard() {
           <CustomServiceDashboardSection key={m.id} module={m} />
         ))}
 
-      <PageAuditTrail area="settings" />
     </div>
   );
 }

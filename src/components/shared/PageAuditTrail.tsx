@@ -53,6 +53,7 @@ export function PageAuditTrail({
       bookings: ["Booking"],
       services: ["Configuration", "Financial"],
       staff: ["User Access"],
+      pets: ["Client"],
     };
 
     const cats = categoryMap[area];

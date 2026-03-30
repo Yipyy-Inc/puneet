@@ -43,7 +43,6 @@ import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
@@ -868,8 +867,6 @@ export default function FacilityBookingsPage() {
           </TabsContent>
         </Tabs>
       )}
-
-      <PageAuditTrail area="bookings" />
 
       {/* Cancel Booking Modal */}
       {cancellingBooking && (

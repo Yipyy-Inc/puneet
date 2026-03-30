@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 
 const exportClientsToCSV = (clientsData: typeof clients) => {
   const headers = ["ID", "Name", "Email", "Phone", "Status", "Pets Count"];
@@ -355,8 +354,6 @@ export default function FacilityClientsPage() {
           )
         }
       />
-
-      <PageAuditTrail area="clients" />
 
       {/* Create Client Modal */}
       <CreateClientModal

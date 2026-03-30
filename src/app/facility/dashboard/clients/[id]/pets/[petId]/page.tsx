@@ -10,6 +10,7 @@ import {
   reportCards,
   petRelationships,
 } from "@/data/pet-data";
+import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1434,6 +1435,8 @@ export default function PetDetailPage({
           </TabsContent>
         )}
       </Tabs>
+
+      <PageAuditTrail area="pets" entityId={String(petId)} />
 
       <BookingModal
         open={bookingModalOpen}
