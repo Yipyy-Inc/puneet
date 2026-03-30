@@ -20,6 +20,13 @@ import {
   FileText,
   MessageSquare,
   DollarSign,
+  ShoppingBag,
+  Plus,
+  X,
+  Send as SendIcon,
+  Utensils,
+  Pill,
+  Footprints,
 } from "lucide-react";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingActionBar } from "@/components/bookings/BookingActionBar";
@@ -38,6 +45,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
+import { clientCommunications } from "@/data/communications";
+import { products } from "@/data/retail";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import {
   getYipyyGoForm,
@@ -117,6 +126,423 @@ function DetailField({
       </div>
       <div>{children}</div>
     </div>
+  );
+}
+
+// ========================================
+// Add-ons & Retail Section
+// ========================================
+
+function BookingAddOnsSection({ isEditable }: { isEditable: boolean }) {
+  const [items, setItems] = useState([
+    { id: 1, name: "Bath Add-on", price: 25.0, type: "service" },
+    { id: 2, name: "Premium Dog Food (retail)", price: 18.0, type: "retail" },
+  ]);
+  const [showAddMenu, setShowAddMenu] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
+
+  const retailSuggestions = products.slice(0, 6);
+
+  const addItem = (name: string, price: number, type: string) => {
+    setItems((prev) => [...prev, { id: Date.now(), name, price, type }]);
+    setShowAddMenu(false);
+    setCustomName("");
+    setCustomPrice("");
+    toast.success(`Added "${name}" · $${price.toFixed(2)}`);
+  };
+
+  const removeItem = (id: number) => {
+    const item = items.find((i) => i.id === id);
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    toast.success(`Removed "${item?.name}"`);
+  };
+
+  const total = items.reduce((s, i) => s + i.price, 0);
+
+  return (
+    <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <ShoppingBag className="size-4" />
+            Add-ons & Retail
+            <Badge variant="secondary" className="text-[10px]">
+              {items.length}
+            </Badge>
+          </CardTitle>
+          {isEditable && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setShowAddMenu(!showAddMenu)}
+            >
+              <Plus className="size-3" />
+              Add Item
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Add menu */}
+        {showAddMenu && (
+          <div className="animate-in fade-in slide-in-from-top-1 bg-muted/30 mb-3 rounded-md border p-3 duration-200">
+            <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wider uppercase">
+              Quick Add from Retail
+            </p>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+              {retailSuggestions.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => addItem(p.name, p.basePrice, "retail")}
+                  className="hover:bg-foreground hover:text-background rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all"
+                >
+                  {p.name} · ${p.basePrice}
+                </button>
+              ))}
+            </div>
+            <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wider uppercase">
+              Custom Item
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Item name"
+                className="h-7 flex-1 text-xs"
+              />
+              <Input
+                type="number"
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+                placeholder="Price"
+                className="h-7 w-20 text-xs"
+                min={0}
+                step={0.01}
+              />
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                disabled={!customName || !customPrice}
+                onClick={() =>
+                  addItem(customName, parseFloat(customPrice) || 0, "custom")
+                }
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Items list */}
+        {items.length > 0 ? (
+          <div className="rounded-md border">
+            {items.map((item) => (
+              <div
+                key={item.id}
+                className="group flex items-center justify-between border-b px-3 py-2.5 last:border-b-0"
+              >
+                <div className="flex items-center gap-2">
+                  {isEditable && (
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="text-muted-foreground/0 hover:text-destructive group-hover:text-muted-foreground transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                  <span className="text-sm">{item.name}</span>
+                  <Badge variant="outline" className="text-[9px]">
+                    {item.type}
+                  </Badge>
+                </div>
+                <span className="font-[tabular-nums] text-sm font-medium">
+                  ${item.price.toFixed(2)}
+                </span>
+              </div>
+            ))}
+            <div className="bg-muted/30 flex justify-between border-t px-3 py-2">
+              <span className="text-xs font-semibold">Add-ons Total</span>
+              <span className="font-[tabular-nums] text-xs font-semibold">
+                ${total.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground py-3 text-center text-sm italic">
+            No add-ons or retail items
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ========================================
+// Care Instructions
+// ========================================
+
+function CareInstructionsSection({
+  pet,
+  service,
+}: {
+  pet: {
+    name: string;
+    allergies: string;
+    specialNeeds: string;
+    weight: number;
+  };
+  service: string;
+}) {
+  const [feeding, setFeeding] = useState(
+    `${pet.weight > 20 ? "2 cups" : "1 cup"} premium kibble, twice daily (8am & 5pm)`,
+  );
+  const [medications, setMedications] = useState(
+    pet.allergies !== "None" ? "Allergy medication with morning meal" : "None",
+  );
+  const [walkSchedule, setWalkSchedule] = useState(
+    service === "boarding"
+      ? "30 min walk at 7am, 12pm, and 6pm"
+      : "Supervised group play",
+  );
+  const [editingField, setEditingField] = useState<string | null>(null);
+
+  const fields = [
+    {
+      key: "feeding",
+      label: "Feeding Schedule",
+      icon: Utensils,
+      value: feeding,
+      set: setFeeding,
+    },
+    {
+      key: "medications",
+      label: "Medications",
+      icon: Pill,
+      value: medications,
+      set: setMedications,
+    },
+    {
+      key: "walks",
+      label: "Walk / Exercise",
+      icon: Footprints,
+      value: walkSchedule,
+      set: setWalkSchedule,
+    },
+  ];
+
+  return (
+    <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <Utensils className="size-4" />
+          Care Instructions for {pet.name}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {fields.map((f) => (
+            <div
+              key={f.key}
+              className="group hover:border-foreground/20 rounded-md border px-3 py-2.5 transition-all"
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <div className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase">
+                  <f.icon className="size-3" />
+                  {f.label}
+                </div>
+                {editingField !== f.key && (
+                  <button
+                    onClick={() => setEditingField(f.key)}
+                    className="text-muted-foreground text-[11px] opacity-0 transition-opacity group-hover:opacity-100 hover:underline"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              {editingField === f.key ? (
+                <div className="animate-in fade-in flex gap-2 duration-150">
+                  <Input
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    className="h-7 flex-1 text-xs"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setEditingField(null);
+                        toast.success(`${f.label} updated`);
+                      }
+                      if (e.key === "Escape") setEditingField(null);
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setEditingField(null);
+                      toast.success(`${f.label} updated`);
+                    }}
+                  >
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm">{f.value}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ========================================
+// Message History
+// ========================================
+
+function MessageHistorySection({
+  clientId,
+  clientName,
+}: {
+  clientId: number;
+  clientName: string;
+}) {
+  const messages = clientCommunications
+    .filter((c) => c.clientId === clientId)
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    )
+    .slice(0, 5);
+
+  const [quickMessage, setQuickMessage] = useState("");
+  const [now] = useState(() => Date.now());
+
+  const handleSend = () => {
+    if (!quickMessage.trim()) return;
+    toast.success(`Message sent to ${clientName}`);
+    setQuickMessage("");
+  };
+
+  const channelIcon = (type: string) => {
+    switch (type) {
+      case "email":
+        return <Mail className="size-3" />;
+      case "sms":
+        return <Phone className="size-3" />;
+      default:
+        return <MessageSquare className="size-3" />;
+    }
+  };
+
+  const channelColor = (type: string) => {
+    switch (type) {
+      case "email":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "sms":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      default:
+        return "bg-violet-100 text-violet-700 border-violet-200";
+    }
+  };
+
+  const timeAgo = (timestamp: string) => {
+    const diff = now - new Date(timestamp).getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days > 30) return `${Math.floor(days / 30)}mo ago`;
+    if (days > 0) return `${days}d ago`;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    if (hours > 0) return `${hours}h ago`;
+    return "Just now";
+  };
+
+  return (
+    <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <MessageSquare className="size-4" />
+            Messages with {clientName}
+            {messages.length > 0 && (
+              <Badge variant="secondary" className="text-[10px]">
+                {messages.length}
+              </Badge>
+            )}
+          </CardTitle>
+          <Link href="/facility/dashboard/messaging">
+            <Button variant="ghost" size="sm" className="h-6 text-[11px]">
+              View All
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Quick send */}
+        <div className="mb-3 flex gap-2">
+          <Input
+            value={quickMessage}
+            onChange={(e) => setQuickMessage(e.target.value)}
+            placeholder={`Quick message to ${clientName}...`}
+            className="h-8 flex-1 text-xs"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSend();
+            }}
+          />
+          <Button
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            onClick={handleSend}
+            disabled={!quickMessage.trim()}
+          >
+            <SendIcon className="size-3" />
+            Send
+          </Button>
+        </div>
+
+        {/* Message list */}
+        {messages.length > 0 ? (
+          <div className="space-y-2">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className="group hover:bg-muted/30 flex items-start gap-2.5 rounded-md border px-3 py-2 transition-all"
+              >
+                <div
+                  className={cn(
+                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border",
+                    channelColor(msg.type),
+                  )}
+                >
+                  {channelIcon(msg.type)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">
+                      {msg.subject || msg.type.toUpperCase()}
+                    </span>
+                    <Badge variant="outline" className="text-[9px] capitalize">
+                      {msg.direction}
+                    </Badge>
+                    <span className="text-muted-foreground ml-auto text-[10px]">
+                      {timeAgo(msg.timestamp)}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                    {msg.content}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground py-3 text-center text-sm italic">
+            No messages yet
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -813,6 +1239,22 @@ export default function FacilityBookingDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Add-ons & Retail Items */}
+          <BookingAddOnsSection isEditable={isEditable} />
+
+          {/* Care Instructions */}
+          {selectedPet && (
+            <CareInstructionsSection pet={selectedPet} service={service} />
+          )}
+
+          {/* Message History */}
+          {client && (
+            <MessageHistorySection
+              clientId={client.id}
+              clientName={client.name}
+            />
+          )}
 
           {/* Forms & Compliance */}
           {formRequirementsCheck && (
