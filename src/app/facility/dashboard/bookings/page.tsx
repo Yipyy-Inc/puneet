@@ -20,14 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { BookingModal } from "@/components/modals/BookingModal";
 import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
@@ -38,15 +30,10 @@ import {
   Download,
   Calendar,
   DollarSign,
-  CheckCircle,
   Clock,
-  MoreVertical,
-  Eye,
-  X,
   CalendarDays,
   CalendarX,
   CheckSquare,
-  Pencil,
   FileText,
   Hash,
   User,
@@ -873,110 +860,9 @@ export default function FacilityBookingsPage() {
                 searchKey="id"
                 searchPlaceholder={"Search by booking ID, client, or pet..."}
                 itemsPerPage={15}
-                actions={(booking) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel>{"Actions"}</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(
-                            `/facility/dashboard/bookings/${booking.id}`,
-                          )
-                        }
-                      >
-                        <Eye className="mr-2 size-4" />
-                        {"View Details"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          setEditingBooking(booking as unknown as Booking)
-                        }
-                      >
-                        <Pencil className="mr-2 size-4" />
-                        {"Edit Booking"}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>{"Status"}</DropdownMenuLabel>
-                      {booking.status === "pending" && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleConfirmBooking(
-                              (booking as unknown as Booking).id,
-                            )
-                          }
-                        >
-                          <CheckCircle className="mr-2 size-4" />
-                          {"Confirm Booking"}
-                        </DropdownMenuItem>
-                      )}
-                      {booking.status === "confirmed" && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleCompleteBooking(
-                              (booking as unknown as Booking).id,
-                            )
-                          }
-                        >
-                          <CheckCircle className="mr-2 size-4" />
-                          {"Mark as Completed"}
-                        </DropdownMenuItem>
-                      )}
-                      {booking.paymentStatus === "pending" && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setProcessingPayment(
-                                booking as unknown as Booking,
-                              )
-                            }
-                          >
-                            <DollarSign className="mr-2 size-4" />
-                            {"Process Payment"}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {booking.paymentStatus === "paid" &&
-                        booking.status !== "cancelled" && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setRefundingBooking(
-                                  booking as unknown as Booking,
-                                )
-                              }
-                            >
-                              <DollarSign className="mr-2 size-4" />
-                              Process Refund
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      {(booking.status === "pending" ||
-                        booking.status === "confirmed") && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() =>
-                              setCancellingBooking(
-                                booking as unknown as Booking,
-                              )
-                            }
-                          >
-                            <X className="mr-2 size-4" />
-                            {"Cancel Booking"}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                onRowClick={(booking) =>
+                  router.push(`/facility/dashboard/bookings/${booking.id}`)
+                }
               />
             )}
           </TabsContent>

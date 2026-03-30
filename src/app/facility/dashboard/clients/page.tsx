@@ -19,7 +19,6 @@ import {
   User,
   UserCheck,
   Phone,
-  Eye,
   Plus,
   PawPrint,
   CircleDot,
@@ -326,17 +325,9 @@ export default function FacilityClientsPage() {
         itemsPerPage={10}
         onFilterClick={() => setFiltersExpanded(!filtersExpanded)}
         filterCount={activeCount}
-        actions={(client) => (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              router.push(`/facility/dashboard/clients/${client.id}`)
-            }
-          >
-            <Eye className="size-4" />
-          </Button>
-        )}
+        onRowClick={(client) =>
+          router.push(`/facility/dashboard/clients/${client.id}`)
+        }
       />
 
       <PageAuditTrail area="clients" />

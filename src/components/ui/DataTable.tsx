@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -340,7 +341,11 @@ export function DataTable<T extends object>({
               paginatedData.map((item, index) => (
                 <TableRow
                   key={index}
-                  className={rowClassName?.(item)}
+                  className={cn(
+                    rowClassName?.(item),
+                    onRowClick &&
+                      "hover:bg-muted/50 cursor-pointer transition-colors",
+                  )}
                   data-row-clickable={onRowClick ? "true" : "false"}
                   onClick={() => onRowClick?.(item)}
                   onKeyDown={(e) => {
