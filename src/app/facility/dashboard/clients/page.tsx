@@ -4,20 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
 import {
-  ClientFilterPanel,
+  ClientFiltersInline,
   ActiveFilterChips,
-} from "@/components/clients/ClientFilterPanel";
+} from "@/components/clients/ClientFiltersInline";
 import { useClientFilters } from "@/hooks/use-client-filters";
 import {
   Download,
@@ -70,7 +65,7 @@ export default function FacilityClientsPage() {
   const router = useRouter();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const {
     filters,
     setFilter,
@@ -260,12 +255,16 @@ export default function FacilityClientsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{facilityClients.length}</div>
-            <p className="text-muted-foreground text-xs">All registered clients</p>
+            <p className="text-muted-foreground text-xs">
+              All registered clients
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Clients
+            </CardTitle>
             <UserCheck className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -285,7 +284,9 @@ export default function FacilityClientsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Pets/Client</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Pets/Client
+            </CardTitle>
             <BarChart3 className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
@@ -303,10 +304,17 @@ export default function FacilityClientsPage() {
       <ActiveFilterChips
         filters={filters}
         setFilter={setFilter}
-        toggleArrayItem={toggleArrayItem}
         clearAll={clearAll}
         activeCount={activeCount}
       />
+
+      {filtersExpanded && (
+        <ClientFiltersInline
+          filters={filters}
+          setFilter={setFilter}
+          toggleArrayItem={toggleArrayItem}
+        />
+      )}
 
       <DataTable
         data={filteredClients}
@@ -316,7 +324,7 @@ export default function FacilityClientsPage() {
         }
         searchPlaceholder="Search by client or pet name..."
         itemsPerPage={10}
-        onFilterClick={() => setFilterPanelOpen(true)}
+        onFilterClick={() => setFiltersExpanded(!filtersExpanded)}
         filterCount={activeCount}
         actions={(client) => (
           <Button
@@ -329,17 +337,6 @@ export default function FacilityClientsPage() {
             <Eye className="size-4" />
           </Button>
         )}
-      />
-
-      {/* Filter Panel (Sheet) */}
-      <ClientFilterPanel
-        open={filterPanelOpen}
-        onOpenChange={setFilterPanelOpen}
-        filters={filters}
-        setFilter={setFilter}
-        toggleArrayItem={toggleArrayItem}
-        clearAll={clearAll}
-        activeCount={activeCount}
       />
 
       <PageAuditTrail area="clients" />
