@@ -56,6 +56,13 @@ export const petSchema = z.object({
   specialNeeds: z.string(),
   imageUrl: z.string().optional(),
   evaluations: z.array(evaluationSchema).optional(),
+  sex: z.enum(["male", "female"]).optional(),
+  spayedNeutered: z.boolean().optional(),
+  coatType: z
+    .enum(["short", "medium", "long", "wire", "curly", "hairless"])
+    .optional(),
+  energyLevel: z.enum(["low", "medium", "high"]).optional(),
+  petStatus: z.enum(["active", "inactive", "deceased"]).optional(),
 });
 
 export type Pet = z.infer<typeof petSchema>;

@@ -11,6 +11,7 @@ import {
   TriToggle,
   CheckGroup,
   TextFilter,
+  RangeFilter,
   DayRangePreset,
 } from "./filters/FilterInputs";
 
@@ -86,6 +87,62 @@ export function ActiveFilterChips({
     chips.push({
       label: `Special needs: ${filters.hasSpecialNeeds}`,
       onRemove: () => setFilter("hasSpecialNeeds", "any"),
+    });
+  if (filters.petName)
+    chips.push({
+      label: `Pet: "${filters.petName}"`,
+      onRemove: () => setFilter("petName", ""),
+    });
+  if (filters.petBreed)
+    chips.push({
+      label: `Breed: "${filters.petBreed}"`,
+      onRemove: () => setFilter("petBreed", ""),
+    });
+  if (filters.petWeightMin || filters.petWeightMax)
+    chips.push({
+      label: `Weight: ${filters.petWeightMin || "0"}-${filters.petWeightMax || "∞"} lbs`,
+      onRemove: () => {
+        setFilter("petWeightMin", "");
+        setFilter("petWeightMax", "");
+      },
+    });
+  if (filters.petAgeMin || filters.petAgeMax)
+    chips.push({
+      label: `Age: ${filters.petAgeMin || "0"}-${filters.petAgeMax || "∞"} yrs`,
+      onRemove: () => {
+        setFilter("petAgeMin", "");
+        setFilter("petAgeMax", "");
+      },
+    });
+  if (filters.petSex !== "any")
+    chips.push({
+      label: `Sex: ${filters.petSex}`,
+      onRemove: () => setFilter("petSex", "any"),
+    });
+  if (filters.petSpayedNeutered !== "any")
+    chips.push({
+      label: `Spayed/neutered: ${filters.petSpayedNeutered}`,
+      onRemove: () => setFilter("petSpayedNeutered", "any"),
+    });
+  if (filters.petCoatType.length > 0)
+    chips.push({
+      label: `Coat: ${filters.petCoatType.join(", ")}`,
+      onRemove: () => setFilter("petCoatType", []),
+    });
+  if (filters.petColor)
+    chips.push({
+      label: `Color: "${filters.petColor}"`,
+      onRemove: () => setFilter("petColor", ""),
+    });
+  if (filters.petEnergyLevel !== "any")
+    chips.push({
+      label: `Energy: ${filters.petEnergyLevel}`,
+      onRemove: () => setFilter("petEnergyLevel", "any"),
+    });
+  if (filters.petStatus.length > 0)
+    chips.push({
+      label: `Pet status: ${filters.petStatus.join(", ")}`,
+      onRemove: () => setFilter("petStatus", []),
     });
   if (filters.services.length > 0)
     chips.push({
@@ -167,7 +224,7 @@ export function ClientFiltersInline({
   filters: ClientFilters;
   setFilter: <K extends keyof ClientFilters>(k: K, v: ClientFilters[K]) => void;
   toggleArrayItem: (
-    key: "status" | "petTypes" | "services",
+    key: "status" | "petTypes" | "services" | "petCoatType" | "petStatus",
     item: string,
   ) => void;
 }) {
@@ -347,6 +404,17 @@ export function ClientFiltersInline({
 
     // Pet Basics
     add(
+      "Pet name",
+      "pets",
+      "Pet Basics",
+      <TextFilter
+        label="Pet name"
+        value={filters.petName}
+        onChange={(v) => setFilter("petName", v)}
+        placeholder="Search by pet name..."
+      />,
+    );
+    add(
       "Species",
       "pets",
       "Pet Basics",
@@ -359,6 +427,141 @@ export function ClientFiltersInline({
         ]}
         selected={filters.petTypes}
         onToggle={(v) => toggleArrayItem("petTypes", v)}
+      />,
+    );
+    add(
+      "Breed",
+      "pets",
+      "Pet Basics",
+      <TextFilter
+        label="Breed"
+        value={filters.petBreed}
+        onChange={(v) => setFilter("petBreed", v)}
+        placeholder="Search by breed..."
+      />,
+    );
+    add(
+      "Weight range",
+      "pets",
+      "Pet Basics",
+      <RangeFilter
+        label="Weight range (lbs)"
+        minValue={filters.petWeightMin}
+        maxValue={filters.petWeightMax}
+        onMinChange={(v) => setFilter("petWeightMin", v)}
+        onMaxChange={(v) => setFilter("petWeightMax", v)}
+        minPlaceholder="Min"
+        maxPlaceholder="Max"
+      />,
+    );
+    add(
+      "Age range",
+      "pets",
+      "Pet Basics",
+      <RangeFilter
+        label="Age range (years)"
+        minValue={filters.petAgeMin}
+        maxValue={filters.petAgeMax}
+        onMinChange={(v) => setFilter("petAgeMin", v)}
+        onMaxChange={(v) => setFilter("petAgeMax", v)}
+        minPlaceholder="Min"
+        maxPlaceholder="Max"
+      />,
+    );
+    add(
+      "Sex",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Sex"
+        value={
+          filters.petSex === "any"
+            ? "any"
+            : filters.petSex === "male"
+              ? "yes"
+              : "no"
+        }
+        onChange={(v) =>
+          setFilter(
+            "petSex",
+            v === "any" ? "any" : v === "yes" ? "male" : "female",
+          )
+        }
+      />,
+    );
+    add(
+      "Spayed / neutered",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Spayed / neutered"
+        value={filters.petSpayedNeutered}
+        onChange={(v) => setFilter("petSpayedNeutered", v)}
+      />,
+    );
+    add(
+      "Coat type",
+      "pets",
+      "Pet Basics",
+      <CheckGroup
+        label="Coat type"
+        options={[
+          { value: "short", label: "Short" },
+          { value: "medium", label: "Medium" },
+          { value: "long", label: "Long" },
+          { value: "wire", label: "Wire" },
+          { value: "curly", label: "Curly" },
+          { value: "hairless", label: "Hairless" },
+        ]}
+        selected={filters.petCoatType}
+        onToggle={(v) => toggleArrayItem("petCoatType", v)}
+      />,
+    );
+    add(
+      "Color",
+      "pets",
+      "Pet Basics",
+      <TextFilter
+        label="Color"
+        value={filters.petColor}
+        onChange={(v) => setFilter("petColor", v)}
+        placeholder="Search by color..."
+      />,
+    );
+    add(
+      "Energy level",
+      "pets",
+      "Pet Basics",
+      <TriToggle
+        label="Energy level"
+        value={
+          filters.petEnergyLevel === "any"
+            ? "any"
+            : filters.petEnergyLevel === "high"
+              ? "yes"
+              : "no"
+        }
+        onChange={(v) =>
+          setFilter(
+            "petEnergyLevel",
+            v === "any" ? "any" : v === "yes" ? "high" : "low",
+          )
+        }
+      />,
+    );
+    add(
+      "Pet status",
+      "pets",
+      "Pet Basics",
+      <CheckGroup
+        label="Pet status"
+        options={[
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+          { value: "deceased", label: "Deceased" },
+        ]}
+        selected={filters.petStatus}
+        onToggle={(v) => toggleArrayItem("petStatus", v)}
       />,
     );
     add(
@@ -382,15 +585,21 @@ export function ClientFiltersInline({
       />,
     );
     add(
-      "Spayed / neutered",
+      "Birthday month",
       "pets",
       "Pet Basics",
       <TriToggle
-        label="Spayed / neutered"
+        label="Birthday month"
         value="any"
         onChange={() => {}}
         comingSoon
       />,
+    );
+    add(
+      "Pet tags",
+      "pets",
+      "Pet Basics",
+      <TriToggle label="Pet tags" value="any" onChange={() => {}} comingSoon />,
     );
 
     // Health & Safety

@@ -29,6 +29,20 @@ export interface ClientFilters {
   hasAllergies: TriState;
   hasSpecialNeeds: TriState;
 
+  // Pet Basics
+  petName: string;
+  petBreed: string;
+  petWeightMin: string;
+  petWeightMax: string;
+  petAgeMin: string;
+  petAgeMax: string;
+  petSex: "any" | "male" | "female";
+  petSpayedNeutered: TriState;
+  petCoatType: string[];
+  petColor: string;
+  petEnergyLevel: "any" | "low" | "medium" | "high";
+  petStatus: string[];
+
   // Health
   vaccineExpiryDays: DayRange | null;
 
@@ -48,6 +62,18 @@ const DEFAULT_FILTERS: ClientFilters = {
   petTypes: [],
   hasAllergies: "any",
   hasSpecialNeeds: "any",
+  petName: "",
+  petBreed: "",
+  petWeightMin: "",
+  petWeightMax: "",
+  petAgeMin: "",
+  petAgeMax: "",
+  petSex: "any",
+  petSpayedNeutered: "any",
+  petCoatType: [],
+  petColor: "",
+  petEnergyLevel: "any",
+  petStatus: [],
   vaccineExpiryDays: null,
   services: [],
   hasActiveBooking: "any",
@@ -69,7 +95,10 @@ export function useClientFilters() {
   );
 
   const toggleArrayItem = useCallback(
-    (key: "status" | "petTypes" | "services", item: string) => {
+    (
+      key: "status" | "petTypes" | "services" | "petCoatType" | "petStatus",
+      item: string,
+    ) => {
       setFilters((prev) => {
         const arr = prev[key];
         return {
@@ -96,6 +125,16 @@ export function useClientFilters() {
     if (filters.petTypes.length > 0) count++;
     if (filters.hasAllergies !== "any") count++;
     if (filters.hasSpecialNeeds !== "any") count++;
+    if (filters.petName) count++;
+    if (filters.petBreed) count++;
+    if (filters.petWeightMin || filters.petWeightMax) count++;
+    if (filters.petAgeMin || filters.petAgeMax) count++;
+    if (filters.petSex !== "any") count++;
+    if (filters.petSpayedNeutered !== "any") count++;
+    if (filters.petCoatType.length > 0) count++;
+    if (filters.petColor) count++;
+    if (filters.petEnergyLevel !== "any") count++;
+    if (filters.petStatus.length > 0) count++;
     if (filters.vaccineExpiryDays !== null) count++;
     if (filters.services.length > 0) count++;
     if (filters.hasActiveBooking !== "any") count++;
@@ -160,6 +199,88 @@ export function useClientFilters() {
           );
           if (filters.hasSpecialNeeds === "yes" && !hasNeeds) return false;
           if (filters.hasSpecialNeeds === "no" && hasNeeds) return false;
+        }
+
+        // Pet Name
+        if (filters.petName) {
+          const q = filters.petName.toLowerCase();
+          if (!client.pets.some((p) => p.name.toLowerCase().includes(q)))
+            return false;
+        }
+
+        // Pet Breed
+        if (filters.petBreed) {
+          const q = filters.petBreed.toLowerCase();
+          if (!client.pets.some((p) => p.breed.toLowerCase().includes(q)))
+            return false;
+        }
+
+        // Pet Weight Range
+        if (filters.petWeightMin || filters.petWeightMax) {
+          const min = filters.petWeightMin
+            ? parseFloat(filters.petWeightMin)
+            : 0;
+          const max = filters.petWeightMax
+            ? parseFloat(filters.petWeightMax)
+            : Infinity;
+          if (!client.pets.some((p) => p.weight >= min && p.weight <= max))
+            return false;
+        }
+
+        // Pet Age Range
+        if (filters.petAgeMin || filters.petAgeMax) {
+          const min = filters.petAgeMin ? parseFloat(filters.petAgeMin) : 0;
+          const max = filters.petAgeMax
+            ? parseFloat(filters.petAgeMax)
+            : Infinity;
+          if (!client.pets.some((p) => p.age >= min && p.age <= max))
+            return false;
+        }
+
+        // Pet Sex
+        if (filters.petSex !== "any") {
+          if (!client.pets.some((p) => p.sex === filters.petSex)) return false;
+        }
+
+        // Spayed / Neutered
+        if (filters.petSpayedNeutered !== "any") {
+          const want = filters.petSpayedNeutered === "yes";
+          if (!client.pets.some((p) => p.spayedNeutered === want)) return false;
+        }
+
+        // Coat Type
+        if (filters.petCoatType.length > 0) {
+          if (
+            !client.pets.some(
+              (p) => p.coatType && filters.petCoatType.includes(p.coatType),
+            )
+          )
+            return false;
+        }
+
+        // Pet Color
+        if (filters.petColor) {
+          const q = filters.petColor.toLowerCase();
+          if (!client.pets.some((p) => p.color.toLowerCase().includes(q)))
+            return false;
+        }
+
+        // Energy Level
+        if (filters.petEnergyLevel !== "any") {
+          if (
+            !client.pets.some((p) => p.energyLevel === filters.petEnergyLevel)
+          )
+            return false;
+        }
+
+        // Pet Status
+        if (filters.petStatus.length > 0) {
+          if (
+            !client.pets.some(
+              (p) => p.petStatus && filters.petStatus.includes(p.petStatus),
+            )
+          )
+            return false;
         }
 
         // Services
