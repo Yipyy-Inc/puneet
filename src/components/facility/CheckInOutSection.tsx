@@ -911,7 +911,17 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             />
                           </div>
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            {item.ownerName}
+                            {client ? (
+                              <Link
+                                href={`/facility/dashboard/clients/${client.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:text-foreground hover:underline"
+                              >
+                                {item.ownerName}
+                              </Link>
+                            ) : (
+                              item.ownerName
+                            )}
                             {item.serviceType === "boarding" &&
                               item.kennelName &&
                               ` · ${item.kennelName}`}
@@ -1054,7 +1064,17 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             />
                           </div>
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            {item.ownerName}
+                            {client ? (
+                              <Link
+                                href={`/facility/dashboard/clients/${client.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:text-foreground hover:underline"
+                              >
+                                {item.ownerName}
+                              </Link>
+                            ) : (
+                              item.ownerName
+                            )}
                             {item.serviceType === "boarding" &&
                               item.kennelName &&
                               ` · ${item.kennelName}`}
@@ -1186,7 +1206,17 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                             {getServiceBadge(item.serviceType, item)}
                           </div>
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            {item.ownerName}
+                            {client ? (
+                              <Link
+                                href={`/facility/dashboard/clients/${client.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="hover:text-foreground hover:underline"
+                              >
+                                {item.ownerName}
+                              </Link>
+                            ) : (
+                              item.ownerName
+                            )}
                             {` · Out: ${item.checkOutTime ? formatTime(item.checkOutTime) : "—"}`}
                           </p>
                         </div>

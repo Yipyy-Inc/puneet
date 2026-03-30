@@ -872,7 +872,16 @@ export default function FacilityBookingDetailPage({
                   ) : (
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-sm font-semibold">
-                        {selectedPet?.name ?? "Unknown"}
+                        {selectedPet && client ? (
+                          <Link
+                            href={`/facility/dashboard/clients/${client.id}/pets/${selectedPet.id}`}
+                            className="hover:text-primary transition-colors hover:underline"
+                          >
+                            {selectedPet.name}
+                          </Link>
+                        ) : (
+                          (selectedPet?.name ?? "Unknown")
+                        )}
                       </CardTitle>
                       {selectedPet && (
                         <TagList

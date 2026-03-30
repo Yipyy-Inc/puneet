@@ -611,7 +611,17 @@ export function TrainingSection() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="truncate text-sm font-semibold">
-                                      {firstPet?.petName ?? session.className}
+                                      {firstPet && client ? (
+                                        <Link
+                                          href={`/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="hover:text-primary hover:underline"
+                                        >
+                                          {firstPet.petName}
+                                        </Link>
+                                      ) : (
+                                        (firstPet?.petName ?? session.className)
+                                      )}
                                     </span>
                                     {sessionEnrollments.length > 1 && (
                                       <Badge
@@ -645,7 +655,17 @@ export function TrainingSection() {
                                     )}
                                   </div>
                                   <p className="text-muted-foreground mt-1 text-xs">
-                                    {firstPet?.ownerName ?? ""}
+                                    {firstPet && client ? (
+                                      <Link
+                                        href={`/facility/dashboard/clients/${client.id}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-foreground hover:underline"
+                                      >
+                                        {firstPet.ownerName}
+                                      </Link>
+                                    ) : (
+                                      (firstPet?.ownerName ?? "")
+                                    )}
                                     {firstPet?.petBreed
                                       ? ` · ${firstPet.petBreed}`
                                       : ""}{" "}
@@ -764,7 +784,17 @@ export function TrainingSection() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="truncate text-sm font-semibold">
-                                      {firstPet?.petName ?? session.className}
+                                      {firstPet && client ? (
+                                        <Link
+                                          href={`/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="hover:text-primary hover:underline"
+                                        >
+                                          {firstPet.petName}
+                                        </Link>
+                                      ) : (
+                                        (firstPet?.petName ?? session.className)
+                                      )}
                                     </span>
                                     {sessionEnrollments.length > 1 && (
                                       <Badge
@@ -790,8 +820,18 @@ export function TrainingSection() {
                                     )}
                                   </div>
                                   <p className="text-muted-foreground mt-1 text-xs">
-                                    {firstPet?.ownerName ?? ""} ·{" "}
-                                    {session.className}
+                                    {firstPet && client ? (
+                                      <Link
+                                        href={`/facility/dashboard/clients/${client.id}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-foreground hover:underline"
+                                      >
+                                        {firstPet.ownerName}
+                                      </Link>
+                                    ) : (
+                                      (firstPet?.ownerName ?? "")
+                                    )}{" "}
+                                    · {session.className}
                                   </p>
                                   <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
                                     <Clock className="size-3" />
@@ -905,7 +945,17 @@ export function TrainingSection() {
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <span className="truncate text-sm font-semibold">
-                                    {firstPet?.petName ?? session.className}
+                                    {firstPet && client ? (
+                                      <Link
+                                        href={`/facility/dashboard/clients/${client.id}/pets/${firstPet.petId}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-primary hover:underline"
+                                      >
+                                        {firstPet.petName}
+                                      </Link>
+                                    ) : (
+                                      (firstPet?.petName ?? session.className)
+                                    )}
                                   </span>
                                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                                     <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
@@ -922,8 +972,19 @@ export function TrainingSection() {
                                     )}
                                   </div>
                                   <p className="text-muted-foreground mt-1 text-xs">
-                                    {firstPet?.ownerName ?? ""} ·{" "}
-                                    {session.className} · {session.trainerName}
+                                    {firstPet && client ? (
+                                      <Link
+                                        href={`/facility/dashboard/clients/${client.id}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-foreground hover:underline"
+                                      >
+                                        {firstPet.ownerName}
+                                      </Link>
+                                    ) : (
+                                      (firstPet?.ownerName ?? "")
+                                    )}{" "}
+                                    · {session.className} ·{" "}
+                                    {session.trainerName}
                                   </p>
                                 </div>
                               </div>

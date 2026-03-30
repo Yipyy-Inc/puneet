@@ -1449,6 +1449,79 @@ export default function ClientDetailPage({
 
                 {/* Invoices Tab */}
                 <TabsContent value="invoices" className="mt-4">
+                  {/* Booking-derived invoices */}
+                  {clientBookings.filter((b) => b.invoice).length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                        Booking Invoices
+                      </p>
+                      {clientBookings
+                        .filter((b) => b.invoice)
+                        .map((b) => {
+                          const inv = b.invoice!;
+                          const bPet = client.pets.find(
+                            (p) =>
+                              p.id ===
+                              (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+                          );
+                          return (
+                            <Link
+                              key={inv.id}
+                              href={`/facility/dashboard/bookings/${b.id}`}
+                              className="bg-card hover:bg-muted/50 flex items-start justify-between rounded-lg border p-3 transition-colors"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold">
+                                    {inv.id}
+                                  </span>
+                                  <Badge
+                                    variant={
+                                      inv.status === "closed"
+                                        ? "outline"
+                                        : inv.status === "open"
+                                          ? "secondary"
+                                          : "default"
+                                    }
+                                    className="text-[10px]"
+                                  >
+                                    {inv.status}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] capitalize"
+                                  >
+                                    {b.service}
+                                  </Badge>
+                                </div>
+                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                  Booking #{b.id}
+                                  {bPet && ` · ${bPet.name}`} ·{" "}
+                                  {formatDate(b.startDate)}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold">
+                                  ${inv.total.toFixed(2)}
+                                </p>
+                                {inv.remainingDue > 0 && (
+                                  <p className="text-xs font-medium text-amber-600">
+                                    ${inv.remainingDue.toFixed(2)} due
+                                  </p>
+                                )}
+                                {inv.remainingDue === 0 && (
+                                  <p className="text-xs text-emerald-600">
+                                    Paid
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                    </div>
+                  )}
+
+                  {/* Standalone invoices from payments system */}
                   {clientInvoices.length > 0 ? (
                     <div className="space-y-3">
                       {clientInvoices

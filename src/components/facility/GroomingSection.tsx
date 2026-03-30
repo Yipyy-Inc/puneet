@@ -701,8 +701,18 @@ export function GroomingSection() {
                                   />
                                 </div>
                                 <p className="text-muted-foreground mt-0.5 text-xs">
-                                  {appointment.ownerName} ·{" "}
-                                  {appointment.stylistName} ·{" "}
+                                  {client ? (
+                                    <Link
+                                      href={`/facility/dashboard/clients/${client.id}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="hover:text-foreground hover:underline"
+                                    >
+                                      {appointment.ownerName}
+                                    </Link>
+                                  ) : (
+                                    appointment.ownerName
+                                  )}{" "}
+                                  · {appointment.stylistName} ·{" "}
                                   {formatTime(appointment.startTime)} -{" "}
                                   {formatTime(appointment.endTime)}
                                 </p>
@@ -855,8 +865,18 @@ export function GroomingSection() {
                                   />
                                 </div>
                                 <p className="text-muted-foreground mt-0.5 text-xs">
-                                  {appointment.ownerName} ·{" "}
-                                  {appointment.stylistName} ·{" "}
+                                  {client ? (
+                                    <Link
+                                      href={`/facility/dashboard/clients/${client.id}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="hover:text-foreground hover:underline"
+                                    >
+                                      {appointment.ownerName}
+                                    </Link>
+                                  ) : (
+                                    appointment.ownerName
+                                  )}{" "}
+                                  · {appointment.stylistName} ·{" "}
                                   {formatTime(appointment.startTime)} -{" "}
                                   {formatTime(appointment.endTime)}
                                 </p>
@@ -989,8 +1009,18 @@ export function GroomingSection() {
                                   />
                                 </div>
                                 <p className="text-muted-foreground mt-0.5 text-xs">
-                                  {appointment.ownerName} ·{" "}
-                                  {appointment.stylistName}
+                                  {client ? (
+                                    <Link
+                                      href={`/facility/dashboard/clients/${client.id}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="hover:text-foreground hover:underline"
+                                    >
+                                      {appointment.ownerName}
+                                    </Link>
+                                  ) : (
+                                    appointment.ownerName
+                                  )}{" "}
+                                  · {appointment.stylistName}
                                 </p>
                               </div>
                             </div>
