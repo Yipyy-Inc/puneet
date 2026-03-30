@@ -803,6 +803,13 @@ export const facilities = [
     name: "Example Pet Care Facility",
     logo: "/yipyy-transparent.png",
     status: "active",
+    smsCredits: {
+      monthlyAllowance: 1000,
+      used: 168,
+      purchased: 200,
+      autoReload: true,
+      autoReloadThreshold: 10,
+    },
     plan: "Basic",
     dayJoined: "2025-01-01",
     subscriptionEnd: "2026-01-01",
