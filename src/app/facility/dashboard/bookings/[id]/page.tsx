@@ -573,8 +573,8 @@ export default function FacilityBookingDetailPage({
     return client.pets?.find((p) => p.id === pid);
   }, [client, booking]);
 
-  const isEditable =
-    booking?.status === "confirmed" || booking?.status === "pending";
+  // Everything is always editable — staff can correct any booking
+  const isEditable = booking?.status !== "cancelled";
   const nights = booking
     ? nightsBetween(booking.startDate, booking.endDate)
     : 0;
@@ -600,6 +600,18 @@ export default function FacilityBookingDetailPage({
   const [editingRequests, setEditingRequests] = useState(false);
   const [basePrice, setBasePrice] = useState(booking?.basePrice ?? 0);
   const [discount, setDiscount] = useState(booking?.discount ?? 0);
+  const [stylist, setStylist] = useState(booking?.stylistPreference ?? "");
+  const [trainer, setTrainer] = useState(booking?.trainerId ?? "");
+  const [notifyEmail, setNotifyEmail] = useState(
+    booking?.notificationEmail ?? true,
+  );
+  const [notifySMS, setNotifySMS] = useState(booking?.notificationSMS ?? false);
+  const [bookingServiceType, setBookingServiceType] = useState(
+    booking?.serviceType ?? "full_day",
+  );
+  const [paymentStatus, setPaymentStatus] = useState(
+    booking?.paymentStatus ?? "unpaid",
+  );
 
   // Derived
   const editedNights = nightsBetween(startDate, endDate);
@@ -928,14 +940,17 @@ export default function FacilityBookingDetailPage({
               <CardTitle className="flex items-center gap-2 text-sm font-semibold">
                 <Calendar className="size-4" />
                 Service Details
-                {isEditable && (
-                  <Badge
-                    variant="outline"
-                    className="ml-1 text-[9px] font-normal"
-                  >
-                    Editable
-                  </Badge>
-                )}
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "ml-1 text-[9px] font-normal",
+                    isEditable
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-red-200 bg-red-50 text-red-700",
+                  )}
+                >
+                  {isEditable ? "Live Editing" : "Read Only"}
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1037,16 +1052,36 @@ export default function FacilityBookingDetailPage({
                   )}
                 </DetailField>
 
-                {/* Duration — auto-calculated */}
+                {/* Duration + Service Type */}
                 <DetailField icon={Clock} label="Duration">
                   <p className="text-sm font-medium">
                     {editedNights > 0
                       ? `${editedNights} night${editedNights !== 1 ? "s" : ""}`
                       : "Same day"}
                   </p>
-                  <p className="text-muted-foreground text-[11px]">
-                    {booking.serviceType?.replace("_", " ") ?? "standard"}
-                  </p>
+                  {isEditable ? (
+                    <Select
+                      value={bookingServiceType}
+                      onValueChange={(v) => {
+                        setBookingServiceType(v);
+                        toast.success(`Type changed to ${v.replace("_", " ")}`);
+                      }}
+                    >
+                      <SelectTrigger className="mt-1 h-7 text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_day">Full Day</SelectItem>
+                        <SelectItem value="half_day">Half Day</SelectItem>
+                        <SelectItem value="overnight">Overnight</SelectItem>
+                        <SelectItem value="extended">Extended Stay</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-muted-foreground text-[11px]">
+                      {bookingServiceType.replace("_", " ")}
+                    </p>
+                  )}
                 </DetailField>
 
                 {/* Room / Kennel */}
@@ -1146,22 +1181,126 @@ export default function FacilityBookingDetailPage({
                   )}
                 </DetailField>
 
-                {booking.stylistPreference && (
-                  <DetailField icon={Scissors} label="Stylist">
-                    <p className="text-sm font-medium">
-                      {booking.stylistPreference}
-                    </p>
-                  </DetailField>
-                )}
+                {/* Stylist */}
+                <DetailField icon={Scissors} label="Stylist">
+                  {isEditable ? (
+                    <Select
+                      value={stylist || "none"}
+                      onValueChange={(v) => {
+                        setStylist(v === "none" ? "" : v);
+                        toast.success(
+                          v === "none"
+                            ? "Stylist unassigned"
+                            : `Stylist set to ${v}`,
+                        );
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Assign stylist..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        <SelectItem value="Jessica M.">Jessica M.</SelectItem>
+                        <SelectItem value="Sarah K.">Sarah K.</SelectItem>
+                        <SelectItem value="Mike R.">Mike R.</SelectItem>
+                        <SelectItem value="Emily T.">Emily T.</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium">{stylist || "—"}</p>
+                  )}
+                </DetailField>
 
-                {booking.trainerId && (
-                  <DetailField icon={User} label="Trainer">
-                    <p className="text-sm font-medium">{booking.trainerId}</p>
-                  </DetailField>
-                )}
+                {/* Trainer */}
+                <DetailField icon={User} label="Trainer">
+                  {isEditable ? (
+                    <Select
+                      value={trainer || "none"}
+                      onValueChange={(v) => {
+                        setTrainer(v === "none" ? "" : v);
+                        toast.success(
+                          v === "none"
+                            ? "Trainer unassigned"
+                            : `Trainer set to ${v}`,
+                        );
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Assign trainer..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        <SelectItem value="Dr. Smith">Dr. Smith</SelectItem>
+                        <SelectItem value="Alex P.">Alex P.</SelectItem>
+                        <SelectItem value="Jordan W.">Jordan W.</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm font-medium">{trainer || "—"}</p>
+                  )}
+                </DetailField>
 
+                {/* Payment Status */}
                 <DetailField icon={DollarSign} label="Payment Status">
-                  <StatusBadge type="status" value={booking.paymentStatus} />
+                  {isEditable ? (
+                    <Select
+                      value={paymentStatus}
+                      onValueChange={(v) => {
+                        setPaymentStatus(v);
+                        toast.success(`Payment status → ${v}`);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="partial">Partial</SelectItem>
+                        <SelectItem value="refunded">Refunded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <StatusBadge type="status" value={paymentStatus} />
+                  )}
+                </DetailField>
+
+                {/* Notifications */}
+                <DetailField icon={Mail} label="Notifications">
+                  <div className="flex gap-3">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={notifyEmail}
+                        onChange={(e) => {
+                          setNotifyEmail(e.target.checked);
+                          toast.success(
+                            e.target.checked
+                              ? "Email notifications on"
+                              : "Email notifications off",
+                          );
+                        }}
+                        className="accent-primary size-3.5 rounded"
+                      />
+                      Email
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={notifySMS}
+                        onChange={(e) => {
+                          setNotifySMS(e.target.checked);
+                          toast.success(
+                            e.target.checked
+                              ? "SMS notifications on"
+                              : "SMS notifications off",
+                          );
+                        }}
+                        className="accent-primary size-3.5 rounded"
+                      />
+                      SMS
+                    </label>
+                  </div>
                 </DetailField>
               </div>
             </CardContent>
