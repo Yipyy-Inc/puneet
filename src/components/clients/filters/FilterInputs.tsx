@@ -1,9 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { DayRange } from "@/hooks/use-client-filters";
 
 // ========================================
 // Section label
@@ -236,6 +245,133 @@ export function RangeFilter({
           className="h-8 w-20 text-xs"
           disabled={comingSoon}
         />
+      </div>
+    </div>
+  );
+}
+
+// ========================================
+// Day range with presets + custom popover
+// ========================================
+
+export function DayRangePreset({
+  label,
+  presets,
+  value,
+  onChange,
+  comingSoon,
+}: {
+  label: string;
+  presets: { value: number; label: string }[];
+  value: DayRange | null;
+  onChange: (v: DayRange | null) => void;
+  comingSoon?: boolean;
+}) {
+  const [customMin, setCustomMin] = useState("");
+  const [customMax, setCustomMax] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const isCustom = value != null && value.preset == null;
+  const activePreset = value?.preset ?? null;
+
+  const handlePreset = (p: number) => {
+    if (comingSoon) return;
+    onChange(activePreset === p ? null : { preset: p, max: p });
+  };
+
+  const handleApply = () => {
+    const min = customMin ? parseInt(customMin, 10) : undefined;
+    const max = customMax ? parseInt(customMax, 10) : undefined;
+    if (min == null && max == null) {
+      onChange(null);
+    } else {
+      onChange({ min, max });
+    }
+    setOpen(false);
+  };
+
+  const customLabel = isCustom
+    ? value.min != null && value.max != null
+      ? `${value.min}-${value.max}d`
+      : value.min != null
+        ? `>${value.min}d`
+        : `<${value.max}d`
+    : null;
+
+  return (
+    <div>
+      <FilterLabel label={label} comingSoon={comingSoon} />
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {presets.map((p) => (
+          <button
+            key={p.value}
+            onClick={() => handlePreset(p.value)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
+              activePreset === p.value
+                ? "bg-foreground text-background border-transparent"
+                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+              comingSoon && "cursor-not-allowed opacity-50",
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              disabled={comingSoon}
+              className={cn(
+                "flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
+                isCustom
+                  ? "bg-foreground text-background border-transparent"
+                  : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                comingSoon && "cursor-not-allowed opacity-50",
+              )}
+            >
+              {customLabel ?? "Custom"}
+              <ChevronDown className="size-3" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-52 p-3">
+            <p className="mb-2.5 text-xs font-medium">Custom Range (days)</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-10 text-[11px]">
+                  From
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={customMin}
+                  onChange={(e) => setCustomMin(e.target.value)}
+                  placeholder="0"
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground w-10 text-[11px]">
+                  To
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={customMax}
+                  onChange={(e) => setCustomMax(e.target.value)}
+                  placeholder="∞"
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="mt-3 h-7 w-full text-xs"
+              onClick={handleApply}
+            >
+              Apply
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

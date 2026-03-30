@@ -9,8 +9,8 @@ import type { ClientFilters } from "@/hooks/use-client-filters";
 import {
   TriToggle,
   CheckGroup,
-  PresetPills,
   TextFilter,
+  DayRangePreset,
 } from "./filters/FilterInputs";
 
 // ========================================
@@ -96,11 +96,36 @@ export function ActiveFilterChips({
       label: `Active booking: ${filters.hasActiveBooking}`,
       onRemove: () => setFilter("hasActiveBooking", "any"),
     });
-  if (filters.lastVisitDays !== null)
+  if (filters.vaccineExpiryDays !== null) {
+    const r = filters.vaccineExpiryDays;
+    const lbl =
+      r.preset != null
+        ? `Vaccine: ${r.preset}d`
+        : r.min != null && r.max != null
+          ? `Vaccine: ${r.min}-${r.max} days`
+          : r.min != null
+            ? `Vaccine: >${r.min} days`
+            : `Vaccine: <${r.max} days`;
     chips.push({
-      label: `Last ${filters.lastVisitDays}d`,
+      label: lbl,
+      onRemove: () => setFilter("vaccineExpiryDays", null),
+    });
+  }
+  if (filters.lastVisitDays !== null) {
+    const r = filters.lastVisitDays;
+    const lbl =
+      r.preset != null
+        ? `No visit: ${r.preset}d`
+        : r.min != null && r.max != null
+          ? `No visit: ${r.min}-${r.max} days`
+          : r.min != null
+            ? `No visit: >${r.min} days`
+            : `No visit: <${r.max} days`;
+    chips.push({
+      label: lbl,
       onRemove: () => setFilter("lastVisitDays", null),
     });
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -327,16 +352,16 @@ export function ClientFiltersInline({
                 onChange={() => {}}
                 comingSoon
               />
-              <PresetPills
+              <DayRangePreset
                 label="Vaccine expiring within"
-                options={[
+                presets={[
                   { value: 7, label: "7d" },
                   { value: 30, label: "30d" },
                   { value: 60, label: "60d" },
+                  { value: 90, label: "90d" },
                 ]}
-                value={null}
-                onChange={() => {}}
-                comingSoon
+                value={filters.vaccineExpiryDays}
+                onChange={(v) => setFilter("vaccineExpiryDays", v)}
               />
             </div>
           )}
@@ -360,12 +385,13 @@ export function ClientFiltersInline({
                 value={filters.hasActiveBooking}
                 onChange={(v) => setFilter("hasActiveBooking", v)}
               />
-              <PresetPills
+              <DayRangePreset
                 label="No visit in"
-                options={[
+                presets={[
                   { value: 30, label: "30d" },
                   { value: 60, label: "60d" },
                   { value: 90, label: "90d" },
+                  { value: 180, label: "6mo" },
                 ]}
                 value={filters.lastVisitDays}
                 onChange={(v) => setFilter("lastVisitDays", v)}

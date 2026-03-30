@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { bookings } from "@/data/bookings";
+import { vaccinationRecords } from "@/data/pet-data";
 import type { Client } from "@/types/client";
 
 // ========================================
@@ -9,6 +10,12 @@ import type { Client } from "@/types/client";
 // ========================================
 
 type TriState = "any" | "yes" | "no";
+
+export interface DayRange {
+  preset?: number; // preset button value (e.g., 7, 30, 60)
+  min?: number; // custom min days
+  max?: number; // custom max days
+}
 
 export interface ClientFilters {
   // Client Info
@@ -22,12 +29,15 @@ export interface ClientFilters {
   hasAllergies: TriState;
   hasSpecialNeeds: TriState;
 
+  // Health
+  vaccineExpiryDays: DayRange | null;
+
   // Services
   services: string[]; // multi-select: "daycare", "boarding", etc.
   hasActiveBooking: TriState;
 
   // Activity
-  lastVisitDays: number | null; // 7, 30, 90, or null for any
+  lastVisitDays: DayRange | null;
 }
 
 const DEFAULT_FILTERS: ClientFilters = {
@@ -38,6 +48,7 @@ const DEFAULT_FILTERS: ClientFilters = {
   petTypes: [],
   hasAllergies: "any",
   hasSpecialNeeds: "any",
+  vaccineExpiryDays: null,
   services: [],
   hasActiveBooking: "any",
   lastVisitDays: null,
@@ -85,6 +96,7 @@ export function useClientFilters() {
     if (filters.petTypes.length > 0) count++;
     if (filters.hasAllergies !== "any") count++;
     if (filters.hasSpecialNeeds !== "any") count++;
+    if (filters.vaccineExpiryDays !== null) count++;
     if (filters.services.length > 0) count++;
     if (filters.hasActiveBooking !== "any") count++;
     if (filters.lastVisitDays !== null) count++;
@@ -170,7 +182,7 @@ export function useClientFilters() {
           if (filters.hasActiveBooking === "no" && hasActive) return false;
         }
 
-        // Last Visit
+        // Last Visit (day range)
         if (filters.lastVisitDays !== null) {
           const clientBookings = bookings.filter(
             (b) => b.clientId === client.id,
@@ -180,7 +192,32 @@ export function useClientFilters() {
             ...clientBookings.map((b) => new Date(b.startDate).getTime()),
           );
           const daysAgo = (Date.now() - latest) / (1000 * 60 * 60 * 24);
-          if (daysAgo > filters.lastVisitDays) return false;
+          const range = filters.lastVisitDays;
+          const maxDays = range.max ?? range.preset;
+          if (maxDays != null && daysAgo > maxDays) return false;
+          if (range.min != null && daysAgo < range.min) return false;
+        }
+
+        // Vaccine expiry (day range)
+        if (filters.vaccineExpiryDays !== null) {
+          const petIds = client.pets.map((p) => p.id);
+          const records = vaccinationRecords.filter((v) =>
+            petIds.includes(v.petId),
+          );
+          if (records.length === 0) return false;
+          const now = Date.now();
+          const range = filters.vaccineExpiryDays;
+          const minDays = range.min;
+          const maxDays = range.max ?? range.preset;
+          const match = records.some((v) => {
+            const daysUntil =
+              (new Date(v.expiryDate).getTime() - now) / (1000 * 60 * 60 * 24);
+            if (daysUntil < 0) return false; // already expired
+            if (maxDays != null && daysUntil > maxDays) return false;
+            if (minDays != null && daysUntil < minDays) return false;
+            return true;
+          });
+          if (!match) return false;
         }
 
         return true;
