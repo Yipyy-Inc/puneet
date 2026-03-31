@@ -622,6 +622,50 @@ export const customServiceCheckInSchema = z.object({
 export type CustomServiceCheckIn = z.infer<typeof customServiceCheckInSchema>;
 
 // ============================================================================
+// Eligibility Conditions (used by custom modules)
+// ============================================================================
+
+export type EligibilityConditionType =
+  | "pet_type"
+  | "evaluation"
+  | "membership"
+  | "waiver"
+  | "service_booked"
+  | "tag"
+  | "vaccination"
+  | "age"
+  | "weight"
+  | "custom";
+
+export interface EligibilityCondition {
+  id: string;
+  type: EligibilityConditionType;
+  operator:
+    | "equals"
+    | "not_equals"
+    | "has"
+    | "not_has"
+    | "greater_than"
+    | "less_than"
+    | "in_list";
+  value: string | string[] | number | boolean;
+  label: string;
+}
+
+// ============================================================================
+// Capacity Resource (used by custom modules)
+// ============================================================================
+
+export interface CapacityResource {
+  id: string;
+  name: string;
+  type: string;
+  maxConcurrent: number;
+  shared: boolean;
+  sharedWith?: string[];
+}
+
+// ============================================================================
 // YipyyGo Custom Section (used by custom modules)
 // ============================================================================
 
@@ -735,6 +779,39 @@ export interface CustomServiceModule {
   showInSidebar: boolean;
   sidebarPosition: number;
   dependencies: string[];
+
+  // Eligibility rules — conditions a pet/client must meet to book
+  eligibilityRules?: {
+    enabled: boolean;
+    operator: "all" | "any";
+    conditions: EligibilityCondition[];
+    deniedMessage?: string;
+  };
+
+  // Service dependencies — requires other bookings or is add-on only
+  serviceDependencies?: {
+    requiresServices?: {
+      moduleId: string;
+      moduleName: string;
+      type: "concurrent" | "same_day" | "any_active";
+    }[];
+    addonOnly?: boolean;
+    addonFor?: string[];
+    excludesWith?: string[];
+  };
+
+  // Capacity & resource management
+  capacity?: {
+    enabled: boolean;
+    maxPerSlot?: number;
+    slotDurationMinutes?: number;
+    resources?: CapacityResource[];
+    waitlistEnabled: boolean;
+    maxWaitlist?: number;
+    autoPromote: boolean;
+    notifyOnAvailability: boolean;
+  };
+
   status: CustomServiceStatus;
   disableReason?: string;
   createdAt: string;

@@ -23,6 +23,7 @@ import { OnlineBookingStep } from "./steps/OnlineBookingStep";
 import { PricingStep } from "./steps/PricingStep";
 import { StaffAssignmentStep } from "./steps/StaffAssignmentStep";
 import { YipyyGoConfigStep } from "./steps/YipyyGoConfigStep";
+import { EligibilityStep } from "./steps/EligibilityStep";
 import { WizardReviewPanel } from "./WizardReviewPanel";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { createDefaultCustomServiceModule } from "@/data/custom-services";
@@ -41,6 +42,7 @@ const WIZARD_STEPS: Step[] = [
   { id: "pricing", title: "Pricing", description: "Rates & billing" },
   { id: "staff", title: "Staff", description: "Assignment & tasks" },
   { id: "yipyygo", title: "YipyyGo", description: "Pre-check-in form" },
+  { id: "eligibility", title: "Rules", description: "Eligibility & capacity" },
   { id: "review", title: "Review", description: "Confirm & save" },
 ];
 
@@ -88,6 +90,11 @@ const STEP_DETAILS: { title: string; description: string }[] = [
     title: "YipyyGo Pre-Check-In",
     description:
       "Configure whether customers must complete a pre-check-in form before their booking, and customize the sections shown.",
+  },
+  {
+    title: "Eligibility, Dependencies & Capacity",
+    description:
+      "Set conditions for who can book, service dependencies, and capacity limits with waitlists.",
   },
   {
     title: "Review & Save",
@@ -254,6 +261,9 @@ export function CustomServiceWizard({
                 <YipyyGoConfigStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 8 && (
+                <EligibilityStep data={formData} onChange={handleChange} />
+              )}
+              {currentStep === 9 && (
                 <WizardReviewPanel
                   data={formData}
                   onEditStep={handleEditStep}
