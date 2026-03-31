@@ -193,6 +193,50 @@ export default function ClientBookingDetailPage({
         <span className="text-foreground font-medium">#{booking.id}</span>
       </div>
 
+      {/* Deposit Notice */}
+      {!isPaid && !isCancelled && (invoice?.depositCollected ?? 0) === 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Banknote className="size-4 text-amber-600" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                Deposit required before check-in
+              </p>
+              <p className="text-xs text-amber-600">
+                50% of total (${(booking.totalCost * 0.5).toFixed(2)}) must be
+                collected before service begins
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
+            onClick={() => setDepositOpen(true)}
+          >
+            <Banknote className="mr-1.5 size-3.5" />
+            Charge Deposit
+          </Button>
+        </div>
+      )}
+
+      {/* Deposit Collected Notice */}
+      {(invoice?.depositCollected ?? 0) > 0 && !isPaid && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <CheckCircle2 className="size-4 text-emerald-600" />
+          <p className="text-sm text-emerald-800">
+            Deposit collected:{" "}
+            <strong className="font-[tabular-nums]">
+              ${(invoice?.depositCollected ?? 0).toFixed(2)}
+            </strong>{" "}
+            — Remaining balance:{" "}
+            <strong className="font-[tabular-nums]">
+              ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
+            </strong>
+          </p>
+        </div>
+      )}
+
       {/* ── Hero Header ── */}
       <div className="from-card to-muted/20 rounded-xl border bg-gradient-to-r p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
