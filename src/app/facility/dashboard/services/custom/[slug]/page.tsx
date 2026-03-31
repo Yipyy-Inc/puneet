@@ -15,7 +15,9 @@ import {
   ArrowRight,
   Users,
   Clock,
+  Truck,
 } from "lucide-react";
+import { RouteView } from "@/components/facility/RouteView";
 
 // Mock upcoming bookings
 const MOCK_BOOKINGS = [
@@ -107,6 +109,17 @@ export default function CustomServiceDashboardPage() {
           variant="secondary"
         />
       </div>
+
+      {/* Route View — shown for transport modules */}
+      {serviceModule.category === "transport" && (
+        <div className="space-y-2">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
+            <Truck className="size-4" />
+            Today&apos;s Routes
+          </h3>
+          <RouteView />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Upcoming Bookings */}
