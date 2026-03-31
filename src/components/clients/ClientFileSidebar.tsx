@@ -94,12 +94,18 @@ export function ClientFileSidebar({
     });
   }, [pathname, storageKey]);
 
-  const onBookingPage = !!pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
-  const onPetPage = !!pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+  const bookingDetailMatch = pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
+  const petDetailMatch = pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+  const onBookingDetail = !!bookingDetailMatch;
+  const onPetDetail = !!petDetailMatch;
   const hasRecentBooking = !!recentCtx.booking;
   const hasRecentPet = !!recentCtx.pet;
   const showRecentSection =
-    (hasRecentBooking && !onBookingPage) || (hasRecentPet && !onPetPage);
+    (hasRecentBooking && !onBookingDetail) || (hasRecentPet && !onPetDetail);
+
+  // Current detail item to show inline in nav
+  const currentBookingId = bookingDetailMatch?.[1] ?? null;
+  const currentPetId = petDetailMatch?.[1] ?? null;
 
   // ── Nav items ──
   const sections = [
@@ -110,6 +116,11 @@ export function ClientFileSidebar({
       count: petCount,
       icon: PawPrint,
       matchPrefix: `${base}/pets`,
+      // Show as parent (not active) when on a specific pet detail
+      isParentOnly: onPetDetail,
+      childItem: currentPetId
+        ? { href: pathname, label: `Pet #${currentPetId}`, icon: PawPrint }
+        : null,
     },
     {
       href: `${base}/bookings`,
@@ -117,6 +128,11 @@ export function ClientFileSidebar({
       count: bookingCount,
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
+      // Show as parent (not active) when on a specific booking detail
+      isParentOnly: onBookingDetail,
+      childItem: currentBookingId
+        ? { href: pathname, label: `Booking #${currentBookingId}`, icon: Calendar }
+        : null,
     },
     { href: `${base}/billing`, label: "Billing", icon: DollarSign },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
@@ -199,7 +215,7 @@ export function ClientFileSidebar({
           <p className="text-muted-foreground px-1 text-[9px] font-semibold tracking-widest uppercase">
             Continue where you left off
           </p>
-          {hasRecentBooking && !onBookingPage && (
+          {hasRecentBooking && !onBookingDetail && (
             <Link
               href={recentCtx.booking!.href}
               className="bg-primary/5 hover:bg-primary/10 border-primary/20 flex items-center gap-2 rounded-lg border px-3 py-2 transition-all"
@@ -211,7 +227,7 @@ export function ClientFileSidebar({
               <ArrowUpRight className="text-primary/50 size-3" />
             </Link>
           )}
-          {hasRecentPet && !onPetPage && (
+          {hasRecentPet && !onPetDetail && (
             <Link
               href={recentCtx.pet!.href}
               className="bg-primary/5 hover:bg-primary/10 border-primary/20 flex items-center gap-2 rounded-lg border px-3 py-2 transition-all"
@@ -234,38 +250,59 @@ export function ClientFileSidebar({
         <div className="space-y-0.5">
           {sections.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.href, item.matchPrefix);
+            const hasChild = !!item.childItem;
+            // Parent is "active" only if no child detail is shown
+            const active = hasChild
+              ? false
+              : isActive(item.href, item.matchPrefix);
+            // Parent is "expanded" (subtly highlighted) when child is shown
+            const expanded = hasChild;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[12px] font-medium transition-all",
-                  active
-                    ? "bg-foreground/[0.06] text-foreground"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                <Icon
+              <div key={item.href}>
+                <Link
+                  href={item.href}
                   className={cn(
-                    "size-[15px]",
-                    active ? "text-foreground" : "text-muted-foreground/70",
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[12px] font-medium transition-all",
+                    active
+                      ? "bg-foreground/[0.06] text-foreground"
+                      : expanded
+                        ? "text-muted-foreground/80"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
-                />
-                <span className="flex-1">{item.label}</span>
-                {item.count != null && item.count > 0 && (
-                  <span
+                >
+                  <Icon
                     className={cn(
-                      "min-w-[18px] rounded-full px-1 py-px text-center text-[9px] font-semibold",
+                      "size-[15px]",
                       active
-                        ? "bg-foreground/10 text-foreground"
-                        : "bg-muted text-muted-foreground",
+                        ? "text-foreground"
+                        : "text-muted-foreground/70",
                     )}
+                  />
+                  <span className="flex-1">{item.label}</span>
+                  {item.count != null && item.count > 0 && (
+                    <span
+                      className={cn(
+                        "min-w-[18px] rounded-full px-1 py-px text-center text-[9px] font-semibold",
+                        active
+                          ? "bg-foreground/10 text-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </Link>
+                {/* Active child — the specific booking/pet you're viewing */}
+                {item.childItem && (
+                  <Link
+                    href={item.childItem.href}
+                    className="bg-foreground/[0.06] text-foreground ml-5 mt-0.5 flex items-center gap-2 rounded-lg px-2.5 py-[7px] text-[12px] font-medium"
                   >
-                    {item.count}
-                  </span>
+                    <div className="bg-primary size-1.5 rounded-full" />
+                    {item.childItem.label}
+                  </Link>
                 )}
-              </Link>
+              </div>
             );
           })}
         </div>
