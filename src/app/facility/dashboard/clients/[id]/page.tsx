@@ -384,13 +384,6 @@ export default function ClientDetailPage({
     <div className="flex-1 space-y-4 p-4 pt-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/facility/dashboard/clients")}
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
         <div className="flex flex-1 items-center gap-4">
           {/* Client Avatar */}
           <div className="relative">
