@@ -84,6 +84,24 @@ export default function SchedulingSettings() {
     // Grooming
     showGroomingSchedule: true, // Show grooming schedule in main view
 
+    // Custom Modules — coverage rules per active module
+    customModuleCoverage: [
+      {
+        moduleId: "yodas-splash",
+        moduleName: "Yoda's Splash",
+        minStaffPerSession: 1,
+        maxSimultaneousSessions: 4,
+        requiredRole: "pool_staff",
+      },
+      {
+        moduleId: "paws-express",
+        moduleName: "Paws Express",
+        minStaffPerSession: 1,
+        maxSimultaneousSessions: 3,
+        requiredRole: "driver",
+      },
+    ],
+
     // Coverage Thresholds (for heatmap)
     understaffedThreshold: 0.7, // Below 70% of required staff = understaffed
     overstaffedThreshold: 1.3, // Above 130% of required staff = overstaffed

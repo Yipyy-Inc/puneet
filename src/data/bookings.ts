@@ -1175,7 +1175,7 @@ export const bookings: Booking[] = [
           price: 25,
           type: "service",
           taxable: true,
-          moduleId: "csm-aqua-therapy-pool",
+          moduleId: "csm-yodas-splash",
         },
       ],
       fees: [
