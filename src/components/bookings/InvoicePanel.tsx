@@ -175,25 +175,85 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
               ${fmt(invoice.subtotal)}
             </span>
           </div>
-          {invoice.discount > 0 && (
-            <div className="flex justify-between">
+          {/* Itemized discounts or single discount */}
+          {invoice.discounts && invoice.discounts.length > 0
+            ? invoice.discounts.map((d, i) => (
+                <div key={i} className="flex justify-between">
+                  <span className="text-muted-foreground">{d.name}</span>
+                  <span className="font-[tabular-nums] text-emerald-600">
+                    -${fmt(d.price)}
+                  </span>
+                </div>
+              ))
+            : invoice.discount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Discount
+                    {invoice.discountLabel ? ` (${invoice.discountLabel})` : ""}
+                  </span>
+                  <span className="font-[tabular-nums] text-emerald-600">
+                    -${fmt(invoice.discount)}
+                  </span>
+                </div>
+              )}
+          {/* Membership indicator */}
+          {invoice.membershipApplied && (
+            <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">
-                Discount
-                {invoice.discountLabel ? ` (${invoice.discountLabel})` : ""}
+                Membership: {invoice.membershipApplied}
               </span>
-              <span className="font-[tabular-nums] text-green-600">
-                -${fmt(invoice.discount)}
+              <Badge
+                variant="outline"
+                className="border-emerald-200 bg-emerald-50 text-[9px] text-emerald-700"
+              >
+                Applied
+              </Badge>
+            </div>
+          )}
+          {/* Multi-tax breakdown or single tax */}
+          {invoice.taxes && invoice.taxes.length > 0
+            ? invoice.taxes.map((tax, i) => (
+                <div key={i} className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {tax.name} (
+                    {(tax.rate * 100).toFixed(tax.rate < 0.1 ? 1 : 3)}
+                    %)
+                  </span>
+                  <span className="font-[tabular-nums]">
+                    ${fmt(tax.amount)}
+                  </span>
+                </div>
+              ))
+            : invoice.taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Tax ({(invoice.taxRate * 100).toFixed(1)}%)
+                  </span>
+                  <span className="font-[tabular-nums]">
+                    ${fmt(invoice.taxAmount)}
+                  </span>
+                </div>
+              )}
+          {/* Tip */}
+          {invoice.tipTotal && invoice.tipTotal > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tip</span>
+              <span className="font-[tabular-nums]">
+                ${fmt(invoice.tipTotal)}
               </span>
             </div>
           )}
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Tax ({invoice.taxRate}%)
-            </span>
-            <span className="font-[tabular-nums]">
-              ${fmt(invoice.taxAmount)}
-            </span>
-          </div>
+          {/* Package credits */}
+          {invoice.packageCreditsUsed && invoice.packageCreditsUsed > 0 && (
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">
+                Package credits used
+              </span>
+              <span className="font-[tabular-nums]">
+                {invoice.packageCreditsUsed}
+              </span>
+            </div>
+          )}
           <Separator />
           <div className="flex justify-between font-medium">
             <span>Total</span>

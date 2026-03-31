@@ -336,6 +336,48 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       taskGeneration: ["setup", "execution", "cleanup"],
     },
     yipyyGoRequired: true,
+    yipyyGo: {
+      enabled: true,
+      sendBeforeHours: 24,
+      required: true,
+      standardSections: {
+        belongings: true,
+        feeding: false,
+        medications: true,
+        behaviorNotes: true,
+        addOns: true,
+        tip: true,
+      },
+      customSections: [
+        {
+          id: "waiver",
+          name: "Swimming Waiver",
+          icon: "📋",
+          type: "yes_no",
+          required: true,
+          items: [
+            {
+              id: "w1",
+              label:
+                "I confirm my pet is healthy, has no open wounds, and is cleared for swimming",
+              required: true,
+            },
+          ],
+        },
+        {
+          id: "pool-prefs",
+          name: "Pool Preferences",
+          icon: "🏊",
+          type: "checklist",
+          required: false,
+          items: [
+            { id: "p1", label: "Bringing own towel", required: false },
+            { id: "p2", label: "Life jacket needed", required: false },
+            { id: "p3", label: "Warm water preferred", required: false },
+          ],
+        },
+      ],
+    },
     requiresEvaluation: true,
     showInSidebar: true,
     sidebarPosition: 10,
@@ -398,6 +440,63 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       taskGeneration: ["execution"],
     },
     yipyyGoRequired: true,
+    yipyyGo: {
+      enabled: true,
+      sendBeforeHours: 48,
+      required: true,
+      standardSections: {
+        belongings: true,
+        feeding: false,
+        medications: true,
+        behaviorNotes: true,
+        addOns: false,
+        tip: true,
+      },
+      customSections: [
+        {
+          id: "pickup",
+          name: "Pickup Instructions",
+          icon: "📍",
+          type: "text_fields",
+          required: true,
+          items: [
+            {
+              id: "addr",
+              label: "Pickup address",
+              required: true,
+              placeholder: "123 Main St, Apt 4B",
+            },
+            {
+              id: "gate",
+              label: "Gate/buzzer code",
+              required: false,
+              placeholder: "Buzz #42",
+            },
+            {
+              id: "notes",
+              label: "Special pickup instructions",
+              required: false,
+              type: "textarea",
+              placeholder: "Dog will be in the backyard...",
+            },
+          ],
+        },
+        {
+          id: "emergency",
+          name: "Emergency Contact Confirmation",
+          icon: "🚨",
+          type: "yes_no",
+          required: true,
+          items: [
+            {
+              id: "e1",
+              label: "I confirm my emergency contact information is up to date",
+              required: true,
+            },
+          ],
+        },
+      ],
+    },
     requiresEvaluation: false,
     showInSidebar: true,
     sidebarPosition: 20,

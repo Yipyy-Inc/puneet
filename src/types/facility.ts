@@ -622,6 +622,34 @@ export const customServiceCheckInSchema = z.object({
 export type CustomServiceCheckIn = z.infer<typeof customServiceCheckInSchema>;
 
 // ============================================================================
+// YipyyGo Custom Section (used by custom modules)
+// ============================================================================
+
+export interface YipyyGoCustomSectionItem {
+  id: string;
+  label: string;
+  required: boolean;
+  type?: "text" | "checkbox" | "radio" | "file" | "textarea";
+  options?: string[];
+  placeholder?: string;
+}
+
+export interface YipyyGoCustomSection {
+  id: string;
+  name: string;
+  icon?: string;
+  type:
+    | "checklist"
+    | "yes_no"
+    | "text_fields"
+    | "multiple_choice"
+    | "file_upload"
+    | "info_display";
+  required: boolean;
+  items: YipyyGoCustomSectionItem[];
+}
+
+// ============================================================================
 // Custom Service Module (complex — kept as interface)
 // ============================================================================
 
@@ -689,6 +717,20 @@ export interface CustomServiceModule {
     taskGeneration: ("setup" | "execution" | "cleanup")[];
   };
   yipyyGoRequired: boolean;
+  yipyyGo?: {
+    enabled: boolean;
+    sendBeforeHours: number;
+    required: boolean;
+    standardSections: {
+      belongings: boolean;
+      feeding: boolean;
+      medications: boolean;
+      behaviorNotes: boolean;
+      addOns: boolean;
+      tip: boolean;
+    };
+    customSections: YipyyGoCustomSection[];
+  };
   requiresEvaluation: boolean;
   showInSidebar: boolean;
   sidebarPosition: number;
