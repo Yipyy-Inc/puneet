@@ -4,7 +4,11 @@ import { use } from "react";
 import { clients } from "@/data/clients";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 
-export default function ClientAuditPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ClientAuditPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const client = clients.find((c) => c.id === parseInt(id, 10));
   if (!client) return null;

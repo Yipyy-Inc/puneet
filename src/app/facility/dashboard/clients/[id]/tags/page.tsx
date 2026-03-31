@@ -7,7 +7,11 @@ import { NotesList } from "@/components/shared/NotesList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tags, StickyNote } from "lucide-react";
 
-export default function ClientTagsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ClientTagsPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);

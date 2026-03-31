@@ -4,7 +4,12 @@ import { use } from "react";
 import Link from "next/link";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
-import { payments, invoices, customerCredits, giftCards } from "@/data/payments";
+import {
+  payments,
+  invoices,
+  customerCredits,
+  giftCards,
+} from "@/data/payments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Receipt, Gift, Award } from "lucide-react";
@@ -125,7 +130,9 @@ export default function ClientBillingPage({
               <div key={pkg.id} className="rounded-md border p-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">{pkg.name}</p>
-                  <Badge variant={pkg.remainingCredits > 0 ? "default" : "secondary"}>
+                  <Badge
+                    variant={pkg.remainingCredits > 0 ? "default" : "secondary"}
+                  >
                     {pkg.remainingCredits} remaining
                   </Badge>
                 </div>
@@ -138,8 +145,8 @@ export default function ClientBillingPage({
                   />
                 </div>
                 <p className="text-muted-foreground mt-1 text-[11px]">
-                  {pkg.usedCredits} of {pkg.totalCredits} used ·
-                  ${pkg.pricePerCredit}/credit
+                  {pkg.usedCredits} of {pkg.totalCredits} used · $
+                  {pkg.pricePerCredit}/credit
                 </p>
               </div>
             ))}
@@ -171,7 +178,9 @@ export default function ClientBillingPage({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge
-                    variant={b.invoice!.status === "closed" ? "outline" : "secondary"}
+                    variant={
+                      b.invoice!.status === "closed" ? "outline" : "secondary"
+                    }
                     className="text-[10px]"
                   >
                     {b.invoice!.status}

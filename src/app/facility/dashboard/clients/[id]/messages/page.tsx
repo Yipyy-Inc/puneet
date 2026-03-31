@@ -11,7 +11,11 @@ import { MessageSquare, Mail, Phone, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function ClientMessagesPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ClientMessagesPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);
@@ -22,7 +26,10 @@ export default function ClientMessagesPage({ params }: { params: Promise<{ id: s
 
   const messages = clientCommunications
     .filter((c) => c.clientId === clientId)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
 
   const timeAgo = (ts: string) => {
     const diff = now - new Date(ts).getTime();
@@ -36,17 +43,23 @@ export default function ClientMessagesPage({ params }: { params: Promise<{ id: s
 
   const channelIcon = (type: string) => {
     switch (type) {
-      case "email": return <Mail className="size-3" />;
-      case "sms": return <Phone className="size-3" />;
-      default: return <MessageSquare className="size-3" />;
+      case "email":
+        return <Mail className="size-3" />;
+      case "sms":
+        return <Phone className="size-3" />;
+      default:
+        return <MessageSquare className="size-3" />;
     }
   };
 
   const channelColor = (type: string) => {
     switch (type) {
-      case "email": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "sms": return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      default: return "bg-violet-100 text-violet-700 border-violet-200";
+      case "email":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "sms":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      default:
+        return "bg-violet-100 text-violet-700 border-violet-200";
     }
   };
 
@@ -92,21 +105,42 @@ export default function ClientMessagesPage({ params }: { params: Promise<{ id: s
         </CardHeader>
         <CardContent>
           {messages.length === 0 ? (
-            <p className="text-muted-foreground py-8 text-center text-sm">No messages</p>
+            <p className="text-muted-foreground py-8 text-center text-sm">
+              No messages
+            </p>
           ) : (
             <div className="space-y-2">
               {messages.map((msg) => (
-                <div key={msg.id} className="hover:bg-muted/30 flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors">
-                  <div className={cn("mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border", channelColor(msg.type))}>
+                <div
+                  key={msg.id}
+                  className="hover:bg-muted/30 flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors"
+                >
+                  <div
+                    className={cn(
+                      "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border",
+                      channelColor(msg.type),
+                    )}
+                  >
                     {channelIcon(msg.type)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium">{msg.subject || msg.type.toUpperCase()}</span>
-                      <Badge variant="outline" className="text-[9px] capitalize">{msg.direction}</Badge>
-                      <span className="text-muted-foreground ml-auto text-[10px]">{timeAgo(msg.timestamp)}</span>
+                      <span className="text-xs font-medium">
+                        {msg.subject || msg.type.toUpperCase()}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] capitalize"
+                      >
+                        {msg.direction}
+                      </Badge>
+                      <span className="text-muted-foreground ml-auto text-[10px]">
+                        {timeAgo(msg.timestamp)}
+                      </span>
                     </div>
-                    <p className="text-muted-foreground mt-0.5 truncate text-xs">{msg.content}</p>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                      {msg.content}
+                    </p>
                   </div>
                 </div>
               ))}

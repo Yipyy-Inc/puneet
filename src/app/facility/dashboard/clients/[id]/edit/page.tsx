@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-export default function ClientEditPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ClientEditPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const client = clients.find((c) => c.id === parseInt(id, 10));
 
@@ -32,7 +36,9 @@ export default function ClientEditPage({ params }: { params: Promise<{ id: strin
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Contact Information</CardTitle>
+          <CardTitle className="text-sm font-semibold">
+            Contact Information
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -42,12 +48,20 @@ export default function ClientEditPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="grid gap-1.5">
               <Label className="text-xs">Email</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
           </div>
           <div className="grid gap-1.5">
             <Label className="text-xs">Phone</Label>
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
@@ -78,7 +92,10 @@ export default function ClientEditPage({ params }: { params: Promise<{ id: strin
         </CardContent>
       </Card>
 
-      <Button onClick={() => toast.success("Client profile updated")} className="gap-1.5">
+      <Button
+        onClick={() => toast.success("Client profile updated")}
+        className="gap-1.5"
+      >
         Save Changes
       </Button>
     </div>

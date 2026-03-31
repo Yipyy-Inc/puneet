@@ -18,7 +18,11 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getPetAgeDisplay, isPetBirthdayThisWeek, daysUntilBirthday } from "@/lib/pet-utils";
+import {
+  getPetAgeDisplay,
+  isPetBirthdayThisWeek,
+  daysUntilBirthday,
+} from "@/lib/pet-utils";
 
 export default function ClientOverviewPage({
   params,
@@ -106,7 +110,7 @@ export default function ClientOverviewPage({
             <p className="text-[11px] font-medium text-emerald-600">
               Total Spent
             </p>
-            <p className="mt-1 text-2xl font-bold font-[tabular-nums]">
+            <p className="mt-1 font-[tabular-nums] text-2xl font-bold">
               ${totalSpent.toFixed(0)}
             </p>
           </CardContent>
@@ -193,7 +197,10 @@ export default function ClientOverviewPage({
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium">{pet.name}</span>
                       {birthday && (
-                        <span className="text-[10px]" title={`Birthday in ${daysTo} days`}>
+                        <span
+                          className="text-[10px]"
+                          title={`Birthday in ${daysTo} days`}
+                        >
                           🎂
                         </span>
                       )}
@@ -237,9 +244,7 @@ export default function ClientOverviewPage({
           <CardContent className="space-y-2">
             {activeBookings.slice(0, 5).map((b) => {
               const pet = client.pets.find(
-                (p) =>
-                  p.id ===
-                  (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+                (p) => p.id === (Array.isArray(b.petId) ? b.petId[0] : b.petId),
               );
               return (
                 <Link
@@ -267,13 +272,10 @@ export default function ClientOverviewPage({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] capitalize"
-                    >
+                    <Badge variant="outline" className="text-[10px] capitalize">
                       {b.status}
                     </Badge>
-                    <span className="text-sm font-medium font-[tabular-nums]">
+                    <span className="font-[tabular-nums] text-sm font-medium">
                       ${b.totalCost}
                     </span>
                   </div>

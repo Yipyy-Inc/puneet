@@ -88,11 +88,20 @@ function formatDateShort(dateStr: string) {
 function statusConfig(status: string) {
   switch (status) {
     case "completed":
-      return { dot: "bg-emerald-500", bg: "bg-emerald-50 border-emerald-200 text-emerald-700" };
+      return {
+        dot: "bg-emerald-500",
+        bg: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      };
     case "confirmed":
-      return { dot: "bg-blue-500", bg: "bg-blue-50 border-blue-200 text-blue-700" };
+      return {
+        dot: "bg-blue-500",
+        bg: "bg-blue-50 border-blue-200 text-blue-700",
+      };
     case "pending":
-      return { dot: "bg-amber-500", bg: "bg-amber-50 border-amber-200 text-amber-700" };
+      return {
+        dot: "bg-amber-500",
+        bg: "bg-amber-50 border-amber-200 text-amber-700",
+      };
     case "cancelled":
       return { dot: "bg-red-500", bg: "bg-red-50 border-red-200 text-red-700" };
     default:
@@ -178,7 +187,7 @@ export default function ClientBookingDetailPage({
       </div>
 
       {/* ── Hero Header ── */}
-      <div className="rounded-xl border bg-gradient-to-r from-card to-muted/20 p-6">
+      <div className="from-card to-muted/20 rounded-xl border bg-gradient-to-r p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -228,7 +237,7 @@ export default function ClientBookingDetailPage({
         </div>
 
         {/* Action bar — inside the hero */}
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/50 pt-4">
+        <div className="border-border/50 mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
           <Button
             variant="outline"
             size="sm"
@@ -242,7 +251,11 @@ export default function ClientBookingDetailPage({
           {!isCancelled && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs"
+                >
                   <Plus className="size-3.5" />
                   Add Item
                   <ChevronDown className="size-3" />
@@ -274,7 +287,11 @@ export default function ClientBookingDetailPage({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+              >
                 <Printer className="size-3.5" />
                 Print
                 <ChevronDown className="size-3" />
@@ -285,7 +302,9 @@ export default function ClientBookingDetailPage({
                 <FileText className="size-4" />
                 Invoice / Receipt
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.success("Care sheet printed")}>
+              <DropdownMenuItem
+                onClick={() => toast.success("Care sheet printed")}
+              >
                 <ClipboardList className="size-4" />
                 Care Sheet
               </DropdownMenuItem>
@@ -294,14 +313,20 @@ export default function ClientBookingDetailPage({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+              >
                 <Send className="size-3.5" />
                 Send
                 <ChevronDown className="size-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => toast.success("Invoice emailed")}>
+              <DropdownMenuItem
+                onClick={() => toast.success("Invoice emailed")}
+              >
                 <Mail className="size-4" />
                 Email Invoice
               </DropdownMenuItem>
@@ -363,7 +388,9 @@ export default function ClientBookingDetailPage({
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Service</span>
-                    <span className="font-medium capitalize">{booking.service}</span>
+                    <span className="font-medium capitalize">
+                      {booking.service}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Check-in</span>
@@ -398,7 +425,9 @@ export default function ClientBookingDetailPage({
                       <p className="text-muted-foreground mb-1 text-xs">
                         Special Requests
                       </p>
-                      <p className="text-sm italic">{booking.specialRequests}</p>
+                      <p className="text-sm italic">
+                        {booking.specialRequests}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -439,7 +468,12 @@ export default function ClientBookingDetailPage({
                         )}
                       </p>
                       <div className="mt-2">
-                        <TagList entityType="pet" entityId={pet.id} compact maxVisible={3} />
+                        <TagList
+                          entityType="pet"
+                          entityId={pet.id}
+                          compact
+                          maxVisible={3}
+                        />
                       </div>
                     </div>
                   </div>
@@ -541,7 +575,10 @@ export default function ClientBookingDetailPage({
                           Required
                         </Badge>
                       )}
-                      <Badge variant="outline" className="text-[8px] capitalize">
+                      <Badge
+                        variant="outline"
+                        className="text-[8px] capitalize"
+                      >
                         {task.category}
                       </Badge>
                       {task.status === "pending" && (
@@ -594,22 +631,24 @@ export default function ClientBookingDetailPage({
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Base Price</span>
-                      <span className="font-medium font-[tabular-nums]">
+                      <span className="font-[tabular-nums] font-medium">
                         ${booking.basePrice.toFixed(2)}
                       </span>
                     </div>
                     {booking.discount > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Discount</span>
-                        <span className="font-medium font-[tabular-nums] text-emerald-600">
+                        <span className="font-[tabular-nums] font-medium text-emerald-600">
                           -${booking.discount.toFixed(2)}
                         </span>
                       </div>
                     )}
                     {addedSubtotal > 0 && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Added Items</span>
-                        <span className="font-medium font-[tabular-nums] text-amber-600">
+                        <span className="text-muted-foreground">
+                          Added Items
+                        </span>
+                        <span className="font-[tabular-nums] font-medium text-amber-600">
                           +${addedSubtotal.toFixed(2)}
                         </span>
                       </div>

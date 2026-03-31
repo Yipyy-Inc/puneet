@@ -155,7 +155,7 @@ export function ClientFileSidebar({
       </div>
 
       {/* Client card */}
-      <div className="mx-3 mb-3 rounded-xl border bg-gradient-to-b from-muted/40 to-transparent p-4">
+      <div className="from-muted/40 mx-3 mb-3 rounded-xl border bg-gradient-to-b to-transparent p-4">
         <div className="flex items-center gap-3">
           <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-sm">
             {getInitials(client.name)}

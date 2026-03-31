@@ -28,8 +28,7 @@ export default function ClientFileLayout({
 
   // The main /clients/[id] page is the standalone full profile — no sidebar
   // All sub-pages (/overview, /bookings, /billing, etc.) get the sidebar
-  const isStandalonePage =
-    pathname === `/facility/dashboard/clients/${id}`;
+  const isStandalonePage = pathname === `/facility/dashboard/clients/${id}`;
 
   if (isStandalonePage) {
     return <>{children}</>;
