@@ -355,49 +355,95 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
           )}
         </div>
 
-        {/* Apply discount (for open invoices) */}
+        {/* Actions (for non-closed invoices) */}
         {invoice.status !== "closed" && (
           <>
             <Separator />
-            <div className="flex gap-1.5">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 text-[10px]"
-                  >
-                    <Percent className="size-3" />
-                    Discount
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48">
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium">Apply Discount</p>
-                    <Input placeholder="Amount or %" className="h-7 text-xs" />
-                    <Input
-                      placeholder="Reason (e.g. Loyalty 10%)"
-                      className="h-7 text-xs"
-                    />
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button
+                      variant="outline"
                       size="sm"
-                      className="h-7 w-full text-xs"
-                      onClick={() => toast.success("Discount applied")}
+                      className="h-7 gap-1 text-[10px]"
                     >
-                      Apply
+                      <Percent className="size-3" />
+                      Discount
                     </Button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1 text-[10px]"
-                onClick={() => toast.info("Add custom fee")}
-              >
-                <DollarSign className="size-3" />
-                Add Fee
-              </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" align="start" className="w-52">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium">Apply Discount</p>
+                      <Input
+                        placeholder="Amount or %"
+                        className="h-7 text-xs"
+                      />
+                      <Input
+                        placeholder="Reason (e.g. Loyalty 10%)"
+                        className="h-7 text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 w-full text-xs"
+                        onClick={() => toast.success("Discount applied")}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-[10px]"
+                  onClick={() => {
+                    setAddingItem(true);
+                    setNewItemName("");
+                    setNewItemPrice("");
+                  }}
+                >
+                  <DollarSign className="size-3" />
+                  Add Fee
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-[10px]"
+                  onClick={() => {
+                    setAddingItem(true);
+                    setNewItemName("");
+                    setNewItemPrice("");
+                  }}
+                >
+                  <Plus className="size-3" />
+                  Add Product
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-[10px]"
+                  onClick={() =>
+                    toast.success("Store credit applied to invoice")
+                  }
+                >
+                  Use Store Credit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-[10px]"
+                  onClick={() =>
+                    toast.success(
+                      "Membership discount applied — 15% off",
+                    )
+                  }
+                >
+                  Redeem Membership
+                </Button>
+              </div>
             </div>
           </>
         )}
