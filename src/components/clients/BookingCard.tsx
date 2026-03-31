@@ -60,17 +60,12 @@ interface BookingCardProps {
   clientId?: number;
 }
 
-export function BookingCard({
-  booking,
-  pet,
-  clientId,
-}: BookingCardProps) {
+export function BookingCard({ booking, pet, clientId }: BookingCardProps) {
   const sc = statusConfig(booking.status);
   const nights = nightsBetween(booking.startDate, booking.endDate);
   const total = booking.invoice?.total ?? booking.totalCost;
   const cId = clientId ?? booking.clientId;
-  const duration =
-    nights > 0 ? `${nights}n` : "day";
+  const duration = nights > 0 ? `${nights}n` : "day";
 
   return (
     <Link
@@ -114,7 +109,7 @@ export function BookingCard({
 
       {/* Price + payment */}
       <div className="text-right">
-        <p className="text-sm font-semibold font-[tabular-nums]">
+        <p className="font-[tabular-nums] text-sm font-semibold">
           ${total.toFixed(2)}
         </p>
         {booking.paymentStatus === "paid" ? (
