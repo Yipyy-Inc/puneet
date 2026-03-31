@@ -222,20 +222,33 @@ export default function ClientBookingDetailPage({
         </div>
       )}
 
-      {/* Deposit Collected Notice */}
+      {/* Deposit Collected Notice + Continue to Check In */}
       {(invoice?.depositCollected ?? 0) > 0 && !isPaid && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <CheckCircle2 className="size-4 text-emerald-600" />
-          <p className="text-sm text-emerald-800">
-            Deposit collected:{" "}
-            <strong className="font-[tabular-nums]">
-              ${(invoice?.depositCollected ?? 0).toFixed(2)}
-            </strong>{" "}
-            — Remaining balance:{" "}
-            <strong className="font-[tabular-nums]">
-              ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
-            </strong>
-          </p>
+        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 text-emerald-600" />
+            <p className="text-sm text-emerald-800">
+              Deposit collected:{" "}
+              <strong className="font-[tabular-nums]">
+                ${(invoice?.depositCollected ?? 0).toFixed(2)}
+              </strong>{" "}
+              — Remaining balance:{" "}
+              <strong className="font-[tabular-nums]">
+                ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
+              </strong>
+            </p>
+          </div>
+          {booking.status !== "confirmed" && (
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() =>
+                toast.success("Checked in — invoice status changed to Open")
+              }
+            >
+              Continue to Check In
+            </Button>
+          )}
         </div>
       )}
 
@@ -403,8 +416,10 @@ export default function ClientBookingDetailPage({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Deposit — only on estimates */}
-          {invoice?.status === "estimate" && !isCancelled && (
+          {/* Deposit — only on estimates with no deposit yet */}
+          {invoice?.status === "estimate" &&
+            !isCancelled &&
+            (invoice?.depositCollected ?? 0) === 0 && (
             <Button
               variant="outline"
               size="sm"
