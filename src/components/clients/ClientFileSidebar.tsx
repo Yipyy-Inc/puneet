@@ -52,6 +52,14 @@ export function ClientFileSidebar({
     return pathname.startsWith(path);
   };
 
+  // Detect if viewing a specific booking or pet detail
+  const bookingMatch = pathname.match(
+    /\/clients\/\d+\/bookings\/(\d+)/,
+  );
+  const activeBookingId = bookingMatch ? bookingMatch[1] : null;
+  const petMatch = pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+  const activePetId = petMatch ? petMatch[1] : null;
+
   const navItems = [
     { href: base, label: "Overview", icon: User },
     {
@@ -60,6 +68,9 @@ export function ClientFileSidebar({
       count: petCount,
       icon: PawPrint,
       matchPrefix: `${base}/pets`,
+      subItem: activePetId
+        ? { href: pathname, label: `Pet #${activePetId}` }
+        : undefined,
     },
     {
       href: `${base}/bookings`,
@@ -67,6 +78,9 @@ export function ClientFileSidebar({
       count: bookingCount,
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
+      subItem: activeBookingId
+        ? { href: pathname, label: `Booking #${activeBookingId}` }
+        : undefined,
     },
     { href: `${base}/billing`, label: "Billing", icon: DollarSign },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
@@ -168,31 +182,42 @@ export function ClientFileSidebar({
               ? pathname.startsWith(item.matchPrefix)
               : isActive(item.href);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all",
-                  active
-                    ? "bg-primary/10 text-primary shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                <Icon className={cn("size-4", active && "text-primary")} />
-                <span className="flex-1">{item.label}</span>
-                {item.count != null && item.count > 0 && (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
-                      active
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all",
+                    active
+                      ? "bg-primary/10 text-primary shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  )}
+                >
+                  <Icon className={cn("size-4", active && "text-primary")} />
+                  <span className="flex-1">{item.label}</span>
+                  {item.count != null && item.count > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                        active
+                          ? "bg-primary/20 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </Link>
+                {/* Sub-item: current booking/pet detail */}
+                {item.subItem && (
+                  <Link
+                    href={item.subItem.href}
+                    className="text-primary bg-primary/5 ml-6 mt-0.5 flex items-center gap-2 rounded-md border-l-2 border-primary/30 px-3 py-1.5 text-[12px] font-medium"
                   >
-                    {item.count}
-                  </span>
+                    <span className="bg-primary size-1.5 rounded-full" />
+                    {item.subItem.label}
+                  </Link>
                 )}
-              </Link>
+              </div>
             );
           })}
         </div>
