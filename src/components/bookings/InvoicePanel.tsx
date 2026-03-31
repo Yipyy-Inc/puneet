@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Receipt, Plus, X, Percent, DollarSign } from "lucide-react";
+import { Receipt, Plus, X, Pencil, Percent, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import type { Invoice } from "@/types/booking";
 
@@ -68,31 +68,48 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 </Button>
               )}
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {invoice.items.map((item, i) => (
                 <div
                   key={i}
-                  className="group flex items-start justify-between text-sm"
+                  className="group -mx-2 flex items-start justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40"
                 >
                   <div className="min-w-0 flex-1">
-                    <p>{item.name}</p>
+                    <p className="text-sm">{item.name}</p>
                     <p className="text-muted-foreground text-xs">
                       ${fmt(item.unitPrice)} x {item.quantity}
+                      {item.staffName && (
+                        <span className="ml-1">· {item.staffName}</span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="font-[tabular-nums]">
+                    <span className="text-sm font-[tabular-nums]">
                       ${fmt(item.price)}
                     </span>
                     {invoice.status !== "closed" && (
-                      <button
-                        className="text-muted-foreground hover:text-destructive hidden size-4 items-center justify-center rounded group-hover:flex"
-                        onClick={() =>
-                          toast.info(`Remove "${item.name}" from invoice`)
-                        }
-                      >
-                        <X className="size-3" />
-                      </button>
+                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button
+                          className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded"
+                          onClick={() =>
+                            toast.info(
+                              `Edit "${item.name}" — change price, quantity, or staff`,
+                            )
+                          }
+                          title="Edit"
+                        >
+                          <Pencil className="size-3" />
+                        </button>
+                        <button
+                          className="text-muted-foreground hover:text-destructive flex size-5 items-center justify-center rounded"
+                          onClick={() =>
+                            toast.info(`Remove "${item.name}" from invoice`)
+                          }
+                          title="Delete"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
