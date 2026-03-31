@@ -88,7 +88,13 @@ export function PaymentCheckoutFlow({
     setTipAmount(parseFloat(val) || 0);
   };
 
+  const [confirming, setConfirming] = useState(false);
+
   const handleConfirm = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
     onConfirm({
       method,
       amount: remaining,
@@ -97,6 +103,7 @@ export function PaymentCheckoutFlow({
       changeAmount: isCash ? change : 0,
     });
     onOpenChange(false);
+    setConfirming(false);
     toast.success(`Payment of $${remaining.toFixed(2)} processed`);
   };
 
@@ -328,17 +335,38 @@ export function PaymentCheckoutFlow({
           </div>
         </div>
 
+        {confirming && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Please review all details — date, time, staff, services,
+            discounts, and tips — before confirming payment.
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Back to Invoice
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (confirming) {
+                setConfirming(false);
+              } else {
+                onOpenChange(false);
+              }
+            }}
+          >
+            {confirming ? "Go Back" : "Back to Invoice"}
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isCash && cashNum < remaining}
-            className="gap-1.5"
+            className={cn(
+              "gap-1.5",
+              confirming && "bg-emerald-600 hover:bg-emerald-700",
+            )}
           >
             <Check className="size-4" />
-            Checkout & Charge ${remaining.toFixed(2)}
+            {confirming
+              ? `Confirm & Charge $${remaining.toFixed(2)}`
+              : `Checkout & Charge $${remaining.toFixed(2)}`}
           </Button>
         </DialogFooter>
       </DialogContent>
