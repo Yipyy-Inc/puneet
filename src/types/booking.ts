@@ -207,6 +207,12 @@ export const invoiceLineItemSchema = z.object({
   unitPrice: z.number(),
   quantity: z.number(),
   price: z.number(),
+  type: z
+    .enum(["service", "product", "addon", "discount", "tip", "package_credit"])
+    .optional(),
+  taxable: z.boolean().optional(), // defaults to true for services/products
+  moduleId: z.string().optional(), // links to custom module
+  staffName: z.string().optional(), // for tips assigned to staff
 });
 export type InvoiceLineItem = z.infer<typeof invoiceLineItemSchema>;
 
@@ -214,11 +220,19 @@ export const invoicePaymentSchema = z.object({
   date: z.string(),
   method: z.string(),
   amount: z.number(),
+  transactionId: z.string().optional(),
 });
 export type InvoicePayment = z.infer<typeof invoicePaymentSchema>;
 
 export const invoiceStatusEnum = z.enum(["estimate", "open", "closed"]);
 export type InvoiceStatus = z.infer<typeof invoiceStatusEnum>;
+
+export const invoiceTaxLineSchema = z.object({
+  name: z.string(), // "GST", "QST", "Sales Tax"
+  rate: z.number(), // 0.05
+  amount: z.number(),
+});
+export type InvoiceTaxLine = z.infer<typeof invoiceTaxLineSchema>;
 
 export const invoiceSchema = z.object({
   id: z.string(),
@@ -228,12 +242,17 @@ export const invoiceSchema = z.object({
   subtotal: z.number(),
   discount: z.number(),
   discountLabel: z.string().optional(),
+  discounts: z.array(invoiceLineItemSchema).optional(), // itemized discounts
   taxRate: z.number(),
   taxAmount: z.number(),
+  taxes: z.array(invoiceTaxLineSchema).optional(), // multi-tax breakdown
   total: z.number(),
   depositCollected: z.number(),
   remainingDue: z.number(),
   payments: z.array(invoicePaymentSchema),
+  membershipApplied: z.string().optional(), // "Gold — 15%"
+  packageCreditsUsed: z.number().optional(),
+  tipTotal: z.number().optional(),
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
 

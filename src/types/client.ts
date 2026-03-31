@@ -21,6 +21,34 @@ export const emergencyContactSchema = z.object({
   email: z.string().email().optional(),
 });
 
+export const membershipSchema = z.object({
+  plan: z.string(),
+  status: z.enum(["active", "expired", "cancelled"]),
+  startDate: z.string(),
+  expiryDate: z.string(),
+  benefits: z.object({
+    discountPercent: z.number().optional(),
+    includedServices: z
+      .array(z.object({ moduleId: z.string(), quantity: z.number() }))
+      .optional(),
+    freeAddOns: z.array(z.string()).optional(),
+  }),
+});
+export type Membership = z.infer<typeof membershipSchema>;
+
+export const packageSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  moduleId: z.string(),
+  totalCredits: z.number(),
+  usedCredits: z.number(),
+  remainingCredits: z.number(),
+  purchaseDate: z.string(),
+  expiryDate: z.string().optional(),
+  pricePerCredit: z.number(),
+});
+export type ClientPackage = z.infer<typeof packageSchema>;
+
 export const clientSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -32,6 +60,8 @@ export const clientSchema = z.object({
   pets: z.custom<Pet[]>(),
   address: addressSchema.optional(),
   emergencyContact: emergencyContactSchema.optional(),
+  membership: membershipSchema.optional(),
+  packages: z.array(packageSchema).optional(),
 });
 
 export type Client = z.infer<typeof clientSchema>;
