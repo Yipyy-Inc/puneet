@@ -23,6 +23,11 @@ import {
   ShieldCheck,
   RotateCcw,
   XCircle,
+  Circle,
+  CircleDot,
+  CheckCircle2,
+  SkipForward,
+  ListChecks,
 } from "lucide-react";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
@@ -67,6 +72,14 @@ import { cn } from "@/lib/utils";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { toast } from "sonner";
 import type { InvoiceLineItem } from "@/types/booking";
+import type { GeneratedTask } from "@/types/task";
+import {
+  getTasksForBooking,
+  completeTask,
+  startTask,
+  skipTask,
+  addCustomTask,
+} from "@/data/generated-tasks";
 
 // ========================================
 // Helpers
@@ -120,6 +133,263 @@ function InfoRow({
       <span className="text-muted-foreground text-sm">{label}</span>
       <span className="text-right text-sm font-medium">{children}</span>
     </div>
+  );
+}
+
+// ========================================
+// Booking Tasks Section
+// ========================================
+
+function BookingTasksSection({
+  bookingId,
+  moduleId,
+  petName,
+  ownerName,
+}: {
+  bookingId: number;
+  moduleId: string;
+  petName: string;
+  ownerName: string;
+}) {
+  const [tasks, setTasks] = useState<GeneratedTask[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [now] = useState(() => Date.now());
+
+  // Load tasks on mount
+  useEffect(() => {
+    setTasks(getTasksForBooking(bookingId));
+  }, [bookingId]);
+
+  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const requiredRemaining = tasks.filter(
+    (t) => t.isRequired && t.status !== "completed" && t.status !== "skipped",
+  ).length;
+
+  const handleComplete = (taskId: string) => {
+    completeTask(taskId, "You");
+    setTasks(getTasksForBooking(bookingId));
+    toast.success("Task completed");
+  };
+
+  const handleStart = (taskId: string) => {
+    startTask(taskId);
+    setTasks(getTasksForBooking(bookingId));
+  };
+
+  const handleSkip = (taskId: string) => {
+    skipTask(taskId);
+    setTasks(getTasksForBooking(bookingId));
+  };
+
+  const handleAddCustom = () => {
+    if (!customName.trim()) return;
+    addCustomTask({
+      id: `task-custom-${Date.now()}`,
+      bookingId,
+      moduleId,
+      templateId: "custom",
+      name: customName,
+      category: "custom",
+      scheduledAt: new Date().toISOString(),
+      status: "pending",
+      isRequired: false,
+      petName,
+      ownerName,
+    });
+    setCustomName("");
+    setShowAddForm(false);
+    setTasks(getTasksForBooking(bookingId));
+    toast.success("Custom task added");
+  };
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle2 className="size-4 text-emerald-500" />;
+      case "in_progress":
+        return <CircleDot className="size-4 text-blue-500" />;
+      case "skipped":
+        return <SkipForward className="text-muted-foreground size-4" />;
+      default:
+        return <Circle className="text-muted-foreground/40 size-4" />;
+    }
+  };
+
+  return (
+    <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <ListChecks className="size-4" />
+            Tasks
+            <Badge variant="secondary" className="text-[10px]">
+              {completedCount}/{tasks.length}
+            </Badge>
+            {requiredRemaining > 0 && (
+              <Badge
+                variant="outline"
+                className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+              >
+                {requiredRemaining} required remaining
+              </Badge>
+            )}
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            onClick={() => setShowAddForm(true)}
+          >
+            <Plus className="size-3" />
+            Add Task
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Add custom task form */}
+        {showAddForm && (
+          <div className="animate-in fade-in mb-3 flex gap-2 duration-150">
+            <Input
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="Custom task name..."
+              className="h-8 flex-1 text-xs"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddCustom();
+                if (e.key === "Escape") setShowAddForm(false);
+              }}
+            />
+            <Button
+              size="sm"
+              className="h-8 text-xs"
+              onClick={handleAddCustom}
+              disabled={!customName.trim()}
+            >
+              Add
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setShowAddForm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        {tasks.length === 0 ? (
+          <p className="text-muted-foreground py-4 text-center text-xs">
+            No tasks generated for this booking
+          </p>
+        ) : (
+          <div className="space-y-1">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className={cn(
+                  "group flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors",
+                  task.status === "completed" && "opacity-60",
+                  task.status !== "completed" &&
+                    task.status !== "skipped" &&
+                    "hover:bg-muted/50",
+                )}
+              >
+                {/* Status icon — clickable to complete */}
+                <button
+                  onClick={() => {
+                    if (task.status === "pending") handleStart(task.id);
+                    else if (task.status === "in_progress")
+                      handleComplete(task.id);
+                  }}
+                  disabled={
+                    task.status === "completed" || task.status === "skipped"
+                  }
+                  className="shrink-0"
+                >
+                  {statusIcon(task.status)}
+                </button>
+
+                {/* Task info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        task.status === "completed" && "line-through",
+                      )}
+                    >
+                      {task.name}
+                    </span>
+                    {task.isRequired && task.status !== "completed" && (
+                      <Badge
+                        variant="outline"
+                        className="border-red-200 bg-red-50 text-[8px] text-red-600"
+                      >
+                        Required
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-[8px] capitalize">
+                      {task.category}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-[10px]">
+                    {formatTime(task.scheduledAt)}
+                    {task.assignedTo && ` · ${task.assignedTo}`}
+                    {task.durationMinutes && ` · ${task.durationMinutes}min`}
+                    {task.completedBy && ` · Done by ${task.completedBy}`}
+                  </p>
+                </div>
+
+                {/* Quick actions */}
+                {task.status === "pending" && (
+                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px]"
+                      onClick={() => handleComplete(task.id)}
+                    >
+                      Done
+                    </Button>
+                    {!task.isRequired && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground h-6 text-[10px]"
+                        onClick={() => handleSkip(task.id)}
+                      >
+                        Skip
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {task.status === "in_progress" && (
+                  <Button
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => handleComplete(task.id)}
+                  >
+                    Complete
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -676,6 +946,14 @@ export default function FacilityBookingDetailPage({
               <BookingNotes />
             </CardContent>
           </Card>
+
+          {/* Tasks */}
+          <BookingTasksSection
+            bookingId={bookingId}
+            moduleId={booking.service?.toLowerCase() ?? "daycare"}
+            petName={pet?.name ?? "Pet"}
+            ownerName={client?.name ?? "Owner"}
+          />
 
           {/* Forms & Compliance */}
           {formRequirementsCheck && (
