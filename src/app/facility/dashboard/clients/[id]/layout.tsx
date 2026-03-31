@@ -1,15 +1,20 @@
+"use client";
+
+import { use } from "react";
+import { usePathname } from "next/navigation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { ClientFileSidebar } from "@/components/clients/ClientFileSidebar";
 
-export default async function ClientFileLayout({
+export default function ClientFileLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id } = use(params);
+  const pathname = usePathname();
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);
 
@@ -19,6 +24,13 @@ export default async function ClientFileLayout({
         <p className="text-muted-foreground">Client not found.</p>
       </div>
     );
+  }
+
+  // Only show sidebar on sub-pages, NOT on the main overview page
+  const isOverview = pathname === `/facility/dashboard/clients/${id}`;
+
+  if (isOverview) {
+    return <>{children}</>;
   }
 
   const bookingCount = bookings.filter((b) => b.clientId === clientId).length;
