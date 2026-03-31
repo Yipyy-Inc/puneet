@@ -51,6 +51,7 @@ import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
+import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
@@ -152,6 +153,7 @@ export default function ClientBookingDetailPage({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [estimateOpen, setEstimateOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
@@ -314,39 +316,15 @@ export default function ClientBookingDetailPage({
                 <FileText className="size-3.5" />
                 View Estimate
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                  >
-                    <Send className="size-3.5" />
-                    Send Estimate
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toast.success(
-                        `Estimate emailed to ${client.email}`,
-                      )
-                    }
-                  >
-                    <Mail className="size-4" />
-                    Email Estimate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      toast.success("SMS estimate link sent")
-                    }
-                  >
-                    <Smartphone className="size-4" />
-                    SMS Estimate Link
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setEstimateOpen(true)}
+              >
+                <Send className="size-3.5" />
+                Send Estimate
+              </Button>
             </>
           )}
 
@@ -866,6 +844,21 @@ export default function ClientBookingDetailPage({
         ruleLabel={`50% of total ($${(booking.totalCost * 0.5).toFixed(2)})`}
         onCharge={(amount, method) => {
           toast.success(`Deposit of $${amount.toFixed(2)} charged via ${method}`);
+        }}
+      />
+      <SendEstimateModal
+        open={estimateOpen}
+        onOpenChange={setEstimateOpen}
+        clientName={client.name}
+        clientEmail={client.email}
+        clientPhone={client.phone}
+        subtotal={invoice?.subtotal ?? booking.totalCost}
+        discount={invoice?.discount ?? booking.discount}
+        taxAmount={invoice?.taxAmount ?? 0}
+        total={invoice?.total ?? booking.totalCost}
+        depositRequired={Math.round(booking.totalCost * 0.5 * 100) / 100}
+        onApplyDiscount={(amount, reason) => {
+          toast.success(`Discount applied: $${amount.toFixed(2)} — ${reason}`);
         }}
       />
     </div>
