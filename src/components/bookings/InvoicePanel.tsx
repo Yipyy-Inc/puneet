@@ -33,6 +33,10 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
   const [addingItem, setAddingItem] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [newItemPrice, setNewItemPrice] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editStaff, setEditStaff] = useState("");
 
   return (
     <Card className="sticky top-20">
@@ -69,51 +73,108 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
               )}
             </div>
             <div className="space-y-1">
-              {invoice.items.map((item, i) => (
-                <div
-                  key={i}
-                  className="group -mx-2 flex items-start justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm">{item.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      ${fmt(item.unitPrice)} x {item.quantity}
-                      {item.staffName && (
-                        <span className="ml-1">· {item.staffName}</span>
+              {invoice.items.map((item, i) =>
+                editingIndex === i ? (
+                  <div
+                    key={i}
+                    className="animate-in fade-in -mx-2 space-y-2 rounded-md border border-dashed bg-muted/20 px-2 py-2 duration-150"
+                  >
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Service name"
+                      className="h-7 text-xs"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                        placeholder="Price"
+                        className="h-7 w-20 text-xs"
+                        min={0}
+                        step={0.01}
+                      />
+                      <Input
+                        value={editStaff}
+                        onChange={(e) => setEditStaff(e.target.value)}
+                        placeholder="Staff name"
+                        className="h-7 flex-1 text-xs"
+                      />
+                    </div>
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-6 text-[10px]"
+                        onClick={() => {
+                          toast.success(
+                            `Updated "${editName}" — $${editPrice}${editStaff ? ` · ${editStaff}` : ""}`,
+                          );
+                          setEditingIndex(null);
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px]"
+                        onClick={() => setEditingIndex(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={i}
+                    className="group -mx-2 flex items-start justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm">{item.name}</p>
+                      <p className="text-muted-foreground text-xs">
+                        ${fmt(item.unitPrice)} x {item.quantity}
+                        {item.staffName && (
+                          <span className="ml-1">· {item.staffName}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-[tabular-nums]">
+                        ${fmt(item.price)}
+                      </span>
+                      {invoice.status !== "closed" && (
+                        <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded"
+                            onClick={() => {
+                              setEditingIndex(i);
+                              setEditName(item.name);
+                              setEditPrice(String(item.price));
+                              setEditStaff(item.staffName ?? "");
+                            }}
+                            title="Edit"
+                          >
+                            <Pencil className="size-3" />
+                          </button>
+                          <button
+                            className="text-muted-foreground hover:text-destructive flex size-5 items-center justify-center rounded"
+                            onClick={() =>
+                              toast.success(
+                                `"${item.name}" removed from invoice`,
+                              )
+                            }
+                            title="Delete"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-[tabular-nums]">
-                      ${fmt(item.price)}
-                    </span>
-                    {invoice.status !== "closed" && (
-                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded"
-                          onClick={() =>
-                            toast.info(
-                              `Edit "${item.name}" — change price, quantity, or staff`,
-                            )
-                          }
-                          title="Edit"
-                        >
-                          <Pencil className="size-3" />
-                        </button>
-                        <button
-                          className="text-muted-foreground hover:text-destructive flex size-5 items-center justify-center rounded"
-                          onClick={() =>
-                            toast.info(`Remove "${item.name}" from invoice`)
-                          }
-                          title="Delete"
-                        >
-                          <X className="size-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         )}
