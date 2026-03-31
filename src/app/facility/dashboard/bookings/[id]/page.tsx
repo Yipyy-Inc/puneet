@@ -499,6 +499,16 @@ export default function FacilityBookingDetailPage({
     () => initialBookings.find((b) => b.id === bookingId),
     [bookingId],
   );
+
+  // Redirect to client-nested route for full context
+  useEffect(() => {
+    if (booking?.clientId) {
+      router.replace(
+        `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
+      );
+    }
+  }, [booking, router]);
+
   const client = useMemo(
     () => (booking ? clients.find((c) => c.id === booking.clientId) : null),
     [booking],

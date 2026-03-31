@@ -860,7 +860,9 @@ export default function FacilityBookingsPage() {
                 searchPlaceholder={"Search by booking ID, client, or pet..."}
                 itemsPerPage={15}
                 onRowClick={(booking) =>
-                  router.push(`/facility/dashboard/bookings/${booking.id}`)
+                  router.push(
+                    `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
+                  )
                 }
               />
             )}
