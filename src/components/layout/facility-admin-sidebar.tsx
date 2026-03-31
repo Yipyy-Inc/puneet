@@ -31,6 +31,7 @@ import {
   GraduationCap,
   ClipboardList,
   LayoutTemplate,
+  Plus,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -162,6 +163,12 @@ export function FacilitySidebar() {
             disabled: false,
           },
           ...customServiceItems,
+          {
+            title: "+ Request Module",
+            url: "/facility/dashboard/modules/request",
+            icon: Plus,
+            disabled: false,
+          },
         ],
       },
       {

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { ModuleRequestsInbox } from "@/components/admin/ModuleRequestsInbox";
 import { facilities } from "@/data/facilities";
 import {
   Card,
@@ -561,6 +562,11 @@ export default function DashboardPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Module Requests */}
+      <div className="mb-8">
+        <ModuleRequestsInbox />
       </div>
 
       {/* Key Metrics */}
