@@ -90,7 +90,7 @@ const SECTION_TYPES = [
 // ========================================
 
 interface YipyyGoConfigStepProps {
-  module: CustomServiceModule;
+  data: CustomServiceModule;
   onChange: (updates: Partial<CustomServiceModule>) => void;
 }
 
@@ -99,11 +99,11 @@ interface YipyyGoConfigStepProps {
 // ========================================
 
 export function YipyyGoConfigStep({
-  module,
+  data,
   onChange,
 }: YipyyGoConfigStepProps) {
-  const yipyyGo = module.yipyyGo ?? {
-    enabled: module.yipyyGoRequired,
+  const yipyyGo = data.yipyyGo ?? {
+    enabled: data.yipyyGoRequired,
     sendBeforeHours: 24,
     required: true,
     standardSections: {
