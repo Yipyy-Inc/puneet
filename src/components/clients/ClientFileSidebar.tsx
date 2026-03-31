@@ -59,15 +59,20 @@ export function ClientFileSidebar({
   const [recentCtx, setRecentCtx] = useState<{
     booking: { id: string; href: string } | null;
     pet: { id: string; href: string } | null;
-  }>(() => {
-    if (typeof window === "undefined") return { booking: null, pet: null };
+  }>({ booking: null, pet: null });
+
+  // Restore from sessionStorage after mount to avoid hydration mismatch
+  useEffect(() => {
     try {
       const s = sessionStorage.getItem(storageKey);
-      return s ? JSON.parse(s) : { booking: null, pet: null };
+      if (s) {
+        const parsed = JSON.parse(s);
+        requestAnimationFrame(() => setRecentCtx(parsed));
+      }
     } catch {
-      return { booking: null, pet: null };
+      /* ignore */
     }
-  });
+  }, [storageKey]);
 
   useEffect(() => {
     const bm = pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
