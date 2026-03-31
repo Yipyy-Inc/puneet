@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -52,13 +53,39 @@ export function ClientFileSidebar({
     return pathname.startsWith(path);
   };
 
-  // Detect if viewing a specific booking or pet detail
-  const bookingMatch = pathname.match(
+  // Detect and REMEMBER the last viewed booking/pet within this client
+  const [lastVisited, setLastVisited] = useState<{
+    booking: { id: string; href: string } | null;
+    pet: { id: string; href: string } | null;
+  }>({ booking: null, pet: null });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const bMatch = pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
+    const pMatch = pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+    if (bMatch || pMatch) {
+      // Use requestAnimationFrame to avoid synchronous setState in effect
+      requestAnimationFrame(() => {
+        setLastVisited((prev) => ({
+          booking: bMatch ? { id: bMatch[1], href: pathname } : prev.booking,
+          pet: pMatch ? { id: pMatch[1], href: pathname } : prev.pet,
+        }));
+      });
+    }
+  }, [pathname]);
+
+  const currentBookingMatch = pathname.match(
     /\/clients\/\d+\/bookings\/(\d+)/,
   );
-  const activeBookingId = bookingMatch ? bookingMatch[1] : null;
-  const petMatch = pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
-  const activePetId = petMatch ? petMatch[1] : null;
+  const currentPetMatch = pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+
+  // Use current match OR last remembered
+  const activeBooking = currentBookingMatch
+    ? { id: currentBookingMatch[1], href: pathname }
+    : lastVisited.booking;
+  const activePet = currentPetMatch
+    ? { id: currentPetMatch[1], href: pathname }
+    : lastVisited.pet;
 
   const navItems = [
     { href: base, label: "Overview", icon: User },
@@ -68,8 +95,8 @@ export function ClientFileSidebar({
       count: petCount,
       icon: PawPrint,
       matchPrefix: `${base}/pets`,
-      subItem: activePetId
-        ? { href: pathname, label: `Pet #${activePetId}` }
+      subItem: activePet
+        ? { href: activePet.href, label: `Pet #${activePet.id}` }
         : undefined,
     },
     {
@@ -78,8 +105,11 @@ export function ClientFileSidebar({
       count: bookingCount,
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
-      subItem: activeBookingId
-        ? { href: pathname, label: `Booking #${activeBookingId}` }
+      subItem: activeBooking
+        ? {
+            href: activeBooking.href,
+            label: `Booking #${activeBooking.id}`,
+          }
         : undefined,
     },
     { href: `${base}/billing`, label: "Billing", icon: DollarSign },
