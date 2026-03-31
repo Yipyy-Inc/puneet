@@ -377,7 +377,40 @@ export default function ClientBookingDetailPage({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => window.print()}>
+              <DropdownMenuItem
+                onClick={() => {
+                  const inv = invoice;
+                  const w = window.open("", "_blank", "width=600,height=800");
+                  if (!w) return;
+                  w.document.write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? booking.id}</title>
+<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
+h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
+.row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
+.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
+.row.sub{color:#666}.header{border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px}
+.section{margin-top:16px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.footer{margin-top:30px;text-align:center;font-size:11px;color:#999}
+@media print{body{padding:20px}}</style></head><body>
+<div class="header"><h1>Invoice ${inv?.id ?? `#${booking.id}`}</h1>
+<h2>${client.name} · ${pet?.name ?? "Pet"} · ${booking.service}</h2></div>
+<div class="section">Services</div>
+${(inv?.items ?? [{ name: booking.service, unitPrice: booking.basePrice, quantity: 1, price: booking.totalCost }])
+  .map((item) => `<div class="row"><span>${item.name}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`)
+  .join("")}
+${(inv?.fees ?? []).map((f) => `<div class="row sub"><span>${f.name}</span><span>$${f.price.toFixed(2)}</span></div>`).join("")}
+<div class="row sub"><span>Subtotal</span><span>$${(inv?.subtotal ?? booking.totalCost).toFixed(2)}</span></div>
+${(inv?.discount ?? 0) > 0 ? `<div class="row sub"><span>Discount${inv?.discountLabel ? ` (${inv.discountLabel})` : ""}</span><span>-$${(inv?.discount ?? 0).toFixed(2)}</span></div>` : ""}
+${(inv?.taxes ?? []).map((t) => `<div class="row sub"><span>${t.name} (${(t.rate * 100).toFixed(t.rate < 0.1 ? 1 : 3)}%)</span><span>$${t.amount.toFixed(2)}</span></div>`).join("")}
+${!inv?.taxes?.length && (inv?.taxAmount ?? 0) > 0 ? `<div class="row sub"><span>Tax</span><span>$${(inv?.taxAmount ?? 0).toFixed(2)}</span></div>` : ""}
+<div class="row total"><span>Total</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
+${(inv?.depositCollected ?? 0) > 0 ? `<div class="row sub"><span>Deposit Paid</span><span>-$${(inv?.depositCollected ?? 0).toFixed(2)}</span></div><div class="row"><span>Remaining</span><span>$${(inv?.remainingDue ?? 0).toFixed(2)}</span></div>` : ""}
+${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
+<div class="footer">Thank you for choosing us!<br>Example Pet Care Facility</div>
+</body></html>`);
+                  w.document.close();
+                  w.print();
+                }}
+              >
                 <FileText className="size-4" />
                 Invoice / Receipt
               </DropdownMenuItem>
