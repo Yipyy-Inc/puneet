@@ -38,6 +38,231 @@ import { bookings } from "@/data/bookings";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { CustomReportBuilder } from "@/components/reports/CustomReportBuilder";
 import { ExportReportModal } from "@/components/reports/ExportReportModal";
+import {
+  getRevenueByService,
+  getStaffTimeByService,
+} from "@/lib/analytics-utils";
+import { Separator } from "@/components/ui/separator";
+
+// ========================================
+// Revenue by Service Section
+// ========================================
+
+function RevenueByServiceSection({ facilityId }: { facilityId: number }) {
+  const revenueData = getRevenueByService(facilityId);
+  const staffData = getStaffTimeByService(facilityId);
+  const totalRevenue = revenueData.reduce((s, r) => s + r.revenue, 0);
+  const totalBookings = revenueData.reduce((s, r) => s + r.bookings, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-sm">Total Revenue</p>
+            <p className="mt-1 font-[tabular-nums] text-2xl font-bold">
+              $
+              {totalRevenue.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-sm">Total Bookings</p>
+            <p className="mt-1 text-2xl font-bold">{totalBookings}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-sm">Avg per Booking</p>
+            <p className="mt-1 font-[tabular-nums] text-2xl font-bold">
+              $
+              {totalBookings > 0
+                ? (totalRevenue / totalBookings).toFixed(2)
+                : "0.00"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Revenue by service table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">
+            Revenue by Service
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1">
+            {/* Header */}
+            <div className="text-muted-foreground grid grid-cols-5 gap-4 border-b px-3 pb-2 text-xs font-semibold">
+              <span className="col-span-2">Service</span>
+              <span className="text-right">Revenue</span>
+              <span className="text-right">Bookings</span>
+              <span className="text-right">Avg/Booking</span>
+            </div>
+            {/* Rows */}
+            {revenueData.map((row) => {
+              const pct =
+                totalRevenue > 0
+                  ? Math.round((row.revenue / totalRevenue) * 100)
+                  : 0;
+              return (
+                <div
+                  key={row.service}
+                  className="hover:bg-muted/30 grid grid-cols-5 items-center gap-4 rounded-md px-3 py-2.5 transition-colors"
+                >
+                  <div className="col-span-2 flex items-center gap-2">
+                    <div
+                      className="size-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: row.color }}
+                    />
+                    <span className="text-sm font-medium">{row.service}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {pct}%
+                    </span>
+                  </div>
+                  <span className="text-right font-[tabular-nums] text-sm font-medium">
+                    $
+                    {row.revenue.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>
+                  <span className="text-right font-[tabular-nums] text-sm">
+                    {row.bookings}
+                  </span>
+                  <span className="text-muted-foreground text-right font-[tabular-nums] text-sm">
+                    ${row.avgPerBooking.toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+            {/* Total row */}
+            <Separator />
+            <div className="grid grid-cols-5 gap-4 px-3 pt-2 text-sm font-semibold">
+              <span className="col-span-2">Total</span>
+              <span className="text-right font-[tabular-nums]">
+                $
+                {totalRevenue.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+              <span className="text-right font-[tabular-nums]">
+                {totalBookings}
+              </span>
+              <span />
+            </div>
+          </div>
+
+          {/* Revenue bar visualization */}
+          <div className="mt-6">
+            <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
+              Revenue Distribution
+            </p>
+            <div className="flex h-6 overflow-hidden rounded-full">
+              {revenueData.map((row) => {
+                const pct =
+                  totalRevenue > 0 ? (row.revenue / totalRevenue) * 100 : 0;
+                if (pct < 1) return null;
+                return (
+                  <div
+                    key={row.service}
+                    className="transition-all"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: row.color,
+                    }}
+                    title={`${row.service}: $${row.revenue.toFixed(2)} (${pct.toFixed(0)}%)`}
+                  />
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {revenueData.map((row) => (
+                <div key={row.service} className="flex items-center gap-1.5">
+                  <div
+                    className="size-2.5 rounded-full"
+                    style={{ backgroundColor: row.color }}
+                  />
+                  <span className="text-muted-foreground text-xs">
+                    {row.service}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Staff Time by Service */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold">
+            Staff Time by Service
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-1">
+            <div className="text-muted-foreground grid grid-cols-5 gap-4 border-b px-3 pb-2 text-xs font-semibold">
+              <span className="col-span-2">Service</span>
+              <span className="text-right">Hours</span>
+              <span className="text-right">% of Total</span>
+              <span className="text-right">Staff</span>
+            </div>
+            {staffData.map((row) => (
+              <div
+                key={row.service}
+                className="hover:bg-muted/30 grid grid-cols-5 items-center gap-4 rounded-md px-3 py-2.5 transition-colors"
+              >
+                <div className="col-span-2 flex items-center gap-2">
+                  <div
+                    className="size-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: row.color }}
+                  />
+                  <span className="text-sm font-medium">{row.service}</span>
+                </div>
+                <span className="text-right font-[tabular-nums] text-sm">
+                  {row.hours}h
+                </span>
+                <span className="text-right font-[tabular-nums] text-sm">
+                  {row.percentage}%
+                </span>
+                <span className="text-muted-foreground text-right text-sm">
+                  {row.staffCount}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Staff time bar */}
+          <div className="mt-4 flex h-4 overflow-hidden rounded-full">
+            {staffData.map((row) => {
+              if (row.percentage < 1) return null;
+              return (
+                <div
+                  key={row.service}
+                  className="transition-all"
+                  style={{
+                    width: `${row.percentage}%`,
+                    backgroundColor: row.color,
+                  }}
+                  title={`${row.service}: ${row.hours}h (${row.percentage}%)`}
+                />
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ========================================
+// Reports Page
+// ========================================
 
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState({
@@ -369,9 +594,13 @@ export default function ReportsPage() {
       </div>
 
       {/* Reports Tabs */}
-      <Tabs defaultValue="occupancy" className="space-y-4">
+      <Tabs defaultValue="revenue" className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
+            <TabsTrigger value="revenue">
+              <DollarSign className="mr-2 size-4" />
+              Revenue
+            </TabsTrigger>
             <TabsTrigger value="occupancy">
               <BarChart3 className="mr-2 size-4" />
               Occupancy
@@ -400,6 +629,11 @@ export default function ReportsPage() {
         </div>
 
         {/* Occupancy Report */}
+        {/* Revenue by Service Tab */}
+        <TabsContent value="revenue" className="space-y-6">
+          <RevenueByServiceSection facilityId={11} />
+        </TabsContent>
+
         <TabsContent value="occupancy" className="space-y-4">
           <Card>
             <CardHeader>
