@@ -500,10 +500,10 @@ export default function FacilityBookingDetailPage({
     [bookingId],
   );
 
-  // Redirect to client-nested route for full context
+  // Redirect to client-nested route — replace to avoid polluting history
   useEffect(() => {
     if (booking?.clientId) {
-      router.push(
+      router.replace(
         `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
       );
     }
