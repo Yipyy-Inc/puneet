@@ -207,7 +207,9 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
                     <Select
                       value={cond.operator}
                       onValueChange={(v) =>
-                        updateCondition(idx, { operator: v as EligibilityCondition["operator"] })
+                        updateCondition(idx, {
+                          operator: v as EligibilityCondition["operator"],
+                        })
                       }
                     >
                       <SelectTrigger className="h-8 w-32 text-xs">
@@ -262,9 +264,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
               <Label className="text-xs">Message when denied</Label>
               <Input
                 value={rules.deniedMessage ?? ""}
-                onChange={(e) =>
-                  updateRules({ deniedMessage: e.target.value })
-                }
+                onChange={(e) => updateRules({ deniedMessage: e.target.value })}
                 placeholder="This service requires..."
                 className="text-xs"
               />
@@ -283,7 +283,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
         </div>
 
         <div className="space-y-3">
-          <label className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-muted/30">
+          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
             <input
               type="radio"
               name="depType"
@@ -304,7 +304,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
             </div>
           </label>
 
-          <label className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-muted/30">
+          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
             <input
               type="radio"
               name="depType"
@@ -331,7 +331,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
             </div>
           </label>
 
-          <label className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-muted/30">
+          <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-3 rounded-md border p-3">
             <input
               type="radio"
               name="depType"
@@ -436,9 +436,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
                 <label className="flex cursor-pointer items-center gap-2">
                   <Checkbox
                     checked={cap.waitlistEnabled}
-                    onCheckedChange={(v) =>
-                      updateCap({ waitlistEnabled: !!v })
-                    }
+                    onCheckedChange={(v) => updateCap({ waitlistEnabled: !!v })}
                   />
                   <span className="text-sm">Enable waitlist when full</span>
                 </label>
@@ -461,9 +459,7 @@ export function EligibilityStep({ data, onChange }: EligibilityStepProps) {
                     <label className="flex items-center gap-2 pt-5">
                       <Checkbox
                         checked={cap.autoPromote}
-                        onCheckedChange={(v) =>
-                          updateCap({ autoPromote: !!v })
-                        }
+                        onCheckedChange={(v) => updateCap({ autoPromote: !!v })}
                       />
                       <span className="text-xs">Auto-book</span>
                     </label>

@@ -98,10 +98,7 @@ interface YipyyGoConfigStepProps {
 // Component
 // ========================================
 
-export function YipyyGoConfigStep({
-  data,
-  onChange,
-}: YipyyGoConfigStepProps) {
+export function YipyyGoConfigStep({ data, onChange }: YipyyGoConfigStepProps) {
   const yipyyGo = data.yipyyGo ?? {
     enabled: data.yipyyGoRequired,
     sendBeforeHours: 24,

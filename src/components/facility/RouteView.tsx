@@ -60,11 +60,19 @@ function formatTime(iso: string) {
 function getStatusConfig(status: string) {
   switch (status) {
     case "completed":
-      return { icon: CheckCircle, color: "text-emerald-500", label: "Delivered" };
+      return {
+        icon: CheckCircle,
+        color: "text-emerald-500",
+        label: "Delivered",
+      };
     case "checked-in":
       return { icon: CircleDot, color: "text-blue-500", label: "In Transit" };
     default:
-      return { icon: Circle, color: "text-muted-foreground/40", label: "Scheduled" };
+      return {
+        icon: Circle,
+        color: "text-muted-foreground/40",
+        label: "Scheduled",
+      };
   }
 }
 
@@ -104,9 +112,7 @@ function RouteSheet({
         {/* Printable content */}
         <div className="space-y-4">
           <div className="border-b pb-4">
-            <h1 className="text-xl font-bold">
-              Paws Express — Route Sheet
-            </h1>
+            <h1 className="text-xl font-bold">Paws Express — Route Sheet</h1>
             <p className="text-muted-foreground text-sm">
               {new Date().toLocaleDateString("en-US", {
                 weekday: "long",
@@ -131,11 +137,11 @@ function RouteSheet({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="pb-2 pr-4">#</th>
-                <th className="pb-2 pr-4">Time</th>
-                <th className="pb-2 pr-4">Pet</th>
-                <th className="pb-2 pr-4">Owner</th>
-                <th className="pb-2 pr-4">Phone</th>
+                <th className="pr-4 pb-2">#</th>
+                <th className="pr-4 pb-2">Time</th>
+                <th className="pr-4 pb-2">Pet</th>
+                <th className="pr-4 pb-2">Owner</th>
+                <th className="pr-4 pb-2">Phone</th>
                 <th className="pb-2">Notes</th>
               </tr>
             </thead>
@@ -143,7 +149,9 @@ function RouteSheet({
               {route.stops.map((stop, idx) => (
                 <tr key={stop.id} className="border-b">
                   <td className="py-2 pr-4">{idx + 1}</td>
-                  <td className="py-2 pr-4">{formatTime(stop.scheduledTime)}</td>
+                  <td className="py-2 pr-4">
+                    {formatTime(stop.scheduledTime)}
+                  </td>
                   <td className="py-2 pr-4 font-medium">
                     {stop.petName}
                     <span className="text-muted-foreground ml-1 font-normal">
@@ -159,8 +167,7 @@ function RouteSheet({
           </table>
 
           <div className="mt-4 border-t pt-4 text-right text-sm">
-            <strong>Total Revenue:</strong> $
-            {route.totalRevenue.toFixed(2)}
+            <strong>Total Revenue:</strong> ${route.totalRevenue.toFixed(2)}
           </div>
         </div>
       </div>
@@ -300,7 +307,7 @@ export function RouteView() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-xs">Revenue</p>
-            <p className="mt-1 text-2xl font-bold font-[tabular-nums]">
+            <p className="mt-1 font-[tabular-nums] text-2xl font-bold">
               ${totalRevenue.toFixed(2)}
             </p>
           </CardContent>
@@ -355,7 +362,7 @@ export function RouteView() {
                     <div
                       key={stop.id}
                       className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted/30",
+                        "hover:bg-muted/30 flex items-center gap-3 rounded-md px-3 py-2 transition-colors",
                         stop.status === "completed" && "opacity-60",
                       )}
                     >
@@ -363,7 +370,7 @@ export function RouteView() {
                       <div className="flex flex-col items-center">
                         <StatusIcon className={cn("size-4", sc.color)} />
                         {idx < route.stops.length - 1 && (
-                          <div className="my-0.5 h-4 w-px bg-border" />
+                          <div className="bg-border my-0.5 h-4 w-px" />
                         )}
                       </div>
 
@@ -410,7 +417,7 @@ export function RouteView() {
                       </div>
 
                       {/* Price */}
-                      <span className="text-sm font-medium font-[tabular-nums]">
+                      <span className="font-[tabular-nums] text-sm font-medium">
                         ${stop.price.toFixed(2)}
                       </span>
                     </div>
@@ -421,7 +428,7 @@ export function RouteView() {
               {/* Route total */}
               <div className="mt-3 flex justify-between border-t pt-2 text-sm">
                 <span className="text-muted-foreground">Route Total</span>
-                <span className="font-semibold font-[tabular-nums]">
+                <span className="font-[tabular-nums] font-semibold">
                   ${route.totalRevenue.toFixed(2)}
                 </span>
               </div>

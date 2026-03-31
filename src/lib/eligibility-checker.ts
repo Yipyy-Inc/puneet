@@ -53,8 +53,7 @@ function checkCondition(
       const hasEval = pet.evaluations?.some(
         (e) => e.status === "passed" && !e.isExpired,
       );
-      const passed =
-        condition.operator === "has" ? !!hasEval : !hasEval;
+      const passed = condition.operator === "has" ? !!hasEval : !hasEval;
       return {
         passed,
         reason: passed
@@ -65,13 +64,11 @@ function checkCondition(
 
     case "membership": {
       const membership = client.membership;
-      const hasMembership =
-        membership?.status === "active";
+      const hasMembership = membership?.status === "active";
       if (condition.operator === "has") {
         if (typeof condition.value === "string" && condition.value) {
           const planMatch =
-            membership?.plan?.toLowerCase() ===
-            condition.value.toLowerCase();
+            membership?.plan?.toLowerCase() === condition.value.toLowerCase();
           return {
             passed: hasMembership && planMatch,
             reason:
@@ -98,8 +95,7 @@ function checkCondition(
           b.clientId === client.id &&
           (b.status === "confirmed" || b.status === "pending"),
       );
-      const passed =
-        condition.operator === "has" ? hasBooking : !hasBooking;
+      const passed = condition.operator === "has" ? hasBooking : !hasBooking;
       return {
         passed,
         reason: passed
@@ -111,9 +107,7 @@ function checkCondition(
     case "tag": {
       const tags = getTagsForEntity("pet", pet.id);
       const tagName = String(condition.value).toLowerCase();
-      const hasTag = tags.some(
-        (t) => t.name.toLowerCase().includes(tagName),
-      );
+      const hasTag = tags.some((t) => t.name.toLowerCase().includes(tagName));
       const passed = condition.operator === "has" ? hasTag : !hasTag;
       return {
         passed,
@@ -124,16 +118,11 @@ function checkCondition(
     }
 
     case "vaccination": {
-      const records = vaccinationRecords.filter(
-        (v) => v.petId === pet.id,
-      );
+      const records = vaccinationRecords.filter((v) => v.petId === pet.id);
       const vacName = String(condition.value).toLowerCase();
       const hasVac = records.some((v) => {
-        const current =
-          new Date(v.expiryDate).getTime() > Date.now();
-        return (
-          v.vaccineName.toLowerCase().includes(vacName) && current
-        );
+        const current = new Date(v.expiryDate).getTime() > Date.now();
+        return v.vaccineName.toLowerCase().includes(vacName) && current;
       });
       const passed = condition.operator === "has" ? hasVac : !hasVac;
       return {
@@ -210,9 +199,7 @@ export function checkEligibility(
   }
 
   const eligible =
-    rules.operator === "all"
-      ? failed.length === 0
-      : passed.length > 0;
+    rules.operator === "all" ? failed.length === 0 : passed.length > 0;
 
   return {
     eligible,
@@ -242,7 +229,9 @@ export function checkDependencies(
     const clientBookings = existingBookings.filter(
       (b) =>
         b.clientId === client.id &&
-        (Array.isArray(b.petId) ? b.petId.includes(petId) : b.petId === petId) &&
+        (Array.isArray(b.petId)
+          ? b.petId.includes(petId)
+          : b.petId === petId) &&
         b.service?.toLowerCase() === req.moduleId.toLowerCase() &&
         (b.status === "confirmed" || b.status === "pending"),
     );

@@ -24,7 +24,9 @@ import { getTemplatesForModule } from "@/data/task-templates";
 // Convert legacy CustomServiceModule → ServiceModule
 // ============================================================================
 
-function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]): ServiceModule {
+function convertCustomModule(
+  csm: (typeof defaultCustomServiceModules)[number],
+): ServiceModule {
   return {
     id: csm.id,
     slug: csm.slug,
@@ -33,7 +35,12 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
     icon: csm.icon,
     color: csm.iconColor,
     isBuiltIn: false,
-    status: csm.status === "active" ? "active" : csm.status === "draft" ? "draft" : "disabled",
+    status:
+      csm.status === "active"
+        ? "active"
+        : csm.status === "draft"
+          ? "draft"
+          : "disabled",
     facilityId: csm.facilityId,
     category: csm.category as ServiceCategory,
 
@@ -47,7 +54,8 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
       cancellationPolicy: csm.onlineBooking.cancellationPolicy
         ? {
             allowCancellation: true,
-            freeBeforeHours: csm.onlineBooking.cancellationPolicy.hoursBeforeBooking,
+            freeBeforeHours:
+              csm.onlineBooking.cancellationPolicy.hoursBeforeBooking,
             fee: {
               type: "percentage",
               value: csm.onlineBooking.cancellationPolicy.feePercentage,
@@ -57,11 +65,12 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
     },
 
     scheduling: {
-      type: csm.category === "stay_based"
-        ? "date_range"
-        : csm.category === "transport"
-          ? "on_demand"
-          : "time_slot",
+      type:
+        csm.category === "stay_based"
+          ? "date_range"
+          : csm.category === "transport"
+            ? "on_demand"
+            : "time_slot",
       slotDuration: csm.calendar.durationOptions[0]?.minutes,
       bufferBetween: csm.calendar.bufferTimeMinutes,
       sameDayBooking: true,
@@ -77,14 +86,16 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
         shared: r.shared,
         sharedWith: r.sharedWith,
       })),
-      capacityPerSlot: csm.capacity?.maxPerSlot ?? csm.calendar.maxSimultaneousBookings,
+      capacityPerSlot:
+        csm.capacity?.maxPerSlot ?? csm.calendar.maxSimultaneousBookings,
       waitlistEnabled: csm.capacity?.waitlistEnabled ?? false,
       maxWaitlist: csm.capacity?.maxWaitlist,
       autoPromote: csm.capacity?.autoPromote,
     },
 
     billing: {
-      pricingModel: csm.pricing.model as ServiceModule["billing"]["pricingModel"],
+      pricingModel: csm.pricing
+        .model as ServiceModule["billing"]["pricingModel"],
       basePrice: csm.pricing.basePrice,
       pricingTiers: csm.pricing.durationTiers?.map((t) => ({
         durationMinutes: t.durationMinutes,
@@ -97,7 +108,10 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
       supportsDiscounts: true,
       depositRequired: csm.onlineBooking.depositRequired,
       depositAmount: csm.onlineBooking.depositAmount,
-      depositType: csm.onlineBooking.depositType as "fixed" | "percentage" | undefined,
+      depositType: csm.onlineBooking.depositType as
+        | "fixed"
+        | "percentage"
+        | undefined,
     },
 
     tasks: {
@@ -135,8 +149,21 @@ function convertCustomModule(csm: (typeof defaultCustomServiceModules)[number]):
           operator: csm.eligibilityRules.operator,
           conditions: csm.eligibilityRules.conditions.map((c) => ({
             id: c.id,
-            type: c.type as ServiceModule extends { eligibility: infer E } ? E extends { conditions: (infer C)[] } ? C extends { type: infer T } ? T : never : never : never,
-            operator: c.operator as "equals" | "not_equals" | "has" | "not_has" | "greater_than" | "less_than" | "in_list",
+            type: c.type as ServiceModule extends { eligibility: infer E }
+              ? E extends { conditions: (infer C)[] }
+                ? C extends { type: infer T }
+                  ? T
+                  : never
+                : never
+              : never,
+            operator: c.operator as
+              | "equals"
+              | "not_equals"
+              | "has"
+              | "not_has"
+              | "greater_than"
+              | "less_than"
+              | "in_list",
             value: c.value,
             label: c.label,
           })),
@@ -245,9 +272,7 @@ export function getResourceConfig(
   return getServiceModule(moduleId)?.resources;
 }
 
-export function getTaskConfig(
-  moduleId: string,
-): TaskEngineConfig | undefined {
+export function getTaskConfig(moduleId: string): TaskEngineConfig | undefined {
   return getServiceModule(moduleId)?.tasks;
 }
 

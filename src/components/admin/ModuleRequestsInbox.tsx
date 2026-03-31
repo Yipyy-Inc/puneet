@@ -15,10 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  getAllRequests,
-  updateRequestStatus,
-} from "@/data/module-requests";
+import { getAllRequests, updateRequestStatus } from "@/data/module-requests";
 
 export function ModuleRequestsInbox() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -72,7 +69,7 @@ export function ModuleRequestsInbox() {
             {requests.map((req) => (
               <div
                 key={req.id}
-                className="rounded-lg border p-4 transition-colors hover:bg-muted/30"
+                className="hover:bg-muted/30 rounded-lg border p-4 transition-colors"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -123,7 +120,7 @@ export function ModuleRequestsInbox() {
                       {req.description}
                     </p>
                     {req.notes && (
-                      <p className="mt-1 text-xs italic text-emerald-600">
+                      <p className="mt-1 text-xs text-emerald-600 italic">
                         {req.notes}
                       </p>
                     )}

@@ -75,7 +75,11 @@ export function BookingNotes() {
             autoFocus
           />
           <div className="flex gap-2">
-            <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={handleAdd}>
+            <Button
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={handleAdd}
+            >
               <Plus className="size-3" />
               Save Note
             </Button>
@@ -112,7 +116,7 @@ export function BookingNotes() {
           {notes.map((note) => (
             <div
               key={note.id}
-              className="rounded-md border bg-muted/20 px-3 py-2"
+              className="bg-muted/20 rounded-md border px-3 py-2"
             >
               <p className="text-sm">{note.content}</p>
               <p className="text-muted-foreground mt-1 text-xs">

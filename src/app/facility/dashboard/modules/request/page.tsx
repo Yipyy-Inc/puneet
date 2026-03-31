@@ -34,9 +34,7 @@ export default function ModuleRequestPage() {
     <div className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Module Requests
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Module Requests</h2>
           <p className="text-muted-foreground text-sm">
             Request new service modules for your facility
           </p>
@@ -104,7 +102,7 @@ export default function ModuleRequestPage() {
                         : req.suggestedCategory.replace("_", " ")}
                     </p>
                     {req.notes && (
-                      <p className="mt-1 text-xs italic text-emerald-600">
+                      <p className="mt-1 text-xs text-emerald-600 italic">
                         {req.notes}
                       </p>
                     )}
