@@ -463,6 +463,40 @@ export default function ClientBookingDetailPage({
               Refund
             </Button>
           )}
+          {/* Undo Check-In — reverts to confirmed */}
+          {booking.status === "confirmed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() =>
+                toast.success(
+                  "Check-in undone — status reverted to Confirmed. Deposit remains collected.",
+                )
+              }
+            >
+              <RotateCcw className="size-3.5" />
+              Undo Check-In
+            </Button>
+          )}
+
+          {/* Undo Confirm — reverts to pending */}
+          {booking.status === "confirmed" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() =>
+                toast.success(
+                  "Confirmation undone — status reverted to Pending. Deposit remains collected.",
+                )
+              }
+            >
+              <RotateCcw className="size-3.5" />
+              Undo Confirm
+            </Button>
+          )}
+
           {!isCancelled && booking.status !== "completed" && (
             <Button
               variant="outline"
