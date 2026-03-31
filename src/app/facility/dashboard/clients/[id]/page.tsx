@@ -24,6 +24,9 @@ import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
+import { generateInvoiceForBooking } from "@/lib/invoice-generator";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   payments,
   invoices,
@@ -475,7 +478,12 @@ export default function ClientDetailPage({
                       facilityName: facility.name,
                       preSelectedClientId: client.id,
                       onCreateBooking: (booking) => {
-                        console.log("Booking created:", booking);
+                        const invoice = generateInvoiceForBooking(
+                          booking as never,
+                        );
+                        toast.success(
+                          `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
+                        );
                       },
                     });
                   }
@@ -1028,7 +1036,12 @@ export default function ClientDetailPage({
                       facilityName: facility.name,
                       preSelectedClientId: client.id,
                       onCreateBooking: (booking) => {
-                        console.log("Booking created:", booking);
+                        const invoice = generateInvoiceForBooking(
+                          booking as never,
+                        );
+                        toast.success(
+                          `Booking created — Invoice ${invoice.id}: $${invoice.total.toFixed(2)}`,
+                        );
                       },
                     });
                   }
@@ -1351,7 +1364,7 @@ export default function ClientDetailPage({
 
               {/* Billing Tabs */}
               <Tabs defaultValue="payments" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="payments">Payments</TabsTrigger>
                   <TabsTrigger value="invoices">
                     Invoices
@@ -1363,6 +1376,17 @@ export default function ClientDetailPage({
                   </TabsTrigger>
                   <TabsTrigger value="credits">Credits</TabsTrigger>
                   <TabsTrigger value="giftcards">Gift Cards</TabsTrigger>
+                  <TabsTrigger value="membership">
+                    Membership
+                    {client.membership?.status === "active" && (
+                      <Badge
+                        variant="outline"
+                        className="ml-1 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+                      >
+                        Active
+                      </Badge>
+                    )}
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Payments Tab */}
@@ -1689,6 +1713,181 @@ export default function ClientDetailPage({
                       No gift cards
                     </p>
                   )}
+                </TabsContent>
+
+                {/* Membership & Packages Tab */}
+                <TabsContent value="membership" className="mt-4">
+                  <div className="space-y-4">
+                    {/* Membership */}
+                    <div className="rounded-lg border p-4">
+                      <p className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-wider uppercase">
+                        Membership
+                      </p>
+                      {client.membership ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "flex size-10 items-center justify-center rounded-full",
+                                  client.membership.status === "active"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-muted text-muted-foreground",
+                                )}
+                              >
+                                <Award className="size-5" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold">
+                                  {client.membership.plan} Plan
+                                </p>
+                                <p className="text-muted-foreground text-xs capitalize">
+                                  {client.membership.status}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge
+                              variant={
+                                client.membership.status === "active"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                              className="capitalize"
+                            >
+                              {client.membership.status}
+                            </Badge>
+                          </div>
+                          <div className="divide-y rounded-md border">
+                            <div className="flex justify-between px-3 py-2 text-xs">
+                              <span className="text-muted-foreground">
+                                Start Date
+                              </span>
+                              <span className="font-medium">
+                                {formatDate(client.membership.startDate)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between px-3 py-2 text-xs">
+                              <span className="text-muted-foreground">
+                                Expiry Date
+                              </span>
+                              <span className="font-medium">
+                                {formatDate(client.membership.expiryDate)}
+                              </span>
+                            </div>
+                            {client.membership.benefits.discountPercent && (
+                              <div className="flex justify-between px-3 py-2 text-xs">
+                                <span className="text-muted-foreground">
+                                  Discount
+                                </span>
+                                <span className="font-medium text-emerald-600">
+                                  {client.membership.benefits.discountPercent}%
+                                  off all services
+                                </span>
+                              </div>
+                            )}
+                            {client.membership.benefits.includedServices &&
+                              client.membership.benefits.includedServices
+                                .length > 0 && (
+                                <div className="flex justify-between px-3 py-2 text-xs">
+                                  <span className="text-muted-foreground">
+                                    Included Services
+                                  </span>
+                                  <span className="font-medium">
+                                    {client.membership.benefits.includedServices
+                                      .map(
+                                        (s) => `${s.quantity}× ${s.moduleId}`,
+                                      )
+                                      .join(", ")}
+                                  </span>
+                                </div>
+                              )}
+                            {client.membership.benefits.freeAddOns &&
+                              client.membership.benefits.freeAddOns.length >
+                                0 && (
+                                <div className="flex justify-between px-3 py-2 text-xs">
+                                  <span className="text-muted-foreground">
+                                    Free Add-ons
+                                  </span>
+                                  <span className="font-medium">
+                                    {client.membership.benefits.freeAddOns.join(
+                                      ", ",
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground py-4 text-center text-sm">
+                          No active membership
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Packages */}
+                    <div className="rounded-lg border p-4">
+                      <p className="text-muted-foreground mb-3 text-[10px] font-semibold tracking-wider uppercase">
+                        Packages
+                      </p>
+                      {client.packages && client.packages.length > 0 ? (
+                        <div className="space-y-3">
+                          {client.packages.map((pkg) => {
+                            const usagePercent =
+                              (pkg.usedCredits / pkg.totalCredits) * 100;
+                            return (
+                              <div
+                                key={pkg.id}
+                                className="rounded-md border p-3"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <p className="text-sm font-semibold">
+                                    {pkg.name}
+                                  </p>
+                                  <Badge
+                                    variant={
+                                      pkg.remainingCredits > 0
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {pkg.remainingCredits} remaining
+                                  </Badge>
+                                </div>
+                                <div className="mt-2">
+                                  <div className="bg-muted mb-1 h-2 overflow-hidden rounded-full">
+                                    <div
+                                      className="bg-primary h-full rounded-full transition-all"
+                                      style={{
+                                        width: `${usagePercent}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between text-[11px]">
+                                    <span className="text-muted-foreground">
+                                      {pkg.usedCredits} of {pkg.totalCredits}{" "}
+                                      used
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      ${pkg.pricePerCredit}/credit
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-muted-foreground mt-2 text-xs">
+                                  Purchased: {formatDate(pkg.purchaseDate)}
+                                  {pkg.expiryDate &&
+                                    ` · Expires: ${formatDate(pkg.expiryDate)}`}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground py-4 text-center text-sm">
+                          No packages purchased
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>
