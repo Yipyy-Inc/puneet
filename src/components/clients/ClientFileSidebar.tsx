@@ -143,10 +143,17 @@ export function ClientFileSidebar({
           )}
         </div>
 
-        {/* Quick action */}
-        <Button size="sm" className="mt-3 h-8 w-full text-xs" asChild>
-          <Link href={base}>View Full Profile</Link>
-        </Button>
+        {/* Quick action — context-aware */}
+        {pathname !== base ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3 h-8 w-full text-xs"
+            asChild
+          >
+            <Link href={base}>View Full Profile</Link>
+          </Button>
+        ) : null}
       </div>
 
       {/* Scrollable navigation */}

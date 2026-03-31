@@ -161,7 +161,26 @@ export default function ClientBookingDetailPage({
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 pt-5 md:p-6">
+      {/* Breadcrumb */}
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <Link
+          href={`/facility/dashboard/clients/${clientId}`}
+          className="hover:text-foreground transition-colors"
+        >
+          {client.name}
+        </Link>
+        <span>/</span>
+        <Link
+          href={`/facility/dashboard/clients/${clientId}/bookings`}
+          className="hover:text-foreground transition-colors"
+        >
+          Bookings
+        </Link>
+        <span>/</span>
+        <span className="text-foreground font-medium">#{booking.id}</span>
+      </div>
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

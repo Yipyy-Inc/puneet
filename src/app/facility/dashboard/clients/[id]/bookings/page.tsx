@@ -23,7 +23,7 @@ export default function ClientBookingsPage({
   if (!client) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4 pt-5 md:p-6">
       <h2 className="text-lg font-semibold">
         Bookings ({clientBookings.length})
       </h2>

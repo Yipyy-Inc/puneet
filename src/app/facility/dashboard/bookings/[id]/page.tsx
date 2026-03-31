@@ -503,7 +503,7 @@ export default function FacilityBookingDetailPage({
   // Redirect to client-nested route for full context
   useEffect(() => {
     if (booking?.clientId) {
-      router.replace(
+      router.push(
         `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
       );
     }
