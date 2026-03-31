@@ -308,10 +308,7 @@ export default function ClientBookingDetailPage({
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
-                onClick={() => {
-                  window.print();
-                  toast.success("Estimate preview opened");
-                }}
+                onClick={() => setEstimateOpen(true)}
               >
                 <FileText className="size-3.5" />
                 View Estimate
