@@ -299,6 +299,57 @@ export default function ClientBookingDetailPage({
             Edit Booking
           </Button>
 
+          {/* View & Send Estimate — only for estimate invoices */}
+          {invoice?.status === "estimate" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => {
+                  window.print();
+                  toast.success("Estimate preview opened");
+                }}
+              >
+                <FileText className="size-3.5" />
+                View Estimate
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                  >
+                    <Send className="size-3.5" />
+                    Send Estimate
+                    <ChevronDown className="size-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      toast.success(
+                        `Estimate emailed to ${client.email}`,
+                      )
+                    }
+                  >
+                    <Mail className="size-4" />
+                    Email Estimate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      toast.success("SMS estimate link sent")
+                    }
+                  >
+                    <Smartphone className="size-4" />
+                    SMS Estimate Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+
           {!isCancelled && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
