@@ -17,8 +17,11 @@ import {
   Pencil,
   Tags,
   History,
+  ChevronLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 
@@ -53,13 +56,15 @@ export function ClientFileSidebar({
     { href: base, label: "Overview", icon: User },
     {
       href: `${base}/pets`,
-      label: `Pets (${petCount})`,
+      label: "Pets",
+      count: petCount,
       icon: PawPrint,
       matchPrefix: `${base}/pets`,
     },
     {
       href: `${base}/bookings`,
-      label: `Bookings (${bookingCount})`,
+      label: "Bookings",
+      count: bookingCount,
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
     },
@@ -78,55 +83,78 @@ export function ClientFileSidebar({
   ];
 
   return (
-    <aside className="bg-card hidden w-60 shrink-0 border-r lg:block">
-      <div className="sticky top-0 max-h-screen overflow-y-auto">
-        {/* Client header */}
-        <div className="border-b p-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-              {getInitials(client.name)}
-            </div>
-            <div className="min-w-0">
-              <Link
-                href={base}
-                className="hover:text-primary truncate text-sm font-semibold transition-colors"
-              >
-                {client.name}
-              </Link>
+    <aside className="bg-card hidden w-64 shrink-0 border-r lg:flex lg:flex-col">
+      {/* Back link */}
+      <div className="border-b px-4 py-2.5">
+        <Link
+          href="/facility/dashboard/clients"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
+        >
+          <ChevronLeft className="size-3" />
+          Back to Clients
+        </Link>
+      </div>
+
+      {/* Client header */}
+      <div className="border-b p-5">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary text-primary-foreground flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm">
+            {getInitials(client.name)}
+          </div>
+          <div className="min-w-0">
+            <Link
+              href={base}
+              className="hover:text-primary block truncate text-sm font-semibold transition-colors"
+            >
+              {client.name}
+            </Link>
+            <div className="mt-0.5 flex items-center gap-1.5">
               <Badge
                 variant={client.status === "active" ? "default" : "secondary"}
-                className="mt-0.5 text-[9px] capitalize"
+                className="h-4 px-1.5 text-[9px] capitalize"
               >
                 {client.status}
               </Badge>
+              {client.membership?.status === "active" && (
+                <Badge
+                  variant="outline"
+                  className="h-4 border-emerald-200 bg-emerald-50 px-1.5 text-[9px] text-emerald-700"
+                >
+                  {client.membership.plan}
+                </Badge>
+              )}
             </div>
           </div>
-          <div className="mt-3 space-y-1">
-            {client.email && (
-              <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                <Mail className="size-3" />
-                <span className="truncate">{client.email}</span>
-              </div>
-            )}
-            {client.phone && (
-              <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                <Phone className="size-3" />
-                {client.phone}
-              </div>
-            )}
-          </div>
-          {client.membership?.status === "active" && (
-            <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700">
-              {client.membership.plan} Member
+        </div>
+
+        {/* Contact info */}
+        <div className="mt-3 space-y-1.5">
+          {client.email && (
+            <div className="text-muted-foreground flex items-center gap-2 text-[11px]">
+              <Mail className="size-3 shrink-0" />
+              <span className="truncate">{client.email}</span>
+            </div>
+          )}
+          {client.phone && (
+            <div className="text-muted-foreground flex items-center gap-2 text-[11px]">
+              <Phone className="size-3 shrink-0" />
+              {client.phone}
             </div>
           )}
         </div>
 
-        {/* Navigation */}
-        <nav className="p-2">
-          <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-            Client File
-          </p>
+        {/* Quick action */}
+        <Button size="sm" className="mt-3 h-8 w-full text-xs" asChild>
+          <Link href={base}>View Full Profile</Link>
+        </Button>
+      </div>
+
+      {/* Scrollable navigation */}
+      <nav className="flex-1 overflow-y-auto p-2">
+        <p className="text-muted-foreground px-3 pt-2 pb-1.5 text-[10px] font-semibold tracking-widest uppercase">
+          Client File
+        </p>
+        <div className="space-y-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = item.matchPrefix
@@ -137,23 +165,37 @@ export function ClientFileSidebar({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all",
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                 )}
               >
-                <Icon className="size-3.5" />
-                {item.label}
+                <Icon className={cn("size-4", active && "text-primary")} />
+                <span className="flex-1">{item.label}</span>
+                {item.count != null && item.count > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      active
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                )}
               </Link>
             );
           })}
+        </div>
 
-          <div className="my-2 border-t" />
+        <Separator className="my-3" />
 
-          <p className="text-muted-foreground px-2 pt-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-            Admin
-          </p>
+        <p className="text-muted-foreground px-3 pt-1 pb-1.5 text-[10px] font-semibold tracking-widest uppercase">
+          Admin
+        </p>
+        <div className="space-y-0.5">
           {adminItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -162,19 +204,19 @@ export function ClientFileSidebar({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all",
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                 )}
               >
-                <Icon className="size-3.5" />
+                <Icon className={cn("size-4", active && "text-primary")} />
                 {item.label}
               </Link>
             );
           })}
-        </nav>
-      </div>
+        </div>
+      </nav>
     </aside>
   );
 }
