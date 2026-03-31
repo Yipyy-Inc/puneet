@@ -172,6 +172,7 @@ export function YipyyGoStaffReviewModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
+          <DialogTitle>YipyyGo Form</DialogTitle>
           <p className="text-muted-foreground">
             No YipyyGo form found for this booking.
           </p>
