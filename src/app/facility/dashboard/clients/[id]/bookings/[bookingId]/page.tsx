@@ -431,7 +431,25 @@ export default function ClientBookingDetailPage({
             </Button>
           )}
 
-          {/* Checkout — for open invoices */}
+          {/* Mark as Ready — for confirmed/in-progress bookings */}
+          {(booking.status === "confirmed" ||
+            booking.status === "pending") && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() =>
+                toast.success(
+                  "Service marked as ready — proceed to checkout",
+                )
+              }
+            >
+              <CheckCircle2 className="size-3.5" />
+              Mark as Ready
+            </Button>
+          )}
+
+          {/* Checkout — for open/completed bookings */}
           {!isPaid && !isCancelled && (
             <Button
               size="sm"
@@ -439,7 +457,7 @@ export default function ClientBookingDetailPage({
               onClick={() => setCheckoutOpen(true)}
             >
               <CreditCard className="size-3.5" />
-              Continue to Pay
+              Proceed to Checkout
             </Button>
           )}
 
