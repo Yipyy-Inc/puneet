@@ -301,28 +301,17 @@ export default function ClientBookingDetailPage({
             Edit Booking
           </Button>
 
-          {/* View & Send Estimate — only for estimate invoices */}
+          {/* View Estimate — only for estimate invoices */}
           {invoice?.status === "estimate" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setEstimateOpen(true)}
-              >
-                <FileText className="size-3.5" />
-                View Estimate
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={() => setEstimateOpen(true)}
-              >
-                <Send className="size-3.5" />
-                Send Estimate
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setEstimateOpen(true)}
+            >
+              <FileText className="size-3.5" />
+              View Estimate
+            </Button>
           )}
 
           {!isCancelled && (
