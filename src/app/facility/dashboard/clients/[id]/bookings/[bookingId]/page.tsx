@@ -9,6 +9,7 @@ import {
   Printer,
   Send,
   CreditCard,
+  Banknote,
   ChevronDown,
   Mail,
   Smartphone,
@@ -47,6 +48,9 @@ import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPayment
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { TagList } from "@/components/shared/TagList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
+import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
+import { TipSplitModal } from "@/components/bookings/TipSplitModal";
+import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
@@ -145,6 +149,9 @@ export default function ClientBookingDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [tipSplitOpen, setTipSplitOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
@@ -337,18 +344,44 @@ export default function ClientBookingDetailPage({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Deposit — only on estimates */}
+          {invoice?.status === "estimate" && !isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setDepositOpen(true)}
+            >
+              <Banknote className="size-3.5" />
+              Charge Deposit
+            </Button>
+          )}
+
+          {/* Checkout — for open invoices */}
           {!isPaid && !isCancelled && (
             <Button
               size="sm"
               className="h-8 gap-1.5 text-xs"
-              onClick={() => setPaymentOpen(true)}
+              onClick={() => setCheckoutOpen(true)}
             >
               <CreditCard className="size-3.5" />
-              Accept Payment
+              Continue to Pay
             </Button>
           )}
 
           <div className="flex-1" />
+
+          {/* Tip Split — for closed invoices with tips */}
+          {isPaid && !isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setTipSplitOpen(true)}
+            >
+              Split Tips
+            </Button>
+          )}
 
           {isPaid && !isCancelled && (
             <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
@@ -705,6 +738,39 @@ export default function ClientBookingDetailPage({
         onConfirm={(bId, r) => {
           setCancelOpen(false);
           toast.success(`Booking #${bId} cancelled: ${r}`);
+        }}
+      />
+      <PaymentCheckoutFlow
+        open={checkoutOpen}
+        onOpenChange={setCheckoutOpen}
+        amountDue={invoice?.remainingDue ?? booking.totalCost}
+        depositPaid={invoice?.depositCollected ?? 0}
+        invoiceTotal={invoice?.total ?? booking.totalCost}
+        onConfirm={(payment) => {
+          toast.success(
+            `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}`,
+          );
+        }}
+      />
+      <TipSplitModal
+        open={tipSplitOpen}
+        onOpenChange={setTipSplitOpen}
+        totalTip={invoice?.tipTotal ?? 0}
+        staffServices={[
+          {
+            staffName: booking.stylistPreference ?? "Staff",
+            serviceValue: booking.basePrice,
+          },
+        ]}
+        onSave={() => {}}
+      />
+      <DepositChargeModal
+        open={depositOpen}
+        onOpenChange={setDepositOpen}
+        ruleAmount={Math.round(booking.totalCost * 0.5 * 100) / 100}
+        ruleLabel={`50% of total ($${(booking.totalCost * 0.5).toFixed(2)})`}
+        onCharge={(amount, method) => {
+          toast.success(`Deposit of $${amount.toFixed(2)} charged via ${method}`);
         }}
       />
     </div>

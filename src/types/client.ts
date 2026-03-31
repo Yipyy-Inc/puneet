@@ -49,6 +49,20 @@ export const packageSchema = z.object({
 });
 export type ClientPackage = z.infer<typeof packageSchema>;
 
+export const storeCreditTransactionSchema = z.object({
+  date: z.string(),
+  amount: z.number(),
+  type: z.enum(["added", "redeemed", "expired"]),
+  source: z.string(),
+  bookingId: z.number().optional(),
+});
+
+export const storeCreditSchema = z.object({
+  balance: z.number(),
+  transactions: z.array(storeCreditTransactionSchema),
+});
+export type StoreCredit = z.infer<typeof storeCreditSchema>;
+
 export const clientSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -62,6 +76,7 @@ export const clientSchema = z.object({
   emergencyContact: emergencyContactSchema.optional(),
   membership: membershipSchema.optional(),
   packages: z.array(packageSchema).optional(),
+  storeCredit: storeCreditSchema.optional(),
 });
 
 export type Client = z.infer<typeof clientSchema>;
