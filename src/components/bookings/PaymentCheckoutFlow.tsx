@@ -33,6 +33,7 @@ interface PaymentCheckoutFlowProps {
   amountDue: number;
   depositPaid: number;
   invoiceTotal: number;
+  clientStoreCreditBalance?: number;
   onConfirm: (payment: {
     method: PaymentMethod;
     amount: number;
@@ -63,6 +64,7 @@ export function PaymentCheckoutFlow({
   amountDue,
   depositPaid,
   invoiceTotal,
+  clientStoreCreditBalance = 0,
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
@@ -126,7 +128,11 @@ export function PaymentCheckoutFlow({
               Payment Method
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {PAYMENT_METHODS.filter((m) => m.value !== "store_credit").map(
+              {PAYMENT_METHODS.filter(
+                (m) =>
+                  m.value !== "store_credit" ||
+                  clientStoreCreditBalance > 0,
+              ).map(
                 (m) => {
                   const Icon = ICONS[m.icon] ?? CreditCard;
                   return (
@@ -150,6 +156,25 @@ export function PaymentCheckoutFlow({
               )}
             </div>
           </div>
+
+          {/* Store credit info */}
+          {method === "store_credit" && (
+            <div className="animate-in fade-in rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 duration-150">
+              <p className="font-medium">
+                Store Credit Balance: ${clientStoreCreditBalance.toFixed(2)}
+              </p>
+              {clientStoreCreditBalance >= remaining ? (
+                <p className="mt-1 text-xs">
+                  Full amount will be covered by store credit.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs">
+                  ${clientStoreCreditBalance.toFixed(2)} will be applied. Remaining $
+                  {(remaining - clientStoreCreditBalance).toFixed(2)} due by another method.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Cash payment */}
           {isCash && (
@@ -291,6 +316,14 @@ export function PaymentCheckoutFlow({
                   ${remaining.toFixed(2)}
                 </span>
               </div>
+              {isCash && change > 0 && changeAsCredit && (
+                <div className="flex justify-between text-xs text-emerald-600">
+                  <span>→ Store credit added</span>
+                  <span className="font-[tabular-nums]">
+                    +${change.toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
