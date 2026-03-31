@@ -46,8 +46,14 @@ export function ClientFileSidebar({
 }: ClientFileSidebarProps) {
   const pathname = usePathname();
   const base = `/facility/dashboard/clients/${client.id}`;
+  const onBookingDetail = !!pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
+  const onPetDetail = !!pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
 
   const isActive = (path: string, matchPrefix?: string) => {
+    // On a detail page, don't highlight the parent section
+    if (matchPrefix && (onBookingDetail || onPetDetail)) {
+      return pathname === path;
+    }
     if (matchPrefix) return pathname.startsWith(matchPrefix);
     if (path === base) return pathname === base;
     return pathname.startsWith(path);
@@ -94,8 +100,6 @@ export function ClientFileSidebar({
     });
   }, [pathname, storageKey]);
 
-  const onBookingDetail = !!pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
-  const onPetDetail = !!pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
   const hasRecentBooking = !!recentCtx.booking;
   const hasRecentPet = !!recentCtx.pet;
 
@@ -110,21 +114,21 @@ export function ClientFileSidebar({
     { href: base, label: "Overview", icon: User },
     {
       href: `${base}/pets`,
-      label: "Pets",
+      label: "Pet Profiles",
       count: petCount,
       icon: PawPrint,
       matchPrefix: `${base}/pets`,
     },
     {
       href: `${base}/bookings`,
-      label: "Bookings",
+      label: "Booking History",
       count: bookingCount,
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
     },
-    { href: `${base}/billing`, label: "Billing", icon: DollarSign },
+    { href: `${base}/billing`, label: "Billing & Payments", icon: DollarSign },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
-    { href: `${base}/forms`, label: "Forms", icon: FileText },
+    { href: `${base}/forms`, label: "Forms & Waivers", icon: FileText },
     { href: `${base}/messages`, label: "Messages", icon: MessageSquare },
     { href: `${base}/report-cards`, label: "Report Cards", icon: Award },
     { href: `${base}/documents`, label: "Documents", icon: FolderOpen },
