@@ -142,7 +142,7 @@ export function ClientFileSidebar({
 
   // ── Render ──
   return (
-    <aside className="bg-card hidden w-64 shrink-0 border-r lg:flex lg:flex-col">
+    <aside className="bg-card hidden w-72 shrink-0 border-r lg:flex lg:flex-col">
       {/* Back */}
       <div className="px-4 py-2.5">
         <Link
