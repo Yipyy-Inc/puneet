@@ -26,10 +26,12 @@ export default function ClientFileLayout({
     );
   }
 
-  // Only show sidebar on sub-pages, NOT on the main overview page
-  const isOverview = pathname === `/facility/dashboard/clients/${id}`;
+  // The main /clients/[id] page is the standalone full profile — no sidebar
+  // All sub-pages (/overview, /bookings, /billing, etc.) get the sidebar
+  const isStandalonePage =
+    pathname === `/facility/dashboard/clients/${id}`;
 
-  if (isOverview) {
+  if (isStandalonePage) {
     return <>{children}</>;
   }
 

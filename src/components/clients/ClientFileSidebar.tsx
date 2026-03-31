@@ -111,7 +111,7 @@ export function ClientFileSidebar({
 
   // ── Nav items ──
   const sections = [
-    { href: base, label: "Overview", icon: User },
+    { href: `${base}/overview`, label: "Overview", icon: User },
     {
       href: `${base}/pets`,
       label: "Pet Profiles",
