@@ -231,8 +231,8 @@ export function PaymentCheckoutFlow({
             </div>
           )}
 
-          {/* Tip */}
-          {method !== "cash" && (
+          {/* Tip — not shown for cash, check, or custom payments */}
+          {method !== "cash" && method !== "custom" && (
             <div>
               <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
                 Add Tip (optional)
