@@ -14,13 +14,6 @@ import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { TimePicker } from "@/components/ui/time-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Booking } from "@/types/booking";
@@ -60,7 +53,6 @@ export function EditBookingModal({
   onSave,
 }: EditBookingModalProps) {
   const [formData, setFormData] = useState({
-    service: booking.service,
     startDate: booking.startDate,
     endDate: booking.endDate,
     checkInTime: booking.checkInTime || "",
@@ -77,10 +69,8 @@ export function EditBookingModal({
     !!formData.startDate &&
     !!formData.endDate &&
     formData.startDate === formData.endDate;
-  // For daycare/grooming (typically same-day), we enforce checkout > checkin.
-  // For boarding across multiple days, times are "time-of-day" on different dates, so ordering isn't required.
   const requiresCheckoutAfterCheckin =
-    formData.service !== "boarding" || isSameDay;
+    booking.service !== "boarding" || isSameDay;
 
   const checkInMinutes = timeToMinutes(formData.checkInTime);
   const checkOutMinutes = timeToMinutes(formData.checkOutTime);
@@ -157,7 +147,6 @@ export function EditBookingModal({
     if (newOpen) {
       // Reset form data when opening modal
       setFormData({
-        service: booking.service,
         startDate: booking.startDate,
         endDate: booking.endDate,
         checkInTime: booking.checkInTime || "",
@@ -184,26 +173,6 @@ export function EditBookingModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            {/* Service */}
-            <div className="grid gap-2">
-              <Label htmlFor="service">Service</Label>
-              <Select
-                value={formData.service}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, service: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daycare">Daycare</SelectItem>
-                  <SelectItem value="boarding">Boarding</SelectItem>
-                  <SelectItem value="grooming">Grooming</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
