@@ -953,13 +953,26 @@ ${(inv?.payments ?? []).length > 0 ? `<div class="section">Payment</div>${(inv?.
       <TipSplitModal
         open={tipSplitOpen}
         onOpenChange={setTipSplitOpen}
-        totalTip={invoice?.tipTotal ?? 0}
-        staffServices={[
-          {
-            staffName: booking.stylistPreference ?? "Staff",
-            serviceValue: booking.basePrice,
-          },
-        ]}
+        totalTip={invoice?.tipTotal ?? 5}
+        staffServices={
+          invoice?.items
+            ? invoice.items
+                .filter((item) => item.type !== "package_credit" && item.price > 0)
+                .map((item) => ({
+                  staffName: item.staffName ?? booking.stylistPreference ?? "Staff",
+                  serviceName: item.name,
+                  serviceValue: item.price,
+                  multiStaff: false,
+                }))
+            : [
+                {
+                  staffName: booking.stylistPreference ?? "Staff",
+                  serviceName: `${booking.service} — ${booking.serviceType?.replace("_", " ") ?? "standard"}`,
+                  serviceValue: booking.basePrice,
+                  multiStaff: false,
+                },
+              ]
+        }
         onSave={() => {}}
       />
       <DepositChargeModal
