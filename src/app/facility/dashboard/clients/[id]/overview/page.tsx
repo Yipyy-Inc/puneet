@@ -8,6 +8,7 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { clientCommunications } from "@/data/communications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BulkPaymentModal } from "@/components/bookings/BulkPaymentModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +20,7 @@ import {
   Calendar,
   ExternalLink,
   DollarSign,
+  CreditCard,
   Clock,
   AlertTriangle,
   CheckCircle,
@@ -46,6 +48,7 @@ export default function ClientOverviewPage({
   const client = clients.find((c) => c.id === clientId);
   const [noteText, setNoteText] = useState("");
   const [now] = useState(() => Date.now());
+  const [bulkPayOpen, setBulkPayOpen] = useState(false);
 
   if (!client) return null;
 
@@ -69,6 +72,15 @@ export default function ClientOverviewPage({
     .reduce((s, b) => s + b.totalCost, 0);
   const avgSpent =
     completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
+
+  // Unpaid invoices for bulk payment
+  const unpaidBookings = clientBookings.filter(
+    (b) => b.paymentStatus === "pending" && b.status !== "cancelled",
+  );
+  const totalOverdue = unpaidBookings.reduce(
+    (s, b) => s + (b.invoice?.remainingDue ?? b.totalCost),
+    0,
+  );
 
   // Pet vaccination status
   const petVacStatus = client.pets.map((pet) => {
@@ -126,6 +138,38 @@ export default function ClientOverviewPage({
           </Link>
         </Button>
       </div>
+
+      {/* Overdue balance banner */}
+      {totalOverdue > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-100">
+              <DollarSign className="size-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-red-800">
+                Outstanding Balance:{" "}
+                <span className="font-[tabular-nums]">
+                  ${totalOverdue.toFixed(2)}
+                </span>
+              </p>
+              <p className="text-xs text-red-600">
+                {unpaidBookings.length} unpaid invoice
+                {unpaidBookings.length !== 1 ? "s" : ""} from finished
+                appointments
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="gap-1.5 bg-red-600 text-white hover:bg-red-700"
+            onClick={() => setBulkPayOpen(true)}
+          >
+            <CreditCard className="size-3.5" />
+            Collect Payment
+          </Button>
+        </div>
+      )}
 
       {/* Key Metrics — vital stats with CTAs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -598,6 +642,29 @@ export default function ClientOverviewPage({
           )}
         </div>
       </div>
+
+      <BulkPaymentModal
+        open={bulkPayOpen}
+        onOpenChange={setBulkPayOpen}
+        clientName={client.name}
+        invoices={unpaidBookings.map((b) => {
+          const bPet = client.pets.find(
+            (p) =>
+              p.id === (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+          );
+          return {
+            bookingId: b.id,
+            invoiceId: b.invoice?.id ?? `INV-${b.id}`,
+            service: b.service,
+            date: b.startDate,
+            petName: bPet?.name ?? "Pet",
+            total: b.invoice?.total ?? b.totalCost,
+            paid: b.invoice?.depositCollected ?? 0,
+            remaining: b.invoice?.remainingDue ?? b.totalCost,
+          };
+        })}
+        onConfirm={() => {}}
+      />
     </div>
   );
 }
