@@ -514,14 +514,29 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
 
           {/* Checkout — for open/completed bookings */}
           {!isPaid && !isCancelled && (
-            <Button
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => setCheckoutOpen(true)}
-            >
-              <CreditCard className="size-3.5" />
-              Proceed to Checkout
-            </Button>
+            <>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setCheckoutOpen(true)}
+              >
+                <CreditCard className="size-3.5" />
+                Proceed to Checkout
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() =>
+                  toast.success(
+                    "Appointment marked as finished — invoice stays open for later billing",
+                  )
+                }
+              >
+                <CheckCircle2 className="size-3.5" />
+                Finish Without Payment
+              </Button>
+            </>
           )}
 
           <div className="flex-1" />
