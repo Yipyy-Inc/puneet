@@ -198,60 +198,73 @@ export default function ClientBookingDetailPage({
         <span className="text-foreground font-medium">#{booking.id}</span>
       </div>
 
-      {/* Deposit Notice */}
+      {/* Deposit Notice — unpaid */}
       {!isPaid && !isCancelled && (invoice?.depositCollected ?? 0) === 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Banknote className="size-4 text-amber-600" />
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+              <Banknote className="size-4 text-blue-600" />
+            </div>
             <div>
-              <p className="text-sm font-medium text-amber-800">
-                Deposit required before check-in
+              <p className="text-sm font-medium text-blue-800">
+                Deposit Required
               </p>
-              <p className="text-xs text-amber-600">
-                50% of total (${(booking.totalCost * 0.5).toFixed(2)}) must be
-                collected before service begins
+              <p className="text-xs text-blue-600">
+                Rule: 50% of service total — $
+                {(booking.totalCost * 0.5).toFixed(2)} due before check-in
+              </p>
+              <p className="text-[10px] text-blue-500">
+                Paying the deposit will auto-confirm this booking
               </p>
             </div>
           </div>
           <Button
             size="sm"
-            variant="outline"
-            className="border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
+            className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
             onClick={() => setDepositOpen(true)}
           >
-            <Banknote className="mr-1.5 size-3.5" />
+            <Banknote className="size-3.5" />
             Charge Deposit
           </Button>
         </div>
       )}
 
-      {/* Deposit Collected Notice + Continue to Check In */}
+      {/* Deposit Collected — with auto-confirm note */}
       {(invoice?.depositCollected ?? 0) > 0 && !isPaid && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="size-4 text-emerald-600" />
-            <p className="text-sm text-emerald-800">
-              Deposit collected:{" "}
-              <strong className="font-[tabular-nums]">
-                ${(invoice?.depositCollected ?? 0).toFixed(2)}
-              </strong>{" "}
-              — Remaining balance:{" "}
-              <strong className="font-[tabular-nums]">
-                ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
-              </strong>
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+              <CheckCircle2 className="size-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-emerald-800">
+                Deposit Collected — $
+                {(invoice?.depositCollected ?? 0).toFixed(2)}
+              </p>
+              <p className="text-xs text-emerald-600">
+                Remaining balance:{" "}
+                <span className="font-[tabular-nums] font-medium">
+                  ${(invoice?.remainingDue ?? booking.totalCost).toFixed(2)}
+                </span>{" "}
+                · Booking auto-confirmed
+              </p>
+            </div>
           </div>
-          {booking.status !== "confirmed" && (
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() =>
-                toast.success("Checked in — invoice status changed to Open")
-              }
-            >
-              Continue to Check In
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {booking.status !== "confirmed" && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  toast.success(
+                    "Checked in — invoice status changed to Open",
+                  )
+                }
+              >
+                Continue to Check In
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -657,15 +670,33 @@ ${
           )}
 
           {!isCancelled && booking.status !== "completed" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:bg-destructive/10 h-8 gap-1.5 text-xs"
-              onClick={() => setCancelOpen(true)}
-            >
-              <XCircle className="size-3.5" />
-              Cancel
-            </Button>
+            <>
+              {/* No-Show with deposit forfeit */}
+              {(invoice?.depositCollected ?? 0) > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs text-amber-700 hover:bg-amber-50"
+                  onClick={() =>
+                    toast.success(
+                      `No-show recorded — deposit of $${(invoice?.depositCollected ?? 0).toFixed(2)} forfeited as no-show fee`,
+                    )
+                  }
+                >
+                  <AlertTriangle className="size-3.5" />
+                  No-Show
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:bg-destructive/10 h-8 gap-1.5 text-xs"
+                onClick={() => setCancelOpen(true)}
+              >
+                <XCircle className="size-3.5" />
+                Cancel
+              </Button>
+            </>
           )}
         </div>
       </div>
