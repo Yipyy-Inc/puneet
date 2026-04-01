@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   PawPrint,
   Pencil,
-  Plus,
   Printer,
   Send,
   CreditCard,
@@ -27,6 +26,7 @@ import {
   MapPin,
   AlertTriangle,
   HandCoins,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +40,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
-import { products } from "@/data/retail";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
@@ -54,6 +53,7 @@ import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
+import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
@@ -157,6 +157,7 @@ export default function ClientBookingDetailPage({
   const [depositOpen, setDepositOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [retailOpen, setRetailOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
@@ -357,42 +358,17 @@ export default function ClientBookingDetailPage({
             </Button>
           )}
 
-          {/* Add Item — not on finished bookings */}
+          {/* Add Item — opens retail product picker */}
           {!isCancelled && booking.status !== "completed" && !isPaid && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                >
-                  <Plus className="size-3.5" />
-                  Add Item
-                  <ChevronDown className="size-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {products.slice(0, 5).map((p) => (
-                  <DropdownMenuItem
-                    key={p.id}
-                    onClick={() => {
-                      setAddedItems((prev) => [
-                        ...prev,
-                        {
-                          name: p.name,
-                          unitPrice: p.basePrice,
-                          quantity: 1,
-                          price: p.basePrice,
-                        },
-                      ]);
-                      toast.success(`Added "${p.name}"`);
-                    }}
-                  >
-                    {p.name} · ${p.basePrice}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setRetailOpen(true)}
+            >
+              <ShoppingBag className="size-3.5" />
+              Add Item
+            </Button>
           )}
 
           <DropdownMenu>
@@ -1216,6 +1192,21 @@ ${
           toast.success(
             `Refund of $${refund.amount.toFixed(2)} processed via ${refund.method}`,
           );
+        }}
+      />
+      <AddRetailItemModal
+        open={retailOpen}
+        onOpenChange={setRetailOpen}
+        onAddItems={(items) => {
+          setAddedItems((prev) => [
+            ...prev,
+            ...items.map((i) => ({
+              name: i.name,
+              unitPrice: i.price / i.quantity,
+              quantity: i.quantity,
+              price: i.price,
+            })),
+          ]);
         }}
       />
     </div>
