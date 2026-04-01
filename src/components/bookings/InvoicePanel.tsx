@@ -71,7 +71,13 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
   return (
     <Card className="sticky top-20 overflow-hidden">
       {/* Status banner */}
-      <div className={cn("px-4 py-2 text-center text-xs font-medium", status.bg, status.color)}>
+      <div
+        className={cn(
+          "px-4 py-2 text-center text-xs font-medium",
+          status.bg,
+          status.color,
+        )}
+      >
         {invoice.status === "estimate" && (
           <span className="flex items-center justify-center gap-1.5">
             <FileText className="size-3.5" />
@@ -92,13 +98,14 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
         )}
       </div>
 
-      <CardHeader className="pb-3 pt-4">
+      <CardHeader className="pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">{invoice.id}</p>
             <p className="text-muted-foreground text-xs">
               {invoice.items.length} item{invoice.items.length !== 1 ? "s" : ""}
-              {invoice.fees.length > 0 && ` · ${invoice.fees.length} fee${invoice.fees.length !== 1 ? "s" : ""}`}
+              {invoice.fees.length > 0 &&
+                ` · ${invoice.fees.length} fee${invoice.fees.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <Badge variant={status.variant} className="capitalize">
@@ -596,7 +603,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 {invoice.payments.map((p, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between rounded-md border bg-muted/20 px-2.5 py-2"
+                    className="bg-muted/20 flex items-center justify-between rounded-md border px-2.5 py-2"
                   >
                     <div>
                       <p className="text-xs font-medium capitalize">

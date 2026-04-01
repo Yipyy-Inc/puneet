@@ -108,7 +108,17 @@ h1{font-size:18px;margin:0;color:#dc2626}h2{font-size:12px;color:#666;margin:4px
 <div class="row"><span>Type</span><span>${refundType === "by_item" ? "By Item" : refundType === "partial" ? "Partial" : "Full"}</span></div>
 <div class="row"><span>Method</span><span>${methodLabel}</span></div>
 ${reason ? `<div class="row"><span>Reason</span><span>${reason}</span></div>` : ""}
-${refundType === "by_item" ? `<div class="section">Refunded Items</div>${items.filter((_, i) => selectedItems.has(i)).map((item) => `<div class="row"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`).join("")}` : ""}
+${
+  refundType === "by_item"
+    ? `<div class="section">Refunded Items</div>${items
+        .filter((_, i) => selectedItems.has(i))
+        .map(
+          (item) =>
+            `<div class="row"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`,
+        )
+        .join("")}`
+    : ""
+}
 <div class="row total"><span>Refund Amount</span><span>$${refundAmount.toFixed(2)}</span></div>
 <div class="badge">REFUND PROCESSED</div>
 <div class="note">The original invoice remains unchanged for audit purposes. This refund receipt is linked to the original transaction.</div>
