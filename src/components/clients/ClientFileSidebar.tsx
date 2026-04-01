@@ -200,7 +200,7 @@ export function ClientFileSidebar({
   };
 
   return (
-    <aside className="bg-card hidden w-64 shrink-0 border-r border-border/50 lg:flex lg:flex-col">
+    <aside className="bg-card hidden w-80 shrink-0 border-r border-border/50 lg:flex lg:flex-col">
       {/* Back link */}
       <div className="px-4 py-3">
         <Link
