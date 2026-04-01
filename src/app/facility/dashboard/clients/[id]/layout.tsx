@@ -28,10 +28,10 @@ export default function ClientFileLayout({
 
   // Standalone profile page — no sidebar
   const isStandalonePage = pathname === `/facility/dashboard/clients/${id}`;
-  // Booking detail pages get a compact client header instead of the full sidebar
-  const isBookingDetail = /\/bookings\/\d+/.test(pathname ?? "");
+  // Booking and pet detail pages get a compact client header instead of the full sidebar
+  const isDetailPage = /\/(bookings|pets)\/\d+/.test(pathname ?? "");
 
-  if (isStandalonePage || isBookingDetail) {
+  if (isStandalonePage || isDetailPage) {
     return <>{children}</>;
   }
 
