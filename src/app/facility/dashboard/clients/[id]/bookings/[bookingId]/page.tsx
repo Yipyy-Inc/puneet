@@ -535,6 +535,13 @@ ${(inv?.taxes ?? []).map((t) => `<div class="row sub"><span>${t.name}</span><spa
 ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
 <div class="row total"><span>Total Charged</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
 ${(inv?.payments ?? []).length > 0 ? `<div class="section">Payment</div>${(inv?.payments ?? []).map((p) => `<div class="row"><span>${p.method}${p.transactionId ? ` · ${p.transactionId}` : ""}</span><span>$${p.amount.toFixed(2)}</span></div>`).join("")}` : ""}
+${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?.items ?? []).filter((item) => item.price > 0 && item.type !== "package_credit").map((item) => {
+  const staffName = item.staffName ?? booking.stylistPreference ?? "Staff";
+  const totalServiceValue = (inv?.items ?? []).filter((i) => i.price > 0 && i.type !== "package_credit").reduce((s, i) => s + i.price, 0);
+  const pct = totalServiceValue > 0 ? item.price / totalServiceValue : 0;
+  const tipShare = Math.round((inv?.tipTotal ?? 0) * pct * 100) / 100;
+  return `<div class="row"><span>${staffName} <small style="color:#888">· ${item.name}</small></span><span>$${tipShare.toFixed(2)}</span></div>`;
+}).join("")}` : ""}
 <div class="paid">PAYMENT COMPLETE</div>
 <div class="footer">Thank you for choosing us!<br>${booking.service} · ${new Date(booking.startDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
 </body></html>`);
