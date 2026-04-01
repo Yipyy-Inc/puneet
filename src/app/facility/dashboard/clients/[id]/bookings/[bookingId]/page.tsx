@@ -62,6 +62,8 @@ import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
+import { QuickBooksSyncPanel } from "@/components/bookings/QuickBooksSyncPanel";
+import { useFacilityRole } from "@/hooks/use-facility-role";
 import type { InvoiceLineItem } from "@/types/booking";
 import type { GeneratedTask } from "@/types/task";
 import {
@@ -138,6 +140,7 @@ export default function ClientBookingDetailPage({
   params: Promise<{ id: string; bookingId: string }>;
 }) {
   const { id, bookingId: bookingIdStr } = use(params);
+  const { role } = useFacilityRole();
   const clientId = parseInt(id, 10);
   const bookingId = parseInt(bookingIdStr, 10);
 
@@ -839,10 +842,10 @@ ${
                         <img
                           src={pet.imageUrl}
                           alt={pet.name}
-                          className="size-24 rounded-full object-cover ring-[3px] ring-white shadow-md transition-transform group-hover:scale-105"
+                          className="size-24 rounded-full object-cover shadow-md ring-[3px] ring-white transition-transform group-hover:scale-105"
                         />
                       ) : (
-                        <div className="bg-primary/10 text-primary flex size-24 items-center justify-center rounded-full text-2xl font-bold ring-[3px] ring-white shadow-md">
+                        <div className="bg-primary/10 text-primary flex size-24 items-center justify-center rounded-full text-2xl font-bold shadow-md ring-[3px] ring-white">
                           {pet.name.charAt(0)}
                         </div>
                       )}
@@ -1103,6 +1106,14 @@ ${
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* QuickBooks Sync — owner/manager only */}
+            {(role === "owner" || role === "manager") && (
+              <QuickBooksSyncPanel
+                sync={booking.quickbooksSync}
+                invoiceId={invoice?.id}
+              />
             )}
           </div>
 
