@@ -19,6 +19,7 @@ import {
   History,
   ChevronLeft,
   ArrowUpRight,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,12 +77,9 @@ export function ClientFileSidebar({
   useEffect(() => {
     try {
       const s = sessionStorage.getItem(storageKey);
-      if (s) {
-        const parsed = JSON.parse(s);
-        requestAnimationFrame(() => setRecentCtx(parsed));
-      }
+      if (s) requestAnimationFrame(() => setRecentCtx(JSON.parse(s)));
     } catch {
-      /* ignore */
+      /* */
     }
   }, [storageKey]);
 
@@ -110,21 +108,22 @@ export function ClientFileSidebar({
   const showRecentSection = hasRecentBooking || hasRecentPet;
 
   // Other bookings for context
-  const otherBookings = useMemo(() => {
-    return bookings
-      .filter(
-        (b) =>
-          b.clientId === client.id &&
-          String(b.id) !== currentBookingId,
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-      )
-      .slice(0, 3);
-  }, [client.id, currentBookingId]);
+  const otherBookings = useMemo(
+    () =>
+      bookings
+        .filter(
+          (b) =>
+            b.clientId === client.id && String(b.id) !== currentBookingId,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+        )
+        .slice(0, 3),
+    [client.id, currentBookingId],
+  );
 
-  // Nav sections
+  // Nav config
   const customerNav = [
     { href: `${base}/overview`, label: "Overview", icon: User },
     {
@@ -175,20 +174,25 @@ export function ClientFileSidebar({
         key={item.href}
         href={item.href}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all",
           active
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+            ? "bg-primary/10 text-primary font-medium"
+            : "text-foreground/70 hover:bg-muted hover:text-foreground",
         )}
       >
-        <Icon className={cn("size-4 shrink-0", active && "text-foreground")} />
+        <Icon
+          className={cn(
+            "size-4 shrink-0",
+            active ? "text-primary" : "text-foreground/40",
+          )}
+        />
         <span className="flex-1">{item.label}</span>
         {item.count != null && item.count > 0 && (
           <span
             className={cn(
-              "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs",
+              "min-w-[22px] rounded-md px-1.5 py-0.5 text-center text-xs font-medium",
               active
-                ? "bg-foreground/10 font-medium"
+                ? "bg-primary/15 text-primary"
                 : "bg-muted text-muted-foreground",
             )}
           >
@@ -200,12 +204,12 @@ export function ClientFileSidebar({
   };
 
   return (
-    <aside className="bg-card hidden w-80 shrink-0 border-r border-border/50 lg:flex lg:flex-col">
-      {/* Back link */}
-      <div className="px-4 py-3">
+    <aside className="hidden w-80 shrink-0 border-r border-border/40 bg-background lg:flex lg:flex-col">
+      {/* Back */}
+      <div className="px-5 pt-4 pb-2">
         <Link
           href="/facility/dashboard/clients"
-          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
         >
           <ChevronLeft className="size-3.5" />
           All Clients
@@ -213,28 +217,25 @@ export function ClientFileSidebar({
       </div>
 
       {/* Client header */}
-      <div className="px-4 pb-4">
+      <div className="px-5 pb-5">
         <div className="flex flex-col items-center text-center">
-          <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-full text-lg font-semibold">
+          <div className="bg-primary/10 text-primary flex size-[72px] items-center justify-center rounded-full text-xl font-bold">
             {getInitials(client.name)}
           </div>
-          <h3 className="mt-3 text-base font-semibold">{client.name}</h3>
-          <div className="mt-1 flex items-center gap-1.5">
-            <div
-              className={cn(
-                "size-2 rounded-full",
-                client.status === "active"
-                  ? "bg-emerald-500"
-                  : "bg-muted-foreground",
-              )}
-            />
-            <span className="text-muted-foreground text-xs capitalize">
+          <h3 className="mt-3 text-lg font-semibold tracking-tight">
+            {client.name}
+          </h3>
+          <div className="mt-1.5 flex items-center gap-2">
+            <Badge
+              variant={client.status === "active" ? "default" : "secondary"}
+              className="h-5 px-2 text-[10px] capitalize"
+            >
               {client.status}
-            </span>
+            </Badge>
             {client.membership?.status === "active" && (
               <Badge
                 variant="outline"
-                className="border-amber-200 bg-amber-50 px-1.5 text-[10px] text-amber-700"
+                className="h-5 border-amber-300 bg-amber-50 px-2 text-[10px] font-medium text-amber-700"
               >
                 {client.membership.plan}
               </Badge>
@@ -243,69 +244,58 @@ export function ClientFileSidebar({
         </div>
 
         {/* Contact */}
-        <div className="mt-3 space-y-1.5">
+        <div className="mt-4 space-y-2 rounded-lg border border-border/40 bg-muted/30 p-3">
           {client.email && (
-            <p className="text-muted-foreground flex items-center gap-2 text-xs">
-              <Mail className="size-3.5 shrink-0" />
+            <div className="flex items-center gap-2.5 text-sm">
+              <Mail className="text-muted-foreground size-4 shrink-0" />
               <span className="truncate">{client.email}</span>
-            </p>
+            </div>
           )}
           {client.phone && (
-            <p className="text-muted-foreground flex items-center gap-2 text-xs">
-              <Phone className="size-3.5 shrink-0" />
+            <div className="flex items-center gap-2.5 text-sm">
+              <Phone className="text-muted-foreground size-4 shrink-0" />
               {client.phone}
-            </p>
+            </div>
           )}
         </div>
 
         {/* Quick actions */}
         <div className="mt-3 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 flex-1 text-xs"
-            asChild
-          >
+          <Button variant="outline" size="sm" className="h-9 flex-1" asChild>
             <Link href={`${base}/messages`}>
-              <Mail className="mr-1.5 size-3.5" />
+              <MessageSquare className="mr-1.5 size-4" />
               Message
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 flex-1 text-xs"
-            asChild
-          >
+          <Button variant="outline" size="sm" className="h-9 flex-1" asChild>
             <Link href={`/facility/dashboard/clients/${client.id}`}>
-              <User className="mr-1.5 size-3.5" />
-              Profile
+              <ExternalLink className="mr-1.5 size-4" />
+              Full Profile
             </Link>
           </Button>
         </div>
       </div>
 
-      <div className="border-t border-border/50" />
-
       {/* Recent context */}
       {showRecentSection && (
-        <div className="space-y-1 px-3 pt-3 pb-2">
+        <div className="space-y-1.5 border-t border-border/40 px-4 pt-4 pb-3">
+          <p className="text-muted-foreground mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
+            Currently Viewing
+          </p>
           {hasRecentBooking && (
             <Link
               href={recentCtx.booking!.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all",
+                "flex items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-all",
                 onBookingDetail
-                  ? "bg-muted border-border font-medium"
-                  : "border-border/50 hover:bg-muted/50",
+                  ? "border-primary/30 bg-primary/5 font-medium"
+                  : "border-border/40 hover:border-border hover:bg-muted/50",
               )}
             >
               <Calendar
                 className={cn(
                   "size-4 shrink-0",
-                  onBookingDetail
-                    ? "text-foreground"
-                    : "text-muted-foreground",
+                  onBookingDetail ? "text-primary" : "text-muted-foreground",
                 )}
               />
               <span className="flex-1 text-sm">
@@ -320,18 +310,16 @@ export function ClientFileSidebar({
             <Link
               href={recentCtx.pet!.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all",
+                "flex items-center gap-3 rounded-lg border px-3.5 py-2.5 transition-all",
                 onPetDetail
-                  ? "bg-muted border-border font-medium"
-                  : "border-border/50 hover:bg-muted/50",
+                  ? "border-primary/30 bg-primary/5 font-medium"
+                  : "border-border/40 hover:border-border hover:bg-muted/50",
               )}
             >
               <PawPrint
                 className={cn(
                   "size-4 shrink-0",
-                  onPetDetail
-                    ? "text-foreground"
-                    : "text-muted-foreground",
+                  onPetDetail ? "text-primary" : "text-muted-foreground",
                 )}
               />
               <span className="flex-1 text-sm">
@@ -346,38 +334,31 @@ export function ClientFileSidebar({
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 pt-2 pb-4">
-        {/* Customer */}
-        <p className="text-muted-foreground mb-1 px-3 text-[11px] font-medium uppercase tracking-wider">
+      <nav className="flex-1 overflow-y-auto border-t border-border/40 px-4 pt-4 pb-5">
+        <p className="text-muted-foreground mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wider">
           Customer
         </p>
-        <div className="space-y-0.5">
-          {customerNav.map(renderNavItem)}
-        </div>
+        <div className="space-y-0.5">{customerNav.map(renderNavItem)}</div>
 
-        {/* Communication */}
-        <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
           Communication
         </p>
         <div className="space-y-0.5">
           {communicationNav.map(renderNavItem)}
         </div>
 
-        {/* Admin */}
-        <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
           Admin
         </p>
-        <div className="space-y-0.5">
-          {adminNav.map(renderNavItem)}
-        </div>
+        <div className="space-y-0.5">{adminNav.map(renderNavItem)}</div>
 
         {/* Other bookings — contextual */}
         {onBookingDetail && otherBookings.length > 0 && (
           <>
-            <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
+            <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
               Other Bookings
             </p>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {otherBookings.map((b) => {
                 const bPet = client.pets.find(
                   (p) =>
@@ -388,19 +369,21 @@ export function ClientFileSidebar({
                   <Link
                     key={b.id}
                     href={`${base}/bookings/${b.id}`}
-                    className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all"
+                    className="text-foreground/70 hover:bg-muted hover:text-foreground flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all"
                   >
-                    <Calendar className="size-4 shrink-0 opacity-60" />
+                    <Calendar className="text-foreground/30 size-4 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium">
+                      <p className="text-sm font-medium capitalize">
                         #{b.id} · {b.service}
                       </p>
-                      <p className="text-muted-foreground text-[11px]">
+                      <p className="text-muted-foreground text-xs">
                         {formatDateShort(b.startDate)}
                         {bPet && ` · ${bPet.name}`}
                       </p>
                     </div>
-                    <span className="text-xs font-medium">${b.totalCost}</span>
+                    <span className="text-sm font-medium font-[tabular-nums]">
+                      ${b.totalCost}
+                    </span>
                   </Link>
                 );
               })}
