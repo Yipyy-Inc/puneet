@@ -24,6 +24,8 @@ import {
 import { FileText, Download, Search, Calendar, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceLoyaltySection } from "@/components/loyalty/InvoiceLoyaltySection";
+import { facilities } from "@/data/facilities";
+import { invoiceHeaderHtml } from "@/lib/invoice-header";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -260,13 +262,9 @@ export function InvoicesTab() {
       </head>
       <body>
         <div class="invoice-wrapper">
+          ${invoiceHeaderHtml(facilities.find((f) => f.id === (selectedFacility?.id ?? 11)))}
           <div class="header">
-            <div>
-              <div class="brand">Yipyy<span> Pets</span></div>
-              <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
-                Billing & Payments
-              </div>
-            </div>
+            <div></div>
             <div class="meta">
               <h1>${title}</h1>
               <div>Issued: ${formatDate(invoice.issuedDate)}</div>
