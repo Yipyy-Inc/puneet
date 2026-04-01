@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
@@ -66,9 +65,6 @@ export function EditBookingModal({
     endDate: booking.endDate,
     checkInTime: booking.checkInTime || "",
     checkOutTime: booking.checkOutTime || "",
-    basePrice: booking.basePrice,
-    discount: booking.discount,
-    discountReason: booking.discountReason || "",
     specialRequests: booking.specialRequests || "",
   });
 
@@ -115,19 +111,6 @@ export function EditBookingModal({
     if (new Date(formData.startDate) > new Date(formData.endDate)) {
       newErrors.endDate = "End date must be after start date";
     }
-    if (formData.basePrice < 0) {
-      newErrors.basePrice = "Base price cannot be negative";
-    }
-    if (formData.discount < 0) {
-      newErrors.discount = "Discount cannot be negative";
-    }
-    if (formData.discount > formData.basePrice) {
-      newErrors.discount = "Discount cannot exceed base price";
-    }
-    if (formData.discount > 0 && !formData.discountReason.trim()) {
-      newErrors.discountReason =
-        "Discount reason is required when discount is applied";
-    }
 
     // Times
     if (formData.checkInTime && !formData.checkOutTime) {
@@ -165,7 +148,6 @@ export function EditBookingModal({
     const updatedBooking: Booking = {
       ...booking,
       ...formData,
-      totalCost: formData.basePrice - formData.discount,
     };
     onSave(updatedBooking);
     onOpenChange(false);
@@ -180,9 +162,6 @@ export function EditBookingModal({
         endDate: booking.endDate,
         checkInTime: booking.checkInTime || "",
         checkOutTime: booking.checkOutTime || "",
-        basePrice: booking.basePrice,
-        discount: booking.discount,
-        discountReason: booking.discountReason || "",
         specialRequests: booking.specialRequests || "",
       });
       setErrors({});
@@ -363,94 +342,6 @@ export function EditBookingModal({
                       Duration: {(sameDayDurationMinutes / 60).toFixed(1)} hours
                     </p>
                   )}
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="basePrice">Base Price ($)</Label>
-                <Input
-                  id="basePrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.basePrice}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      basePrice: parseFloat(e.target.value) || 0,
-                    });
-                    if (errors.basePrice) {
-                      setErrors({ ...errors, basePrice: "" });
-                    }
-                  }}
-                  className={errors.basePrice ? "border-destructive" : ""}
-                  required
-                />
-                {errors.basePrice && (
-                  <p className="text-destructive text-sm">{errors.basePrice}</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="discount">Discount ($)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.discount}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      discount: parseFloat(e.target.value) || 0,
-                    });
-                    if (errors.discount) {
-                      setErrors({ ...errors, discount: "" });
-                    }
-                  }}
-                  className={errors.discount ? "border-destructive" : ""}
-                />
-                {errors.discount && (
-                  <p className="text-destructive text-sm">{errors.discount}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Discount Reason */}
-            {formData.discount > 0 && (
-              <div className="grid gap-2">
-                <Label htmlFor="discountReason">Discount Reason</Label>
-                <Input
-                  id="discountReason"
-                  value={formData.discountReason}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      discountReason: e.target.value,
-                    });
-                    if (errors.discountReason) {
-                      setErrors({ ...errors, discountReason: "" });
-                    }
-                  }}
-                  className={errors.discountReason ? "border-destructive" : ""}
-                  placeholder="e.g., Loyalty discount, First-time customer"
-                />
-                {errors.discountReason && (
-                  <p className="text-destructive text-sm">
-                    {errors.discountReason}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Total Cost */}
-            <div className="bg-muted grid gap-2 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-base">Total Cost</Label>
-                <div className="text-2xl font-bold">
-                  ${(formData.basePrice - formData.discount).toFixed(2)}
-                </div>
               </div>
             </div>
 
