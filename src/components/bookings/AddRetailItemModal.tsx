@@ -3,14 +3,19 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Search,
   ShoppingBag,
@@ -19,6 +24,8 @@ import {
   Check,
   Package,
   X,
+  Minus,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,8 +53,12 @@ export function AddRetailItemModal({
   >(new Map());
 
   const categories = useMemo(() => {
-    const cats = new Set(products.map((p) => p.category));
-    return ["all", ...Array.from(cats).sort()];
+    const activeProducts = products.filter((p) => p.status === "active");
+    const counts = new Map<string, number>();
+    for (const p of activeProducts) {
+      counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
+    }
+    return { total: activeProducts.length, counts };
   }, []);
 
   const filtered = useMemo(() => {
@@ -61,8 +72,7 @@ export function AddRetailItemModal({
         p.name.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
         p.barcode?.includes(q) ||
-        p.brand?.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.brand?.toLowerCase().includes(q)
       );
     });
   }, [searchQuery, activeCategory]);
@@ -75,17 +85,13 @@ export function AddRetailItemModal({
         p.variants?.some((v) => v.barcode === barcodeInput),
     );
     if (found) {
-      const variant = found.variants?.find(
-        (v) => v.barcode === barcodeInput,
-      );
-      const name = variant
-        ? `${found.name} — ${variant.name}`
-        : found.name;
+      const variant = found.variants?.find((v) => v.barcode === barcodeInput);
+      const name = variant ? `${found.name} — ${variant.name}` : found.name;
       const price = variant ? variant.price : found.basePrice;
       addToCart(found.id + (variant?.id ?? ""), name, price);
       toast.success(`Scanned: ${name}`);
     } else {
-      toast.error("Product not found for this barcode");
+      toast.error("Product not found");
     }
     setBarcodeInput("");
   };
@@ -141,110 +147,114 @@ export function AddRetailItemModal({
     onOpenChange(false);
     setCart(new Map());
     setSearchQuery("");
+    setActiveCategory("all");
     toast.success(
       `${cartCount} item${cartCount !== 1 ? "s" : ""} added to invoice`,
     );
   };
 
+  const handleClose = () => {
+    setSearchQuery("");
+    setScanMode(false);
+    setActiveCategory("all");
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        if (!v) {
-          setSearchQuery("");
-          setScanMode(false);
-        }
-        onOpenChange(v);
-      }}
-    >
-      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingBag className="size-5" />
-            Add Products to Invoice
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="flex max-w-2xl flex-col gap-0 overflow-hidden p-0">
+        {/* ── Fixed header ── */}
+        <div className="shrink-0 space-y-3 border-b p-5 pb-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="size-5" />
+              Add Products to Invoice
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Search + Scan toggle */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products by name, SKU, or brand..."
-              className="pl-10"
-              autoFocus
-            />
-          </div>
-          <Button
-            variant={scanMode ? "default" : "outline"}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setScanMode(!scanMode)}
-          >
-            <Barcode className="size-4" />
-            Scan
-          </Button>
-        </div>
-
-        {/* Barcode scanner */}
-        {scanMode && (
-          <div className="animate-in fade-in flex gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 duration-150">
-            <Barcode className="mt-0.5 size-5 shrink-0 text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-800">
-                Barcode Scanner
-              </p>
-              <div className="mt-1.5 flex gap-2">
-                <Input
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleScan();
-                  }}
-                  placeholder="Scan or type barcode..."
-                  className="h-8 flex-1 bg-white text-xs"
-                  autoFocus={scanMode}
-                />
-                <Button
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={handleScan}
-                  disabled={!barcodeInput.trim()}
-                >
-                  Add
-                </Button>
-              </div>
+          {/* Search + Scan toggle */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, SKU, barcode, or brand..."
+                className="h-10 pl-10"
+                autoFocus
+              />
             </div>
-          </div>
-        )}
-
-        {/* Category filter */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all",
-                activeCategory === cat
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "hover:bg-muted/50",
-              )}
+            <Button
+              variant={scanMode ? "default" : "outline"}
+              className="h-10 gap-1.5"
+              onClick={() => setScanMode(!scanMode)}
             >
-              {cat === "all" ? "All Products" : cat}
-            </button>
-          ))}
+              <Barcode className="size-4" />
+              Scan
+            </Button>
+          </div>
+
+          {/* Scanner input */}
+          {scanMode && (
+            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+              <Barcode className="size-4 shrink-0 text-blue-600" />
+              <Input
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleScan();
+                }}
+                placeholder="Scan or enter barcode..."
+                className="h-8 flex-1 border-blue-200 bg-white text-sm"
+                autoFocus={scanMode}
+              />
+              <Button
+                size="sm"
+                className="h-8"
+                onClick={handleScan}
+                disabled={!barcodeInput.trim()}
+              >
+                Add
+              </Button>
+            </div>
+          )}
+
+          {/* Category filter + result count */}
+          <div className="flex items-center gap-2">
+            <Select value={activeCategory} onValueChange={setActiveCategory}>
+              <SelectTrigger className="h-9 w-[200px] text-xs">
+                <SlidersHorizontal className="text-muted-foreground mr-1 size-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  All Categories ({categories.total})
+                </SelectItem>
+                {Array.from(categories.counts.entries())
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([cat, count]) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat} ({count})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <span className="text-muted-foreground text-xs">
+              {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+            </span>
+          </div>
         </div>
 
-        {/* Product grid */}
-        <div className="flex-1 overflow-y-auto">
+        {/* ── Scrollable product list — fills remaining space ── */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
           {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <Package className="text-muted-foreground/30 mx-auto size-10" />
-              <p className="text-muted-foreground mt-2 text-sm">
+            <div className="py-16 text-center">
+              <Package className="text-muted-foreground/20 mx-auto size-12" />
+              <p className="text-muted-foreground mt-3 text-sm">
                 No products found
+              </p>
+              <p className="text-muted-foreground/60 mt-1 text-xs">
+                Try a different search or category
               </p>
             </div>
           ) : (
@@ -253,141 +263,144 @@ export function AddRetailItemModal({
                 const inCart = cart.has(product.id);
                 const cartQty = cart.get(product.id)?.quantity ?? 0;
                 return (
-                  <button
+                  <div
                     key={product.id}
-                    onClick={() =>
-                      addToCart(
-                        product.id,
-                        product.name,
-                        product.basePrice,
-                      )
-                    }
                     className={cn(
-                      "flex items-start gap-3 rounded-xl border p-3 text-left transition-all",
+                      "group relative flex items-start gap-3 rounded-xl border p-3 transition-all",
                       inCart
-                        ? "border-primary/30 bg-primary/5 ring-1 ring-primary/10"
-                        : "hover:border-border hover:bg-muted/30",
+                        ? "border-primary/40 bg-primary/5"
+                        : "hover:border-primary/20 hover:shadow-sm",
                     )}
                   >
-                    <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
-                      <ShoppingBag className="text-muted-foreground size-5" />
+                    <div className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-lg">
+                      <ShoppingBag className="text-muted-foreground/60 size-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{product.name}</p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
-                        {product.brand && `${product.brand} · `}
-                        {product.category}
+                      <p className="text-sm leading-tight font-medium">
+                        {product.name}
                       </p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="font-[tabular-nums] text-sm font-semibold">
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {product.brand ?? product.category}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <span className="font-[tabular-nums] text-sm font-bold">
                           ${product.basePrice.toFixed(2)}
                         </span>
-                        <Badge
-                          variant="outline"
-                          className="text-[9px]"
-                        >
-                          SKU: {product.sku}
-                        </Badge>
+                        {product.stock != null && (
+                          <span
+                            className={cn(
+                              "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                              product.stock <= (product.minStock ?? 5)
+                                ? "bg-red-50 text-red-600"
+                                : "bg-emerald-50 text-emerald-600",
+                            )}
+                          >
+                            {product.stock} in stock
+                          </span>
+                        )}
                       </div>
                     </div>
+                    {/* Add / Quantity stepper */}
                     {inCart ? (
-                      <Badge className="bg-primary shrink-0">
-                        {cartQty}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() =>
+                            updateQuantity(product.id, cartQty - 1)
+                          }
+                          className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md border transition-colors"
+                        >
+                          <Minus className="size-3" />
+                        </button>
+                        <span className="w-6 text-center text-sm font-semibold">
+                          {cartQty}
+                        </span>
+                        <button
+                          onClick={() =>
+                            updateQuantity(product.id, cartQty + 1)
+                          }
+                          className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md border transition-colors"
+                        >
+                          <Plus className="size-3" />
+                        </button>
+                      </div>
                     ) : (
-                      <Plus className="text-muted-foreground/30 mt-1 size-4 shrink-0" />
+                      <button
+                        onClick={() =>
+                          addToCart(product.id, product.name, product.basePrice)
+                        }
+                        className="text-muted-foreground/40 hover:text-primary hover:bg-primary/10 flex size-8 items-center justify-center rounded-lg transition-all"
+                      >
+                        <Plus className="size-5" />
+                      </button>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
           )}
         </div>
 
-        {/* Cart summary */}
-        {cartItems.length > 0 && (
-          <div className="animate-in slide-in-from-bottom-2 space-y-2 rounded-xl border bg-muted/20 p-3 duration-200">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium">
-                Cart ({cartCount} item{cartCount !== 1 ? "s" : ""})
-              </p>
-              <button
-                onClick={() => setCart(new Map())}
-                className="text-muted-foreground text-xs hover:underline"
-              >
-                Clear
-              </button>
-            </div>
-            <div className="max-h-[120px] space-y-1 overflow-y-auto">
-              {cartItems.map(([id, item]) => (
-                <div
-                  key={id}
-                  className="flex items-center gap-2 rounded-md bg-background px-2.5 py-1.5"
+        {/* ── Fixed footer — cart summary + actions ── */}
+        <div className="bg-muted/20 shrink-0 border-t p-5 pt-4">
+          {cartItems.length > 0 && (
+            <div className="mb-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium">
+                  {cartCount} item{cartCount !== 1 ? "s" : ""} selected
+                </p>
+                <button
+                  onClick={() => setCart(new Map())}
+                  className="text-muted-foreground text-xs hover:underline"
                 >
-                  <span className="min-w-0 flex-1 truncate text-xs">
-                    {item.name}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateQuantity(id, item.quantity - 1);
-                      }}
-                      className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded border text-xs"
-                    >
-                      −
-                    </button>
-                    <span className="w-5 text-center text-xs font-medium">
-                      {item.quantity}
+                  Clear all
+                </button>
+              </div>
+              <div className="max-h-20 space-y-1 overflow-y-auto">
+                {cartItems.map(([id, item]) => (
+                  <div
+                    key={id}
+                    className="bg-background flex items-center gap-2 rounded-lg px-3 py-1.5"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                      {item.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      ×{item.quantity}
+                    </span>
+                    <span className="w-14 text-right font-[tabular-nums] text-xs font-semibold">
+                      ${(item.price * item.quantity).toFixed(2)}
                     </span>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateQuantity(id, item.quantity + 1);
-                      }}
-                      className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded border text-xs"
+                      onClick={() => removeFromCart(id)}
+                      className="text-muted-foreground hover:text-destructive"
                     >
-                      +
+                      <X className="size-3" />
                     </button>
                   </div>
-                  <span className="w-16 text-right font-[tabular-nums] text-xs font-medium">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFromCart(id);
-                    }}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="flex justify-between border-t pt-2 text-sm font-semibold">
-              <span>Total</span>
-              <span className="font-[tabular-nums]">
-                ${cartTotal.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        )}
+          )}
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={cartItems.length === 0}
-            className="gap-1.5"
-          >
-            <Check className="size-4" />
-            Add {cartCount} Item{cartCount !== 1 ? "s" : ""} to Invoice —
-            ${cartTotal.toFixed(2)}
-          </Button>
-        </DialogFooter>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 gap-1.5"
+              onClick={handleConfirm}
+              disabled={cartItems.length === 0}
+            >
+              <Check className="size-4" />
+              Add to Invoice
+              {cartTotal > 0 && (
+                <span className="font-[tabular-nums]">
+                  — ${cartTotal.toFixed(2)}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
