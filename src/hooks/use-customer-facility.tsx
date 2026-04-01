@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useMemo, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  ReactNode,
+} from "react";
 import { facilities } from "@/data/facilities";
 
 export interface FacilityBranding {
@@ -51,20 +58,29 @@ export function CustomerFacilityProvider({
     [],
   );
 
+  // Start null to match server render — hydrate from localStorage in effect
   const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(
-    () => {
-      if (typeof window === "undefined") return null;
-      const stored = localStorage.getItem(CUSTOMER_FACILITY_KEY);
-      if (stored) {
-        const facilityId = parseInt(stored, 10);
-        if (availableFacilities.some((f) => f.id === facilityId)) {
-          return facilityId;
-        }
-      }
-      return availableFacilities[0]?.id ?? null;
-    },
+    null,
   );
-  const isLoading = false;
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(CUSTOMER_FACILITY_KEY);
+    if (stored) {
+      const facilityId = parseInt(stored, 10);
+      if (availableFacilities.some((f) => f.id === facilityId)) {
+        setSelectedFacilityId(facilityId);
+        setIsLoading(false);
+        return;
+      }
+    }
+    const defaultId = availableFacilities[0]?.id ?? null;
+    setSelectedFacilityId(defaultId);
+    if (defaultId !== null) {
+      localStorage.setItem(CUSTOMER_FACILITY_KEY, defaultId.toString());
+    }
+    setIsLoading(false);
+  }, [availableFacilities]);
 
   const setSelectedFacility = (facilityId: number) => {
     if (availableFacilities.some((f) => f.id === facilityId)) {
