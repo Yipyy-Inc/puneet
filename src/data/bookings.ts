@@ -421,6 +421,27 @@ export const bookings: Booking[] = [
       payments: [{ date: "2026-03-12", method: "cash", amount: 73.3 }],
       membershipApplied: "Gold — 15%",
     },
+    quickbooksSync: {
+      status: "synced",
+      quickbooksInvoiceId: "QB-INV-1007",
+      quickbooksCustomerId: "QB-CUST-15",
+      lastSyncAt: "2026-03-12T15:45:00Z",
+      history: [
+        {
+          action: "invoice_created",
+          timestamp: "2026-03-12T14:00:00Z",
+          quickbooksRefId: "QB-INV-1007",
+          triggeredBy: "system",
+        },
+        {
+          action: "payment_synced",
+          timestamp: "2026-03-12T15:45:00Z",
+          amount: 73.3,
+          quickbooksRefId: "QB-PMT-8801",
+          triggeredBy: "system",
+        },
+      ],
+    },
   },
 
   // ═══════════════════════════════════════════════════════════════════
@@ -548,6 +569,28 @@ export const bookings: Booking[] = [
       remainingDue: 0,
       payments: [{ date: "2026-03-22", method: "card", amount: 33.74 }],
       tipTotal: 5,
+    },
+    quickbooksSync: {
+      status: "failed",
+      quickbooksInvoiceId: "QB-INV-1009",
+      quickbooksCustomerId: "QB-CUST-15",
+      lastSyncAt: "2026-03-22T16:30:00Z",
+      error: "QuickBooks API timeout — please retry",
+      history: [
+        {
+          action: "invoice_created",
+          timestamp: "2026-03-22T16:00:00Z",
+          quickbooksRefId: "QB-INV-1009",
+          triggeredBy: "system",
+        },
+        {
+          action: "sync_failed",
+          timestamp: "2026-03-22T16:30:00Z",
+          amount: 33.74,
+          error: "QuickBooks API timeout — please retry",
+          triggeredBy: "system",
+        },
+      ],
     },
   },
 

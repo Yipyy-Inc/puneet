@@ -256,6 +256,41 @@ export const invoiceSchema = z.object({
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
 
+export const qbSyncActionEnum = z.enum([
+  "invoice_created",
+  "payment_synced",
+  "deposit_synced",
+  "refund_synced",
+  "line_item_added",
+  "sync_failed",
+  "manual_resync",
+]);
+
+export const qbSyncStatusEnum = z.enum([
+  "not_synced",
+  "pending",
+  "synced",
+  "failed",
+]);
+
+export const qbSyncHistoryEntrySchema = z.object({
+  action: qbSyncActionEnum,
+  timestamp: z.string(),
+  amount: z.number().optional(),
+  quickbooksRefId: z.string().optional(),
+  error: z.string().optional(),
+  triggeredBy: z.string().optional(),
+});
+
+export const quickbooksSyncSchema = z.object({
+  status: qbSyncStatusEnum,
+  quickbooksInvoiceId: z.string().optional(),
+  quickbooksCustomerId: z.string().optional(),
+  lastSyncAt: z.string().optional(),
+  error: z.string().optional(),
+  history: z.array(qbSyncHistoryEntrySchema),
+});
+
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
   paymentMethod: bookingPaymentMethodEnum.optional(),
@@ -263,6 +298,7 @@ export const bookingSchema = newBookingSchema.extend({
   refundAmount: z.number().optional(),
   cancellationReason: z.string().optional(),
   invoice: invoiceSchema.optional(),
+  quickbooksSync: quickbooksSyncSchema.optional(),
 });
 
 export type Booking = z.infer<typeof bookingSchema>;
