@@ -759,4 +759,202 @@ export const bookings: Booking[] = [
       { date: "2026-03-24", checkInTime: "07:30", checkOutTime: "18:00" },
     ],
   },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #14 — CLOSED: Split payment (card + cash)
+  // Test: Multiple payment entries in history, split receipt
+  // Client: Jane Smith (29), Pet: Fluffy
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 14,
+    clientId: 29,
+    petId: 14,
+    facilityId: 11,
+    service: "grooming",
+    serviceType: "full_groom",
+    startDate: "2026-03-17",
+    endDate: "2026-03-17",
+    checkInTime: "09:30",
+    checkOutTime: "11:00",
+    status: "completed",
+    basePrice: 65,
+    discount: 0,
+    totalCost: 65,
+    paymentStatus: "paid",
+    stylistPreference: "Emily T.",
+    notificationEmail: true,
+    notificationSMS: true,
+    invoice: {
+      id: "INV-1014",
+      status: "closed",
+      items: [
+        { name: "Full Groom", unitPrice: 65, quantity: 1, price: 65, staffName: "Emily T." },
+        { name: "De-matting", unitPrice: 25, quantity: 1, price: 25, staffName: "Emily T.", type: "addon" },
+      ],
+      fees: [],
+      subtotal: 90,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 13.48,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 4.50 },
+        { name: "QST", rate: 0.09975, amount: 8.98 },
+      ],
+      total: 103.48,
+      depositCollected: 0,
+      remainingDue: 0,
+      payments: [
+        { date: "2026-03-17", method: "card", amount: 60.00, transactionId: "TXN-5501" },
+        { date: "2026-03-17", method: "cash", amount: 43.48 },
+      ],
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #15 — CLOSED: Benefit stacking (package + membership + discount)
+  // Test: All 3 benefits on one invoice, stacking order shown
+  // Client: Alice Johnson (15), Pet: Whiskers — Gold member + package
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 15,
+    clientId: 15,
+    petId: 2,
+    facilityId: 11,
+    service: "boarding",
+    serviceType: "deluxe",
+    startDate: "2026-03-08",
+    endDate: "2026-03-10",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    status: "completed",
+    basePrice: 65,
+    discount: 16.25,
+    totalCost: 130,
+    paymentStatus: "paid",
+    kennel: "Suite B",
+    notificationEmail: true,
+    notificationSMS: false,
+    invoice: {
+      id: "INV-1015",
+      status: "closed",
+      items: [
+        { name: "Boarding — Deluxe (2 nights)", unitPrice: 65, quantity: 2, price: 130 },
+      ],
+      fees: [],
+      subtotal: 130,
+      discount: 16.25,
+      discountLabel: "Stacked benefits",
+      discounts: [
+        { name: "Gold Membership (15%)", unitPrice: 19.50, quantity: 1, price: 19.50, type: "discount", taxable: false },
+        { name: "Promo: SPRING10 ($10 off)", unitPrice: 10, quantity: 1, price: 10, type: "discount", taxable: false },
+      ],
+      taxRate: 0.14975,
+      taxAmount: 15.05,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 5.03 },
+        { name: "QST", rate: 0.09975, amount: 10.02 },
+      ],
+      total: 115.55,
+      depositCollected: 0,
+      remainingDue: 0,
+      payments: [{ date: "2026-03-10", method: "card", amount: 115.55, transactionId: "TXN-6601" }],
+      membershipApplied: "Gold — 15%",
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #16 — CLOSED: Partially refunded (2 of 3 items refunded)
+  // Test: Refund receipt generated, original invoice preserved
+  // Client: Bob Smith (16), Pet: Max
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 16,
+    clientId: 16,
+    petId: 3,
+    facilityId: 11,
+    service: "grooming",
+    serviceType: "bath_brush",
+    startDate: "2026-03-14",
+    endDate: "2026-03-14",
+    checkInTime: "10:00",
+    checkOutTime: "11:00",
+    status: "completed",
+    basePrice: 45,
+    discount: 0,
+    totalCost: 45,
+    paymentStatus: "paid",
+    stylistPreference: "Mike R.",
+    notificationEmail: true,
+    notificationSMS: false,
+    invoice: {
+      id: "INV-1016",
+      status: "closed",
+      items: [
+        { name: "Bath & Brush", unitPrice: 45, quantity: 1, price: 45, staffName: "Mike R." },
+        { name: "Nail Trim (REFUNDED)", unitPrice: 15, quantity: 1, price: 15, staffName: "Mike R.", type: "addon" },
+        { name: "Flea Treatment (REFUNDED)", unitPrice: 20, quantity: 1, price: 20, staffName: "Mike R.", type: "addon" },
+      ],
+      fees: [],
+      subtotal: 80,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 11.98,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 4.00 },
+        { name: "QST", rate: 0.09975, amount: 7.98 },
+      ],
+      total: 91.98,
+      depositCollected: 0,
+      remainingDue: 0,
+      payments: [
+        { date: "2026-03-14", method: "card", amount: 91.98, transactionId: "TXN-7701" },
+        { date: "2026-03-16", method: "card", amount: -35.00, transactionId: "REF-7702" },
+      ],
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #17 — OPEN: Cash payment with tip added manually on invoice
+  // Test: Add Tip on invoice panel, then proceed to cash checkout
+  // Client: Bob Smith (16), Pet: Max
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 17,
+    clientId: 16,
+    petId: 3,
+    facilityId: 11,
+    service: "training",
+    serviceType: "group_class",
+    startDate: "2026-03-29",
+    endDate: "2026-03-29",
+    checkInTime: "16:00",
+    checkOutTime: "17:00",
+    status: "confirmed",
+    basePrice: 40,
+    discount: 0,
+    totalCost: 40,
+    paymentStatus: "pending",
+    notificationEmail: true,
+    notificationSMS: true,
+    invoice: {
+      id: "INV-1017",
+      status: "open",
+      items: [
+        { name: "Group Training Class", unitPrice: 40, quantity: 1, price: 40 },
+      ],
+      fees: [],
+      subtotal: 40,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 5.99,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 2.00 },
+        { name: "QST", rate: 0.09975, amount: 3.99 },
+      ],
+      total: 45.99,
+      depositCollected: 0,
+      remainingDue: 45.99,
+      payments: [],
+    },
+  },
 ];
