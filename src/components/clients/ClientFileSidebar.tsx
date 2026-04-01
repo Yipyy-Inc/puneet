@@ -113,8 +113,7 @@ export function ClientFileSidebar({
     () =>
       bookings
         .filter(
-          (b) =>
-            b.clientId === client.id && String(b.id) !== currentBookingId,
+          (b) => b.clientId === client.id && String(b.id) !== currentBookingId,
         )
         .sort(
           (a, b) =>
@@ -205,7 +204,7 @@ export function ClientFileSidebar({
   };
 
   return (
-    <aside className="hidden w-80 shrink-0 border-r border-border/40 bg-background lg:flex lg:flex-col">
+    <aside className="border-border/40 bg-background hidden w-80 shrink-0 border-r lg:flex lg:flex-col">
       {/* Back */}
       <div className="px-5 pt-4 pb-2">
         <Link
@@ -221,7 +220,7 @@ export function ClientFileSidebar({
       <div className="px-5 pb-5">
         <div className="flex flex-col items-center text-center">
           {client.imageUrl ? (
-            <div className="size-[72px] overflow-hidden rounded-full ring-2 ring-border/50 ring-offset-2 ring-offset-background">
+            <div className="ring-border/50 ring-offset-background size-[72px] overflow-hidden rounded-full ring-2 ring-offset-2">
               <Image
                 src={client.imageUrl}
                 alt={client.name}
@@ -231,7 +230,7 @@ export function ClientFileSidebar({
               />
             </div>
           ) : (
-            <div className="bg-primary/10 text-primary flex size-[72px] items-center justify-center rounded-full text-xl font-bold ring-2 ring-border/50 ring-offset-2 ring-offset-background">
+            <div className="bg-primary/10 text-primary ring-border/50 ring-offset-background flex size-[72px] items-center justify-center rounded-full text-xl font-bold ring-2 ring-offset-2">
               {getInitials(client.name)}
             </div>
           )}
@@ -257,7 +256,7 @@ export function ClientFileSidebar({
         </div>
 
         {/* Contact */}
-        <div className="mt-4 space-y-2 rounded-lg border border-border/40 bg-muted/30 p-3">
+        <div className="border-border/40 bg-muted/30 mt-4 space-y-2 rounded-lg border p-3">
           {client.email && (
             <div className="flex items-center gap-2.5 text-sm">
               <Mail className="text-muted-foreground size-4 shrink-0" />
@@ -291,8 +290,8 @@ export function ClientFileSidebar({
 
       {/* Recent context */}
       {showRecentSection && (
-        <div className="space-y-1.5 border-t border-border/40 px-4 pt-4 pb-3">
-          <p className="text-muted-foreground mb-2 px-1 text-[11px] font-medium uppercase tracking-wider">
+        <div className="border-border/40 space-y-1.5 border-t px-4 pt-4 pb-3">
+          <p className="text-muted-foreground mb-2 px-1 text-[11px] font-medium tracking-wider uppercase">
             Currently Viewing
           </p>
           {hasRecentBooking && (
@@ -335,9 +334,7 @@ export function ClientFileSidebar({
                   onPetDetail ? "text-primary" : "text-muted-foreground",
                 )}
               />
-              <span className="flex-1 text-sm">
-                Pet #{recentCtx.pet!.id}
-              </span>
+              <span className="flex-1 text-sm">Pet #{recentCtx.pet!.id}</span>
               {!onPetDetail && (
                 <ArrowUpRight className="text-muted-foreground size-3.5" />
               )}
@@ -347,20 +344,18 @@ export function ClientFileSidebar({
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto border-t border-border/40 px-4 pt-4 pb-5">
-        <p className="text-muted-foreground mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wider">
+      <nav className="border-border/40 flex-1 overflow-y-auto border-t px-4 pt-4 pb-5">
+        <p className="text-muted-foreground mb-1.5 px-3 text-[11px] font-medium tracking-wider uppercase">
           Customer
         </p>
         <div className="space-y-0.5">{customerNav.map(renderNavItem)}</div>
 
-        <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground mt-5 mb-1.5 px-3 text-[11px] font-medium tracking-wider uppercase">
           Communication
         </p>
-        <div className="space-y-0.5">
-          {communicationNav.map(renderNavItem)}
-        </div>
+        <div className="space-y-0.5">{communicationNav.map(renderNavItem)}</div>
 
-        <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground mt-5 mb-1.5 px-3 text-[11px] font-medium tracking-wider uppercase">
           Admin
         </p>
         <div className="space-y-0.5">{adminNav.map(renderNavItem)}</div>
@@ -368,15 +363,14 @@ export function ClientFileSidebar({
         {/* Other bookings — contextual */}
         {onBookingDetail && otherBookings.length > 0 && (
           <>
-            <p className="text-muted-foreground mb-1.5 mt-5 px-3 text-[11px] font-medium uppercase tracking-wider">
+            <p className="text-muted-foreground mt-5 mb-1.5 px-3 text-[11px] font-medium tracking-wider uppercase">
               Other Bookings
             </p>
             <div className="space-y-1">
               {otherBookings.map((b) => {
                 const bPet = client.pets.find(
                   (p) =>
-                    p.id ===
-                    (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+                    p.id === (Array.isArray(b.petId) ? b.petId[0] : b.petId),
                 );
                 return (
                   <Link
@@ -394,7 +388,7 @@ export function ClientFileSidebar({
                         {bPet && ` · ${bPet.name}`}
                       </p>
                     </div>
-                    <span className="text-sm font-medium font-[tabular-nums]">
+                    <span className="font-[tabular-nums] text-sm font-medium">
                       ${b.totalCost}
                     </span>
                   </Link>
