@@ -76,10 +76,7 @@ export function BulkPaymentModal({
     () => invoices.filter((i) => selected.has(i.invoiceId)),
     [invoices, selected],
   );
-  const totalAmount = selectedInvoices.reduce(
-    (s, i) => s + i.remaining,
-    0,
-  );
+  const totalAmount = selectedInvoices.reduce((s, i) => s + i.remaining, 0);
 
   const toggleInvoice = (id: string) => {
     setSelected((prev) => {
@@ -114,7 +111,8 @@ export function BulkPaymentModal({
     // Auto-generate bulk receipt
     const w = window.open("", "_blank", "width=500,height=700");
     if (w) {
-      w.document.write(`<!DOCTYPE html><html><head><title>Bulk Payment Receipt</title>
+      w.document
+        .write(`<!DOCTYPE html><html><head><title>Bulk Payment Receipt</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
 h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 .row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
@@ -165,10 +163,8 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
         {step === "select" ? (
           <div className="animate-in fade-in space-y-5 py-2 duration-200">
             {/* Total */}
-            <div className="rounded-xl border bg-muted/30 p-4 text-center">
-              <p className="text-muted-foreground text-xs">
-                Total Outstanding
-              </p>
+            <div className="bg-muted/30 rounded-xl border p-4 text-center">
+              <p className="text-muted-foreground text-xs">Total Outstanding</p>
               <p className="font-[tabular-nums] text-3xl font-bold">
                 ${invoices.reduce((s, i) => s + i.remaining, 0).toFixed(2)}
               </p>
@@ -181,7 +177,7 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
             {/* Invoice selection */}
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+                <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
                   Select Invoices
                 </p>
                 <button
@@ -213,12 +209,9 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
                         <Calendar className="size-3.5 text-blue-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">
-                          {inv.invoiceId}
-                        </p>
+                        <p className="text-sm font-medium">{inv.invoiceId}</p>
                         <p className="text-muted-foreground text-xs">
-                          {inv.service} · {inv.petName} ·{" "}
-                          {formatDate(inv.date)}
+                          {inv.service} · {inv.petName} · {formatDate(inv.date)}
                         </p>
                       </div>
                     </div>
@@ -239,7 +232,7 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
 
             {/* Payment method */}
             <div>
-              <p className="text-muted-foreground mb-2 text-[11px] font-medium uppercase tracking-wider">
+              <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wider uppercase">
                 Payment Method
               </p>
               <div className="grid grid-cols-4 gap-2">
@@ -252,14 +245,12 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
                       className={cn(
                         "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all",
                         method === m.value
-                          ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
+                          ? "border-primary bg-primary/5 text-primary ring-primary/20 ring-1"
                           : "hover:bg-muted/30",
                       )}
                     >
                       <Icon className="size-5" />
-                      <span className="text-[10px] font-medium">
-                        {m.label}
-                      </span>
+                      <span className="text-[10px] font-medium">{m.label}</span>
                     </button>
                   );
                 })}
@@ -267,7 +258,7 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
             </div>
 
             {/* Selected summary */}
-            <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+            <div className="bg-muted/20 rounded-lg border px-3 py-2.5">
               <div className="flex justify-between text-sm font-semibold">
                 <span>
                   {selectedInvoices.length} invoice
@@ -281,13 +272,11 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-right-2 space-y-5 py-2 duration-200">
-            <div className="rounded-xl border bg-muted/20 p-4">
+            <div className="bg-muted/20 rounded-xl border p-4">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Invoices</span>
-                  <span className="font-medium">
-                    {selectedInvoices.length}
-                  </span>
+                  <span className="font-medium">{selectedInvoices.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Method</span>
@@ -304,8 +293,8 @@ ${selectedInvoices.map((inv) => `<div class="row"><span>${inv.invoiceId} · ${in
             </div>
             <p className="text-muted-foreground text-center text-xs">
               Payment will be automatically applied across all{" "}
-              {selectedInvoices.length} selected invoices. Each invoice will
-              be marked as paid.
+              {selectedInvoices.length} selected invoices. Each invoice will be
+              marked as paid.
             </p>
           </div>
         )}

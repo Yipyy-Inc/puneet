@@ -256,9 +256,7 @@ export default function ClientBookingDetailPage({
                 size="sm"
                 className="gap-1.5"
                 onClick={() =>
-                  toast.success(
-                    "Checked in — invoice status changed to Open",
-                  )
+                  toast.success("Checked in — invoice status changed to Open")
                 }
               >
                 Continue to Check In

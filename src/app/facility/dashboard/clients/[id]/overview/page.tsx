@@ -649,8 +649,7 @@ export default function ClientOverviewPage({
         clientName={client.name}
         invoices={unpaidBookings.map((b) => {
           const bPet = client.pets.find(
-            (p) =>
-              p.id === (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+            (p) => p.id === (Array.isArray(b.petId) ? b.petId[0] : b.petId),
           );
           return {
             bookingId: b.id,
