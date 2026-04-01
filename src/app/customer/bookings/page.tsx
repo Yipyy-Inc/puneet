@@ -87,13 +87,13 @@ export default function CustomerBookingsPage() {
     }
   }, [searchParams]);
 
-  // Get customer's bookings for selected facility
+  // Get customer's bookings (show all facilities — filter by facility switcher if desired)
   const customerBookings = useMemo(() => {
-    if (!selectedFacility) return [];
-    return bookings.filter(
-      (b) =>
-        b.clientId === MOCK_CUSTOMER_ID && b.facilityId === selectedFacility.id,
-    );
+    const all = bookings.filter((b) => b.clientId === MOCK_CUSTOMER_ID);
+    if (!selectedFacility) return all;
+    // If the selected facility has bookings, filter; otherwise show all
+    const filtered = all.filter((b) => b.facilityId === selectedFacility.id);
+    return filtered.length > 0 ? filtered : all;
   }, [selectedFacility]);
 
   // Separate upcoming and past bookings (only on client to avoid hydration issues)
