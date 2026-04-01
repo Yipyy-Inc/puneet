@@ -53,6 +53,7 @@ import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
 import { TipSplitModal } from "@/components/bookings/TipSplitModal";
 import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
+import { RefundModal } from "@/components/bookings/RefundModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
@@ -155,6 +156,7 @@ export default function ClientBookingDetailPage({
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
@@ -595,9 +597,14 @@ ${
           )}
 
           {isPaid && !isCancelled && (
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setRefundOpen(true)}
+            >
               <RotateCcw className="size-3.5" />
-              Refund
+              Issue Refund
             </Button>
           )}
           {/* Undo Check-In — reverts to confirmed */}
@@ -1134,6 +1141,21 @@ ${
         depositRequired={Math.round(booking.totalCost * 0.5 * 100) / 100}
         onApplyDiscount={(amount, reason) => {
           toast.success(`Discount applied: $${amount.toFixed(2)} — ${reason}`);
+        }}
+      />
+      <RefundModal
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
+        invoiceTotal={invoice?.total ?? booking.totalCost}
+        amountPaid={invoice?.depositCollected ?? booking.totalCost}
+        items={(invoice?.items ?? []).map((i) => ({
+          name: i.name,
+          price: i.price,
+        }))}
+        onConfirm={(refund) => {
+          toast.success(
+            `Refund of $${refund.amount.toFixed(2)} processed via ${refund.method}`,
+          );
         }}
       />
     </div>
