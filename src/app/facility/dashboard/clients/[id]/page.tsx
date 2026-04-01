@@ -22,6 +22,8 @@ import {
 import { getTagsForEntity } from "@/data/tags-notes";
 import { TagList } from "@/components/shared/TagList";
 import { NotesList } from "@/components/shared/NotesList";
+import { NotesButton } from "@/components/shared/NotesButton";
+import { TagsButton } from "@/components/shared/TagsButton";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { BookingCard } from "@/components/clients/BookingCard";
 import { generateInvoiceForBooking } from "@/lib/invoice-generator";
@@ -497,9 +499,18 @@ export default function ClientDetailPage({
         </div>
       </div>
 
-      {/* Customer Tags */}
+      {/* Customer Tags + Notes */}
       <div className="flex items-center gap-2">
-        <TagList entityType="customer" entityId={client.id} editable />
+        <TagList
+          entityType="customer"
+          entityId={client.id}
+          editable
+          maxVisible={4}
+        />
+        <div className="ml-auto flex items-center gap-2">
+          <TagsButton entityType="customer" entityId={client.id} />
+          <NotesButton entityType="customer" entityId={client.id} />
+        </div>
       </div>
 
       {/* Quick Stats */}

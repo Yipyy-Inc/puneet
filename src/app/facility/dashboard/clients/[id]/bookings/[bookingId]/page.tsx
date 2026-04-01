@@ -58,6 +58,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
+import { NotesButton } from "@/components/shared/NotesButton";
+import { TagsButton } from "@/components/shared/TagsButton";
 import type { InvoiceLineItem } from "@/types/booking";
 import type { GeneratedTask } from "@/types/task";
 import {
@@ -289,6 +291,8 @@ export default function ClientBookingDetailPage({
                     {booking.status}
                   </span>
                 </div>
+                <TagsButton entityType="booking" entityId={booking.id} />
+                <NotesButton entityType="booking" entityId={booking.id} />
               </div>
               <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                 <span className="flex items-center gap-1.5">
