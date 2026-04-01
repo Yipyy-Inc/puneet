@@ -1129,9 +1129,25 @@ ${
         amountDue={invoice?.remainingDue ?? booking.totalCost}
         depositPaid={invoice?.depositCollected ?? 0}
         invoiceTotal={invoice?.total ?? booking.totalCost}
+        otherUnpaidInvoices={initialBookings
+          .filter(
+            (b) =>
+              b.clientId === clientId &&
+              b.id !== bookingId &&
+              b.paymentStatus === "pending" &&
+              b.status !== "cancelled",
+          )
+          .map((b) => ({
+            invoiceId: b.invoice?.id ?? `INV-${b.id}`,
+            service: b.service,
+            amount: b.invoice?.remainingDue ?? b.totalCost,
+          }))}
         onConfirm={(payment) => {
+          const extra = payment.includedInvoices?.length
+            ? ` + ${payment.includedInvoices.length} other invoices`
+            : "";
           toast.success(
-            `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}`,
+            `Charged $${payment.amount.toFixed(2)} via ${payment.method}${payment.tip > 0 ? ` + $${payment.tip.toFixed(2)} tip` : ""}${extra}`,
           );
         }}
       />
