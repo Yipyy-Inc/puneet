@@ -799,6 +799,18 @@ ${
               )}
             </div>
 
+            {/* Notes */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-muted/30 pb-3">
+                <CardTitle className="text-xs font-semibold tracking-wider uppercase">
+                  Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <BookingNotes />
+              </CardContent>
+            </Card>
+
             {/* Tasks */}
             {tasks.length > 0 && (
               <Card className="overflow-hidden">
@@ -989,17 +1001,6 @@ ${
               </Card>
             )}
 
-            {/* Notes */}
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-muted/30 pb-3">
-                <CardTitle className="text-xs font-semibold tracking-wider uppercase">
-                  Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <BookingNotes />
-              </CardContent>
-            </Card>
           </div>
 
           {/* Right — 2 cols — Invoice */}
