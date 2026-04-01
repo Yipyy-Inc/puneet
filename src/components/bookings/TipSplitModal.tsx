@@ -22,10 +22,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  calculateTipSplit,
-  type TipSplitEntry,
-} from "@/lib/invoice-lifecycle";
+import { calculateTipSplit, type TipSplitEntry } from "@/lib/invoice-lifecycle";
 
 interface StaffService {
   staffName: string;
@@ -111,7 +108,7 @@ export function TipSplitModal({
 
         <div className="space-y-4 py-2">
           {/* Total tip */}
-          <div className="rounded-lg border bg-muted/30 p-3 text-center">
+          <div className="bg-muted/30 rounded-lg border p-3 text-center">
             <p className="text-muted-foreground text-xs">Total Tip</p>
             <p className="font-[tabular-nums] text-2xl font-bold">
               ${totalTip.toFixed(2)}
@@ -123,9 +120,9 @@ export function TipSplitModal({
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               <Users className="size-4 shrink-0" />
               <p>
-                Some services have multiple staff assigned. Staff
-                reassignment is disabled in multi-staff mode — edit
-                individual assignments on the invoice first.
+                Some services have multiple staff assigned. Staff reassignment
+                is disabled in multi-staff mode — edit individual assignments on
+                the invoice first.
               </p>
             </div>
           )}
@@ -148,10 +145,7 @@ export function TipSplitModal({
                     </p>
                   </div>
                   {s.multiStaff ? (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px]"
-                    >
+                    <Badge variant="outline" className="text-[10px]">
                       <Users className="mr-1 size-2.5" />
                       Multi-staff
                     </Badge>
@@ -215,7 +209,7 @@ export function TipSplitModal({
 
           {/* Tip breakdown */}
           <div className="space-y-2">
-            <div className="grid grid-cols-4 gap-2 text-[10px] font-semibold tracking-wider uppercase text-muted-foreground">
+            <div className="text-muted-foreground grid grid-cols-4 gap-2 text-[10px] font-semibold tracking-wider uppercase">
               <span>Staff</span>
               <span className="text-right">Service $</span>
               <span className="text-right">Tip</span>
@@ -229,11 +223,10 @@ export function TipSplitModal({
                 <span className="truncate text-sm font-medium">
                   {entry.staffName}
                 </span>
-                <span className="text-muted-foreground text-right text-sm font-[tabular-nums]">
+                <span className="text-muted-foreground text-right font-[tabular-nums] text-sm">
                   ${entry.serviceValue.toFixed(2)}
                 </span>
-                {method === "custom_amount" ||
-                method === "custom_percent" ? (
+                {method === "custom_amount" || method === "custom_percent" ? (
                   <Input
                     type="number"
                     value={customValues[entry.staffName] ?? ""}
@@ -243,17 +236,17 @@ export function TipSplitModal({
                         [entry.staffName]: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="h-7 text-right text-xs font-[tabular-nums]"
+                    className="h-7 text-right font-[tabular-nums] text-xs"
                     min={0}
                     step={0.01}
                     placeholder={method === "custom_percent" ? "%" : "$"}
                   />
                 ) : (
-                  <span className="text-right text-sm font-semibold font-[tabular-nums]">
+                  <span className="text-right font-[tabular-nums] text-sm font-semibold">
                     ${entry.tipAmount.toFixed(2)}
                   </span>
                 )}
-                <span className="text-muted-foreground text-right text-xs font-[tabular-nums]">
+                <span className="text-muted-foreground text-right font-[tabular-nums] text-xs">
                   {entry.percentage}%
                 </span>
               </div>
@@ -273,7 +266,7 @@ export function TipSplitModal({
               <span className="text-right font-[tabular-nums]">100%</span>
             </div>
             {!isBalanced && (
-              <div className="flex items-center gap-1.5 text-xs text-destructive">
+              <div className="text-destructive flex items-center gap-1.5 text-xs">
                 <AlertTriangle className="size-3" />
                 Total doesn&apos;t match tip amount — adjust values
               </div>

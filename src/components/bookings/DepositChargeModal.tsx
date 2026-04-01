@@ -62,7 +62,7 @@ export function DepositChargeModal({
 
           {/* Amount selection */}
           <div className="space-y-2">
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 hover:bg-muted/30">
+            <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5">
               <input
                 type="radio"
                 checked={useRule}
@@ -76,7 +76,7 @@ export function DepositChargeModal({
                 </strong>
               </span>
             </label>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5 hover:bg-muted/30">
+            <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2.5">
               <input
                 type="radio"
                 checked={!useRule}

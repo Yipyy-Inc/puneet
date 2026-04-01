@@ -116,7 +116,7 @@ export function PaymentCheckoutFlow({
 
         <div className="space-y-5 py-2">
           {/* Amount */}
-          <div className="rounded-lg border bg-muted/30 p-4 text-center">
+          <div className="bg-muted/30 rounded-lg border p-4 text-center">
             <p className="text-muted-foreground text-xs">Amount Due</p>
             <p className="font-[tabular-nums] text-3xl font-bold">
               ${amountDue.toFixed(2)}
@@ -137,30 +137,25 @@ export function PaymentCheckoutFlow({
             <div className="grid grid-cols-3 gap-2">
               {PAYMENT_METHODS.filter(
                 (m) =>
-                  m.value !== "store_credit" ||
-                  clientStoreCreditBalance > 0,
-              ).map(
-                (m) => {
-                  const Icon = ICONS[m.icon] ?? CreditCard;
-                  return (
-                    <button
-                      key={m.value}
-                      onClick={() => setMethod(m.value)}
-                      className={cn(
-                        "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all",
-                        method === m.value
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "hover:bg-muted/50",
-                      )}
-                    >
-                      <Icon className="size-5" />
-                      <span className="text-[11px] font-medium">
-                        {m.label}
-                      </span>
-                    </button>
-                  );
-                },
-              )}
+                  m.value !== "store_credit" || clientStoreCreditBalance > 0,
+              ).map((m) => {
+                const Icon = ICONS[m.icon] ?? CreditCard;
+                return (
+                  <button
+                    key={m.value}
+                    onClick={() => setMethod(m.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all",
+                      method === m.value
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "hover:bg-muted/50",
+                    )}
+                  >
+                    <Icon className="size-5" />
+                    <span className="text-[11px] font-medium">{m.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -176,8 +171,9 @@ export function PaymentCheckoutFlow({
                 </p>
               ) : (
                 <p className="mt-1 text-xs">
-                  ${clientStoreCreditBalance.toFixed(2)} will be applied. Remaining $
-                  {(remaining - clientStoreCreditBalance).toFixed(2)} due by another method.
+                  ${clientStoreCreditBalance.toFixed(2)} will be applied.
+                  Remaining ${(remaining - clientStoreCreditBalance).toFixed(2)}{" "}
+                  due by another method.
                 </p>
               )}
             </div>
@@ -202,12 +198,12 @@ export function PaymentCheckoutFlow({
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Change Due</span>
-                    <span className="font-semibold font-[tabular-nums]">
+                    <span className="font-[tabular-nums] font-semibold">
                       ${change.toFixed(2)}
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-muted/30">
+                    <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs">
                       <input
                         type="radio"
                         checked={!changeAsCredit}
@@ -216,7 +212,7 @@ export function PaymentCheckoutFlow({
                       />
                       Return change to client
                     </label>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-muted/30">
+                    <label className="hover:bg-muted/30 flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs">
                       <input
                         type="radio"
                         checked={changeAsCredit}
@@ -239,8 +235,7 @@ export function PaymentCheckoutFlow({
               </p>
               <div className="flex gap-2">
                 {TIP_PRESETS.map((t) => {
-                  const amt =
-                    Math.round(amountDue * t.multiplier * 100) / 100;
+                  const amt = Math.round(amountDue * t.multiplier * 100) / 100;
                   const active = tipAmount === amt && !customTip;
                   return (
                     <button
@@ -290,7 +285,7 @@ export function PaymentCheckoutFlow({
           )}
 
           {/* Summary */}
-          <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="bg-muted/20 rounded-lg border p-3">
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
@@ -337,8 +332,8 @@ export function PaymentCheckoutFlow({
 
         {confirming && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Please review all details — date, time, staff, services,
-            discounts, and tips — before confirming payment.
+            Please review all details — date, time, staff, services, discounts,
+            and tips — before confirming payment.
           </div>
         )}
 

@@ -259,9 +259,9 @@ export default function ClientBookingDetailPage({
           <CheckCircle2 className="size-4 shrink-0" />
           <span>
             This booking is <strong>finished</strong>. Date, time, service
-            prices, and items are locked. You can still view the receipt,
-            split tips, or issue a refund. If a correction is needed,
-            cancel and refund this invoice, then create a new booking.
+            prices, and items are locked. You can still view the receipt, split
+            tips, or issue a refund. If a correction is needed, cancel and
+            refund this invoice, then create a new booking.
           </span>
         </div>
       )}
@@ -400,7 +400,8 @@ export default function ClientBookingDetailPage({
                   const inv = invoice;
                   const w = window.open("", "_blank", "width=600,height=800");
                   if (!w) return;
-                  w.document.write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? booking.id}</title>
+                  w.document
+                    .write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? booking.id}</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
 h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
 .row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
@@ -412,8 +413,20 @@ h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-w
 <div class="header"><h1>Invoice ${inv?.id ?? `#${booking.id}`}</h1>
 <h2>${client.name} · ${pet?.name ?? "Pet"} · ${booking.service}</h2></div>
 <div class="section">Services</div>
-${(inv?.items ?? [{ name: booking.service, unitPrice: booking.basePrice, quantity: 1, price: booking.totalCost }])
-  .map((item) => `<div class="row"><span>${item.name}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`)
+${(
+  inv?.items ?? [
+    {
+      name: booking.service,
+      unitPrice: booking.basePrice,
+      quantity: 1,
+      price: booking.totalCost,
+    },
+  ]
+)
+  .map(
+    (item) =>
+      `<div class="row"><span>${item.name}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`,
+  )
   .join("")}
 ${(inv?.fees ?? []).map((f) => `<div class="row sub"><span>${f.name}</span><span>$${f.price.toFixed(2)}</span></div>`).join("")}
 <div class="row sub"><span>Subtotal</span><span>$${(inv?.subtotal ?? booking.totalCost).toFixed(2)}</span></div>
@@ -471,28 +484,25 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
           {invoice?.status === "estimate" &&
             !isCancelled &&
             (invoice?.depositCollected ?? 0) === 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => setDepositOpen(true)}
-            >
-              <Banknote className="size-3.5" />
-              Charge Deposit
-            </Button>
-          )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setDepositOpen(true)}
+              >
+                <Banknote className="size-3.5" />
+                Charge Deposit
+              </Button>
+            )}
 
           {/* Mark as Ready — for confirmed/in-progress bookings */}
-          {(booking.status === "confirmed" ||
-            booking.status === "pending") && (
+          {(booking.status === "confirmed" || booking.status === "pending") && (
             <Button
               size="sm"
               variant="outline"
               className="h-8 gap-1.5 text-xs"
               onClick={() =>
-                toast.success(
-                  "Service marked as ready — proceed to checkout",
-                )
+                toast.success("Service marked as ready — proceed to checkout")
               }
             >
               <CheckCircle2 className="size-3.5" />
@@ -533,7 +543,8 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                   const inv = invoice;
                   const w = window.open("", "_blank", "width=600,height=800");
                   if (!w) return;
-                  w.document.write(`<!DOCTYPE html><html><head><title>Receipt ${inv?.id ?? booking.id}</title>
+                  w.document
+                    .write(`<!DOCTYPE html><html><head><title>Receipt ${inv?.id ?? booking.id}</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
 h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
 .row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
@@ -553,13 +564,24 @@ ${(inv?.taxes ?? []).map((t) => `<div class="row sub"><span>${t.name}</span><spa
 ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
 <div class="row total"><span>Total Charged</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
 ${(inv?.payments ?? []).length > 0 ? `<div class="section">Payment</div>${(inv?.payments ?? []).map((p) => `<div class="row"><span>${p.method}${p.transactionId ? ` · ${p.transactionId}` : ""}</span><span>$${p.amount.toFixed(2)}</span></div>`).join("")}` : ""}
-${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?.items ?? []).filter((item) => item.price > 0 && item.type !== "package_credit").map((item) => {
-  const staffName = item.staffName ?? booking.stylistPreference ?? "Staff";
-  const totalServiceValue = (inv?.items ?? []).filter((i) => i.price > 0 && i.type !== "package_credit").reduce((s, i) => s + i.price, 0);
-  const pct = totalServiceValue > 0 ? item.price / totalServiceValue : 0;
-  const tipShare = Math.round((inv?.tipTotal ?? 0) * pct * 100) / 100;
-  return `<div class="row"><span>${staffName} <small style="color:#888">· ${item.name}</small></span><span>$${tipShare.toFixed(2)}</span></div>`;
-}).join("")}` : ""}
+${
+  (inv?.tipTotal ?? 0) > 0
+    ? `<div class="section">Tip Distribution</div>${(inv?.items ?? [])
+        .filter((item) => item.price > 0 && item.type !== "package_credit")
+        .map((item) => {
+          const staffName =
+            item.staffName ?? booking.stylistPreference ?? "Staff";
+          const totalServiceValue = (inv?.items ?? [])
+            .filter((i) => i.price > 0 && i.type !== "package_credit")
+            .reduce((s, i) => s + i.price, 0);
+          const pct =
+            totalServiceValue > 0 ? item.price / totalServiceValue : 0;
+          const tipShare = Math.round((inv?.tipTotal ?? 0) * pct * 100) / 100;
+          return `<div class="row"><span>${staffName} <small style="color:#888">· ${item.name}</small></span><span>$${tipShare.toFixed(2)}</span></div>`;
+        })
+        .join("")}`
+    : ""
+}
 <div class="paid">PAYMENT COMPLETE</div>
 <div class="footer">Thank you for choosing us!<br>${booking.service} · ${new Date(booking.startDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
 </body></html>`);
@@ -905,17 +927,13 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?
                             "Staff";
                           const totalSvc = (invoice?.items ?? [])
                             .filter(
-                              (i) =>
-                                i.price > 0 &&
-                                i.type !== "package_credit",
+                              (i) => i.price > 0 && i.type !== "package_credit",
                             )
                             .reduce((s, i) => s + i.price, 0);
-                          const pct =
-                            totalSvc > 0 ? item.price / totalSvc : 0;
+                          const pct = totalSvc > 0 ? item.price / totalSvc : 0;
                           const tipShare =
-                            Math.round(
-                              (invoice?.tipTotal ?? 0) * pct * 100,
-                            ) / 100;
+                            Math.round((invoice?.tipTotal ?? 0) * pct * 100) /
+                            100;
                           return (
                             <div
                               key={idx}
@@ -926,12 +944,11 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?
                                   {staffName}
                                 </p>
                                 <p className="text-muted-foreground text-xs">
-                                  {item.name} · $
-                                  {item.price.toFixed(2)} (
+                                  {item.name} · ${item.price.toFixed(2)} (
                                   {(pct * 100).toFixed(0)}%)
                                 </p>
                               </div>
-                              <span className="text-sm font-semibold font-[tabular-nums]">
+                              <span className="font-[tabular-nums] text-sm font-semibold">
                                 ${tipShare.toFixed(2)}
                               </span>
                             </div>
@@ -1072,9 +1089,12 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?
         staffServices={
           invoice?.items
             ? invoice.items
-                .filter((item) => item.type !== "package_credit" && item.price > 0)
+                .filter(
+                  (item) => item.type !== "package_credit" && item.price > 0,
+                )
                 .map((item) => ({
-                  staffName: item.staffName ?? booking.stylistPreference ?? "Staff",
+                  staffName:
+                    item.staffName ?? booking.stylistPreference ?? "Staff",
                   serviceName: item.name,
                   serviceValue: item.price,
                   multiStaff: false,
@@ -1096,7 +1116,9 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?
         ruleAmount={Math.round(booking.totalCost * 0.5 * 100) / 100}
         ruleLabel={`50% of total ($${(booking.totalCost * 0.5).toFixed(2)})`}
         onCharge={(amount, method) => {
-          toast.success(`Deposit of $${amount.toFixed(2)} charged via ${method}`);
+          toast.success(
+            `Deposit of $${amount.toFixed(2)} charged via ${method}`,
+          );
         }}
       />
       <SendEstimateModal

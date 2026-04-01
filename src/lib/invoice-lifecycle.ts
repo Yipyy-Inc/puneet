@@ -8,7 +8,12 @@
 import type { Invoice } from "@/types/booking";
 
 // Extended status includes void/refunded for lifecycle management
-type InvoiceLifecycleStatus = "estimate" | "open" | "closed" | "void" | "refunded";
+type InvoiceLifecycleStatus =
+  | "estimate"
+  | "open"
+  | "closed"
+  | "void"
+  | "refunded";
 
 // ============================================================================
 // Deposit Rules
@@ -181,10 +186,7 @@ export function calculateTipSplit(
 
   switch (method) {
     case "by_service": {
-      const totalValue = staffServices.reduce(
-        (s, e) => s + e.serviceValue,
-        0,
-      );
+      const totalValue = staffServices.reduce((s, e) => s + e.serviceValue, 0);
       return staffServices.map((s) => {
         const pct = totalValue > 0 ? s.serviceValue / totalValue : 0;
         return {
@@ -196,8 +198,7 @@ export function calculateTipSplit(
       });
     }
     case "equal": {
-      const each =
-        Math.round((totalTip / staffServices.length) * 100) / 100;
+      const each = Math.round((totalTip / staffServices.length) * 100) / 100;
       return staffServices.map((s) => ({
         staffName: s.staffName,
         serviceValue: s.serviceValue,

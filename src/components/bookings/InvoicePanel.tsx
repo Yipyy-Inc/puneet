@@ -77,7 +77,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 editingIndex === i ? (
                   <div
                     key={i}
-                    className="animate-in fade-in -mx-2 space-y-2 rounded-md border border-dashed bg-muted/20 px-2 py-2 duration-150"
+                    className="animate-in fade-in bg-muted/20 -mx-2 space-y-2 rounded-md border border-dashed px-2 py-2 duration-150"
                   >
                     <Input
                       value={editName}
@@ -129,7 +129,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                 ) : (
                   <div
                     key={i}
-                    className="group -mx-2 flex items-start justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-muted/40"
+                    className="group hover:bg-muted/40 -mx-2 flex items-start justify-between rounded-md px-2 py-1.5 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm">{item.name}</p>
@@ -141,7 +141,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-sm font-[tabular-nums]">
+                      <span className="font-[tabular-nums] text-sm">
                         ${fmt(item.price)}
                       </span>
                       {invoice.status !== "closed" && (
@@ -434,9 +434,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                   </PopoverTrigger>
                   <PopoverContent side="top" align="start" className="w-52">
                     <div className="space-y-2">
-                      <p className="text-xs font-medium">
-                        Add Tip to Invoice
-                      </p>
+                      <p className="text-xs font-medium">Add Tip to Invoice</p>
                       <div className="flex gap-1.5">
                         {[5, 10, 15, 20].map((amt) => (
                           <button
@@ -444,7 +442,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                             onClick={() =>
                               toast.success(`$${amt} tip added to invoice`)
                             }
-                            className="flex-1 rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-all hover:bg-foreground hover:text-background"
+                            className="hover:bg-foreground hover:text-background flex-1 rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-all"
                           >
                             ${amt}
                           </button>
@@ -485,9 +483,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                   size="sm"
                   className="h-7 gap-1 text-[10px]"
                   onClick={() =>
-                    toast.success(
-                      "Membership discount applied — 15% off",
-                    )
+                    toast.success("Membership discount applied — 15% off")
                   }
                 >
                   Redeem Membership
