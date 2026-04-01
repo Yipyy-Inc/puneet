@@ -11,17 +11,47 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Receipt, Plus, X, Pencil, Percent, DollarSign } from "lucide-react";
+import {
+  Plus,
+  X,
+  Pencil,
+  Percent,
+  DollarSign,
+  FileText,
+  Lock,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { Invoice } from "@/types/booking";
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; variant: "outline" | "secondary" | "default" }
+  {
+    label: string;
+    variant: "outline" | "secondary" | "default" | "destructive";
+    color: string;
+    bg: string;
+  }
 > = {
-  estimate: { label: "Estimate", variant: "outline" },
-  open: { label: "Open", variant: "secondary" },
-  closed: { label: "Closed", variant: "default" },
+  estimate: {
+    label: "Estimate",
+    variant: "outline",
+    color: "text-muted-foreground",
+    bg: "bg-muted/30",
+  },
+  open: {
+    label: "Open",
+    variant: "secondary",
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+  },
+  closed: {
+    label: "Closed",
+    variant: "default",
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
+  },
 };
 
 function fmt(n: number): string {
@@ -39,18 +69,42 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
   const [editStaff, setEditStaff] = useState("");
 
   return (
-    <Card className="sticky top-20">
-      <CardHeader className="pb-3">
+    <Card className="sticky top-20 overflow-hidden">
+      {/* Status banner */}
+      <div className={cn("px-4 py-2 text-center text-xs font-medium", status.bg, status.color)}>
+        {invoice.status === "estimate" && (
+          <span className="flex items-center justify-center gap-1.5">
+            <FileText className="size-3.5" />
+            Price Estimate — Not yet billed
+          </span>
+        )}
+        {invoice.status === "open" && (
+          <span className="flex items-center justify-center gap-1.5">
+            <Clock className="size-3.5" />
+            Invoice Open — Payment pending
+          </span>
+        )}
+        {invoice.status === "closed" && (
+          <span className="flex items-center justify-center gap-1.5">
+            <Lock className="size-3.5" />
+            Invoice Closed — Paid in full
+          </span>
+        )}
+      </div>
+
+      <CardHeader className="pb-3 pt-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Receipt className="text-muted-foreground size-4" />
-            <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-              Invoice
-            </span>
+          <div>
+            <p className="text-sm font-semibold">{invoice.id}</p>
+            <p className="text-muted-foreground text-xs">
+              {invoice.items.length} item{invoice.items.length !== 1 ? "s" : ""}
+              {invoice.fees.length > 0 && ` · ${invoice.fees.length} fee${invoice.fees.length !== 1 ? "s" : ""}`}
+            </p>
           </div>
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge variant={status.variant} className="capitalize">
+            {status.label}
+          </Badge>
         </div>
-        <p className="text-muted-foreground text-xs">{invoice.id}</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Items */}
@@ -503,24 +557,61 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
           </>
         )}
 
+        {/* Deposit tracker */}
+        {invoice.depositCollected > 0 && (
+          <>
+            <Separator />
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-emerald-800">
+                  Deposit Collected
+                </span>
+                <span className="font-[tabular-nums] text-sm font-semibold text-emerald-700">
+                  ${fmt(invoice.depositCollected)}
+                </span>
+              </div>
+              {invoice.remainingDue > 0 && (
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs text-emerald-600">
+                    Remaining Balance
+                  </span>
+                  <span className="font-[tabular-nums] text-xs font-medium text-amber-600">
+                    ${fmt(invoice.remainingDue)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* Payments */}
         {invoice.payments.length > 0 && (
           <>
             <Separator />
             <div>
               <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
-                Payments
+                Payment History
               </p>
               <div className="space-y-1.5">
                 {invoice.payments.map((p, i) => (
                   <div
                     key={i}
-                    className="text-muted-foreground flex justify-between text-xs"
+                    className="flex items-center justify-between rounded-md border bg-muted/20 px-2.5 py-2"
                   >
-                    <span>
-                      {p.date} · {p.method}
-                    </span>
-                    <span className="font-[tabular-nums]">
+                    <div>
+                      <p className="text-xs font-medium capitalize">
+                        {p.method}
+                      </p>
+                      <p className="text-muted-foreground text-[10px]">
+                        {new Date(p.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                        {p.transactionId && ` · ${p.transactionId}`}
+                      </p>
+                    </div>
+                    <span className="font-[tabular-nums] text-sm font-semibold">
                       ${fmt(p.amount)}
                     </span>
                   </div>
@@ -529,6 +620,47 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             </div>
           </>
         )}
+
+        {/* Invoice audit trail */}
+        <Separator />
+        <div>
+          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
+            Invoice Activity
+          </p>
+          <div className="space-y-1.5 text-[11px]">
+            <div className="text-muted-foreground flex items-center gap-2">
+              <div className="size-1.5 shrink-0 rounded-full bg-emerald-400" />
+              Invoice created
+            </div>
+            {invoice.depositCollected > 0 && (
+              <div className="text-muted-foreground flex items-center gap-2">
+                <div className="size-1.5 shrink-0 rounded-full bg-blue-400" />
+                Deposit of ${fmt(invoice.depositCollected)} collected
+              </div>
+            )}
+            {invoice.discount > 0 && (
+              <div className="text-muted-foreground flex items-center gap-2">
+                <div className="size-1.5 shrink-0 rounded-full bg-amber-400" />
+                Discount applied: ${fmt(invoice.discount)}
+              </div>
+            )}
+            {invoice.payments.map((p, i) => (
+              <div
+                key={i}
+                className="text-muted-foreground flex items-center gap-2"
+              >
+                <div className="size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                Payment of ${fmt(p.amount)} via {p.method}
+              </div>
+            ))}
+            {invoice.status === "closed" && (
+              <div className="flex items-center gap-2 font-medium text-emerald-600">
+                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                Invoice closed — paid in full
+              </div>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
