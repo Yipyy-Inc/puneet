@@ -416,6 +416,80 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
           )}
         </div>
 
+        {/* Auto-detected benefits */}
+        {invoice.status !== "closed" && (
+          <div className="space-y-1.5">
+            <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+              Available Benefits
+            </p>
+            {/* Package credits available */}
+            {invoice.packageCreditsUsed == null && (
+              <button
+                onClick={() =>
+                  toast.success("Package credit applied — deducted from balance")
+                }
+                className="flex w-full items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-left transition-all hover:bg-emerald-100"
+              >
+                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-emerald-800">
+                    Package Credit
+                  </p>
+                  <p className="text-[10px] text-emerald-600">
+                    Client may have eligible package credits
+                  </p>
+                </div>
+                <span className="text-[10px] font-medium text-emerald-700">
+                  Apply →
+                </span>
+              </button>
+            )}
+            {/* Membership discount */}
+            {!invoice.membershipApplied && (
+              <button
+                onClick={() =>
+                  toast.success("Membership discount auto-applied")
+                }
+                className="flex w-full items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-2 text-left transition-all hover:bg-blue-100"
+              >
+                <div className="size-1.5 shrink-0 rounded-full bg-blue-500" />
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-blue-800">
+                    Membership Discount
+                  </p>
+                  <p className="text-[10px] text-blue-600">
+                    Check for active membership benefits
+                  </p>
+                </div>
+                <span className="text-[10px] font-medium text-blue-700">
+                  Apply →
+                </span>
+              </button>
+            )}
+            {/* Applied benefits labels */}
+            {invoice.membershipApplied && (
+              <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
+                <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                <span className="text-xs text-emerald-700">
+                  ✓ {invoice.membershipApplied}
+                </span>
+              </div>
+            )}
+            {invoice.packageCreditsUsed != null &&
+              invoice.packageCreditsUsed > 0 && (
+                <div className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
+                  <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                  <span className="text-xs text-emerald-700">
+                    ✓ Package Credit Used ({invoice.packageCreditsUsed})
+                  </span>
+                </div>
+              )}
+            <p className="text-muted-foreground text-[9px] italic">
+              Order: Package → Membership → Discount → Store Credit → Tax
+            </p>
+          </div>
+        )}
+
         {/* Actions (for non-closed invoices) */}
         {invoice.status !== "closed" && (
           <>
