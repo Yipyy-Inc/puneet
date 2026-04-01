@@ -426,7 +426,9 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             {invoice.packageCreditsUsed == null && (
               <button
                 onClick={() =>
-                  toast.success("Package credit applied — deducted from balance")
+                  toast.success(
+                    "Package credit applied — deducted from balance",
+                  )
                 }
                 className="flex w-full items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-left transition-all hover:bg-emerald-100"
               >

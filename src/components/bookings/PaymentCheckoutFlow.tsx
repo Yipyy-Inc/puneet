@@ -253,9 +253,7 @@ export function PaymentCheckoutFlow({
             <button
               onClick={() => {
                 setSplitMode(true);
-                setSplitPayments([
-                  { method, amount: "" },
-                ]);
+                setSplitPayments([{ method, amount: "" }]);
               }}
               className="text-primary text-xs font-medium hover:underline"
             >
@@ -596,9 +594,12 @@ export function PaymentCheckoutFlow({
                   const w = window.open("", "_blank", "width=500,height=600");
                   if (!w) return;
                   const methodLabel = splitMode
-                    ? splitPayments.map((p) => `${p.method}: $${p.amount}`).join(", ")
+                    ? splitPayments
+                        .map((p) => `${p.method}: $${p.amount}`)
+                        .join(", ")
                     : method.replace("_", " ");
-                  w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title>
+                  w.document
+                    .write(`<!DOCTYPE html><html><head><title>Receipt</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
 h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
