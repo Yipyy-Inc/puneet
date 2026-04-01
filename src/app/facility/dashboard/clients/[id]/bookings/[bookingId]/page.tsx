@@ -26,6 +26,7 @@ import {
   CalendarDays,
   MapPin,
   AlertTriangle,
+  HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -836,6 +837,96 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="section">Tip Distribution</div>${(inv?
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tips Section */}
+          {isPaid && (
+            <Card id="tips" className="overflow-hidden">
+              <CardHeader className="bg-muted/30 pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
+                    <HandCoins className="size-3.5" />
+                    Tips
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => setTipSplitOpen(true)}
+                  >
+                    Edit Split
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {(invoice?.tipTotal ?? 0) > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-muted-foreground text-sm">
+                        Total Tip
+                      </span>
+                      <span className="font-[tabular-nums] text-lg font-bold">
+                        ${(invoice?.tipTotal ?? 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                      Distribution
+                    </p>
+                    <div className="space-y-1.5">
+                      {(invoice?.items ?? [])
+                        .filter(
+                          (item) =>
+                            item.price > 0 && item.type !== "package_credit",
+                        )
+                        .map((item, idx) => {
+                          const staffName =
+                            item.staffName ??
+                            booking.stylistPreference ??
+                            "Staff";
+                          const totalSvc = (invoice?.items ?? [])
+                            .filter(
+                              (i) =>
+                                i.price > 0 &&
+                                i.type !== "package_credit",
+                            )
+                            .reduce((s, i) => s + i.price, 0);
+                          const pct =
+                            totalSvc > 0 ? item.price / totalSvc : 0;
+                          const tipShare =
+                            Math.round(
+                              (invoice?.tipTotal ?? 0) * pct * 100,
+                            ) / 100;
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between rounded-md border px-3 py-2"
+                            >
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {staffName}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {item.name} · $
+                                  {item.price.toFixed(2)} (
+                                  {(pct * 100).toFixed(0)}%)
+                                </p>
+                              </div>
+                              <span className="text-sm font-semibold font-[tabular-nums]">
+                                ${tipShare.toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground py-2 text-center text-sm">
+                    No tip recorded for this booking
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
