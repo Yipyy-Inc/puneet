@@ -27,6 +27,12 @@ import {
   type PaymentMethod,
 } from "@/lib/invoice-lifecycle";
 
+interface OtherUnpaidInvoice {
+  invoiceId: string;
+  service: string;
+  amount: number;
+}
+
 interface PaymentCheckoutFlowProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,12 +40,14 @@ interface PaymentCheckoutFlowProps {
   depositPaid: number;
   invoiceTotal: number;
   clientStoreCreditBalance?: number;
+  otherUnpaidInvoices?: OtherUnpaidInvoice[];
   onConfirm: (payment: {
     method: PaymentMethod;
     amount: number;
     tip: number;
     changeAsCredit: boolean;
     changeAmount: number;
+    includedInvoices?: string[];
   }) => void;
 }
 
@@ -65,6 +73,7 @@ export function PaymentCheckoutFlow({
   depositPaid,
   invoiceTotal,
   clientStoreCreditBalance = 0,
+  otherUnpaidInvoices = [],
   onConfirm,
 }: PaymentCheckoutFlowProps) {
   const [method, setMethod] = useState<PaymentMethod>("card_on_file");
@@ -72,8 +81,15 @@ export function PaymentCheckoutFlow({
   const [tipAmount, setTipAmount] = useState(0);
   const [customTip, setCustomTip] = useState("");
   const [changeAsCredit, setChangeAsCredit] = useState(true);
+  const [includedInvoices, setIncludedInvoices] = useState<Set<string>>(
+    new Set(),
+  );
 
-  const remaining = amountDue + tipAmount;
+  const otherTotal = otherUnpaidInvoices
+    .filter((i) => includedInvoices.has(i.invoiceId))
+    .reduce((s, i) => s + i.amount, 0);
+
+  const remaining = amountDue + tipAmount + otherTotal;
   const cashNum = parseFloat(cashCollected) || 0;
   const { change } = calculateChange(remaining, cashNum);
   const isCash = method === "cash";
@@ -101,6 +117,8 @@ export function PaymentCheckoutFlow({
       tip: tipAmount,
       changeAsCredit: isCash && changeAsCredit,
       changeAmount: isCash ? change : 0,
+      includedInvoices:
+        includedInvoices.size > 0 ? [...includedInvoices] : undefined,
     });
     onOpenChange(false);
     setConfirming(false);
@@ -128,6 +146,65 @@ export function PaymentCheckoutFlow({
               </p>
             )}
           </div>
+
+          {/* Other unpaid invoices notice */}
+          {otherUnpaidInvoices.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-medium text-amber-800">
+                This client has {otherUnpaidInvoices.length} other unpaid
+                invoice{otherUnpaidInvoices.length !== 1 ? "s" : ""} (
+                <span className="font-[tabular-nums]">
+                  $
+                  {otherUnpaidInvoices
+                    .reduce((s, i) => s + i.amount, 0)
+                    .toFixed(2)}
+                </span>
+                )
+              </p>
+              <p className="mt-1 mb-2 text-xs text-amber-600">
+                Include them in this payment to settle all at once
+              </p>
+              <div className="space-y-1">
+                {otherUnpaidInvoices.map((inv) => (
+                  <label
+                    key={inv.invoiceId}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2.5 rounded-md border bg-white px-3 py-2 transition-all",
+                      includedInvoices.has(inv.invoiceId)
+                        ? "border-amber-400"
+                        : "border-amber-200 hover:border-amber-300",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={includedInvoices.has(inv.invoiceId)}
+                      onChange={() => {
+                        setIncludedInvoices((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(inv.invoiceId))
+                            next.delete(inv.invoiceId);
+                          else next.add(inv.invoiceId);
+                          return next;
+                        });
+                      }}
+                      className="accent-primary size-3.5"
+                    />
+                    <span className="flex-1 text-xs">
+                      {inv.invoiceId} · {inv.service}
+                    </span>
+                    <span className="font-[tabular-nums] text-xs font-medium">
+                      ${inv.amount.toFixed(2)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {includedInvoices.size > 0 && (
+                <p className="mt-2 text-xs font-medium text-amber-800">
+                  +${otherTotal.toFixed(2)} added to this payment
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Payment Method */}
           <div>
@@ -300,6 +377,17 @@ export function PaymentCheckoutFlow({
                   <span>Deposit paid</span>
                   <span className="font-[tabular-nums]">
                     -${depositPaid.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {otherTotal > 0 && (
+                <div className="flex justify-between text-amber-600">
+                  <span>
+                    + {includedInvoices.size} other invoice
+                    {includedInvoices.size !== 1 ? "s" : ""}
+                  </span>
+                  <span className="font-[tabular-nums]">
+                    ${otherTotal.toFixed(2)}
                   </span>
                 </div>
               )}
