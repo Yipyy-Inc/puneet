@@ -1108,13 +1108,6 @@ ${
               </Card>
             )}
 
-            {/* QuickBooks Sync — owner/manager only */}
-            {(role === "owner" || role === "manager") && (
-              <QuickBooksSyncPanel
-                sync={booking.quickbooksSync}
-                invoiceId={invoice?.id}
-              />
-            )}
           </div>
 
           {/* Right — 2 cols — Invoice */}
@@ -1184,6 +1177,14 @@ ${
         </div>
 
         <PageAuditTrail area="bookings" entityId={String(bookingId)} />
+
+        {/* QuickBooks Sync — owner/manager only, below Change History */}
+        {(role === "owner" || role === "manager") && (
+          <QuickBooksSyncPanel
+            sync={booking.quickbooksSync}
+            invoiceId={invoice?.id}
+          />
+        )}
 
         {/* Modals */}
         <EditBookingModal
