@@ -593,8 +593,35 @@ export function PaymentCheckoutFlow({
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {
-                  window.print();
-                  toast.success("Print dialog opened");
+                  const w = window.open("", "_blank", "width=500,height=600");
+                  if (!w) return;
+                  const methodLabel = splitMode
+                    ? splitPayments.map((p) => `${p.method}: $${p.amount}`).join(", ")
+                    : method.replace("_", " ");
+                  w.document.write(`<!DOCTYPE html><html><head><title>Receipt</title>
+<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
+h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
+.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
+.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
+.row.sub{color:#666}
+.badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
+.footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
+@media print{body{padding:20px}}</style></head><body>
+<h1>Payment Receipt</h1>
+<h2>${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
+<div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>
+${depositPaid > 0 ? `<div class="row sub"><span>Deposit Applied</span><span>-$${depositPaid.toFixed(2)}</span></div>` : ""}
+${tipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${tipAmount.toFixed(2)}</span></div>` : ""}
+${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${otherTotal.toFixed(2)}</span></div>` : ""}
+<div class="row total"><span>Total Charged</span><span>$${remaining.toFixed(2)}</span></div>
+<div class="row sub"><span>Payment Method</span><span>${methodLabel}</span></div>
+${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</span></div>` : ""}
+<div class="badge">PAYMENT COMPLETE</div>
+<div class="footer">Thank you for your business!</div>
+</body></html>`);
+                  w.document.close();
+                  w.print();
+                  toast.success("Receipt sent to printer");
                 }}
               >
                 Print
