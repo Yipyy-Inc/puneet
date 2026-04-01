@@ -59,28 +59,35 @@ export function CustomerFacilityProvider({
   );
 
   // Start null to match server render — hydrate from localStorage in effect
-  const [selectedFacilityId, setSelectedFacilityId] = useState<number | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<{
+    facilityId: number | null;
+    loading: boolean;
+  }>({ facilityId: null, loading: true });
 
   useEffect(() => {
-    const stored = localStorage.getItem(CUSTOMER_FACILITY_KEY);
-    if (stored) {
-      const facilityId = parseInt(stored, 10);
-      if (availableFacilities.some((f) => f.id === facilityId)) {
-        setSelectedFacilityId(facilityId);
-        setIsLoading(false);
-        return;
+    requestAnimationFrame(() => {
+      const stored = localStorage.getItem(CUSTOMER_FACILITY_KEY);
+      if (stored) {
+        const id = parseInt(stored, 10);
+        if (availableFacilities.some((f) => f.id === id)) {
+          setState({ facilityId: id, loading: false });
+          return;
+        }
       }
-    }
-    const defaultId = availableFacilities[0]?.id ?? null;
-    setSelectedFacilityId(defaultId);
-    if (defaultId !== null) {
-      localStorage.setItem(CUSTOMER_FACILITY_KEY, defaultId.toString());
-    }
-    setIsLoading(false);
+      const defaultId = availableFacilities[0]?.id ?? null;
+      if (defaultId !== null) {
+        localStorage.setItem(CUSTOMER_FACILITY_KEY, defaultId.toString());
+      }
+      setState({ facilityId: defaultId, loading: false });
+    });
   }, [availableFacilities]);
+
+  const selectedFacilityId = state.facilityId;
+  const isLoading = state.loading;
+
+  const setSelectedFacilityId = (id: number | null) => {
+    setState((prev) => ({ ...prev, facilityId: id }));
+  };
 
   const setSelectedFacility = (facilityId: number) => {
     if (availableFacilities.some((f) => f.id === facilityId)) {
