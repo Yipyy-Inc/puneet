@@ -39,6 +39,7 @@ interface TipSplitModalProps {
   onOpenChange: (open: boolean) => void;
   totalTip: number;
   staffServices: StaffService[];
+  defaultSplitMethod?: SplitMethod;
   onSave: (entries: TipSplitEntry[]) => void;
 }
 
@@ -64,9 +65,10 @@ export function TipSplitModal({
   onOpenChange,
   totalTip,
   staffServices,
+  defaultSplitMethod = "by_service",
   onSave,
 }: TipSplitModalProps) {
-  const [method, setMethod] = useState<SplitMethod>("by_service");
+  const [method, setMethod] = useState<SplitMethod>(defaultSplitMethod);
   const [customValues, setCustomValues] = useState<Record<string, number>>({});
   const [assignments, setAssignments] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
@@ -183,6 +185,14 @@ export function TipSplitModal({
           <Separator />
 
           {/* Split method */}
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+              Split Method
+            </p>
+            <p className="text-muted-foreground text-[10px]">
+              Default from Settings → Staff → Payroll
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {METHODS.map((m) => (
               <button

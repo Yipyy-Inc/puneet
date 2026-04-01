@@ -106,6 +106,15 @@ export default function SchedulingSettings() {
     understaffedThreshold: 0.7, // Below 70% of required staff = understaffed
     overstaffedThreshold: 1.3, // Above 130% of required staff = overstaffed
 
+    // Payroll & Tips
+    defaultTipSplitMethod: "by_service" as
+      | "by_service"
+      | "equal"
+      | "custom_percent"
+      | "custom_amount",
+    tipPoolingEnabled: false,
+    tipReportingEnabled: true,
+
     // Overtime Settings
     enableOvertimeTracking: true,
     overtimeThresholdDaily: 8,
