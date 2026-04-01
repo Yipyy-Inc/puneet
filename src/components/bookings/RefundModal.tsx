@@ -82,6 +82,41 @@ export function RefundModal({
       reason,
       type: refundType,
     });
+
+    // Auto-generate refund receipt in new window
+    const w = window.open("", "_blank", "width=500,height=600");
+    if (w) {
+      const methodLabel =
+        method === "original"
+          ? "Original Payment Method"
+          : method === "store_credit"
+            ? "Store Credit"
+            : "Cash";
+      w.document.write(`<!DOCTYPE html><html><head><title>Refund Receipt</title>
+<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
+h1{font-size:18px;margin:0;color:#dc2626}h2{font-size:12px;color:#666;margin:4px 0 20px}
+.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
+.row.total{border-top:2px solid #dc2626;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px;color:#dc2626}
+.row.sub{color:#666}.section{margin-top:14px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
+.badge{background:#fef2f2;color:#dc2626;padding:6px 14px;border-radius:8px;text-align:center;margin-top:14px;font-weight:600;font-size:13px}
+.note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-top:14px;font-size:11px;color:#64748b}
+</style></head><body>
+<h1>Refund Receipt</h1>
+<h2>Processed ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
+<div class="section">Refund Details</div>
+<div class="row"><span>Type</span><span>${refundType === "by_item" ? "By Item" : refundType === "partial" ? "Partial" : "Full"}</span></div>
+<div class="row"><span>Method</span><span>${methodLabel}</span></div>
+${reason ? `<div class="row"><span>Reason</span><span>${reason}</span></div>` : ""}
+${refundType === "by_item" ? `<div class="section">Refunded Items</div>${items.filter((_, i) => selectedItems.has(i)).map((item) => `<div class="row"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`).join("")}` : ""}
+<div class="row total"><span>Refund Amount</span><span>$${refundAmount.toFixed(2)}</span></div>
+<div class="badge">REFUND PROCESSED</div>
+<div class="note">The original invoice remains unchanged for audit purposes. This refund receipt is linked to the original transaction.</div>
+<div class="footer">Refund processed by staff · ${new Date().toLocaleTimeString()}</div>
+</body></html>`);
+      w.document.close();
+    }
+
     onOpenChange(false);
     setStep("select");
     setRefundType("full");
@@ -342,7 +377,8 @@ export function RefundModal({
                 </p>
                 <p className="mt-0.5 text-xs text-amber-700">
                   This action cannot be undone. The refund will be processed
-                  immediately.
+                  immediately. The original invoice stays unchanged for audit
+                  purposes — a separate refund receipt will be generated.
                 </p>
               </div>
             </div>
