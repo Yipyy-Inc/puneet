@@ -536,7 +536,7 @@ ${invoice.payments.length > 0 ? `<div class="section">Payments</div>${invoice.pa
               }}
             >
               <Receipt className="size-3.5" />
-              View Full Invoice
+              View Receipt
             </Button>
           </>
         )}
