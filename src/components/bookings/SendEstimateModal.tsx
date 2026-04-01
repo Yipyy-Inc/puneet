@@ -86,12 +86,16 @@ export function SendEstimateModal({
   };
 
   const handleSendEmail = () => {
-    toast.success(`Estimate sent to ${clientEmail}`);
+    toast.success(
+      `Estimate sent to ${clientEmail} — booking saved as estimate`,
+    );
     onOpenChange(false);
   };
 
   const handleSendSMS = () => {
-    toast.success(`Estimate link sent via SMS to ${clientPhone}`);
+    toast.success(
+      `Estimate sent via SMS to ${clientPhone} — booking saved as estimate`,
+    );
     onOpenChange(false);
   };
 
