@@ -40,6 +40,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { bookings as initialBookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
@@ -152,6 +154,11 @@ export default function ClientBookingDetailPage({
     const pid = Array.isArray(booking.petId) ? booking.petId[0] : booking.petId;
     return client.pets?.find((p) => p.id === pid);
   }, [client, booking]);
+  const facility = useMemo(
+    () =>
+      booking ? facilities.find((f) => f.id === booking.facilityId) : null,
+    [booking],
+  );
 
   const nights = booking
     ? nightsBetween(booking.startDate, booking.endDate)
@@ -470,6 +477,7 @@ h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-w
 .section{margin-top:16px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
 .footer{margin-top:30px;text-align:center;font-size:11px;color:#999}
 @media print{body{padding:20px}}</style></head><body>
+${invoiceHeaderHtml(facility)}
 <div class="header"><h1>Invoice ${inv?.id ?? `#${booking.id}`}</h1>
 <h2>${client.name} · ${pet?.name ?? "Pet"} · ${booking.service}</h2></div>
 <div class="section">Services</div>
@@ -496,7 +504,7 @@ ${!inv?.taxes?.length && (inv?.taxAmount ?? 0) > 0 ? `<div class="row sub"><span
 <div class="row total"><span>Total</span><span>$${(inv?.total ?? booking.totalCost).toFixed(2)}</span></div>
 ${(inv?.depositCollected ?? 0) > 0 ? `<div class="row sub"><span>Deposit Paid</span><span>-$${(inv?.depositCollected ?? 0).toFixed(2)}</span></div><div class="row"><span>Remaining</span><span>$${(inv?.remainingDue ?? 0).toFixed(2)}</span></div>` : ""}
 ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv?.tipTotal ?? 0).toFixed(2)}</span></div>` : ""}
-<div class="footer">Thank you for choosing us!<br>Example Pet Care Facility</div>
+<div class="footer">Thank you for choosing us!<br>${facility?.name ?? "Our Facility"}</div>
 </body></html>`);
                     w.document.close();
                     w.print();
@@ -630,6 +638,7 @@ h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-w
 .footer{margin-top:30px;text-align:center;font-size:11px;color:#999}
 .paid{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600}
 </style></head><body>
+${invoiceHeaderHtml(facility)}
 <div class="header"><h1>Receipt</h1><h2>${inv?.id ?? `#${booking.id}`} · ${client.name} · ${pet?.name ?? "Pet"}</h2></div>
 <div class="section">Services</div>
 ${(inv?.items ?? []).map((item) => `<div class="row"><span>${item.name}${item.staffName ? ` <small style="color:#888">· ${item.staffName}</small>` : ""}</span><span>$${item.price.toFixed(2)}</span></div>`).join("")}

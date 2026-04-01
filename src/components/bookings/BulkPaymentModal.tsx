@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { facilities } from "@/data/facilities";
+import { invoiceHeaderHtml } from "@/lib/invoice-header";
+
+const defaultFacility = facilities.find((f) => f.id === 11);
 
 interface UnpaidInvoice {
   bookingId: number;
@@ -121,6 +125,7 @@ h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 .footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
 .badge{background:#ecfdf5;color:#059669;padding:6px 14px;border-radius:8px;text-align:center;margin-top:14px;font-weight:600;font-size:13px}
 </style></head><body>
+${invoiceHeaderHtml(defaultFacility)}
 <h1>Bulk Payment Receipt</h1>
 <h2>${clientName} · ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
 <div class="section">Invoices Paid (${selectedInvoices.length})</div>

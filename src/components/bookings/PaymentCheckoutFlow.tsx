@@ -27,6 +27,11 @@ import {
   calculateChange,
   type PaymentMethod,
 } from "@/lib/invoice-lifecycle";
+import { facilities } from "@/data/facilities";
+import { invoiceHeaderHtml } from "@/lib/invoice-header";
+
+// Default facility for receipt header
+const defaultFacility = facilities.find((f) => f.id === 11);
 
 interface OtherUnpaidInvoice {
   invoiceId: string;
@@ -608,6 +613,7 @@ h1{font-size:18px;margin:0}h2{font-size:12px;color:#666;margin:4px 0 20px}
 .badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
 .footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
 @media print{body{padding:20px}}</style></head><body>
+${invoiceHeaderHtml(defaultFacility)}
 <h1>Payment Receipt</h1>
 <h2>${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</h2>
 <div class="row"><span>Amount</span><span>$${amountDue.toFixed(2)}</span></div>
@@ -618,7 +624,7 @@ ${otherTotal > 0 ? `<div class="row sub"><span>Other Invoices</span><span>$${oth
 <div class="row sub"><span>Payment Method</span><span>${methodLabel}</span></div>
 ${paymentNote ? `<div class="row sub"><span>Note</span><span>${paymentNote}</span></div>` : ""}
 <div class="badge">PAYMENT COMPLETE</div>
-<div class="footer">Thank you for your business!</div>
+<div class="footer">Thank you for your business!<br>${defaultFacility?.name ?? ""}</div>
 </body></html>`);
                   w.document.close();
                   w.print();

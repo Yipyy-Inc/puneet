@@ -81,6 +81,7 @@ export const facilities = [
   {
     id: 1,
     name: "Paws & Play Daycare",
+    logo: "/yipyy-transparent.png",
     status: "active",
     plan: "Premium",
     dayJoined: "2025-06-15",
