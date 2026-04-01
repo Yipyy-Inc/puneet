@@ -60,6 +60,8 @@ import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import { DataTable } from "@/components/ui/DataTable";
+import { NotesButton } from "@/components/shared/NotesButton";
+import { TagsButton } from "@/components/shared/TagsButton";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { hasPermission } from "@/lib/role-utils";
 
@@ -417,6 +419,12 @@ export default function PetDetailPage({
             </>
           )}
         </div>
+      </div>
+
+      {/* Tags + Notes */}
+      <div className="flex items-center gap-2">
+        <TagsButton entityType="pet" entityId={pet.id} />
+        <NotesButton entityType="pet" entityId={pet.id} />
       </div>
 
       {/* Quick Stats */}
