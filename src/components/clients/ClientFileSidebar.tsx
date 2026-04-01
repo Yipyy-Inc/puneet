@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,14 +15,15 @@ import {
   FolderOpen,
   Phone,
   Mail,
-  Pencil,
   Tags,
   History,
   ChevronLeft,
   ArrowUpRight,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { bookings } from "@/data/bookings";
 import type { Client } from "@/types/client";
 
 interface ClientFileSidebarProps {
@@ -39,6 +40,13 @@ const getInitials = (name: string) =>
     .toUpperCase()
     .slice(0, 2);
 
+function formatDateShort(dateStr: string) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function ClientFileSidebar({
   client,
   petCount,
@@ -48,26 +56,23 @@ export function ClientFileSidebar({
   const base = `/facility/dashboard/clients/${client.id}`;
   const onBookingDetail = !!pathname.match(/\/clients\/\d+\/bookings\/(\d+)/);
   const onPetDetail = !!pathname.match(/\/clients\/\d+\/pets\/(\d+)/);
+  const currentBookingId = pathname.match(/\/bookings\/(\d+)/)?.[1];
 
   const isActive = (path: string, matchPrefix?: string) => {
-    // On a detail page, don't highlight the parent section
     if (matchPrefix && (onBookingDetail || onPetDetail)) {
       return pathname === path;
     }
     if (matchPrefix) return pathname.startsWith(matchPrefix);
-    if (path === base) return pathname === base;
     return pathname.startsWith(path);
   };
 
-  // ── Persist last-viewed booking/pet via sessionStorage ──
+  // Persist last-viewed booking/pet
   const storageKey = `yipyy_client_${client.id}_ctx`;
-
   const [recentCtx, setRecentCtx] = useState<{
     booking: { id: string; href: string } | null;
     pet: { id: string; href: string } | null;
   }>({ booking: null, pet: null });
 
-  // Restore from sessionStorage after mount to avoid hydration mismatch
   useEffect(() => {
     try {
       const s = sessionStorage.getItem(storageKey);
@@ -102,15 +107,25 @@ export function ClientFileSidebar({
 
   const hasRecentBooking = !!recentCtx.booking;
   const hasRecentPet = !!recentCtx.pet;
-
-  // Always show the recent context card — it's the ONLY place the
-  // specific booking/pet link lives. On the detail page itself it
-  // serves as confirmation of what you're viewing; on other pages
-  // it's the quick-return shortcut.
   const showRecentSection = hasRecentBooking || hasRecentPet;
 
-  // ── Nav items ──
-  const sections = [
+  // Other bookings for context
+  const otherBookings = useMemo(() => {
+    return bookings
+      .filter(
+        (b) =>
+          b.clientId === client.id &&
+          String(b.id) !== currentBookingId,
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      )
+      .slice(0, 3);
+  }, [client.id, currentBookingId]);
+
+  // Nav sections
+  const customerNav = [
     { href: `${base}/overview`, label: "Overview", icon: User },
     {
       href: `${base}/pets`,
@@ -126,103 +141,178 @@ export function ClientFileSidebar({
       icon: Calendar,
       matchPrefix: `${base}/bookings`,
     },
-    { href: `${base}/billing`, label: "Billing & Payments", icon: DollarSign },
+    {
+      href: `${base}/billing`,
+      label: "Billing & Payments",
+      icon: DollarSign,
+    },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
     { href: `${base}/forms`, label: "Forms & Waivers", icon: FileText },
+  ];
+
+  const communicationNav = [
     { href: `${base}/messages`, label: "Messages", icon: MessageSquare },
     { href: `${base}/report-cards`, label: "Report Cards", icon: Award },
     { href: `${base}/documents`, label: "Documents", icon: FolderOpen },
   ];
 
-  const admin = [
-    { href: `${base}/edit`, label: "Edit Client", icon: Pencil },
+  const adminNav = [
     { href: `${base}/tags`, label: "Tags & Notes", icon: Tags },
     { href: `${base}/audit`, label: "Audit Trail", icon: History },
   ];
 
-  // ── Render ──
+  const renderNavItem = (item: {
+    href: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    count?: number;
+    matchPrefix?: string;
+  }) => {
+    const Icon = item.icon;
+    const active = isActive(item.href, item.matchPrefix);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+          active
+            ? "bg-muted font-medium text-foreground"
+            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        )}
+      >
+        <Icon className={cn("size-4 shrink-0", active && "text-foreground")} />
+        <span className="flex-1">{item.label}</span>
+        {item.count != null && item.count > 0 && (
+          <span
+            className={cn(
+              "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-xs",
+              active
+                ? "bg-foreground/10 font-medium"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {item.count}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   return (
-    <aside className="bg-card hidden w-72 shrink-0 border-r lg:flex lg:flex-col">
-      {/* Back */}
-      <div className="px-4 py-2.5">
+    <aside className="bg-card hidden w-64 shrink-0 border-r border-border/50 lg:flex lg:flex-col">
+      {/* Back link */}
+      <div className="px-4 py-3">
         <Link
           href="/facility/dashboard/clients"
-          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[11px] font-medium transition-colors"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
         >
-          <ChevronLeft className="size-3" />
+          <ChevronLeft className="size-3.5" />
           All Clients
         </Link>
       </div>
 
-      {/* Client card */}
-      <div className="from-muted/40 mx-3 mb-3 rounded-xl border bg-gradient-to-b to-transparent p-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-sm">
+      {/* Client header */}
+      <div className="px-4 pb-4">
+        <div className="flex flex-col items-center text-center">
+          <div className="bg-muted text-muted-foreground flex size-16 items-center justify-center rounded-full text-lg font-semibold">
             {getInitials(client.name)}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{client.name}</p>
-            <div className="mt-0.5 flex items-center gap-1">
-              <div
-                className={cn(
-                  "size-1.5 rounded-full",
-                  client.status === "active"
-                    ? "bg-emerald-500"
-                    : "bg-muted-foreground",
-                )}
-              />
-              <span className="text-muted-foreground text-[10px] capitalize">
-                {client.status}
-              </span>
-              {client.membership?.status === "active" && (
-                <Badge
-                  variant="outline"
-                  className="ml-0.5 h-3.5 border-amber-200 bg-amber-50 px-1 text-[8px] text-amber-700"
-                >
-                  {client.membership.plan}
-                </Badge>
+          <h3 className="mt-3 text-base font-semibold">{client.name}</h3>
+          <div className="mt-1 flex items-center gap-1.5">
+            <div
+              className={cn(
+                "size-2 rounded-full",
+                client.status === "active"
+                  ? "bg-emerald-500"
+                  : "bg-muted-foreground",
               )}
-            </div>
+            />
+            <span className="text-muted-foreground text-xs capitalize">
+              {client.status}
+            </span>
+            {client.membership?.status === "active" && (
+              <Badge
+                variant="outline"
+                className="border-amber-200 bg-amber-50 px-1.5 text-[10px] text-amber-700"
+              >
+                {client.membership.plan}
+              </Badge>
+            )}
           </div>
         </div>
-        <div className="mt-2.5 space-y-1">
+
+        {/* Contact */}
+        <div className="mt-3 space-y-1.5">
           {client.email && (
-            <p className="text-muted-foreground flex items-center gap-1.5 text-[10px]">
-              <Mail className="size-2.5 shrink-0" />
+            <p className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Mail className="size-3.5 shrink-0" />
               <span className="truncate">{client.email}</span>
             </p>
           )}
           {client.phone && (
-            <p className="text-muted-foreground flex items-center gap-1.5 text-[10px]">
-              <Phone className="size-2.5 shrink-0" />
+            <p className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Phone className="size-3.5 shrink-0" />
               {client.phone}
             </p>
           )}
         </div>
+
+        {/* Quick actions */}
+        <div className="mt-3 flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 flex-1 text-xs"
+            asChild
+          >
+            <Link href={`${base}/messages`}>
+              <Mail className="mr-1.5 size-3.5" />
+              Message
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 flex-1 text-xs"
+            asChild
+          >
+            <Link href={`/facility/dashboard/clients/${client.id}`}>
+              <User className="mr-1.5 size-3.5" />
+              Profile
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Recent context — pinned card for quick return */}
+      <div className="border-t border-border/50" />
+
+      {/* Recent context */}
       {showRecentSection && (
-        <div className="mx-3 mb-3 space-y-1">
-          <p className="text-muted-foreground px-1 text-[9px] font-semibold tracking-widest uppercase">
-            Continue where you left off
-          </p>
+        <div className="space-y-1 px-3 pt-3 pb-2">
           {hasRecentBooking && (
             <Link
               href={recentCtx.booking!.href}
               className={cn(
-                "flex items-center gap-2 rounded-lg border px-3 py-2 transition-all",
+                "flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all",
                 onBookingDetail
-                  ? "bg-primary/10 border-primary/30"
-                  : "bg-primary/5 hover:bg-primary/10 border-primary/20",
+                  ? "bg-muted border-border font-medium"
+                  : "border-border/50 hover:bg-muted/50",
               )}
             >
-              <Calendar className="text-primary size-3.5 shrink-0" />
-              <span className="text-primary flex-1 text-[12px] font-medium">
+              <Calendar
+                className={cn(
+                  "size-4 shrink-0",
+                  onBookingDetail
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
+              />
+              <span className="flex-1 text-sm">
                 Booking #{recentCtx.booking!.id}
               </span>
               {!onBookingDetail && (
-                <ArrowUpRight className="text-primary/50 size-3" />
+                <ArrowUpRight className="text-muted-foreground size-3.5" />
               )}
             </Link>
           )}
@@ -230,18 +320,25 @@ export function ClientFileSidebar({
             <Link
               href={recentCtx.pet!.href}
               className={cn(
-                "flex items-center gap-2 rounded-lg border px-3 py-2 transition-all",
+                "flex items-center gap-2.5 rounded-lg border px-3 py-2 transition-all",
                 onPetDetail
-                  ? "bg-primary/10 border-primary/30"
-                  : "bg-primary/5 hover:bg-primary/10 border-primary/20",
+                  ? "bg-muted border-border font-medium"
+                  : "border-border/50 hover:bg-muted/50",
               )}
             >
-              <PawPrint className="text-primary size-3.5 shrink-0" />
-              <span className="text-primary flex-1 text-[12px] font-medium">
+              <PawPrint
+                className={cn(
+                  "size-4 shrink-0",
+                  onPetDetail
+                    ? "text-foreground"
+                    : "text-muted-foreground",
+                )}
+              />
+              <span className="flex-1 text-sm">
                 Pet #{recentCtx.pet!.id}
               </span>
               {!onPetDetail && (
-                <ArrowUpRight className="text-primary/50 size-3" />
+                <ArrowUpRight className="text-muted-foreground size-3.5" />
               )}
             </Link>
           )}
@@ -249,80 +346,67 @@ export function ClientFileSidebar({
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 pb-3">
-        <p className="text-muted-foreground px-2 pt-1 pb-1.5 text-[9px] font-semibold tracking-widest uppercase">
-          Sections
+      <nav className="flex-1 overflow-y-auto px-3 pt-2 pb-4">
+        {/* Customer */}
+        <p className="text-muted-foreground mb-1 px-3 text-[11px] font-medium uppercase tracking-wider">
+          Customer
         </p>
         <div className="space-y-0.5">
-          {sections.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href, item.matchPrefix);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[12px] font-medium transition-all",
-                  active
-                    ? "bg-foreground/[0.06] text-foreground"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-[15px]",
-                    active ? "text-foreground" : "text-muted-foreground/70",
-                  )}
-                />
-                <span className="flex-1">{item.label}</span>
-                {item.count != null && item.count > 0 && (
-                  <span
-                    className={cn(
-                      "min-w-[18px] rounded-full px-1 py-px text-center text-[9px] font-semibold",
-                      active
-                        ? "bg-foreground/10 text-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {item.count}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {customerNav.map(renderNavItem)}
         </div>
 
-        <div className="my-2.5 border-t" />
+        {/* Communication */}
+        <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
+          Communication
+        </p>
+        <div className="space-y-0.5">
+          {communicationNav.map(renderNavItem)}
+        </div>
 
-        <p className="text-muted-foreground px-2 pt-0.5 pb-1.5 text-[9px] font-semibold tracking-widest uppercase">
+        {/* Admin */}
+        <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
           Admin
         </p>
         <div className="space-y-0.5">
-          {admin.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[12px] font-medium transition-all",
-                  active
-                    ? "bg-foreground/[0.06] text-foreground"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "size-[15px]",
-                    active ? "text-foreground" : "text-muted-foreground/70",
-                  )}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
+          {adminNav.map(renderNavItem)}
         </div>
+
+        {/* Other bookings — contextual */}
+        {onBookingDetail && otherBookings.length > 0 && (
+          <>
+            <p className="text-muted-foreground mb-1 mt-4 px-3 text-[11px] font-medium uppercase tracking-wider">
+              Other Bookings
+            </p>
+            <div className="space-y-0.5">
+              {otherBookings.map((b) => {
+                const bPet = client.pets.find(
+                  (p) =>
+                    p.id ===
+                    (Array.isArray(b.petId) ? b.petId[0] : b.petId),
+                );
+                return (
+                  <Link
+                    key={b.id}
+                    href={`${base}/bookings/${b.id}`}
+                    className="text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all"
+                  >
+                    <Calendar className="size-4 shrink-0 opacity-60" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">
+                        #{b.id} · {b.service}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {formatDateShort(b.startDate)}
+                        {bPet && ` · ${bPet.name}`}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium">${b.totalCost}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
       </nav>
     </aside>
   );
