@@ -260,7 +260,8 @@ export default function ClientBookingDetailPage({
           <span>
             This booking is <strong>finished</strong>. Date, time, service
             prices, and items are locked. You can still view the receipt,
-            split tips, or issue a refund.
+            split tips, or issue a refund. If a correction is needed,
+            cancel and refund this invoice, then create a new booking.
           </span>
         </div>
       )}
