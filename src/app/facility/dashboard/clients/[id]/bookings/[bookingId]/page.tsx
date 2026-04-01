@@ -253,6 +253,18 @@ export default function ClientBookingDetailPage({
         </div>
       )}
 
+      {/* Finished Notice */}
+      {(booking.status === "completed" || isPaid) && !isCancelled && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <CheckCircle2 className="size-4 shrink-0" />
+          <span>
+            This booking is <strong>finished</strong>. Date, time, service
+            prices, and items are locked. You can still view the receipt,
+            split tips, or issue a refund.
+          </span>
+        </div>
+      )}
+
       {/* ── Hero Header ── */}
       <div className="from-card to-muted/20 rounded-xl border bg-gradient-to-r p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -305,15 +317,18 @@ export default function ClientBookingDetailPage({
 
         {/* Action bar — inside the hero */}
         <div className="border-border/50 mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="size-3.5" />
-            Edit Booking
-          </Button>
+          {/* Edit Booking — not available on finished (completed/paid) bookings */}
+          {booking.status !== "completed" && !isPaid && !isCancelled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="size-3.5" />
+              Edit Booking
+            </Button>
+          )}
 
           {/* View Estimate — only for estimate invoices */}
           {invoice?.status === "estimate" && (
@@ -328,7 +343,8 @@ export default function ClientBookingDetailPage({
             </Button>
           )}
 
-          {!isCancelled && (
+          {/* Add Item — not on finished bookings */}
+          {!isCancelled && booking.status !== "completed" && !isPaid && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
