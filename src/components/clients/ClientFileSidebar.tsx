@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   ExternalLink,
 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -219,9 +220,21 @@ export function ClientFileSidebar({
       {/* Client header */}
       <div className="px-5 pb-5">
         <div className="flex flex-col items-center text-center">
-          <div className="bg-primary/10 text-primary flex size-[72px] items-center justify-center rounded-full text-xl font-bold">
-            {getInitials(client.name)}
-          </div>
+          {client.imageUrl ? (
+            <div className="size-[72px] overflow-hidden rounded-full ring-2 ring-border/50 ring-offset-2 ring-offset-background">
+              <Image
+                src={client.imageUrl}
+                alt={client.name}
+                width={72}
+                height={72}
+                className="size-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="bg-primary/10 text-primary flex size-[72px] items-center justify-center rounded-full text-xl font-bold ring-2 ring-border/50 ring-offset-2 ring-offset-background">
+              {getInitials(client.name)}
+            </div>
+          )}
           <h3 className="mt-3 text-lg font-semibold tracking-tight">
             {client.name}
           </h3>
