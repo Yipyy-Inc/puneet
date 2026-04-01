@@ -84,12 +84,22 @@ export function PaymentCheckoutFlow({
   const [includedInvoices, setIncludedInvoices] = useState<Set<string>>(
     new Set(),
   );
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitPayments, setSplitPayments] = useState<
+    { method: PaymentMethod; amount: string }[]
+  >([]);
+  const [paymentNote, setPaymentNote] = useState("");
 
   const otherTotal = otherUnpaidInvoices
     .filter((i) => includedInvoices.has(i.invoiceId))
     .reduce((s, i) => s + i.amount, 0);
 
   const remaining = amountDue + tipAmount + otherTotal;
+  const splitTotal = splitPayments.reduce(
+    (s, p) => s + (parseFloat(p.amount) || 0),
+    0,
+  );
+  const splitLeftToPay = remaining - splitTotal;
   const cashNum = parseFloat(cashCollected) || 0;
   const { change } = calculateChange(remaining, cashNum);
   const isCash = method === "cash";
@@ -235,6 +245,122 @@ export function PaymentCheckoutFlow({
               })}
             </div>
           </div>
+
+          {/* Split payment toggle + entries */}
+          {!splitMode ? (
+            <button
+              onClick={() => {
+                setSplitMode(true);
+                setSplitPayments([
+                  { method, amount: "" },
+                ]);
+              }}
+              className="text-primary text-xs font-medium hover:underline"
+            >
+              Split Payment →
+            </button>
+          ) : (
+            <div className="animate-in fade-in space-y-3 rounded-lg border p-3 duration-150">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium">Split Payment</p>
+                <button
+                  onClick={() => {
+                    setSplitMode(false);
+                    setSplitPayments([]);
+                  }}
+                  className="text-muted-foreground text-xs hover:underline"
+                >
+                  Cancel Split
+                </button>
+              </div>
+              {splitPayments.map((sp, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <select
+                    value={sp.method}
+                    onChange={(e) => {
+                      setSplitPayments((prev) =>
+                        prev.map((p, i) =>
+                          i === idx
+                            ? { ...p, method: e.target.value as PaymentMethod }
+                            : p,
+                        ),
+                      );
+                    }}
+                    className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+                  >
+                    <option value="card_on_file">Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="terminal">Terminal</option>
+                    <option value="e_transfer">E-Transfer</option>
+                  </select>
+                  <Input
+                    type="number"
+                    value={sp.amount}
+                    onChange={(e) => {
+                      setSplitPayments((prev) =>
+                        prev.map((p, i) =>
+                          i === idx ? { ...p, amount: e.target.value } : p,
+                        ),
+                      );
+                    }}
+                    placeholder="Amount"
+                    className="h-8 flex-1 font-[tabular-nums] text-xs"
+                    min={0}
+                    step={0.01}
+                  />
+                  {splitPayments.length > 1 && (
+                    <button
+                      onClick={() =>
+                        setSplitPayments((prev) =>
+                          prev.filter((_, i) => i !== idx),
+                        )
+                      }
+                      className="text-muted-foreground hover:text-destructive text-xs"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() =>
+                    setSplitPayments((prev) => [
+                      ...prev,
+                      { method: "cash", amount: "" },
+                    ])
+                  }
+                  className="text-primary text-xs font-medium hover:underline"
+                >
+                  + Add Method
+                </button>
+                <span
+                  className={cn(
+                    "font-[tabular-nums] text-xs font-medium",
+                    splitLeftToPay > 0.01
+                      ? "text-amber-600"
+                      : splitLeftToPay < -0.01
+                        ? "text-red-600"
+                        : "text-emerald-600",
+                  )}
+                >
+                  {splitLeftToPay > 0.01
+                    ? `$${splitLeftToPay.toFixed(2)} left`
+                    : splitLeftToPay < -0.01
+                      ? `$${Math.abs(splitLeftToPay).toFixed(2)} over`
+                      : "Balanced ✓"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Payment note */}
+          <Input
+            value={paymentNote}
+            onChange={(e) => setPaymentNote(e.target.value)}
+            placeholder="Payment note (optional)"
+            className="h-8 text-xs"
+          />
 
           {/* Store credit info */}
           {method === "store_credit" && (
@@ -440,7 +566,10 @@ export function PaymentCheckoutFlow({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isCash && cashNum < remaining}
+            disabled={
+              (isCash && !splitMode && cashNum < remaining) ||
+              (splitMode && Math.abs(splitLeftToPay) > 0.01)
+            }
             className={cn(
               "gap-1.5",
               confirming && "bg-emerald-600 hover:bg-emerald-700",
