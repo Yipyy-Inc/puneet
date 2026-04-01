@@ -35,11 +35,13 @@ export type ServiceType = z.infer<typeof serviceTypeEnum>;
 
 export const bookingStatusEnum = z.enum([
   "pending",
+  "estimate_sent",
   "request_submitted",
   "waitlisted",
   "confirmed",
   "completed",
   "cancelled",
+  "declined",
 ]);
 export type BookingStatus = z.infer<typeof bookingStatusEnum>;
 

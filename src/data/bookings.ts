@@ -1031,4 +1031,71 @@ export const bookings: Booking[] = [
       payments: [],
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #18 — ESTIMATE SENT: Waiting for client confirmation
+  // Test: Estimate banner, Resend/Confirm/Decline buttons, customer confirm flow
+  // Client: Alice Johnson (15), Pet: Buddy
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 18,
+    clientId: 15,
+    petId: 1,
+    facilityId: 11,
+    service: "boarding",
+    serviceType: "deluxe",
+    startDate: "2026-04-19",
+    endDate: "2026-04-30",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    status: "estimate_sent",
+    basePrice: 65,
+    discount: 0,
+    totalCost: 715,
+    paymentStatus: "pending",
+    kennel: "Suite A",
+    specialRequests:
+      "Buddy needs his blanket from home. Extra walks in the afternoon please.",
+    notificationEmail: true,
+    notificationSMS: true,
+    invoice: {
+      id: "INV-1018",
+      status: "estimate",
+      items: [
+        {
+          name: "Boarding — Deluxe Suite (11 nights)",
+          unitPrice: 65,
+          quantity: 11,
+          price: 715,
+        },
+        {
+          name: "Nail Trim",
+          unitPrice: 15,
+          quantity: 1,
+          price: 15,
+          type: "addon",
+        },
+        {
+          name: "Gourmet Treats Pack",
+          unitPrice: 12,
+          quantity: 1,
+          price: 12,
+          type: "product",
+        },
+      ],
+      fees: [],
+      subtotal: 742,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 111.11,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 37.1 },
+        { name: "QST", rate: 0.09975, amount: 74.01 },
+      ],
+      total: 853.11,
+      depositCollected: 0,
+      remainingDue: 853.11,
+      payments: [],
+    },
+  },
 ];

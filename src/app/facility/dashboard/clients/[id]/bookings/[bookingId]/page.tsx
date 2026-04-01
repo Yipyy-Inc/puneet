@@ -112,6 +112,13 @@ function statusConfig(status: string) {
         dot: "bg-amber-500",
         bg: "bg-amber-50 border-amber-200 text-amber-700",
       };
+    case "estimate_sent":
+      return {
+        dot: "bg-violet-500",
+        bg: "bg-violet-50 border-violet-200 text-violet-700",
+      };
+    case "declined":
+      return { dot: "bg-red-500", bg: "bg-red-50 border-red-200 text-red-700" };
     case "cancelled":
       return { dot: "bg-red-500", bg: "bg-red-50 border-red-200 text-red-700" };
     default:
@@ -150,6 +157,8 @@ export default function ClientBookingDetailPage({
     ? nightsBetween(booking.startDate, booking.endDate)
     : 0;
   const isCancelled = booking?.status === "cancelled";
+  const isDeclined = booking?.status === "declined";
+  const isEstimateSent = booking?.status === "estimate_sent";
   const isPaid = booking?.paymentStatus === "paid";
 
   const [editOpen, setEditOpen] = useState(false);
@@ -191,6 +200,74 @@ export default function ClientBookingDetailPage({
       />
 
       <div className="space-y-5 p-5 md:p-7">
+        {/* Estimate Sent — waiting for client confirmation */}
+        {isEstimateSent && (
+          <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                <Clock className="size-4 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-violet-800">
+                  Waiting for client confirmation
+                </p>
+                <p className="text-xs text-violet-600">
+                  Estimate sent to {client.name} — awaiting response
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-100"
+                onClick={() => setEstimateOpen(true)}
+              >
+                <Send className="size-3.5" />
+                Resend
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  toast.success("Booking confirmed — deposit rules now apply")
+                }
+              >
+                <CheckCircle2 className="size-3.5" />
+                Confirm Booking
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() => toast.info("Booking marked as declined")}
+              >
+                <XCircle className="size-3.5" />
+                Decline
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Declined — client rejected the estimate */}
+        {isDeclined && (
+          <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-100">
+                <XCircle className="size-4 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-red-800">
+                  Estimate Declined
+                </p>
+                <p className="text-xs text-red-600">
+                  {client.name} declined this estimate
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Deposit Notice — unpaid */}
         {!isPaid && !isCancelled && (invoice?.depositCollected ?? 0) === 0 && (
           <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -339,7 +416,7 @@ export default function ClientBookingDetailPage({
               </Button>
             )}
 
-            {/* View Estimate — only for estimate invoices */}
+            {/* Send/View Estimate — only for estimate invoices */}
             {invoice?.status === "estimate" && (
               <Button
                 variant="outline"
@@ -347,8 +424,8 @@ export default function ClientBookingDetailPage({
                 className="h-8 gap-1.5 text-xs"
                 onClick={() => setEstimateOpen(true)}
               >
-                <FileText className="size-3.5" />
-                View Estimate
+                <Send className="size-3.5" />
+                {isEstimateSent ? "Resend Estimate" : "Send Estimate"}
               </Button>
             )}
 
@@ -1000,7 +1077,6 @@ ${
                 </CardContent>
               </Card>
             )}
-
           </div>
 
           {/* Right — 2 cols — Invoice */}

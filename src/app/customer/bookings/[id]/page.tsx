@@ -21,7 +21,10 @@ import {
   RotateCcw,
   MessageSquare,
   ClipboardList,
+  XCircle,
+  Receipt,
 } from "lucide-react";
+import { toast } from "sonner";
 import { GroomingCheckInButton } from "@/components/grooming/GroomingCheckInButton";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoForm } from "@/data/yipyygo-forms";
@@ -76,6 +79,8 @@ const statusConfig: Record<
     label: string;
   }
 > = {
+  estimate_sent: { variant: "outline", label: "Estimate" },
+  declined: { variant: "destructive", label: "Declined" },
   confirmed: { variant: "default", label: "Confirmed" },
   completed: { variant: "secondary", label: "Completed" },
   cancelled: { variant: "destructive", label: "Cancelled" },
@@ -165,6 +170,7 @@ export default function BookingDetailPage({
   const isPaid = inv ? inv.remainingDue <= 0 : false;
   const isCancelled = booking.status === "cancelled";
   const isCompleted = booking.status === "completed";
+  const isEstimate = booking.status === "estimate_sent";
 
   const status = statusConfig[booking.status] ?? statusConfig.pending;
 
@@ -207,6 +213,49 @@ export default function BookingDetailPage({
       </div>
 
       <div className="space-y-4">
+        {/* ── Estimate Banner ── */}
+        {isEstimate && (
+          <div className="animate-in fade-in slide-in-from-top-2 rounded-xl border border-violet-200 bg-violet-50 p-5 duration-400 dark:border-violet-900 dark:bg-violet-950/20">
+            <div className="flex items-start gap-3">
+              <Receipt className="mt-0.5 size-5 shrink-0 text-violet-600" />
+              <div className="flex-1">
+                <p className="font-semibold text-violet-900 dark:text-violet-200">
+                  Price Estimate
+                </p>
+                <p className="mt-0.5 text-sm text-violet-700 dark:text-violet-300">
+                  Review the details below and let us know if you&apos;d like to
+                  proceed.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Button
+                className="flex-1 gap-1.5"
+                onClick={() =>
+                  toast.success(
+                    "Booking confirmed! The facility has been notified.",
+                  )
+                }
+              >
+                <CheckCircle2 className="size-4" />
+                Confirm &amp; Book
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 gap-1.5 border-red-200 text-red-600 hover:bg-red-50"
+                onClick={() =>
+                  toast.info(
+                    "Estimate declined. The facility has been notified.",
+                  )
+                }
+              >
+                <XCircle className="size-4" />
+                Decline
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ── Cancelled Banner ── */}
         {isCancelled && (
           <div className="animate-in fade-in slide-in-from-top-2 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 duration-400 dark:border-red-900 dark:bg-red-950/20">
