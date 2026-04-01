@@ -68,9 +68,7 @@ export default function ClientOverviewPage({
     .filter((b) => b.paymentStatus === "paid")
     .reduce((s, b) => s + b.totalCost, 0);
   const avgSpent =
-    completedBookings.length > 0
-      ? totalSpent / completedBookings.length
-      : 0;
+    completedBookings.length > 0 ? totalSpent / completedBookings.length : 0;
 
   // Pet vaccination status
   const petVacStatus = client.pets.map((pet) => {
@@ -135,18 +133,14 @@ export default function ClientOverviewPage({
           href={`/facility/dashboard/clients/${id}/bookings`}
           className="group"
         >
-          <Card className="transition-all group-hover:border-primary/30 group-hover:shadow-sm">
+          <Card className="group-hover:border-primary/30 transition-all group-hover:shadow-sm">
             <CardContent className="flex items-center gap-3 pt-5 pb-4">
               <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-lg">
                 <Calendar className="text-primary size-5" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {clientBookings.length}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Total Bookings
-                </p>
+                <p className="text-2xl font-bold">{clientBookings.length}</p>
+                <p className="text-muted-foreground text-xs">Total Bookings</p>
               </div>
             </CardContent>
           </Card>
@@ -161,7 +155,7 @@ export default function ClientOverviewPage({
                 <DollarSign className="size-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold font-[tabular-nums]">
+                <p className="font-[tabular-nums] text-2xl font-bold">
                   ${totalSpent.toFixed(0)}
                 </p>
                 <p className="text-muted-foreground text-xs">Total Spent</p>
@@ -169,10 +163,7 @@ export default function ClientOverviewPage({
             </CardContent>
           </Card>
         </Link>
-        <Link
-          href={`/facility/dashboard/clients/${id}/pets`}
-          className="group"
-        >
+        <Link href={`/facility/dashboard/clients/${id}/pets`} className="group">
           <Card className="transition-all group-hover:border-blue-300 group-hover:shadow-sm">
             <CardContent className="flex items-center gap-3 pt-5 pb-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
@@ -191,12 +182,10 @@ export default function ClientOverviewPage({
               <Clock className="size-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold font-[tabular-nums]">
+              <p className="font-[tabular-nums] text-2xl font-bold">
                 ${avgSpent.toFixed(0)}
               </p>
-              <p className="text-muted-foreground text-xs">
-                Avg per Booking
-              </p>
+              <p className="text-muted-foreground text-xs">Avg per Booking</p>
             </div>
           </CardContent>
         </Card>
@@ -276,7 +265,7 @@ export default function ClientOverviewPage({
                           >
                             {b.status}
                           </Badge>
-                          <p className="mt-0.5 text-sm font-medium font-[tabular-nums]">
+                          <p className="mt-0.5 font-[tabular-nums] text-sm font-medium">
                             ${b.totalCost}
                           </p>
                         </div>
@@ -325,7 +314,7 @@ export default function ClientOverviewPage({
                 </Button>
               </div>
               <div className="mt-3 space-y-2">
-                <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+                <div className="bg-muted/20 rounded-lg border px-3 py-2.5">
                   <p className="text-sm">
                     Prefers morning drop-offs. Buddy gets anxious with loud
                     noises — keep away from barking areas.
@@ -334,10 +323,10 @@ export default function ClientOverviewPage({
                     Jessica M. · 2 days ago
                   </p>
                 </div>
-                <div className="rounded-lg border bg-muted/20 px-3 py-2.5">
+                <div className="bg-muted/20 rounded-lg border px-3 py-2.5">
                   <p className="text-sm">
-                    Client mentioned interest in swim sessions for Buddy.
-                    Follow up after next boarding stay.
+                    Client mentioned interest in swim sessions for Buddy. Follow
+                    up after next boarding stay.
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     Amy C. · 1 week ago
@@ -467,8 +456,8 @@ export default function ClientOverviewPage({
                           )}
                         </div>
                         <p className="text-muted-foreground text-xs">
-                          {pet.breed} · {getPetAgeDisplay(pet)} ·{" "}
-                          {pet.weight} lbs
+                          {pet.breed} · {getPetAgeDisplay(pet)} · {pet.weight}{" "}
+                          lbs
                         </p>
 
                         {/* Vaccination status — auto-highlighted */}
@@ -497,13 +486,12 @@ export default function ClientOverviewPage({
                         )}
 
                         {/* Allergy alert */}
-                        {pet.allergies &&
-                          pet.allergies !== "None" && (
-                            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-red-600">
-                              <ShieldCheck className="size-3" />
-                              Allergy: {pet.allergies}
-                            </div>
-                          )}
+                        {pet.allergies && pet.allergies !== "None" && (
+                          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-red-600">
+                            <ShieldCheck className="size-3" />
+                            Allergy: {pet.allergies}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -564,7 +552,7 @@ export default function ClientOverviewPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {client.membership && (
-                  <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2.5">
+                  <div className="bg-muted/20 flex items-center justify-between rounded-lg border px-3 py-2.5">
                     <div>
                       <p className="text-sm font-medium">
                         {client.membership.plan} Plan
@@ -588,10 +576,7 @@ export default function ClientOverviewPage({
                   </div>
                 )}
                 {client.packages?.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="rounded-lg border px-3 py-2.5"
-                  >
+                  <div key={pkg.id} className="rounded-lg border px-3 py-2.5">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{pkg.name}</p>
                       <span className="text-xs font-medium">
