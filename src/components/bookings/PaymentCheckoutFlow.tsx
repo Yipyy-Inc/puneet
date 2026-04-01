@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   Wallet,
   Check,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -115,6 +116,7 @@ export function PaymentCheckoutFlow({
   };
 
   const [confirming, setConfirming] = useState(false);
+  const [step, setStep] = useState<"pay" | "receipt">("pay");
 
   const handleConfirm = () => {
     if (!confirming) {
@@ -130,8 +132,8 @@ export function PaymentCheckoutFlow({
       includedInvoices:
         includedInvoices.size > 0 ? [...includedInvoices] : undefined,
     });
-    onOpenChange(false);
     setConfirming(false);
+    setStep("receipt");
     toast.success(`Payment of $${remaining.toFixed(2)} processed`);
   };
 
@@ -544,42 +546,107 @@ export function PaymentCheckoutFlow({
           </div>
         </div>
 
-        {confirming && (
+        {step === "pay" && confirming && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Please review all details — date, time, staff, services, discounts,
             and tips — before confirming payment.
           </div>
         )}
 
+        {/* Receipt step — shown after successful payment */}
+        {step === "receipt" && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 py-4 text-center duration-300">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-100">
+              <Check className="size-7 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold">Payment Complete</p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                ${remaining.toFixed(2)} charged successfully
+              </p>
+            </div>
+            <Separator />
+            <p className="text-muted-foreground text-xs">
+              Send a receipt to the client?
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => toast.success("Receipt sent via email")}
+              >
+                <Mail className="size-3.5" />
+                Email
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => toast.success("Receipt sent via SMS")}
+              >
+                <Smartphone className="size-3.5" />
+                SMS
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  window.print();
+                  toast.success("Print dialog opened");
+                }}
+              >
+                Print
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (confirming) {
-                setConfirming(false);
-              } else {
+          {step === "pay" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (confirming) {
+                    setConfirming(false);
+                  } else {
+                    onOpenChange(false);
+                  }
+                }}
+              >
+                {confirming ? "Go Back" : "Back to Invoice"}
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={
+                  (isCash && !splitMode && cashNum < remaining) ||
+                  (splitMode && Math.abs(splitLeftToPay) > 0.01)
+                }
+                className={cn(
+                  "gap-1.5",
+                  confirming && "bg-emerald-600 hover:bg-emerald-700",
+                )}
+              >
+                <Check className="size-4" />
+                {confirming
+                  ? `Confirm & Charge $${remaining.toFixed(2)}`
+                  : `Checkout & Charge $${remaining.toFixed(2)}`}
+              </Button>
+            </>
+          )}
+          {step === "receipt" && (
+            <Button
+              className="w-full"
+              onClick={() => {
                 onOpenChange(false);
-              }
-            }}
-          >
-            {confirming ? "Go Back" : "Back to Invoice"}
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={
-              (isCash && !splitMode && cashNum < remaining) ||
-              (splitMode && Math.abs(splitLeftToPay) > 0.01)
-            }
-            className={cn(
-              "gap-1.5",
-              confirming && "bg-emerald-600 hover:bg-emerald-700",
-            )}
-          >
-            <Check className="size-4" />
-            {confirming
-              ? `Confirm & Charge $${remaining.toFixed(2)}`
-              : `Checkout & Charge $${remaining.toFixed(2)}`}
-          </Button>
+                setStep("pay");
+              }}
+            >
+              Done
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
