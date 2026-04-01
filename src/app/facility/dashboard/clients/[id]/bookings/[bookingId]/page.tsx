@@ -829,57 +829,75 @@ ${
                       Pet
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-3">
-                      <div className="bg-primary/10 flex size-12 shrink-0 items-center justify-center rounded-full">
-                        <PawPrint className="text-primary size-6" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/facility/dashboard/clients/${clientId}/pets/${pet.id}`}
-                          className="hover:text-primary text-sm font-semibold transition-colors hover:underline"
-                        >
-                          {pet.name}
-                        </Link>
-                        <p className="text-muted-foreground text-xs">
-                          {pet.breed} · {pet.type}
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {getPetAgeDisplay(pet)} · {pet.weight} lbs
-                          {pet.sex && (
-                            <>
-                              {" · "}
-                              <span className="capitalize">{pet.sex}</span>
-                            </>
-                          )}
-                        </p>
-                        <div className="mt-2">
-                          <TagList
-                            entityType="pet"
-                            entityId={pet.id}
-                            compact
-                            maxVisible={3}
-                          />
+                  <CardContent className="flex flex-col items-center pt-5 pb-4">
+                    {/* Photo */}
+                    <Link
+                      href={`/facility/dashboard/clients/${clientId}/pets/${pet.id}`}
+                      className="group relative"
+                    >
+                      {pet.imageUrl ? (
+                        <img
+                          src={pet.imageUrl}
+                          alt={pet.name}
+                          className="size-24 rounded-full object-cover ring-[3px] ring-white shadow-md transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="bg-primary/10 text-primary flex size-24 items-center justify-center rounded-full text-2xl font-bold ring-[3px] ring-white shadow-md">
+                          {pet.name.charAt(0)}
                         </div>
-                      </div>
+                      )}
+                    </Link>
+
+                    {/* Name + details */}
+                    <Link
+                      href={`/facility/dashboard/clients/${clientId}/pets/${pet.id}`}
+                      className="hover:text-primary mt-3 text-base font-bold transition-colors"
+                    >
+                      {pet.name}
+                    </Link>
+                    <p className="text-muted-foreground mt-0.5 text-sm">
+                      {pet.breed} · {pet.type}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {getPetAgeDisplay(pet)} · {pet.weight} lbs
+                      {pet.sex && (
+                        <>
+                          {" · "}
+                          <span className="capitalize">{pet.sex}</span>
+                        </>
+                      )}
+                    </p>
+
+                    {/* Tags */}
+                    <div className="mt-3">
+                      <TagList
+                        entityType="pet"
+                        entityId={pet.id}
+                        compact
+                        maxVisible={4}
+                      />
                     </div>
+
                     {/* Alerts */}
-                    <div className="mt-3 space-y-1.5">
-                      {pet.allergies && pet.allergies !== "None" && (
-                        <div className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">
-                          <ShieldCheck className="size-3 shrink-0" />
-                          <span>
-                            <strong>Allergy:</strong> {pet.allergies}
-                          </span>
-                        </div>
-                      )}
-                      {pet.specialNeeds && pet.specialNeeds !== "None" && (
-                        <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-700">
-                          <AlertTriangle className="size-3 shrink-0" />
-                          <span>{pet.specialNeeds}</span>
-                        </div>
-                      )}
-                    </div>
+                    {((pet.allergies && pet.allergies !== "None") ||
+                      (pet.specialNeeds && pet.specialNeeds !== "None")) && (
+                      <div className="mt-3 w-full space-y-1.5">
+                        {pet.allergies && pet.allergies !== "None" && (
+                          <div className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">
+                            <ShieldCheck className="size-3 shrink-0" />
+                            <span>
+                              <strong>Allergy:</strong> {pet.allergies}
+                            </span>
+                          </div>
+                        )}
+                        {pet.specialNeeds && pet.specialNeeds !== "None" && (
+                          <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] text-blue-700">
+                            <AlertTriangle className="size-3 shrink-0" />
+                            <span>{pet.specialNeeds}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
