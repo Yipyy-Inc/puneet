@@ -142,7 +142,7 @@ export function RefundModal({
           <div className="animate-in fade-in space-y-5 py-2 duration-200">
             {/* Refund type */}
             <div className="space-y-2">
-              <p className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+              <p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
                 Refund Type
               </p>
               <div className="space-y-1.5">
@@ -151,7 +151,7 @@ export function RefundModal({
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
                     refundType === "full"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
                       : "hover:border-border hover:bg-muted/30",
                   )}
                 >
@@ -169,7 +169,7 @@ export function RefundModal({
                     <p className="text-sm font-semibold">Full Refund</p>
                     <p className="text-muted-foreground text-xs">
                       Refund entire payment of{" "}
-                      <span className="font-medium font-[tabular-nums]">
+                      <span className="font-[tabular-nums] font-medium">
                         ${amountPaid.toFixed(2)}
                       </span>
                     </p>
@@ -181,7 +181,7 @@ export function RefundModal({
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
                     refundType === "partial"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
                       : "hover:border-border hover:bg-muted/30",
                   )}
                 >
@@ -208,7 +208,7 @@ export function RefundModal({
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all",
                     refundType === "by_item"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
                       : "hover:border-border hover:bg-muted/30",
                   )}
                 >
@@ -278,13 +278,11 @@ export function RefundModal({
                             : "border-border",
                         )}
                       >
-                        {selectedItems.has(idx) && (
-                          <Check className="size-3" />
-                        )}
+                        {selectedItems.has(idx) && <Check className="size-3" />}
                       </div>
                       <span className="text-sm">{item.name}</span>
                     </div>
-                    <span className="text-sm font-medium font-[tabular-nums]">
+                    <span className="font-[tabular-nums] text-sm font-medium">
                       ${item.price.toFixed(2)}
                     </span>
                   </button>
@@ -294,7 +292,7 @@ export function RefundModal({
 
             {/* Refund method */}
             <div>
-              <p className="text-muted-foreground mb-2 text-[11px] font-medium uppercase tracking-wider">
+              <p className="text-muted-foreground mb-2 text-[11px] font-medium tracking-wider uppercase">
                 Refund To
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -307,14 +305,12 @@ export function RefundModal({
                       className={cn(
                         "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all",
                         method === m.value
-                          ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
+                          ? "border-primary bg-primary/5 text-primary ring-primary/20 ring-1"
                           : "hover:bg-muted/30",
                       )}
                     >
                       <Icon className="size-5" />
-                      <span className="text-[11px] font-medium">
-                        {m.label}
-                      </span>
+                      <span className="text-[11px] font-medium">{m.label}</span>
                     </button>
                   );
                 })}
@@ -352,7 +348,7 @@ export function RefundModal({
             </div>
 
             {/* Summary */}
-            <div className="rounded-xl border bg-muted/20 p-4">
+            <div className="bg-muted/20 rounded-xl border p-4">
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Refund Type</span>
@@ -399,8 +395,7 @@ export function RefundModal({
             disabled={refundAmount <= 0 || refundAmount > amountPaid}
             className={cn(
               "gap-1.5",
-              step === "confirm" &&
-                "bg-red-600 text-white hover:bg-red-700",
+              step === "confirm" && "bg-red-600 text-white hover:bg-red-700",
             )}
           >
             <RotateCcw className="size-4" />
