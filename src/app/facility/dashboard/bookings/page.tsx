@@ -7,13 +7,12 @@ import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +32,7 @@ import {
   Clock,
   CalendarDays,
   CalendarX,
+  CheckCircle,
   CheckSquare,
   FileText,
   Hash,
@@ -728,41 +728,61 @@ export default function FacilityBookingsPage() {
         </div>
       </div>
 
-      {/* Compact Stats Row */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-6 py-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">All</span>
-            <span className="text-sm font-semibold">{totalBookings}</span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Today</span>
-            <span className="text-sm font-semibold">
-              {todayBookings.length}
-            </span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Completed</span>
-            <span className="text-sm font-semibold">{completedBookings}</span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Pending</span>
-            <span className="text-sm font-semibold">
-              {pendingBookings.length}
-            </span>
-          </div>
-          <Separator orientation="vertical" className="h-4" />
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground text-sm">Revenue</span>
-            <span className="font-[tabular-nums] text-sm font-semibold">
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">All Bookings</CardTitle>
+            <Calendar className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBookings}</div>
+            <p className="text-muted-foreground text-xs">Total bookings</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Today</CardTitle>
+            <CalendarDays className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todayBookings.length}</div>
+            <p className="text-muted-foreground text-xs">Active today</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CheckCircle className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{completedBookings}</div>
+            <p className="text-muted-foreground text-xs">Successfully done</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Clock className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingBookings.length}</div>
+            <p className="text-muted-foreground text-xs">Awaiting action</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <DollarSign className="text-muted-foreground size-4" />
+          </CardHeader>
+          <CardContent>
+            <div className="font-[tabular-nums] text-2xl font-bold">
               ${totalRevenue.toLocaleString()}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+            <p className="text-muted-foreground text-xs">Total received</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Calendar or Table View */}
       {viewMode === "calendar" ? (
