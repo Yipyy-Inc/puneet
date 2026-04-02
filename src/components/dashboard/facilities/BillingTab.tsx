@@ -37,7 +37,7 @@ const billingHistory = [
     description: "Premium Plan - Monthly",
     amount: 299.99,
     status: "paid",
-    invoice: "INV-2025-001",
+    invoice: "10032",
   },
   {
     id: 2,
@@ -45,7 +45,7 @@ const billingHistory = [
     description: "Premium Plan - Monthly",
     amount: 299.99,
     status: "paid",
-    invoice: "INV-2024-012",
+    invoice: "10033",
   },
   {
     id: 3,
@@ -53,7 +53,7 @@ const billingHistory = [
     description: "Premium Plan - Monthly",
     amount: 299.99,
     status: "paid",
-    invoice: "INV-2024-011",
+    invoice: "10034",
   },
 ];
 

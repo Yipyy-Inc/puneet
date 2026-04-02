@@ -497,7 +497,7 @@ export default function ClientBookingDetailPage({
                     const w = window.open("", "_blank", "width=600,height=800");
                     if (!w) return;
                     w.document
-                      .write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? booking.id}</title>
+                      .write(`<!DOCTYPE html><html><head><title>Invoice #${inv?.id ?? String(booking.id)}</title>
 <style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:500px;margin:0 auto}
 h1{font-size:20px;margin:0}h2{font-size:13px;color:#666;margin:4px 0 20px;font-weight:normal}
 .row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee}
@@ -1350,7 +1350,7 @@ ${
                 b.status !== "cancelled",
             )
             .map((b) => ({
-              invoiceId: b.invoice?.id ?? `INV-${b.id}`,
+              invoiceId: b.invoice?.id ?? String(10000 + b.id),
               service: b.service,
               amount: b.invoice?.remainingDue ?? b.totalCost,
             }))}

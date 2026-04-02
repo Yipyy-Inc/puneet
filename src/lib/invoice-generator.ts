@@ -356,7 +356,7 @@ export function generateInvoiceForBooking(
   const total = dollars(totalCents);
 
   return {
-    id: `INV-${booking.id}-${Date.now().toString(36)}`,
+    id: String(10000 + booking.id),
     status: "open",
     items,
     fees,

@@ -352,7 +352,7 @@ const paymentVariables: TemplateVariable[] = [
     label: "Invoice ID",
     category: "payment",
     description: "Unique invoice reference number",
-    example: "INV-2024-0042",
+    example: "10031",
     contextRequired: ["invoice"],
   },
   {

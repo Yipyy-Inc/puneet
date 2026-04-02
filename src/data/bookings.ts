@@ -27,7 +27,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1001",
+      id: "10001",
       status: "estimate",
       items: [
         {
@@ -200,7 +200,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1002",
+      id: "10002",
       status: "estimate",
       items: [
         {
@@ -259,7 +259,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1003",
+      id: "10003",
       status: "open",
       items: [
         { name: "Daycare — Full Day", unitPrice: 50, quantity: 1, price: 50 },
@@ -317,7 +317,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1004",
+      id: "10004",
       status: "open",
       items: [
         { name: "Daycare — Full Day", unitPrice: 50, quantity: 1, price: 50 },
@@ -367,7 +367,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1005",
+      id: "10005",
       status: "closed",
       items: [
         {
@@ -431,7 +431,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1006",
+      id: "10006",
       status: "closed",
       items: [
         {
@@ -506,7 +506,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1007",
+      id: "10007",
       status: "closed",
       items: [
         {
@@ -589,7 +589,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1008",
+      id: "10008",
       status: "closed",
       items: [
         {
@@ -652,7 +652,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1009",
+      id: "10009",
       status: "closed",
       items: [
         {
@@ -740,7 +740,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1010",
+      id: "10010",
       status: "closed",
       items: [
         {
@@ -803,7 +803,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1011",
+      id: "10011",
       status: "closed",
       items: [
         {
@@ -856,7 +856,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1012",
+      id: "10012",
       status: "open",
       items: [{ name: "Bath & Brush", unitPrice: 45, quantity: 1, price: 45 }],
       fees: [],
@@ -899,7 +899,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1013",
+      id: "10013",
       status: "closed",
       items: [
         { name: "Daycare — Full Day", unitPrice: 50, quantity: 1, price: 50 },
@@ -949,7 +949,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1014",
+      id: "10014",
       status: "closed",
       items: [
         {
@@ -1017,7 +1017,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1015",
+      id: "10015",
       status: "closed",
       items: [
         {
@@ -1095,7 +1095,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1016",
+      id: "10016",
       status: "closed",
       items: [
         {
@@ -1175,7 +1175,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1017",
+      id: "10017",
       status: "open",
       items: [
         { name: "Group Training Class", unitPrice: 40, quantity: 1, price: 40 },
@@ -1223,7 +1223,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1018",
+      id: "10018",
       status: "estimate",
       items: [
         {
@@ -1289,7 +1289,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1022",
+      id: "10022",
       status: "open",
       items: [
         {
@@ -1348,7 +1348,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1019",
+      id: "10019",
       status: "open",
       items: [
         {
@@ -1482,7 +1482,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: false,
     invoice: {
-      id: "INV-1020",
+      id: "10020",
       status: "open",
       items: [
         {
@@ -1553,7 +1553,7 @@ export const bookings: Booking[] = [
     notificationEmail: true,
     notificationSMS: true,
     invoice: {
-      id: "INV-1021",
+      id: "10021",
       status: "open",
       items: [
         {

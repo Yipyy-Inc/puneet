@@ -101,7 +101,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
       <CardHeader className="pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold">{invoice.id}</p>
+            <p className="text-sm font-semibold">#{invoice.id}</p>
             <p className="text-muted-foreground text-xs">
               {invoice.items.length} item{invoice.items.length !== 1 ? "s" : ""}
               {invoice.fees.length > 0 &&
