@@ -14,6 +14,7 @@ import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequestsTopbarDropdown";
 import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
+import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
 import { CallingButton } from "@/components/layout/CallingButton";
 
 export default async function FacilityLayout({
@@ -49,6 +50,7 @@ export default async function FacilityLayout({
                   <CallingButton />
                   <TopBarIconsNext />
                 </div>
+                <TaskNotificationsPanel />
                 <FacilityNotificationsDropdown facilityId={11} />
                 <BookingRequestsTopbarDropdown />
                 <FacilityHeader />
