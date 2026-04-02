@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,21 @@ const MED_FEEDBACK = facilityConfig.careTaskFeedback.medication;
 export default function TaskManagementPage() {
   const { role } = useFacilityRole();
   const isManager = role === "owner" || role === "manager";
+
+  const searchParams = useSearchParams();
+  const highlightTaskId = searchParams?.get("taskId") ?? null;
+  const [highlightFade, setHighlightFade] = useState(!!highlightTaskId);
+
+  // Auto-fade the highlight after 3 seconds
+  useEffect(() => {
+    if (highlightTaskId) {
+      requestAnimationFrame(() => setHighlightFade(true));
+      const timer = setTimeout(() => {
+        requestAnimationFrame(() => setHighlightFade(false));
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightTaskId]);
 
   const [dateOffset, setDateOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"time" | "staff" | "pet">("time");
@@ -400,11 +416,15 @@ export default function TaskManagementPage() {
                   return (
                     <div
                       key={task.id}
+                      id={`task-${task.id}`}
                       className={cn(
                         "flex items-start gap-3 py-3 first:pt-3",
                         task.status === "completed" && "opacity-50",
                         task.isOverdue &&
                           "rounded-lg border border-red-200 bg-red-50/50 px-3",
+                        highlightTaskId === task.id &&
+                          highlightFade &&
+                          "border-primary bg-primary/5 animate-pulse rounded-lg border-2 px-3",
                       )}
                     >
                       {/* Status icon */}
