@@ -588,7 +588,7 @@ export default function BookingDetailPage({
             <Button className="flex-1" asChild>
               <Link href={`/customer/bookings/${booking.id}/yipyygo-form`}>
                 <FileText className="mr-1.5 size-4" />
-                Complete YipyyGo Form
+                Complete Express Check-in Form
               </Link>
             </Button>
           )}

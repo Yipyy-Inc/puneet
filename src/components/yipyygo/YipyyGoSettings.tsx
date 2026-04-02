@@ -58,9 +58,9 @@ export function YipyyGoSettings({
       const saved = saveYipyyGoConfig(localConfig);
       onConfigChange(saved);
       setHasChanges(false);
-      toast.success("YipyyGo settings saved successfully");
+      toast.success("Express Check-in settings saved successfully");
     } catch (error) {
-      toast.error("Failed to save YipyyGo settings");
+      toast.error("Failed to save Express Check-in settings");
       console.error("Error saving YipyyGo config:", error);
     } finally {
       setIsSaving(false);
@@ -75,7 +75,7 @@ export function YipyyGoSettings({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                YipyyGo Pre-Check-In Forms
+                Yipyy Express Check-in Forms
               </CardTitle>
               <CardDescription>
                 Configure pre-check-in forms that customers complete before
@@ -133,8 +133,8 @@ export function YipyyGoSettings({
             <CardHeader>
               <CardTitle>Add-ons & staff notifications</CardTitle>
               <CardDescription>
-                How add-ons from YipyyGo forms are applied and when to notify
-                staff.
+                How add-ons from Express Check-in forms are applied and when to
+                notify staff.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

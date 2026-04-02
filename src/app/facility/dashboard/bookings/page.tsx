@@ -412,7 +412,7 @@ export default function FacilityBookingsPage() {
     },
     {
       key: "yipyygo",
-      label: "YipyyGo",
+      label: "Yipyy Express Check-in",
       icon: FileText,
       defaultVisible: true,
       sortValue: (booking) => {

@@ -852,6 +852,23 @@ export const facilities = [
       clients: 100,
       pets: 250,
     },
+    expressCheckinConfig: {
+      sections: {
+        feeding: "required" as const,
+        medication: "required" as const,
+        belongings: "optional" as const,
+        emergencyContact: "required" as const,
+        vaccination: "required" as const,
+        waiver: "required" as const,
+      },
+      customSections: [] as {
+        id: string;
+        name: string;
+        type: "required" | "optional" | "disabled";
+      }[],
+      sendBefore: 48,
+      reminderHours: 24,
+    },
     bookingStatusConfig: {
       customStatuses: [
         { id: "on_hold", name: "On Hold", color: "amber", position: 4 },

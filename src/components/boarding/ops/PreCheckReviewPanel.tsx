@@ -70,7 +70,9 @@ export function PreCheckReviewPanel({
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-base">YipyyGo PreCheck</CardTitle>
+              <CardTitle className="text-base">
+                Yipyy Express Check-in
+              </CardTitle>
               <div className="text-muted-foreground mt-1 text-xs">
                 Staff can review, edit, approve, or request corrections.
               </div>

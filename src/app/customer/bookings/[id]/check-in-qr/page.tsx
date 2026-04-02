@@ -91,7 +91,7 @@ export default function CheckInQRPage({
               </>
             ) : (
               <p className="text-muted-foreground py-8 text-center">
-                No QR code available. Complete your YipyyGo form first.
+                No QR code available. Complete your Express Check-in form first.
               </p>
             )}
           </CardContent>

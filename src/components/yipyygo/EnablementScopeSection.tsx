@@ -128,8 +128,8 @@ export function EnablementScopeSection({
         <CardHeader>
           <CardTitle>Service Scope</CardTitle>
           <CardDescription>
-            Select which services require YipyyGo pre-check-in forms and whether
-            they are mandatory or optional.
+            Select which services require Yipyy Express Check-in forms and
+            whether they are mandatory or optional.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

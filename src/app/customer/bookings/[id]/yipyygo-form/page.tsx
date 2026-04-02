@@ -250,12 +250,12 @@ export default function YipyyGoFormPage({
       });
 
       toast.success(
-        "YipyyGo form submitted successfully! You're check-in ready!",
+        "Express Check-in form submitted successfully! You're check-in ready!",
       );
       router.push(`/customer/bookings/${booking.id}/check-in-qr`);
     } catch (error) {
       toast.error("Failed to submit form. Please try again.");
-      console.error("Error submitting YipyyGo form:", error);
+      console.error("Error submitting Express Check-in form:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -342,7 +342,7 @@ export default function YipyyGoFormPage({
       <div className="bg-muted/20 flex min-h-screen items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Access YipyyGo Form</CardTitle>
+            <CardTitle>Access Express Check-in Form</CardTitle>
             <CardDescription>
               Please log in or verify with a code to access the pre-check-in
               form
@@ -527,7 +527,7 @@ export default function YipyyGoFormPage({
               Back
             </Button>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold">YipyyGo</h1>
+              <h1 className="text-2xl font-bold">Yipyy Express Check-in</h1>
               <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium">
                 <Zap className="size-3" />
                 ~2 min
@@ -596,20 +596,44 @@ export default function YipyyGoFormPage({
           </CardContent>
         </Card>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center gap-2">
-          {sections.map((section, index) => (
-            <div
-              key={section.id}
-              className={`h-2 flex-1 rounded-sm ${
-                index < currentSection
-                  ? "bg-primary"
-                  : index === currentSection
-                    ? "bg-primary/50"
-                    : "bg-muted"
-              } `}
-            />
-          ))}
+        {/* Progress Stepper */}
+        <div className="bg-card rounded-xl border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Step {currentSection + 1} of {totalSections}
+            </p>
+            <p className="text-primary text-xs font-medium">
+              {sections[currentSection]?.label}
+            </p>
+          </div>
+          {/* Bar */}
+          <div className="flex items-center gap-1.5">
+            {sections.map((section, index) => (
+              <div
+                key={section.id}
+                className="flex flex-1 flex-col items-center gap-1.5"
+              >
+                <div
+                  className={`h-2 w-full rounded-full transition-all ${
+                    index < currentSection
+                      ? "bg-primary"
+                      : index === currentSection
+                        ? "bg-primary/60"
+                        : "bg-muted"
+                  }`}
+                />
+                <span
+                  className={`hidden text-[9px] font-medium sm:block ${
+                    index <= currentSection
+                      ? "text-primary"
+                      : "text-muted-foreground/50"
+                  }`}
+                >
+                  {section.label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Current Section */}

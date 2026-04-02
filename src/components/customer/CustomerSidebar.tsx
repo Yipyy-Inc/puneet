@@ -95,7 +95,7 @@ export function CustomerSidebar() {
             icon: Calendar,
           },
           {
-            title: "YipyyGo",
+            title: "Yipyy Express Check-in",
             url: "/customer/yipyygo",
             icon: ClipboardCheck,
           },

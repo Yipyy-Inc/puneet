@@ -261,7 +261,7 @@ export function BookingModal({ booking }: BookingModalProps) {
             </Card>
           </div>
 
-          {/* YipyyGo Pre-Check-In (when enabled for this service) */}
+          {/* Yipyy Express Check-in (when enabled for this service) */}
           {(() => {
             const yipyyGoConfig = getYipyyGoConfig(booking.facilityId);
             const serviceType = booking.service?.toLowerCase() as
@@ -283,7 +283,7 @@ export function BookingModal({ booking }: BookingModalProps) {
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <FileText className="text-primary size-4" />
-                    YipyyGo Pre-Check-In
+                    Yipyy Express Check-in
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-wrap items-center gap-2">

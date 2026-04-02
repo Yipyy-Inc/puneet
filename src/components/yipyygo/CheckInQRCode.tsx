@@ -5,7 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { buildCheckInUrl } from "@/lib/qr-checkin";
 
 interface CheckInQRCodeProps {
-  /** Token from YipyyGo form (qrCheckInToken). */
+  /** Token from Express Check-in form (qrCheckInToken). */
   token: string;
   /** Optional: size in pixels (default 256). */
   size?: number;

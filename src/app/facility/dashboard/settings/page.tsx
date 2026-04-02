@@ -23,6 +23,7 @@ import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
 import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
+import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3621,6 +3622,13 @@ export default function SettingsPage() {
           {activeSection === "booking-statuses" && (
             <div className="space-y-6">
               <BookingStatusSettings />
+            </div>
+          )}
+
+          {/* Express Check-in Requirements */}
+          {activeSection === "checkin-requirements" && (
+            <div className="space-y-6">
+              <CheckinRequirementsSettings />
             </div>
           )}
 
