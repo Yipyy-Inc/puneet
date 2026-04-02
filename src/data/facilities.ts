@@ -852,6 +852,23 @@ export const facilities = [
       clients: 100,
       pets: 250,
     },
+    bookingStatusConfig: {
+      customStatuses: [
+        { id: "on_hold", name: "On Hold", color: "amber", position: 4 },
+        {
+          id: "waiting_list",
+          name: "Waiting List",
+          color: "blue",
+          position: 2,
+        },
+      ],
+      autoTransitions: {
+        onDepositPaid: "confirmed",
+        onCheckIn: "checked_in",
+        onCheckout: "completed",
+        onPaymentComplete: "confirmed",
+      },
+    },
     taxConfig: {
       country: "CA",
       province: "QC",
