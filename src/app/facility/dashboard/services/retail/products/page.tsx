@@ -15,6 +15,7 @@ import {
   Upload,
   X,
   Edit,
+  Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +59,11 @@ import {
   type ProductVariant,
   type VariantType,
 } from "@/data/retail";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { generateUniqueBarcode } from "@/lib/barcode-generator";
+import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
+import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
 
 type ProductWithRecord = Product & Record<string, unknown>;
 
@@ -96,6 +102,7 @@ export default function ProductsPage() {
     null,
   );
   const [isVariantModalOpen, setIsVariantModalOpen] = useState(false);
+  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
   const [variantForm, setVariantForm] = useState({
     name: "",
     sku: "",
@@ -843,15 +850,80 @@ export default function ProductsPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="barcode">Barcode</Label>
-                <Input
-                  id="barcode"
-                  value={formData.barcode}
-                  onChange={(e) =>
-                    setFormData({ ...formData, barcode: e.target.value })
-                  }
-                  placeholder="e.g., 123456789012"
-                />
+                <Label>Barcode</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  {/* Barcode mode selector */}
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, barcode: "" })}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                        !formData.barcode.startsWith("YPY-")
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      Scan / Enter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const gen = generateUniqueBarcode(11);
+                        setFormData({ ...formData, barcode: gen.code });
+                        toast.success(`Barcode generated: ${gen.code}`);
+                      }}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                        formData.barcode.startsWith("YPY-")
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      Auto-Generate
+                    </button>
+                  </div>
+
+                  {formData.barcode.startsWith("YPY-") ? (
+                    <div className="flex items-center gap-3">
+                      <BarcodeDisplay
+                        code={formData.barcode}
+                        width={120}
+                        height={35}
+                      />
+                      <div className="flex-1">
+                        <p className="font-mono text-xs font-medium">
+                          {formData.barcode}
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">
+                          System-generated · CODE128
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 h-6 gap-1 text-[10px]"
+                          onClick={() => setLabelPrintOpen(true)}
+                        >
+                          <Printer className="size-3" />
+                          Print Label
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Input
+                      value={formData.barcode}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          barcode: e.target.value,
+                        })
+                      }
+                      placeholder="Scan barcode or enter manually..."
+                      className="h-9 text-sm"
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1386,6 +1458,15 @@ export default function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Barcode Label Print */}
+      <BarcodeLabelPrint
+        open={labelPrintOpen}
+        onOpenChange={setLabelPrintOpen}
+        barcode={formData.barcode}
+        productName={formData.name}
+        price={formData.basePrice}
+      />
     </div>
   );
 }
