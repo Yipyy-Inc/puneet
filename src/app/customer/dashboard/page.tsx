@@ -198,7 +198,7 @@ export default function CustomerDashboardPage() {
 
     if (!customer) return actions;
 
-    // Check for YipyyGo forms needed (upcoming bookings with form not submitted/approved)
+    // Check for Express Check-in forms needed (upcoming bookings with form not submitted/approved)
     const yipyyGoConfig = selectedFacility
       ? getYipyyGoConfig(selectedFacility.id)
       : null;

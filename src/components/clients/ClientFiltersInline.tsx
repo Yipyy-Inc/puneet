@@ -774,11 +774,11 @@ export function ClientFiltersInline({
       />,
     );
     add(
-      "YipyyGo check-in",
+      "Express Check-in",
       "forms",
       "Forms & Compliance",
       <TriToggle
-        label="YipyyGo check-in"
+        label="Express Check-in"
         value="any"
         onChange={() => {}}
         comingSoon

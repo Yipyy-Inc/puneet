@@ -74,7 +74,7 @@ export function YipyyGoStaffReviewModal({
         staffUserId,
         details: "approved",
       });
-      toast.success("YipyyGo form approved");
+      toast.success("Express Check-in form approved");
       onApproved?.();
       onOpenChange(false);
     }
@@ -172,9 +172,9 @@ export function YipyyGoStaffReviewModal({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
-          <DialogTitle>YipyyGo Form</DialogTitle>
+          <DialogTitle>Express Check-in Form</DialogTitle>
           <p className="text-muted-foreground">
-            No YipyyGo form found for this booking.
+            No Express Check-in form found for this booking.
           </p>
           <p className="text-muted-foreground text-sm">
             You can mark as manually completed if the customer did not submit.

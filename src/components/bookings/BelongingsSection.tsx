@@ -6,13 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -49,16 +42,6 @@ function fmtTimestamp(ts: string) {
   });
 }
 
-const conditionStyles: Record<string, string> = {
-  Good: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  Worn: "bg-amber-50 text-amber-700 border-amber-200",
-  Damaged: "bg-red-50 text-red-700 border-red-200",
-  Sealed: "bg-blue-50 text-blue-700 border-blue-200",
-  Used: "bg-slate-50 text-slate-700 border-slate-200",
-};
-
-const CONDITIONS = ["Good", "Worn", "Damaged", "Sealed", "Used"];
-
 let _belId = 300;
 
 export function BelongingsSection({
@@ -71,7 +54,6 @@ export function BelongingsSection({
   const [newItem, setNewItem] = useState({
     name: "",
     description: "",
-    condition: "Good",
     photoUrl: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,13 +113,13 @@ export function BelongingsSection({
         name: newItem.name,
         description: newItem.description || undefined,
         photoUrl: newItem.photoUrl || undefined,
-        condition: newItem.condition,
+        condition: "Good",
         checkedInAt: new Date().toISOString(),
         checkedInBy: "You",
         returned: false,
       },
     ]);
-    setNewItem({ name: "", description: "", condition: "Good", photoUrl: "" });
+    setNewItem({ name: "", description: "", photoUrl: "" });
     setAddOpen(false);
     toast.success("Belonging added");
   };
@@ -202,8 +184,8 @@ export function BelongingsSection({
           <Collapsible open={addOpen} onOpenChange={setAddOpen}>
             <CollapsibleContent>
               <div className="space-y-3 border-b py-4">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div className="col-span-2 sm:col-span-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Label className="text-[11px]">Item Name</Label>
                     <Input
                       value={newItem.name}
@@ -213,26 +195,6 @@ export function BelongingsSection({
                       placeholder="e.g. Blue fleece blanket"
                       className="mt-1 h-8 text-xs"
                     />
-                  </div>
-                  <div>
-                    <Label className="text-[11px]">Condition</Label>
-                    <Select
-                      value={newItem.condition}
-                      onValueChange={(v) =>
-                        setNewItem((p) => ({ ...p, condition: v }))
-                      }
-                    >
-                      <SelectTrigger className="mt-1 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONDITIONS.map((c) => (
-                          <SelectItem key={c} value={c} className="text-xs">
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                   <div>
                     <Label className="text-[11px]">Description</Label>
@@ -450,15 +412,6 @@ export function BelongingsSection({
                         )}
                       >
                         {item.name}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full border px-1.5 py-0 text-[9px] font-semibold",
-                          conditionStyles[item.condition] ??
-                            conditionStyles.Good,
-                        )}
-                      >
-                        {item.condition}
                       </span>
                     </div>
                     {item.description && (

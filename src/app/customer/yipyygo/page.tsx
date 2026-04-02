@@ -170,8 +170,9 @@ export default function CustomerYipyyGoPage() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-muted-foreground text-center">
-                YipyyGo pre-check-in is not enabled for {selectedFacility.name}.
-                You’ll complete check-in at the facility.
+                Yipyy Express Check-in is not enabled for{" "}
+                {selectedFacility.name}. You’ll complete check-in at the
+                facility.
               </p>
               <Button asChild variant="outline" className="mt-4 w-full">
                 <Link href="/customer/bookings">View Bookings</Link>

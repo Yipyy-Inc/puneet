@@ -78,6 +78,11 @@ const STATIC_GROUPS: SettingsGroup[] = [
     label: "Operations",
     sections: [
       { id: "booking-statuses", label: "Booking Statuses", icon: CircleDot },
+      {
+        id: "checkin-requirements",
+        label: "Express Check-in",
+        icon: CircleDot,
+      },
       { id: "retail", label: "Retail / POS", icon: Puzzle },
     ],
   },
@@ -93,7 +98,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
     label: "Advanced",
     sections: [
       { id: "tags-notes", label: "Tags & Notes", icon: Tag },
-      { id: "yipyygo", label: "YipyyGo", icon: FileText },
+      { id: "yipyygo", label: "Yipyy Express Check-in", icon: FileText },
       { id: "audit", label: "Audit Log", icon: History },
     ],
   },

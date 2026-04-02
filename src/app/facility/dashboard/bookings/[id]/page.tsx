@@ -1014,7 +1014,7 @@ export default function FacilityBookingDetailPage({
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold">
-                  YipyyGo Pre-Check-In
+                  Yipyy Express Check-in
                 </CardTitle>
               </CardHeader>
               <CardContent>

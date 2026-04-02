@@ -54,7 +54,7 @@ const STATIC_CATEGORIES: CategoryTab[] = [
   { id: "grooming", label: "Grooming", icon: Scissors },
   { id: "training", label: "Training", icon: GraduationCap },
   { id: "forms", label: "Forms", icon: FileText },
-  { id: "yipyygo", label: "YipyyGo", icon: CheckCircle },
+  { id: "yipyygo", label: "Yipyy Express Check-in", icon: CheckCircle },
 ];
 
 // ========================================

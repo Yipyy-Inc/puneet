@@ -41,7 +41,11 @@ const WIZARD_STEPS: Step[] = [
   { id: "booking", title: "Online Booking", description: "Client portal" },
   { id: "pricing", title: "Pricing", description: "Rates & billing" },
   { id: "staff", title: "Staff", description: "Assignment & tasks" },
-  { id: "yipyygo", title: "YipyyGo", description: "Pre-check-in form" },
+  {
+    id: "yipyygo",
+    title: "Yipyy Express Check-in",
+    description: "Pre-check-in form",
+  },
   { id: "eligibility", title: "Rules", description: "Eligibility & capacity" },
   { id: "review", title: "Review", description: "Confirm & save" },
 ];
@@ -87,7 +91,7 @@ const STEP_DETAILS: { title: string; description: string }[] = [
       "Configure auto-assignment, required staff roles, and which tasks are auto-generated.",
   },
   {
-    title: "YipyyGo Pre-Check-In",
+    title: "Yipyy Express Check-in",
     description:
       "Configure whether customers must complete a pre-check-in form before their booking, and customize the sections shown.",
   },
