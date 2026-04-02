@@ -98,7 +98,7 @@ export function EmailTemplateModal({
         </DialogDescription>
       </DialogHeader>
 
-      <ScrollArea className="max-h-[70vh]">
+      <ScrollArea className="flex-1">
         <div className="space-y-6 py-4 pr-4">
           {!previewMode ? (
             <>

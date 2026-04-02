@@ -1215,7 +1215,7 @@ export function CustomerBookingModal({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <ScrollArea className="max-h-[calc(95vh-280px)] flex-1 pr-4">
+          <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6 pb-4">
               {/* Step 1: Pet Selection */}
               {currentStep === 0 && (

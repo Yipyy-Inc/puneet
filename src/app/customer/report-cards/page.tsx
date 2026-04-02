@@ -449,7 +449,7 @@ export default function CustomerReportCardsPage() {
             </CardContent>
           </Card>
         ) : (
-          <ScrollArea className="h-[calc(100vh-9rem)] pr-4">
+          <ScrollArea className="pr-4">
             <div className="relative pl-4">
               {/* Vertical timeline line */}
               <div

@@ -324,7 +324,7 @@ export function CampaignBuilderModal({
         onStepChange={setCurrentStep}
       />
 
-      <ScrollArea className="max-h-[55vh]">
+      <ScrollArea className="flex-1">
         <StepperContent className="py-4 pr-4">
           {/* STEP 1: Goal */}
           {currentStep === 0 && (
