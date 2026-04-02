@@ -204,9 +204,7 @@ export default function ClientBookingDetailPage({
   const [retailOpen, setRetailOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
-  const bookingRef = booking
-    ? formatBookingRef(booking.id, booking.startDate)
-    : `BK-${String(bookingId).padStart(5, "0")}`;
+  const bookingRef = formatBookingRef(booking?.id ?? bookingId);
 
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   useEffect(() => {
