@@ -113,9 +113,7 @@ export function QuickBooksSyncPanel({
                 cfg.badgeBg,
               )}
             >
-              <span
-                className={cn("size-1.5 rounded-full", cfg.dotColor)}
-              />
+              <span className={cn("size-1.5 rounded-full", cfg.dotColor)} />
               {cfg.label}
             </span>
             {historyCount > 0 && (
@@ -159,7 +157,7 @@ export function QuickBooksSyncPanel({
             {historyCount > 0 && (
               <div className="relative max-h-[300px] space-y-0 overflow-y-auto pl-4">
                 {/* Vertical line */}
-                <div className="absolute top-2 bottom-2 left-[7px] w-px bg-border" />
+                <div className="bg-border absolute top-2 bottom-2 left-[7px] w-px" />
 
                 {sync!.history.map((entry, idx) => {
                   const isFail = entry.action === "sync_failed";
@@ -229,9 +227,7 @@ export function QuickBooksSyncPanel({
                   size="sm"
                   className="h-7 gap-1.5 text-[11px]"
                   onClick={() =>
-                    toast.info(
-                      "QuickBooks link — requires backend integration",
-                    )
+                    toast.info("QuickBooks link — requires backend integration")
                   }
                 >
                   <ExternalLink className="size-3" />
