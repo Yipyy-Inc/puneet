@@ -40,6 +40,8 @@ import type { FacilityTask } from "@/data/facility-tasks";
 import { shifts, getStaffOnShift } from "@/data/shifts";
 import { facilityConfig } from "@/data/facility-config";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { ClickableStatCard } from "@/components/ui/ClickableStatCard";
+import { ListChecks, CheckCircle as CheckCircleIcon } from "lucide-react";
 import { generateAllTasksForDate } from "@/lib/booking-task-generator";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -207,36 +209,49 @@ export default function TaskManagementPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalTasks}</div>
-            <div className="text-muted-foreground text-xs">Total Tasks</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-emerald-600">
-              {completedTasks}
-            </div>
-            <div className="text-muted-foreground text-xs">Completed</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-amber-600">
-              {pendingTasks}
-            </div>
-            <div className="text-muted-foreground text-xs">Pending</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">
-              {overdueTasks}
-            </div>
-            <div className="text-muted-foreground text-xs">Overdue</div>
-          </CardContent>
-        </Card>
+        <ClickableStatCard
+          title="Total Tasks"
+          value={totalTasks}
+          subtitle="All tasks"
+          icon={ListChecks}
+          onClick={() =>
+            setStatusFilter(statusFilter === "all" ? "all" : "all")
+          }
+          isActive={statusFilter === "all"}
+        />
+        <ClickableStatCard
+          title="Completed"
+          value={completedTasks}
+          subtitle="Done"
+          icon={CheckCircleIcon}
+          onClick={() =>
+            setStatusFilter(statusFilter === "completed" ? "all" : "completed")
+          }
+          isActive={statusFilter === "completed"}
+          valueClassName="text-emerald-600"
+        />
+        <ClickableStatCard
+          title="Pending"
+          value={pendingTasks}
+          subtitle="Awaiting action"
+          icon={Clock}
+          onClick={() =>
+            setStatusFilter(statusFilter === "pending" ? "all" : "pending")
+          }
+          isActive={statusFilter === "pending"}
+          valueClassName="text-amber-600"
+        />
+        <ClickableStatCard
+          title="Overdue"
+          value={overdueTasks}
+          subtitle="Needs attention"
+          icon={AlertTriangle}
+          onClick={() =>
+            setStatusFilter(statusFilter === "overdue" ? "all" : "overdue")
+          }
+          isActive={statusFilter === "overdue"}
+          valueClassName="text-red-600"
+        />
       </div>
 
       {/* Overdue alert banner */}

@@ -7,7 +7,8 @@ import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import type { Booking } from "@/types/booking";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ClickableStatCard } from "@/components/ui/ClickableStatCard";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
@@ -730,58 +731,49 @@ export default function FacilityBookingsPage() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">All Bookings</CardTitle>
-            <Calendar className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBookings}</div>
-            <p className="text-muted-foreground text-xs">Total bookings</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today</CardTitle>
-            <CalendarDays className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todayBookings.length}</div>
-            <p className="text-muted-foreground text-xs">Active today</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{completedBookings}</div>
-            <p className="text-muted-foreground text-xs">Successfully done</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingBookings.length}</div>
-            <p className="text-muted-foreground text-xs">Awaiting action</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="text-muted-foreground size-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-[tabular-nums] text-2xl font-bold">
-              ${totalRevenue.toLocaleString()}
-            </div>
-            <p className="text-muted-foreground text-xs">Total received</p>
-          </CardContent>
-        </Card>
+        <ClickableStatCard
+          title="All Bookings"
+          value={totalBookings}
+          subtitle="Total bookings"
+          icon={Calendar}
+          onClick={() => setActiveTab(activeTab === "all" ? "all" : "all")}
+          isActive={activeTab === "all"}
+        />
+        <ClickableStatCard
+          title="Today"
+          value={todayBookings.length}
+          subtitle="Active today"
+          icon={CalendarDays}
+          onClick={() => setActiveTab(activeTab === "today" ? "all" : "today")}
+          isActive={activeTab === "today"}
+        />
+        <ClickableStatCard
+          title="Completed"
+          value={completedBookings}
+          subtitle="Successfully done"
+          icon={CheckCircle}
+          onClick={() =>
+            setActiveTab(activeTab === "completed" ? "all" : "completed")
+          }
+          isActive={activeTab === "completed"}
+        />
+        <ClickableStatCard
+          title="Pending"
+          value={pendingBookings.length}
+          subtitle="Awaiting action"
+          icon={Clock}
+          onClick={() =>
+            setActiveTab(activeTab === "pending" ? "all" : "pending")
+          }
+          isActive={activeTab === "pending"}
+        />
+        <ClickableStatCard
+          title="Revenue"
+          value={`$${totalRevenue.toLocaleString()}`}
+          subtitle="Total received"
+          icon={DollarSign}
+          valueClassName="font-[tabular-nums]"
+        />
       </div>
 
       {/* Calendar or Table View */}
