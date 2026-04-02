@@ -63,6 +63,9 @@ import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { QuickBooksSyncPanel } from "@/components/bookings/QuickBooksSyncPanel";
+import { FeedingSection } from "@/components/bookings/FeedingSection";
+import { MedicationSection } from "@/components/bookings/MedicationSection";
+import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import type { InvoiceLineItem } from "@/types/booking";
 import type { GeneratedTask } from "@/types/task";
@@ -906,6 +909,23 @@ ${
               )}
             </div>
 
+            {/* Feeding Instructions */}
+            {booking.feedingInstructions &&
+              booking.feedingInstructions.length > 0 && (
+                <FeedingSection entries={booking.feedingInstructions} />
+              )}
+
+            {/* Medications */}
+            {booking.medicationInstructions &&
+              booking.medicationInstructions.length > 0 && (
+                <MedicationSection entries={booking.medicationInstructions} />
+              )}
+
+            {/* Belongings */}
+            {booking.belongings && booking.belongings.length > 0 && (
+              <BelongingsSection entries={booking.belongings} />
+            )}
+
             {/* Notes */}
             <Card className="overflow-hidden">
               <CardHeader className="bg-muted/30 pb-3">
@@ -1107,7 +1127,6 @@ ${
                 </CardContent>
               </Card>
             )}
-
           </div>
 
           {/* Right — 2 cols — Invoice */}

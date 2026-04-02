@@ -291,6 +291,63 @@ export const quickbooksSyncSchema = z.object({
   history: z.array(qbSyncHistoryEntrySchema),
 });
 
+// ============================================================================
+// Feeding / Medication / Belongings — booking-level care instructions
+// ============================================================================
+
+export const feedingStatusEnum = z.enum(["pending", "completed", "skipped"]);
+
+export const feedingEntrySchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  time: z.string(),
+  amount: z.string(),
+  foodType: z.string(),
+  instructions: z.string().optional(),
+  status: feedingStatusEnum,
+  feedback: z.string().optional(),
+  completedBy: z.string().optional(),
+  completedAt: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type FeedingEntry = z.infer<typeof feedingEntrySchema>;
+
+export const medicationDoseSchema = z.object({
+  scheduledAt: z.string(),
+  status: z.enum(["pending", "given", "skipped", "refused"]),
+  administeredBy: z.string().optional(),
+  administeredAt: z.string().optional(),
+  skipReason: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const medicationEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  dosage: z.string(),
+  method: z.string(),
+  frequency: z.string(),
+  times: z.array(z.string()),
+  instructions: z.string().optional(),
+  isCritical: z.boolean(),
+  doses: z.array(medicationDoseSchema),
+});
+export type MedicationEntry = z.infer<typeof medicationEntrySchema>;
+
+export const belongingEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  photoUrl: z.string().optional(),
+  condition: z.string(),
+  checkedInAt: z.string().optional(),
+  checkedInBy: z.string().optional(),
+  returned: z.boolean(),
+  returnedAt: z.string().optional(),
+  returnedBy: z.string().optional(),
+});
+export type BelongingEntry = z.infer<typeof belongingEntrySchema>;
+
 export const bookingSchema = newBookingSchema.extend({
   id: z.number(),
   paymentMethod: bookingPaymentMethodEnum.optional(),
@@ -299,6 +356,9 @@ export const bookingSchema = newBookingSchema.extend({
   cancellationReason: z.string().optional(),
   invoice: invoiceSchema.optional(),
   quickbooksSync: quickbooksSyncSchema.optional(),
+  feedingInstructions: z.array(feedingEntrySchema).optional(),
+  medicationInstructions: z.array(medicationEntrySchema).optional(),
+  belongings: z.array(belongingEntrySchema).optional(),
 });
 
 export type Booking = z.infer<typeof bookingSchema>;
