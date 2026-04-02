@@ -1262,4 +1262,288 @@ export const bookings: Booking[] = [
       payments: [],
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #22 — MULTI-PET (2): Two pets daycare
+  // Test: 2-pet side-by-side layout
+  // Client: Alice Johnson (15), Pets: Buddy (1) + Whiskers (2)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 22,
+    clientId: 15,
+    petId: [1, 2],
+    facilityId: 11,
+    service: "daycare",
+    serviceType: "full_day",
+    startDate: "2026-04-22",
+    endDate: "2026-04-22",
+    checkInTime: "08:00",
+    checkOutTime: "17:00",
+    status: "confirmed",
+    basePrice: 50,
+    discount: 0,
+    totalCost: 100,
+    paymentStatus: "pending",
+    specialRequests: "Keep Buddy and Whiskers in the same play group if possible.",
+    notificationEmail: true,
+    notificationSMS: false,
+    invoice: {
+      id: "INV-1022",
+      status: "open",
+      items: [
+        { name: "Daycare Full Day — Buddy", unitPrice: 50, quantity: 1, price: 50 },
+        { name: "Daycare Full Day — Whiskers", unitPrice: 50, quantity: 1, price: 50 },
+      ],
+      fees: [],
+      subtotal: 100,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 14.98,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 5.0 },
+        { name: "QST", rate: 0.09975, amount: 9.98 },
+      ],
+      total: 114.98,
+      depositCollected: 0,
+      remainingDue: 114.98,
+      payments: [],
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #19 — MULTI-PET: Three pets boarding together
+  // Test: 3-pet grid layout, per-pet feeding/medication labels
+  // Client: Alice Johnson (15), Pets: Buddy (1) + Whiskers (2) + Daisy (50)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 19,
+    clientId: 15,
+    petId: [1, 2, 50],
+    facilityId: 11,
+    service: "boarding",
+    serviceType: "standard",
+    startDate: "2026-04-20",
+    endDate: "2026-04-23",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    status: "confirmed",
+    basePrice: 45,
+    discount: 0,
+    totalCost: 270,
+    paymentStatus: "pending",
+    kennel: "Kennel 5 + Kennel 6",
+    specialRequests:
+      "Buddy and Whiskers can share playtime but feed separately.",
+    notificationEmail: true,
+    notificationSMS: true,
+    invoice: {
+      id: "INV-1019",
+      status: "open",
+      items: [
+        {
+          name: "Boarding — Standard (3 nights) — Buddy",
+          unitPrice: 45,
+          quantity: 3,
+          price: 135,
+        },
+        {
+          name: "Boarding — Standard (3 nights) — Whiskers",
+          unitPrice: 45,
+          quantity: 3,
+          price: 135,
+        },
+        {
+          name: "Boarding — Standard (3 nights) — Daisy",
+          unitPrice: 45,
+          quantity: 3,
+          price: 135,
+        },
+      ],
+      fees: [],
+      subtotal: 405,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 40.43,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 13.5 },
+        { name: "QST", rate: 0.09975, amount: 26.93 },
+      ],
+      total: 310.43,
+      depositCollected: 0,
+      remainingDue: 310.43,
+      payments: [],
+    },
+    feedingInstructions: [
+      {
+        id: "feed-m1",
+        label: "Buddy — Breakfast",
+        time: "08:00",
+        amount: "1 cup",
+        foodType: "Dry Kibble (Royal Canin)",
+        instructions: "Mix with warm water",
+        status: "pending",
+      },
+      {
+        id: "feed-m2",
+        label: "Whiskers — Breakfast",
+        time: "08:00",
+        amount: "1/2 cup",
+        foodType: "Wet Food (Fancy Feast)",
+        instructions: "Serve at room temperature",
+        status: "pending",
+      },
+      {
+        id: "feed-m3",
+        label: "Buddy — Dinner",
+        time: "18:00",
+        amount: "1 cup",
+        foodType: "Dry Kibble (Royal Canin)",
+        status: "pending",
+      },
+      {
+        id: "feed-m4",
+        label: "Whiskers — Dinner",
+        time: "18:00",
+        amount: "1/2 cup",
+        foodType: "Wet Food (Fancy Feast)",
+        status: "pending",
+      },
+      {
+        id: "feed-m5",
+        label: "Daisy — Breakfast",
+        time: "08:00",
+        amount: "1/4 cup",
+        foodType: "Dry Kibble (Small Breed)",
+        instructions: "Small portions — she eats fast and may choke",
+        status: "pending",
+      },
+      {
+        id: "feed-m6",
+        label: "Daisy — Dinner",
+        time: "18:00",
+        amount: "1/4 cup",
+        foodType: "Dry Kibble (Small Breed)",
+        status: "pending",
+      },
+    ],
+    medicationInstructions: [
+      {
+        id: "med-m1",
+        name: "Buddy — Apoquel",
+        dosage: "16mg tablet",
+        method: "Oral",
+        frequency: "Once daily",
+        times: ["08:00"],
+        instructions: "Give with food",
+        isCritical: true,
+        doses: [
+          { scheduledAt: "2026-04-20T08:00:00Z", status: "pending" },
+          { scheduledAt: "2026-04-21T08:00:00Z", status: "pending" },
+          { scheduledAt: "2026-04-22T08:00:00Z", status: "pending" },
+        ],
+      },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #20 — MULTI-PET (4): Four pets daycare
+  // Test: 4-pet grid layout
+  // Client: John Doe (28), Pets: Rex (13) + Bella (19) + Whiskers (20) + Shadow (21)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 20,
+    clientId: 28,
+    petId: [13, 19, 20, 21],
+    facilityId: 11,
+    service: "daycare",
+    serviceType: "full_day",
+    startDate: "2026-04-21",
+    endDate: "2026-04-21",
+    checkInTime: "07:30",
+    checkOutTime: "18:00",
+    status: "confirmed",
+    basePrice: 40,
+    discount: 0,
+    totalCost: 160,
+    paymentStatus: "pending",
+    specialRequests:
+      "Shadow is shy — keep separate from large groups. Rex and Bella can play together.",
+    notificationEmail: true,
+    notificationSMS: false,
+    invoice: {
+      id: "INV-1020",
+      status: "open",
+      items: [
+        { name: "Daycare Full Day — Rex", unitPrice: 40, quantity: 1, price: 40 },
+        { name: "Daycare Full Day — Bella", unitPrice: 40, quantity: 1, price: 40 },
+        { name: "Daycare Full Day — Whiskers", unitPrice: 40, quantity: 1, price: 40 },
+        { name: "Daycare Full Day — Shadow", unitPrice: 40, quantity: 1, price: 40 },
+      ],
+      fees: [],
+      subtotal: 160,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 23.96,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 8.0 },
+        { name: "QST", rate: 0.09975, amount: 15.96 },
+      ],
+      total: 183.96,
+      depositCollected: 0,
+      remainingDue: 183.96,
+      payments: [],
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // #21 — MULTI-PET (5): Five pets boarding — full house
+  // Test: 5-pet grid layout, responsive wrapping
+  // Client: John Doe (28), All 5 pets
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    id: 21,
+    clientId: 28,
+    petId: [13, 19, 20, 21, 51],
+    facilityId: 11,
+    service: "boarding",
+    serviceType: "standard",
+    startDate: "2026-05-01",
+    endDate: "2026-05-04",
+    checkInTime: "14:00",
+    checkOutTime: "11:00",
+    status: "confirmed",
+    basePrice: 45,
+    discount: 0,
+    totalCost: 675,
+    paymentStatus: "pending",
+    kennel: "Kennels 1-5",
+    specialRequests:
+      "Mochi is an escape artist — double check all gates. Shadow needs a quiet kennel away from dogs.",
+    notificationEmail: true,
+    notificationSMS: true,
+    invoice: {
+      id: "INV-1021",
+      status: "open",
+      items: [
+        { name: "Boarding Standard (3 nights) — Rex", unitPrice: 45, quantity: 3, price: 135 },
+        { name: "Boarding Standard (3 nights) — Bella", unitPrice: 45, quantity: 3, price: 135 },
+        { name: "Boarding Standard (3 nights) — Whiskers", unitPrice: 45, quantity: 3, price: 135 },
+        { name: "Boarding Standard (3 nights) — Shadow", unitPrice: 45, quantity: 3, price: 135 },
+        { name: "Boarding Standard (3 nights) — Mochi", unitPrice: 45, quantity: 3, price: 135 },
+      ],
+      fees: [],
+      subtotal: 675,
+      discount: 0,
+      taxRate: 0.14975,
+      taxAmount: 101.08,
+      taxes: [
+        { name: "GST", rate: 0.05, amount: 33.75 },
+        { name: "QST", rate: 0.09975, amount: 67.33 },
+      ],
+      total: 776.08,
+      depositCollected: 0,
+      remainingDue: 776.08,
+      payments: [],
+    },
+  },
 ];
