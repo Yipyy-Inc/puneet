@@ -22,6 +22,7 @@ import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
 import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
+import { RetailSettings } from "@/components/facility/RetailSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3620,6 +3621,13 @@ export default function SettingsPage() {
           {activeSection === "booking-statuses" && (
             <div className="space-y-6">
               <BookingStatusSettings />
+            </div>
+          )}
+
+          {/* Retail / POS */}
+          {activeSection === "retail" && (
+            <div className="space-y-6">
+              <RetailSettings />
             </div>
           )}
 
