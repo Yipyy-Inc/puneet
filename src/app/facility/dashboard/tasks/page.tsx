@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import type { FacilityTask } from "@/data/facility-tasks";
 import { shifts, getStaffOnShift } from "@/data/shifts";
 import { facilityConfig } from "@/data/facility-config";
+import { useFacilityRole } from "@/hooks/use-facility-role";
 import { generateAllTasksForDate } from "@/lib/booking-task-generator";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,12 +86,21 @@ const MED_FEEDBACK = facilityConfig.careTaskFeedback.medication;
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TaskManagementPage() {
+  const { role } = useFacilityRole();
+  const isManager = role === "owner" || role === "manager";
+
   const [dateOffset, setDateOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"time" | "staff" | "pet">("time");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [staffFilter, setStaffFilter] = useState<"mine" | "all">(
+    isManager ? "all" : "mine",
+  );
   const [completeTask, setCompleteTask] = useState<FacilityTask | null>(null);
   const [feedback, setFeedback] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Mock: current logged-in staff (would come from auth in production)
+  const currentStaffName = "Jessica M.";
 
   const today = useMemo(() => {
     const d = new Date();
@@ -103,11 +113,14 @@ export default function TaskManagementPage() {
   // Generate tasks from booking care instructions for this date
   const dayTasks = useMemo(() => {
     let tasks = generateAllTasksForDate(dateStr);
+    if (staffFilter === "mine") {
+      tasks = tasks.filter((t) => t.assignedToName === currentStaffName);
+    }
     if (statusFilter !== "all") {
       tasks = tasks.filter((t) => t.status === statusFilter);
     }
     return tasks;
-  }, [dateStr, statusFilter]);
+  }, [dateStr, statusFilter, staffFilter, currentStaffName]);
 
   const totalTasks = dayTasks.length;
   const completedTasks = dayTasks.filter(
@@ -251,6 +264,36 @@ export default function TaskManagementPage() {
       )}
 
       {/* Controls */}
+      <div className="flex items-center gap-3">
+        {/* My Tasks / All Tasks toggle */}
+        <div className="flex rounded-lg border">
+          <button
+            onClick={() => setStaffFilter("mine")}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium transition-colors",
+              staffFilter === "mine"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted",
+            )}
+          >
+            My Tasks
+          </button>
+          <button
+            onClick={() => setStaffFilter("all")}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium transition-colors",
+              staffFilter === "all"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted",
+            )}
+          >
+            All Tasks
+          </button>
+        </div>
+        <span className="text-muted-foreground text-xs">
+          {staffFilter === "mine" ? `Showing ${currentStaffName}'s tasks` : "Showing all staff"}
+        </span>
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex rounded-lg border">
           {(["time", "staff", "pet"] as const).map((mode) => (
