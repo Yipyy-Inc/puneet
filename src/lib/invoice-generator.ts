@@ -10,10 +10,11 @@ import type { Booking } from "@/types/booking";
 import type { Client, Membership, ClientPackage } from "@/types/client";
 import type { CustomServiceModule } from "@/types/facility";
 import { clients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
 import { defaultCustomServiceModules as customServiceModules } from "@/data/custom-services";
 
 // ============================================================================
-// Tax configuration (facility-level — would come from settings in production)
+// Tax configuration — reads from facility settings
 // ============================================================================
 
 export interface TaxConfig {
@@ -25,13 +26,38 @@ export interface TaxConfig {
   taxInclusive: boolean;
 }
 
-const DEFAULT_TAX_CONFIG: TaxConfig = {
-  taxes: [
-    { name: "GST", rate: 0.05, appliesTo: "all" },
-    { name: "QST", rate: 0.09975, appliesTo: "all" },
-  ],
-  taxInclusive: false,
-};
+function getFacilityTaxConfig(facilityId?: number): TaxConfig {
+  const facility = facilities.find((f) => f.id === (facilityId ?? 11));
+  const tc = facility?.taxConfig;
+  if (tc) {
+    return {
+      taxes: tc.taxes
+        .filter((t) => t.enabled)
+        .map((t) => {
+          const a = t.appliesTo as string;
+          return {
+            name: t.name,
+            rate: t.rate,
+            appliesTo:
+              a === "services_only"
+                ? ("services" as const)
+                : a === "products_only"
+                  ? ("products" as const)
+                  : ("all" as const),
+          };
+        }),
+      taxInclusive: tc.pricesIncludeTax,
+    };
+  }
+  // Fallback
+  return {
+    taxes: [
+      { name: "GST", rate: 0.05, appliesTo: "all" },
+      { name: "QST", rate: 0.09975, appliesTo: "all" },
+    ],
+    taxInclusive: false,
+  };
+}
 
 // ============================================================================
 // Helpers — integer math to avoid floating point
@@ -209,7 +235,7 @@ function calculateDiscounts(
 
 function calculateTaxes(
   taxableAmountCents: number,
-  config: TaxConfig = DEFAULT_TAX_CONFIG,
+  config: TaxConfig = getFacilityTaxConfig(),
 ): { lines: InvoiceTaxLine[]; totalCents: number } {
   const lines: InvoiceTaxLine[] = [];
   let totalCents = 0;
@@ -257,7 +283,8 @@ export function generateInvoiceForBooking(
   const serviceModule = customServiceModules.find(
     (m) => m.slug === moduleId || m.id === moduleId,
   );
-  const taxConfig = options?.taxConfig ?? DEFAULT_TAX_CONFIG;
+  const taxConfig =
+    options?.taxConfig ?? getFacilityTaxConfig(booking.facilityId);
 
   // --- Base charge ---
   const baseItem = calculateBaseCharge(booking, serviceModule);

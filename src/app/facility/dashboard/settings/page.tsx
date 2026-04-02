@@ -20,6 +20,7 @@ import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
+import { TaxSettings } from "@/components/facility/TaxSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3611,6 +3612,13 @@ export default function SettingsPage() {
           {activeSection === "tags-notes" && (
             <div className="space-y-6">
               <TagNotesSettings />
+            </div>
+          )}
+
+          {/* Taxes */}
+          {activeSection === "taxes" && (
+            <div className="space-y-6">
+              <TaxSettings />
             </div>
           )}
 

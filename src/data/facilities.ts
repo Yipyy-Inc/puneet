@@ -102,6 +102,28 @@ export const facilities = [
       clients: 500,
       pets: -1, // unlimited
     },
+    taxConfig: {
+      country: "CA",
+      province: "ON",
+      taxes: [
+        {
+          id: "hst",
+          name: "HST",
+          rate: 0.13,
+          appliesTo: "all" as const,
+          registrationNumber: "RT 111222333",
+          enabled: true,
+        },
+      ],
+      pricesIncludeTax: false,
+      showTaxesSeparately: true,
+      showRegistrationOnInvoice: false,
+      exemptions: {
+        tips: true,
+        giftCards: true,
+        storeCredit: true,
+      },
+    },
     enabledModules: [
       "booking",
       "scheduling",
@@ -829,6 +851,36 @@ export const facilities = [
       staff: 10,
       clients: 100,
       pets: 250,
+    },
+    taxConfig: {
+      country: "CA",
+      province: "QC",
+      taxes: [
+        {
+          id: "gst",
+          name: "GST",
+          rate: 0.05,
+          appliesTo: "all" as const,
+          registrationNumber: "RT 123456789",
+          enabled: true,
+        },
+        {
+          id: "qst",
+          name: "QST",
+          rate: 0.09975,
+          appliesTo: "all" as const,
+          registrationNumber: "QT 987654321",
+          enabled: true,
+        },
+      ],
+      pricesIncludeTax: false,
+      showTaxesSeparately: true,
+      showRegistrationOnInvoice: true,
+      exemptions: {
+        tips: true,
+        giftCards: true,
+        storeCredit: true,
+      },
     },
     enabledModules: ["booking", "customers", "communication"],
     locationsList: [

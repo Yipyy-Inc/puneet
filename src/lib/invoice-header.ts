@@ -8,6 +8,10 @@ interface FacilityInfo {
   logo?: string;
   contact?: { email?: string; phone?: string };
   locationsList?: { address: string }[];
+  taxConfig?: {
+    showRegistrationOnInvoice?: boolean;
+    taxes?: { name: string; registrationNumber?: string; enabled: boolean }[];
+  };
 }
 
 export function invoiceHeaderHtml(facility: FacilityInfo | null | undefined) {
@@ -32,6 +36,20 @@ export function invoiceHeaderHtml(facility: FacilityInfo | null | undefined) {
   <div style="font-weight:700;font-size:16px">${facility.name}</div>
   ${address ? `<div style="color:#666;font-size:12px;margin-top:2px">${address}</div>` : ""}
   ${contact ? `<div style="color:#666;font-size:12px;margin-top:2px">${contact}</div>` : ""}
+  ${(() => {
+    if (
+      !facility.taxConfig?.showRegistrationOnInvoice ||
+      !facility.taxConfig.taxes
+    )
+      return "";
+    const regs = facility.taxConfig.taxes
+      .filter((t) => t.enabled && t.registrationNumber)
+      .map((t) => `${t.name}: ${t.registrationNumber}`)
+      .join(" · ");
+    return regs
+      ? `<div style="color:#888;font-size:10px;margin-top:4px">${regs}</div>`
+      : "";
+  })()}
 </div>
 <hr style="border:none;border-top:1px solid #e5e5e5;margin-bottom:20px" />`;
 }
