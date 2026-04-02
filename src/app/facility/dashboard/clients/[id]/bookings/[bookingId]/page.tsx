@@ -68,6 +68,7 @@ import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { formatBookingRef } from "@/lib/booking-id";
 import type { InvoiceLineItem } from "@/types/booking";
 import type { GeneratedTask } from "@/types/task";
 import {
@@ -203,6 +204,10 @@ export default function ClientBookingDetailPage({
   const [retailOpen, setRetailOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<InvoiceLineItem[]>([]);
 
+  const bookingRef = booking
+    ? formatBookingRef(booking.id, booking.startDate)
+    : `BK-${String(bookingId).padStart(5, "0")}`;
+
   const [tasks, setTasks] = useState<GeneratedTask[]>([]);
   useEffect(() => {
     setTasks(getTasksForBooking(bookingId));
@@ -226,7 +231,7 @@ export default function ClientBookingDetailPage({
       <ClientInfoStrip
         client={client}
         backHref={`/facility/dashboard/clients/${clientId}`}
-        currentContext={`Booking #${booking.id}${pet ? ` · ${pet.name}` : ""}`}
+        currentContext={`${bookingRef}${pet ? ` · ${pet.name}` : ""}`}
       />
 
       <div className="space-y-5 p-5 md:p-7">
@@ -389,13 +394,13 @@ export default function ClientBookingDetailPage({
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold tracking-tight">
-                  Booking #{booking.id}
+                  {bookingRef}
                 </h1>
                 <BookingStatusDropdown
                   currentStatus={booking.status}
                   onStatusChange={(newStatus) => {
                     toast.success(
-                      `Booking #${booking.id} status changed to ${newStatus.replace(/_/g, " ")}`,
+                      `${bookingRef} status changed to ${newStatus.replace(/_/g, " ")}`,
                     );
                   }}
                 />
@@ -1309,7 +1314,7 @@ ${
           onOpenChange={setEditOpen}
           onSave={(u) => {
             setEditOpen(false);
-            toast.success(`Booking #${u.id} updated`);
+            toast.success(`${bookingRef} updated`);
           }}
         />
         <ProcessPaymentModal
@@ -1327,7 +1332,7 @@ ${
           onOpenChange={setCancelOpen}
           onConfirm={(bId, r) => {
             setCancelOpen(false);
-            toast.success(`Booking #${bId} cancelled: ${r}`);
+            toast.success(`${bookingRef} cancelled: ${r}`);
           }}
         />
         <PaymentCheckoutFlow

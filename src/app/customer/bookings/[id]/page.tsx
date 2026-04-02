@@ -31,6 +31,7 @@ import { getYipyyGoForm } from "@/data/yipyygo-forms";
 import { CheckInQRCode } from "@/components/yipyygo/CheckInQRCode";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { formatBookingRef } from "@/lib/booking-id";
 import type { Booking } from "@/types/booking";
 
 const MOCK_CUSTOMER_ID = 15;
@@ -201,7 +202,7 @@ export default function BookingDetailPage({
       <div className="animate-in fade-in slide-in-from-top-2 mb-6 flex items-start justify-between gap-3 duration-300">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Booking #{booking.id}
+            {formatBookingRef(booking.id, booking.startDate)}
           </h1>
           <p className="text-muted-foreground mt-0.5 text-sm">
             {fmtDate(booking.startDate)}
