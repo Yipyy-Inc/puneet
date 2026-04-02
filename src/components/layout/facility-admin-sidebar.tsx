@@ -189,7 +189,7 @@ export function FacilitySidebar() {
             count: 2,
           },
           {
-            title: "Online Booking",
+            title: "Booking Requests",
             url: "/facility/dashboard/online-booking",
             icon: CalendarClock,
             disabled: false,
