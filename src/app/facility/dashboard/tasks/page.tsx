@@ -357,67 +357,76 @@ export default function TaskManagementPage() {
       )}
 
       {/* Controls */}
-      <div className="flex items-center gap-3">
-        {/* My Tasks / All Tasks toggle */}
-        <div className="flex rounded-lg border">
-          <button
-            onClick={() => setStaffFilter("mine")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium transition-colors",
-              staffFilter === "mine"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            My Tasks
-          </button>
-          <button
-            onClick={() => setStaffFilter("all")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-medium transition-colors",
-              staffFilter === "all"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            All Tasks
-          </button>
-        </div>
-        <span className="text-muted-foreground text-xs">
-          {staffFilter === "mine"
-            ? `Showing ${currentStaffName}'s tasks`
-            : "Showing all staff"}
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-lg border">
-          {(["time", "staff", "pet"] as const).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={cn(
-                "px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-                viewMode === mode
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted",
-              )}
-            >
-              By {mode}
-            </button>
-          ))}
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-8 w-[140px] text-xs">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-4 py-3">
+          {/* Staff filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Show:</span>
+            <div className="bg-muted flex rounded-full p-0.5">
+              {(
+                [
+                  { key: "mine", label: "My Tasks" },
+                  { key: "all", label: "All Tasks" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setStaffFilter(opt.key)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                    staffFilter === opt.key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-border hidden h-5 w-px sm:block" />
+
+          {/* View mode */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">View:</span>
+            <div className="bg-muted flex rounded-full p-0.5">
+              {(["time", "staff", "pet"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-medium capitalize transition-all",
+                    viewMode === mode
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  By {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-border hidden h-5 w-px sm:block" />
+
+          {/* Status filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Status:</span>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-[130px] rounded-full text-xs">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Task groups */}
       <div className="space-y-6">
