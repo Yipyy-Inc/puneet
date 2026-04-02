@@ -64,6 +64,7 @@ import { toast } from "sonner";
 import { generateUniqueBarcode } from "@/lib/barcode-generator";
 import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
+import { retailConfig } from "@/data/retail-config";
 
 type ProductWithRecord = Product & Record<string, unknown>;
 
@@ -705,14 +706,24 @@ export default function ProductsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="brand">Brand</Label>
-                <Input
-                  id="brand"
+                <Select
                   value={formData.brand}
-                  onChange={(e) =>
-                    setFormData({ ...formData, brand: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, brand: value })
                   }
-                  placeholder="e.g., PawNutrition"
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {retailConfig.brands.map((b) => (
+                      <SelectItem key={b.id} value={b.name}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__other__">+ Other / Add New</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -809,11 +820,13 @@ export default function ProductsPage() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
+                    {retailConfig.categories
+                      .filter((c) => c.status === "active")
+                      .map((cat) => (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
