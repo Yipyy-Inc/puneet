@@ -23,19 +23,14 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { facilityConfig } from "@/data/facility-config";
 import type { FeedingEntry } from "@/types/booking";
 
 interface FeedingSectionProps {
   entries: FeedingEntry[];
 }
 
-const FEEDBACK_OPTIONS = [
-  { value: "ate_all", label: "Ate all (100%)" },
-  { value: "ate_most", label: "Ate most (75%)" },
-  { value: "ate_some", label: "Ate some (50%)" },
-  { value: "ate_little", label: "Ate little (25%)" },
-  { value: "refused", label: "Refused (0%)" },
-];
+const FEEDBACK_OPTIONS = facilityConfig.careTaskFeedback.feeding;
 
 const MEAL_LABELS = ["Breakfast", "Lunch", "Dinner", "Snack", "Treats"];
 const FOOD_TYPES = [

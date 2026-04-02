@@ -921,9 +921,12 @@ ${
               />
             )}
 
-            {/* Belongings */}
-            {booking.belongings && booking.belongings.length > 0 && (
-              <BelongingsSection entries={booking.belongings} />
+            {/* Belongings — always show so staff can add at check-in */}
+            {!isCancelled && (
+              <BelongingsSection
+                entries={booking.belongings ?? []}
+                isCompleted={booking.status === "completed"}
+              />
             )}
 
             {/* Notes */}
