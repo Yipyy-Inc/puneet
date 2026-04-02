@@ -42,7 +42,17 @@ import { shifts, getStaffOnShift } from "@/data/shifts";
 import { facilityConfig } from "@/data/facility-config";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { ClickableStatCard } from "@/components/ui/ClickableStatCard";
-import { ListChecks, CheckCircle as CheckCircleIcon } from "lucide-react";
+import { Calendar as CalendarWidget } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  ListChecks,
+  CheckCircle as CheckCircleIcon,
+  CalendarDays,
+} from "lucide-react";
 import { generateAllTasksForDate } from "@/lib/booking-task-generator";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,9 +227,32 @@ export default function TaskManagementPage() {
           >
             <ChevronRight className="size-4" />
           </Button>
-          <span className="text-muted-foreground ml-2 text-sm font-medium">
-            {fmtDate(today)}
-          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="ml-1 gap-1.5">
+                <CalendarDays className="size-4" />
+                {fmtDate(today)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <CalendarWidget
+                mode="single"
+                selected={today}
+                onSelect={(date) => {
+                  if (date) {
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    const sel = new Date(date);
+                    sel.setHours(0, 0, 0, 0);
+                    const diff = Math.round(
+                      (sel.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+                    );
+                    setDateOffset(diff);
+                  }
+                }}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
