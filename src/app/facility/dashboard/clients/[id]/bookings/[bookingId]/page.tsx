@@ -909,17 +909,17 @@ ${
               )}
             </div>
 
-            {/* Feeding Instructions */}
-            {booking.feedingInstructions &&
-              booking.feedingInstructions.length > 0 && (
-                <FeedingSection entries={booking.feedingInstructions} />
-              )}
+            {/* Feeding Instructions — always show so staff can add */}
+            {!isCancelled && (
+              <FeedingSection entries={booking.feedingInstructions ?? []} />
+            )}
 
-            {/* Medications */}
-            {booking.medicationInstructions &&
-              booking.medicationInstructions.length > 0 && (
-                <MedicationSection entries={booking.medicationInstructions} />
-              )}
+            {/* Medications — always show so staff can add */}
+            {!isCancelled && (
+              <MedicationSection
+                entries={booking.medicationInstructions ?? []}
+              />
+            )}
 
             {/* Belongings */}
             {booking.belongings && booking.belongings.length > 0 && (

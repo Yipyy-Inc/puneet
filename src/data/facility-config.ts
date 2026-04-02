@@ -290,4 +290,21 @@ export const facilityConfig = {
         "Full refund if cancelled 48+ hours before series start. 75% refund if cancelled 24-48 hours before. No refunds after series begins or if any sessions have been attended.",
     },
   },
+
+  // ── Care task feedback options (configurable per facility) ──────
+  careTaskFeedback: {
+    feeding: [
+      { value: "ate_all", label: "Ate all (100%)" },
+      { value: "ate_most", label: "Ate most (75%)" },
+      { value: "ate_some", label: "Ate some (50%)" },
+      { value: "ate_little", label: "Ate little (25%)" },
+      { value: "refused", label: "Refused to eat (0%)" },
+    ],
+    medication: [
+      { value: "given", label: "Given" },
+      { value: "skipped", label: "Skipped" },
+      { value: "refused", label: "Refused" },
+      { value: "vomited", label: "Vomited after" },
+    ],
+  },
 };
