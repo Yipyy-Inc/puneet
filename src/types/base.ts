@@ -39,7 +39,11 @@ export const bookingStatusEnum = z.enum([
   "request_submitted",
   "waitlisted",
   "confirmed",
+  "checked_in",
+  "in_progress",
+  "ready",
   "completed",
+  "no_show",
   "cancelled",
   "declined",
 ]);

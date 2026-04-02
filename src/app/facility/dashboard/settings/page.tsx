@@ -21,6 +21,7 @@ import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings"
 import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
 import { TaxSettings } from "@/components/facility/TaxSettings";
+import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3612,6 +3613,13 @@ export default function SettingsPage() {
           {activeSection === "tags-notes" && (
             <div className="space-y-6">
               <TagNotesSettings />
+            </div>
+          )}
+
+          {/* Booking Statuses */}
+          {activeSection === "booking-statuses" && (
+            <div className="space-y-6">
+              <BookingStatusSettings />
             </div>
           )}
 

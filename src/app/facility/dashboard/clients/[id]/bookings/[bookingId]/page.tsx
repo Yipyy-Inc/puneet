@@ -63,6 +63,7 @@ import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { QuickBooksSyncPanel } from "@/components/bookings/QuickBooksSyncPanel";
+import { BookingStatusDropdown } from "@/components/bookings/BookingStatusDropdown";
 import { FeedingSection } from "@/components/bookings/FeedingSection";
 import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
@@ -177,6 +178,20 @@ export default function ClientBookingDetailPage({
   const isEstimateSent = booking?.status === "estimate_sent";
   const isPaid = booking?.paymentStatus === "paid";
 
+  // Auto-transition config from facility settings
+  const autoTransitions = facility?.bookingStatusConfig?.autoTransitions as
+    | Record<string, string>
+    | undefined;
+  const autoTransition = (action: string) => {
+    const target = autoTransitions?.[action];
+    if (target && target !== "none") {
+      const label = target
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      toast.success(`Status auto-updated to ${label}`);
+    }
+  };
+
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -204,7 +219,6 @@ export default function ClientBookingDetailPage({
   const invoice = booking.invoice;
   const addedSubtotal = addedItems.reduce((s, i) => s + i.price, 0);
   const completedTasks = tasks.filter((t) => t.status === "completed").length;
-  const sc = statusConfig(booking.status);
 
   return (
     <div>
@@ -245,9 +259,10 @@ export default function ClientBookingDetailPage({
               <Button
                 size="sm"
                 className="gap-1.5"
-                onClick={() =>
-                  toast.success("Booking confirmed — deposit rules now apply")
-                }
+                onClick={() => {
+                  toast.success("Booking confirmed — deposit rules now apply");
+                  autoTransition("onDepositPaid");
+                }}
               >
                 <CheckCircle2 className="size-3.5" />
                 Confirm Booking
@@ -341,9 +356,12 @@ export default function ClientBookingDetailPage({
                 <Button
                   size="sm"
                   className="gap-1.5"
-                  onClick={() =>
-                    toast.success("Checked in — invoice status changed to Open")
-                  }
+                  onClick={() => {
+                    toast.success(
+                      "Checked in — invoice status changed to Open",
+                    );
+                    autoTransition("onCheckIn");
+                  }}
                 >
                   Continue to Check In
                 </Button>
@@ -373,17 +391,14 @@ export default function ClientBookingDetailPage({
                 <h1 className="text-2xl font-bold tracking-tight">
                   Booking #{booking.id}
                 </h1>
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1",
-                    sc.bg,
-                  )}
-                >
-                  <div className={cn("size-2 rounded-full", sc.dot)} />
-                  <span className="text-xs font-semibold capitalize">
-                    {booking.status}
-                  </span>
-                </div>
+                <BookingStatusDropdown
+                  currentStatus={booking.status}
+                  onStatusChange={(newStatus) => {
+                    toast.success(
+                      `Booking #${booking.id} status changed to ${newStatus.replace(/_/g, " ")}`,
+                    );
+                  }}
+                />
                 <TagsButton entityType="booking" entityId={booking.id} />
                 <NotesButton entityType="booking" entityId={booking.id} />
               </div>
@@ -579,9 +594,12 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                 size="sm"
                 variant="outline"
                 className="h-8 gap-1.5 text-xs"
-                onClick={() =>
-                  toast.success("Service marked as ready — proceed to checkout")
-                }
+                onClick={() => {
+                  toast.success(
+                    "Service marked as ready — proceed to checkout",
+                  );
+                  autoTransition("onCheckIn");
+                }}
               >
                 <CheckCircle2 className="size-3.5" />
                 Mark as Ready
@@ -603,11 +621,12 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                   variant="outline"
                   size="sm"
                   className="h-8 gap-1.5 text-xs"
-                  onClick={() =>
+                  onClick={() => {
                     toast.success(
                       "Appointment marked as finished — invoice stays open for later billing",
-                    )
-                  }
+                    );
+                    autoTransition("onCheckout");
+                  }}
                 >
                   <CheckCircle2 className="size-3.5" />
                   Finish Without Payment
@@ -865,8 +884,8 @@ ${
                               pets.length === 1
                                 ? "flex flex-col items-center"
                                 : compact
-                                  ? "flex items-start gap-3 rounded-xl border bg-muted/10 p-3"
-                                  : "flex flex-col items-center rounded-xl border bg-muted/10 p-4",
+                                  ? "bg-muted/10 flex items-start gap-3 rounded-xl border p-3"
+                                  : "bg-muted/10 flex flex-col items-center rounded-xl border p-4",
                             )}
                           >
                             {/* Photo */}
@@ -913,7 +932,9 @@ ${
                               <p
                                 className={cn(
                                   "text-muted-foreground mt-0.5",
-                                  compact ? "text-[11px]" : "text-center text-xs",
+                                  compact
+                                    ? "text-[11px]"
+                                    : "text-center text-xs",
                                 )}
                               >
                                 {p.breed} · {p.type}
@@ -921,7 +942,9 @@ ${
                               <p
                                 className={cn(
                                   "text-muted-foreground",
-                                  compact ? "text-[10px]" : "text-center text-[11px]",
+                                  compact
+                                    ? "text-[10px]"
+                                    : "text-center text-[11px]",
                                 )}
                               >
                                 {getPetAgeDisplay(p)} · {p.weight} lbs

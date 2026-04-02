@@ -14,6 +14,7 @@ import {
   Tag,
   PawPrint,
   UtensilsCrossed,
+  CircleDot,
   Bed,
   Sun,
   Scissors,
@@ -71,6 +72,12 @@ const STATIC_GROUPS: SettingsGroup[] = [
     sections: [
       { id: "pet-breeds", label: "Pet Breeds", icon: PawPrint },
       { id: "care-tasks", label: "Care Tasks", icon: UtensilsCrossed },
+    ],
+  },
+  {
+    label: "Operations",
+    sections: [
+      { id: "booking-statuses", label: "Booking Statuses", icon: CircleDot },
     ],
   },
   {
