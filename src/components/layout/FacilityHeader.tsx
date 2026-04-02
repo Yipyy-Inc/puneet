@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Plus, User, Calendar, List, Zap } from "lucide-react";
+import { Plus, User, Calendar, ShoppingBag, Zap } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -173,9 +173,14 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               <Calendar className="mr-2 size-4" />
               New Booking
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleCreateWaitlist}>
-              <List className="mr-2 size-4" />
-              New Waitlist
+            <DropdownMenuItem
+              onClick={() => {
+                window.location.href =
+                  "/facility/dashboard/services/retail?mode=new-sale";
+              }}
+            >
+              <ShoppingBag className="mr-2 size-4" />
+              Retail Sale
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
               <Zap className="mr-2 size-4" />
