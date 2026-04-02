@@ -204,9 +204,9 @@ export default function OnlineBookingPage() {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Online booking</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Booking Requests</h2>
         <p className="text-muted-foreground">
-          Booking requests &amp; waiting list
+          Manage incoming requests &amp; waiting list
         </p>
       </div>
 
@@ -342,12 +342,12 @@ export default function OnlineBookingPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">
-                Online booking settings
+                Booking request settings
               </CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
               Settings UI isn’t required for this task; this tab is a
-              placeholder for the online booking settings flow.
+              placeholder for the booking request settings flow.
             </CardContent>
           </Card>
         </TabsContent>
