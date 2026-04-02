@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   ShoppingCart,
-  Barcode,
   Plus,
   Minus,
   Trash2,
@@ -1544,30 +1545,120 @@ export default function POSPage() {
           </Card>
         </div>
 
-        {/* Barcode Scanner Input */}
+        {/* Smart Search Bar — barcode scan + product search in one */}
         <Card>
           <CardContent className="pt-4">
-            <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
-              <div className="relative flex-1">
-                <Barcode className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  placeholder="Scan barcode or enter SKU..."
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="pl-10"
-                  autoFocus
-                />
-              </div>
-              <Button type="submit">Add</Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsProductModalOpen(true)}
+            <div className="relative">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!barcodeInput.trim()) return;
+                  // Try barcode/SKU exact match first
+                  const found = getProductByBarcode(barcodeInput.trim());
+                  if (found) {
+                    addToCart(found);
+                    setBarcodeInput("");
+                    return;
+                  }
+                  // Try SKU match
+                  const skuMatch = products.find(
+                    (p) =>
+                      p.sku.toLowerCase() === barcodeInput.trim().toLowerCase(),
+                  );
+                  if (skuMatch) {
+                    addToCart(skuMatch);
+                    setBarcodeInput("");
+                    return;
+                  }
+                  // If search has results, add the first one
+                  const q = barcodeInput.toLowerCase();
+                  const searchMatch = products.find(
+                    (p) =>
+                      p.name.toLowerCase().includes(q) ||
+                      p.sku.toLowerCase().includes(q),
+                  );
+                  if (searchMatch) {
+                    addToCart(searchMatch);
+                    setBarcodeInput("");
+                  } else {
+                    toast.error("Product not found");
+                  }
+                }}
               >
-                <Search className="mr-2 size-4" />
-                Browse
-              </Button>
-            </form>
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                  <Input
+                    placeholder="Scan barcode, search product name, or enter SKU..."
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    className="h-11 pl-10 text-sm"
+                    autoFocus
+                  />
+                </div>
+              </form>
+
+              {/* Search results dropdown */}
+              {barcodeInput.trim().length >= 2 && (
+                <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-[280px] overflow-y-auto rounded-lg border bg-background shadow-lg">
+                  {(() => {
+                    const q = barcodeInput.toLowerCase();
+                    const results = products.filter(
+                      (p) =>
+                        p.status === "active" &&
+                        (p.name.toLowerCase().includes(q) ||
+                          p.sku.toLowerCase().includes(q) ||
+                          p.barcode?.includes(barcodeInput) ||
+                          p.category.toLowerCase().includes(q)),
+                    );
+                    if (results.length === 0) {
+                      return (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No products found
+                        </div>
+                      );
+                    }
+                    return results.slice(0, 8).map((product) => (
+                      <button
+                        key={product.id}
+                        className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => {
+                          addToCart(product);
+                          setBarcodeInput("");
+                        }}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">
+                            {product.name}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            SKU: {product.sku}
+                            {product.category
+                              ? ` · ${product.category}`
+                              : ""}
+                          </p>
+                        </div>
+                        <div className="ml-4 shrink-0 text-right">
+                          <p className="font-[tabular-nums] text-sm font-semibold">
+                            ${product.basePrice.toFixed(2)}
+                          </p>
+                          <p
+                            className={cn(
+                              "text-[10px] font-medium",
+                              (product.stock ?? 0) <=
+                                (product.minStock ?? 5)
+                                ? "text-red-600"
+                                : "text-emerald-600",
+                            )}
+                          >
+                            {product.stock ?? 0} in stock
+                          </p>
+                        </div>
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
