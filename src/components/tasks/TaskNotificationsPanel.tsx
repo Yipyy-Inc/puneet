@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   getAllTaskNotifications,
   type TaskNotificationPriority,
@@ -64,6 +65,7 @@ function fmtRelative(iso: string) {
 }
 
 export function TaskNotificationsPanel() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const notifications = useMemo(() => getAllTaskNotifications(), []);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -143,9 +145,16 @@ export function TaskNotificationsPanel() {
                   <div
                     key={notif.id}
                     className={cn(
-                      "group hover:bg-muted/30 relative flex gap-3 px-4 py-3 transition-colors",
+                      "group hover:bg-muted/30 relative flex cursor-pointer gap-3 px-4 py-3 transition-colors",
                       notif.priority === "critical" && "bg-red-50/50",
                     )}
+                    onClick={() => {
+                      const url = notif.taskId
+                        ? `/facility/dashboard/tasks?taskId=${notif.taskId}`
+                        : (notif.actionUrl ?? "/facility/dashboard/tasks");
+                      router.push(url);
+                      setOpen(false);
+                    }}
                   >
                     <div
                       className={cn(
@@ -173,7 +182,10 @@ export function TaskNotificationsPanel() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleDismiss(notif.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismiss(notif.id);
+                      }}
                       className="text-muted-foreground/40 hover:text-muted-foreground absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <X className="size-3" />
