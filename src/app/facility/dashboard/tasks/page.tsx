@@ -364,11 +364,13 @@ export default function TaskManagementPage() {
 
       {/* Controls */}
       <Card className="border-border/50">
-        <CardContent className="flex flex-wrap items-center gap-4 px-4 py-2.5">
+        <CardContent className="flex flex-wrap items-center gap-4 px-4 py-3">
           {/* Staff filter */}
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">Show:</span>
-            <div className="bg-muted flex rounded-full p-0.5">
+            <span className="text-muted-foreground text-[11px] font-medium">
+              Show:
+            </span>
+            <div className="flex gap-1">
               {(
                 [
                   { key: "mine", label: "My Tasks" },
@@ -379,10 +381,10 @@ export default function TaskManagementPage() {
                   key={opt.key}
                   onClick={() => setStaffFilter(opt.key)}
                   className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium transition-all",
+                    "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
                     staffFilter === opt.key
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                   )}
                 >
                   {opt.label}
@@ -395,17 +397,19 @@ export default function TaskManagementPage() {
 
           {/* View mode */}
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">View:</span>
-            <div className="bg-muted flex rounded-full p-0.5">
+            <span className="text-muted-foreground text-[11px] font-medium">
+              View:
+            </span>
+            <div className="flex gap-1">
               {(["time", "staff", "pet"] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
                   className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium capitalize transition-all",
+                    "rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-all",
                     viewMode === mode
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground",
                   )}
                 >
                   By {mode}
@@ -418,9 +422,11 @@ export default function TaskManagementPage() {
 
           {/* Status filter */}
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">Status:</span>
+            <span className="text-muted-foreground text-[11px] font-medium">
+              Status:
+            </span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px] rounded-full text-xs">
+              <SelectTrigger className="h-8 w-[130px] rounded-lg text-xs">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
