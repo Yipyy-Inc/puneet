@@ -210,19 +210,25 @@ export default function TaskManagementPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 p-5 md:p-7">
+      {/* Header + Date Navigation */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Task Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Task Management</h1>
           <p className="text-muted-foreground mt-0.5 text-sm">
-            Track and manage all care tasks across bookings
+            {fmtDate(today)}
+            {totalTasks > 0 && (
+              <span className="ml-1.5">
+                · {totalTasks} task{totalTasks !== 1 ? "s" : ""}
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="size-8 rounded-lg"
             onClick={() => setDateOffset((p) => p - 1)}
           >
             <ChevronLeft className="size-4" />
@@ -230,27 +236,28 @@ export default function TaskManagementPage() {
           <Button
             variant={dateOffset === 0 ? "default" : "outline"}
             size="sm"
+            className="h-8 rounded-lg px-3 text-xs"
             onClick={() => setDateOffset(0)}
           >
             Today
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
+            className="size-8 rounded-lg"
             onClick={() => setDateOffset((p) => p + 1)}
           >
             <ChevronRight className="size-4" />
           </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="ml-1 gap-1.5">
-                <CalendarDays className="size-4" />
-                {fmtDate(today)}
-                {totalTasks > 0 && (
-                  <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
-                    {totalTasks} task{totalTasks !== 1 ? "s" : ""}
-                  </span>
-                )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-1 h-8 gap-1.5 rounded-lg text-xs"
+              >
+                <CalendarDays className="size-3.5" />
+                Pick Date
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -276,7 +283,6 @@ export default function TaskManagementPage() {
                     <span className="bg-primary mr-1 inline-block size-1.5 rounded-full" />
                     {datesWithTasks.size} day
                     {datesWithTasks.size !== 1 ? "s" : ""} with active tasks
-                    this month
                   </p>
                 </div>
               )}
@@ -286,7 +292,7 @@ export default function TaskManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <ClickableStatCard
           title="Total Tasks"
           value={totalTasks}
@@ -357,8 +363,8 @@ export default function TaskManagementPage() {
       )}
 
       {/* Controls */}
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-4 py-3">
+      <Card className="border-border/50">
+        <CardContent className="flex flex-wrap items-center gap-4 px-4 py-2.5">
           {/* Staff filter */}
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">Show:</span>
@@ -444,35 +450,38 @@ export default function TaskManagementPage() {
               : [];
 
           return (
-            <Card key={groupKey} className="overflow-hidden">
-              <CardHeader className="bg-muted/30 pb-3">
+            <Card key={groupKey} className="border-border/50 overflow-hidden">
+              <CardHeader className="bg-muted/20 px-5 pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-sm">
+                  <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
                     {viewMode === "time" ? (
-                      <ShiftIcon className="size-4" />
+                      <ShiftIcon className="size-3.5" />
                     ) : viewMode === "staff" ? (
-                      <User className="size-4" />
+                      <User className="size-3.5" />
                     ) : (
-                      <Sparkles className="size-4" />
+                      <Sparkles className="size-3.5" />
                     )}
-                    <span className="capitalize">
-                      {viewMode === "time" && shiftDef
-                        ? `${shiftDef.name} (${fmtTime(shiftDef.startTime)} – ${fmtTime(shiftDef.endTime)})`
-                        : groupKey}
-                    </span>
+                    {viewMode === "time" && shiftDef
+                      ? `${shiftDef.name} (${fmtTime(shiftDef.startTime)} – ${fmtTime(shiftDef.endTime)})`
+                      : groupKey}
                   </CardTitle>
                   <div className="flex items-center gap-3">
                     {onShift.length > 0 && (
-                      <span className="text-muted-foreground text-xs">
-                        Staff: {onShift.map((s) => s.staffName).join(", ")}
+                      <span className="text-muted-foreground text-[11px]">
+                        {onShift.map((s) => s.staffName).join(", ")}
                       </span>
                     )}
-                    <span className="text-muted-foreground text-xs">
-                      {groupDone} of {tasks.length} done
+                    <span className="text-muted-foreground text-[11px]">
+                      {groupDone}/{tasks.length}
                     </span>
-                    <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
+                    <div className="bg-muted h-1 w-14 overflow-hidden rounded-full">
                       <div
-                        className="bg-primary h-full rounded-full transition-all"
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          groupDone === tasks.length
+                            ? "bg-emerald-500"
+                            : "bg-primary",
+                        )}
                         style={{
                           width: `${tasks.length > 0 ? (groupDone / tasks.length) * 100 : 0}%`,
                         }}
@@ -481,7 +490,7 @@ export default function TaskManagementPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="divide-y pt-0">
+              <CardContent className="divide-y px-5 pt-0">
                 {tasks.map((task) => {
                   const CatIcon = categoryIcons[task.category] ?? Sparkles;
                   return (
