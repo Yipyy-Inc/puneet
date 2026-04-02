@@ -82,6 +82,11 @@ import { vaccinationRules, evaluationConfig } from "@/data/settings";
 import { getFormById } from "@/data/forms";
 import { getSubmissionsForPet } from "@/data/form-submissions";
 import { Syringe } from "lucide-react";
+import {
+  CareInstructionsStep,
+  type CustomerFeedingEntry,
+  type CustomerMedicationEntry,
+} from "@/components/customer/CareInstructionsStep";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -209,6 +214,12 @@ export function CustomerBookingModal({
     useState({ start: "09:00", end: "17:00" });
   const [_recurringAutoPay, _setRecurringAutoPay] = useState(false);
   const [specialRequests, setSpecialRequests] = useState("");
+  const [feedingEntries, setFeedingEntries] = useState<CustomerFeedingEntry[]>(
+    [],
+  );
+  const [medicationEntries, setMedicationEntries] = useState<
+    CustomerMedicationEntry[]
+  >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
   const [customTipAmount, setCustomTipAmount] = useState("");
@@ -384,8 +395,8 @@ export function CustomerBookingModal({
   // Number of Details sub-steps: daycare 2 (Schedule, Add-ons); boarding 3 (Schedule, Room Type, Add-ons); grooming 3 (Schedule, Package, Add-ons)
   // Custom modules: 2 (Schedule, Service Details — duration/resource/capacity)
   const detailsSubStepCount = useMemo(() => {
-    if (selectedService === "daycare") return 2;
-    if (selectedService === "boarding") return 3;
+    if (selectedService === "daycare") return 3; // schedule, add-ons, care instructions
+    if (selectedService === "boarding") return 4; // schedule, room, add-ons, care instructions
     if (selectedService === "grooming") return 3;
     if (selectedCustomModule) return 2;
     return 1;
@@ -913,6 +924,8 @@ export function CustomerBookingModal({
       setExtraServices([]);
       setAddOnApplyTo({});
       setSpecialRequests("");
+      setFeedingEntries([]);
+      setMedicationEntries([]);
       setIsRecurring(false);
       setRecurringFrequency("monthly");
       setRecurringEndDate("");
@@ -1129,6 +1142,8 @@ export function CustomerBookingModal({
       setExtraServices([]);
       setAddOnApplyTo({});
       setSpecialRequests("");
+      setFeedingEntries([]);
+      setMedicationEntries([]);
       setIsRecurring(false);
       setRecurringFrequency("monthly");
       setRecurringEndDate("");
@@ -2913,6 +2928,20 @@ export function CustomerBookingModal({
                       </div>
                     )}
 
+                  {/* Care Instructions sub-step (Daycare: 2, Boarding: 3) */}
+                  {((currentDetailsSubStep === 2 &&
+                    selectedService === "daycare") ||
+                    (currentDetailsSubStep === 3 &&
+                      selectedService === "boarding")) && (
+                    <CareInstructionsStep
+                      feedingEntries={feedingEntries}
+                      onFeedingChange={setFeedingEntries}
+                      medicationEntries={medicationEntries}
+                      onMedicationChange={setMedicationEntries}
+                      petNames={selectedPets.map((p) => p.name)}
+                    />
+                  )}
+
                   {/* Sub-step 1 (Grooming): Package */}
                   {currentDetailsSubStep === 1 &&
                     selectedService === "grooming" && (
@@ -3588,16 +3617,46 @@ export function CustomerBookingModal({
                           </div>
                         )}
 
-                      {/* Feeding/medication summary — placeholder when customer flow collects these later */}
+                      {/* Feeding & Medication summary */}
                       {(selectedService === "daycare" ||
                         selectedService === "boarding") && (
                         <div className="text-sm">
-                          <p className="text-muted-foreground">
-                            Feeding / medication
+                          <p className="text-muted-foreground font-medium">
+                            Care Instructions
                           </p>
-                          <p className="text-muted-foreground italic">
-                            None added
-                          </p>
+                          {feedingEntries.length === 0 &&
+                          medicationEntries.length === 0 ? (
+                            <p className="text-muted-foreground italic">
+                              None added
+                            </p>
+                          ) : (
+                            <div className="mt-1 space-y-1">
+                              {feedingEntries.length > 0 && (
+                                <p className="text-xs">
+                                  <span className="font-medium">Feeding:</span>{" "}
+                                  {feedingEntries
+                                    .map(
+                                      (f) =>
+                                        `${f.label} at ${f.time}${f.amount ? ` (${f.amount})` : ""}`,
+                                    )
+                                    .join(", ")}
+                                </p>
+                              )}
+                              {medicationEntries.length > 0 && (
+                                <p className="text-xs">
+                                  <span className="font-medium">
+                                    Medications:
+                                  </span>{" "}
+                                  {medicationEntries
+                                    .map(
+                                      (m) =>
+                                        `${m.name || "Unnamed"} ${m.dosage ? `(${m.dosage})` : ""} — ${m.frequency}${m.isCritical ? " ⚠" : ""}`,
+                                    )
+                                    .join(", ")}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
