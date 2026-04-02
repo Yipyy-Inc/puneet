@@ -130,6 +130,20 @@ export default function TaskManagementPage() {
   // Mock: current logged-in staff (would come from auth in production)
   const currentStaffName = "Jessica M.";
 
+  // Compute dates with tasks for calendar dots
+  const datesWithTasks = useMemo(() => {
+    const dates = new Set<string>();
+    // Check a range of dates around today for tasks
+    for (let i = -15; i <= 15; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const ds = d.toISOString().slice(0, 10);
+      const tasks = generateAllTasksForDate(ds);
+      if (tasks.length > 0) dates.add(ds);
+    }
+    return dates;
+  }, []);
+
   const today = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + dateOffset);
@@ -232,6 +246,11 @@ export default function TaskManagementPage() {
               <Button variant="ghost" size="sm" className="ml-1 gap-1.5">
                 <CalendarDays className="size-4" />
                 {fmtDate(today)}
+                {totalTasks > 0 && (
+                  <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
+                    {totalTasks} task{totalTasks !== 1 ? "s" : ""}
+                  </span>
+                )}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -251,6 +270,16 @@ export default function TaskManagementPage() {
                   }
                 }}
               />
+              {datesWithTasks.size > 0 && (
+                <div className="border-t px-3 py-2">
+                  <p className="text-muted-foreground text-[10px]">
+                    <span className="bg-primary mr-1 inline-block size-1.5 rounded-full" />
+                    {datesWithTasks.size} day
+                    {datesWithTasks.size !== 1 ? "s" : ""} with active tasks
+                    this month
+                  </p>
+                </div>
+              )}
             </PopoverContent>
           </Popover>
         </div>
@@ -545,18 +574,44 @@ export default function TaskManagementPage() {
                         )}
                       </div>
 
-                      {/* Action */}
-                      {task.status === "pending" ||
-                      task.status === "overdue" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 shrink-0 text-[11px]"
-                          onClick={() => setCompleteTask(task)}
-                        >
-                          Complete
-                        </Button>
-                      ) : null}
+                      {/* Actions */}
+                      {(task.status === "pending" ||
+                        task.status === "overdue") && (
+                        <div className="flex shrink-0 items-center gap-1">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 text-[10px]"
+                              >
+                                <CalendarDays className="size-3" />
+                                Reschedule
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                              <CalendarWidget
+                                mode="single"
+                                onSelect={(date) => {
+                                  if (date) {
+                                    toast.success(
+                                      `${task.name} rescheduled to ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+                                    );
+                                  }
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[11px]"
+                            onClick={() => setCompleteTask(task)}
+                          >
+                            Complete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
