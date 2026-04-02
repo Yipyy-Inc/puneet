@@ -269,7 +269,7 @@ export function getMockPreviewData(): VariableDataContext {
       trainerName: "Mike Torres",
     },
     payment: {
-      invoiceId: "INV-2024-0042",
+      invoiceId: "10042",
       invoiceTotal: "$150.00",
       amountDue: "$75.00",
       amountPaid: "$75.00",

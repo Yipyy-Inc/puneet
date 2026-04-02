@@ -360,7 +360,7 @@ export default function BookingDetailPage({
                   Invoice
                 </span>
                 <span className="text-muted-foreground font-mono text-xs">
-                  {inv.id}
+                  #{inv.id}
                 </span>
               </div>
 

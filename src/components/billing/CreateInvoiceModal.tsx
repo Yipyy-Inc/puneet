@@ -128,10 +128,10 @@ export function CreateInvoiceModal({
     }
 
     const invoiceId = crypto.randomUUID();
-    const invoiceNum = invoiceId.substring(0, 4).toUpperCase();
+    const seqNum = parseInt(invoiceId.substring(0, 4), 16) % 89999;
     const invoice = {
       id: `inv-${invoiceId}`,
-      invoiceNumber: `INV-${new Date().getFullYear()}-${invoiceNum}`,
+      invoiceNumber: String(10001 + seqNum),
       facilityId,
       clientId: selectedClient,
       bookingId,

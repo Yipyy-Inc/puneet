@@ -214,7 +214,7 @@ export const payments: Payment[] = [
 export const invoices: Invoice[] = [
   {
     id: "inv-001",
-    invoiceNumber: "INV-2024-001",
+    invoiceNumber: "10023",
     facilityId: 11,
     clientId: 15,
     bookingId: 1,
@@ -249,7 +249,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-002",
-    invoiceNumber: "INV-2024-002",
+    invoiceNumber: "10024",
     facilityId: 11,
     clientId: 16,
     bookingId: 2,
@@ -284,7 +284,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-003",
-    invoiceNumber: "INV-2024-003",
+    invoiceNumber: "10025",
     facilityId: 11,
     clientId: 28,
     status: "overdue",
@@ -321,7 +321,7 @@ export const invoices: Invoice[] = [
   // Additional sample invoices for customer 15 (Alice) to test dashboard
   {
     id: "inv-010",
-    invoiceNumber: "INV-2026-010",
+    invoiceNumber: "10026",
     facilityId: 1,
     clientId: 15,
     bookingId: 3,
@@ -362,7 +362,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-011",
-    invoiceNumber: "INV-2026-011",
+    invoiceNumber: "10027",
     facilityId: 1,
     clientId: 15,
     bookingId: 5,
@@ -397,7 +397,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-012",
-    invoiceNumber: "INV-2026-012",
+    invoiceNumber: "10028",
     facilityId: 1,
     clientId: 15,
     bookingId: 6,
@@ -432,7 +432,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-004",
-    invoiceNumber: "INV-2024-004",
+    invoiceNumber: "10029",
     facilityId: 11,
     clientId: 29,
     status: "sent",
@@ -474,7 +474,7 @@ export const invoices: Invoice[] = [
   },
   {
     id: "inv-005",
-    invoiceNumber: "INV-2024-005",
+    invoiceNumber: "10030",
     facilityId: 11,
     clientId: 15,
     status: "paid",

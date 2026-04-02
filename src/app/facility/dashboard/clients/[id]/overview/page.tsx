@@ -653,7 +653,7 @@ export default function ClientOverviewPage({
           );
           return {
             bookingId: b.id,
-            invoiceId: b.invoice?.id ?? `INV-${b.id}`,
+            invoiceId: b.invoice?.id ?? String(10000 + b.id),
             service: b.service,
             date: b.startDate,
             petName: bPet?.name ?? "Pet",
