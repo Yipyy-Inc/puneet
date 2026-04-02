@@ -1176,7 +1176,7 @@ ${
           </div>
         </div>
 
-        <PageAuditTrail area="bookings" entityId={String(bookingId)} />
+        <PageAuditTrail area="bookings" />
 
         {/* QuickBooks Sync — owner/manager only, below Change History */}
         {(role === "owner" || role === "manager") && (
