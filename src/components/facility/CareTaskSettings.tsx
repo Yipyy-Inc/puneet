@@ -36,10 +36,7 @@ export function CareTaskSettings() {
       toast.error("This option already exists");
       return;
     }
-    setFeedingOptions((prev) => [
-      ...prev,
-      { value, label: newFeeding.trim() },
-    ]);
+    setFeedingOptions((prev) => [...prev, { value, label: newFeeding.trim() }]);
     setNewFeeding("");
     toast.success("Feeding option added");
   };
@@ -91,7 +88,7 @@ export function CareTaskSettings() {
             {feedingOptions.map((opt, idx) => (
               <div
                 key={opt.value}
-                className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"
+                className="bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
               >
                 <GripVertical className="text-muted-foreground/40 size-4 shrink-0" />
                 <Input
@@ -137,7 +134,7 @@ export function CareTaskSettings() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1 shrink-0"
+              className="h-8 shrink-0 gap-1"
               onClick={handleAddFeeding}
               disabled={!newFeeding.trim()}
             >
@@ -164,7 +161,7 @@ export function CareTaskSettings() {
             {medOptions.map((opt, idx) => (
               <div
                 key={opt.value}
-                className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"
+                className="bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
               >
                 <GripVertical className="text-muted-foreground/40 size-4 shrink-0" />
                 <Input
@@ -187,9 +184,7 @@ export function CareTaskSettings() {
                       toast.error("Must have at least one option");
                       return;
                     }
-                    setMedOptions((prev) =>
-                      prev.filter((_, i) => i !== idx),
-                    );
+                    setMedOptions((prev) => prev.filter((_, i) => i !== idx));
                   }}
                 >
                   <Trash2 className="size-3.5" />
@@ -210,7 +205,7 @@ export function CareTaskSettings() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1 shrink-0"
+              className="h-8 shrink-0 gap-1"
               onClick={handleAddMed}
               disabled={!newMed.trim()}
             >

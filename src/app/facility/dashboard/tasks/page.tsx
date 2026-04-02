@@ -291,7 +291,9 @@ export default function TaskManagementPage() {
           </button>
         </div>
         <span className="text-muted-foreground text-xs">
-          {staffFilter === "mine" ? `Showing ${currentStaffName}'s tasks` : "Showing all staff"}
+          {staffFilter === "mine"
+            ? `Showing ${currentStaffName}'s tasks`
+            : "Showing all staff"}
         </span>
       </div>
       <div className="flex items-center gap-3">

@@ -4,6 +4,18 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { facilities } from "@/data/facilities";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   ShoppingCart,
   Plus,
@@ -31,6 +43,8 @@ import {
   CheckCircle2,
   XCircle,
   RotateCcw,
+  Pause,
+  ChevronDown,
   Wallet,
   Gift,
 } from "lucide-react";
@@ -109,6 +123,7 @@ import { logPaymentAction } from "@/lib/payment-audit";
 
 interface CartItemWithId extends CartItem {
   id: string;
+  imageUrl?: string;
 }
 
 export default function POSPage() {
@@ -123,6 +138,9 @@ export default function POSPage() {
   const isManager = facilityRole === "manager" || facilityRole === "owner";
 
   const [cart, setCart] = useState<CartItemWithId[]>([]);
+  const [heldSales, setHeldSales] = useState<
+    { id: number; items: CartItemWithId[]; heldAt: string; label: string }[]
+  >([]);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -459,8 +477,20 @@ export default function POSPage() {
         discount: 0,
         discountType: "fixed",
         total: isVariant ? (item as ProductVariant).price : product.basePrice,
+        imageUrl: product.imageUrl,
       };
       setCart([...cart, newItem]);
+    }
+
+    // Low stock warning
+    const stock = isVariant ? (item as ProductVariant).stock : product.stock;
+    const minStock = isVariant
+      ? (item as ProductVariant).minStock
+      : product.minStock;
+    if (stock != null && minStock != null && stock <= minStock) {
+      toast.warning(`Low stock: ${product.name} — only ${stock} left`, {
+        duration: 4000,
+      });
     }
   };
 
@@ -1599,7 +1629,7 @@ export default function POSPage() {
 
               {/* Search results dropdown */}
               {barcodeInput.trim().length >= 2 && (
-                <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-[280px] overflow-y-auto rounded-lg border bg-background shadow-lg">
+                <div className="bg-background absolute top-full right-0 left-0 z-50 mt-1 max-h-[280px] overflow-y-auto rounded-lg border shadow-lg">
                   {(() => {
                     const q = barcodeInput.toLowerCase();
                     const results = products.filter(
@@ -1612,7 +1642,7 @@ export default function POSPage() {
                     );
                     if (results.length === 0) {
                       return (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
+                        <div className="text-muted-foreground p-4 text-center text-sm">
                           No products found
                         </div>
                       );
@@ -1620,21 +1650,17 @@ export default function POSPage() {
                     return results.slice(0, 8).map((product) => (
                       <button
                         key={product.id}
-                        className="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors"
                         onClick={() => {
                           addToCart(product);
                           setBarcodeInput("");
                         }}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">
-                            {product.name}
-                          </p>
+                          <p className="text-sm font-medium">{product.name}</p>
                           <p className="text-muted-foreground text-xs">
                             SKU: {product.sku}
-                            {product.category
-                              ? ` · ${product.category}`
-                              : ""}
+                            {product.category ? ` · ${product.category}` : ""}
                           </p>
                         </div>
                         <div className="ml-4 shrink-0 text-right">
@@ -1644,8 +1670,7 @@ export default function POSPage() {
                           <p
                             className={cn(
                               "text-[10px] font-medium",
-                              (product.stock ?? 0) <=
-                                (product.minStock ?? 5)
+                              (product.stock ?? 0) <= (product.minStock ?? 5)
                                 ? "text-red-600"
                                 : "text-emerald-600",
                             )}
@@ -1694,47 +1719,169 @@ export default function POSPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Recent Transactions */}
+        <Collapsible>
+          <CollapsibleTrigger className="hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border px-4 py-2.5 transition-colors">
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Receipt className="text-muted-foreground size-4" />
+              Recent Sales
+              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-semibold">
+                5
+              </span>
+            </span>
+            <ChevronDown className="text-muted-foreground size-4" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="space-y-1.5">
+              {[
+                {
+                  id: "TXN-001",
+                  time: "2:30 PM",
+                  items: 3,
+                  total: 87.45,
+                  method: "Card",
+                },
+                {
+                  id: "TXN-002",
+                  time: "1:15 PM",
+                  items: 1,
+                  total: 24.99,
+                  method: "Cash",
+                },
+                {
+                  id: "TXN-003",
+                  time: "11:40 AM",
+                  items: 5,
+                  total: 142.5,
+                  method: "Card",
+                },
+                {
+                  id: "TXN-004",
+                  time: "10:20 AM",
+                  items: 2,
+                  total: 36.98,
+                  method: "E-Transfer",
+                },
+                {
+                  id: "TXN-005",
+                  time: "9:05 AM",
+                  items: 1,
+                  total: 54.99,
+                  method: "Card",
+                },
+              ].map((txn) => (
+                <div
+                  key={txn.id}
+                  className="bg-background flex items-center justify-between rounded-lg border px-3 py-2"
+                >
+                  <div>
+                    <p className="text-xs font-medium">{txn.id}</p>
+                    <p className="text-muted-foreground text-[10px]">
+                      {txn.time} · {txn.items} item{txn.items !== 1 ? "s" : ""}{" "}
+                      · {txn.method}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-[tabular-nums] text-sm font-semibold">
+                      ${txn.total.toFixed(2)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() =>
+                        toast.success(`Reprinting receipt ${txn.id}`)
+                      }
+                    >
+                      <Printer className="size-3" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
-      {/* Right Side - Cart */}
+      {/* Right Side - Cart (Invoice Panel Style) */}
       <div className="space-y-4">
-        <Card className="flex max-h-[calc(100vh-12rem)] flex-col">
-          <CardHeader className="pb-2">
+        <Card className="flex max-h-[calc(100vh-12rem)] flex-col overflow-hidden">
+          {/* Header */}
+          <CardHeader className="bg-muted/30 pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="size-5" />
+              <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
+                <ShoppingCart className="size-3.5" />
                 Cart
+                {cart.length > 0 && (
+                  <span className="text-muted-foreground font-normal normal-case">
+                    — {cart.reduce((s, i) => s + i.quantity, 0)} item
+                    {cart.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""}
+                  </span>
+                )}
               </CardTitle>
-              {cart.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCart([])}
-                  className="text-destructive"
-                >
-                  Clear
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {heldSales.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-[11px]"
+                    onClick={() => {
+                      const sale = heldSales[0];
+                      setCart(sale.items);
+                      setHeldSales((prev) =>
+                        prev.filter((s) => s.id !== sale.id),
+                      );
+                      toast.success(`Resumed: ${sale.label}`);
+                    }}
+                  >
+                    <RotateCcw className="size-3" />
+                    Resume ({heldSales.length})
+                  </Button>
+                )}
+                {cart.length > 0 && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1 text-[11px]"
+                      onClick={() => {
+                        setHeldSales((prev) => [
+                          ...prev,
+                          {
+                            id: Date.now(),
+                            items: [...cart],
+                            heldAt: new Date().toISOString(),
+                            label: `${cart.length} item${cart.length !== 1 ? "s" : ""} · $${cart.reduce((s, i) => s + i.total, 0).toFixed(2)}`,
+                          },
+                        ]);
+                        setCart([]);
+                        toast.success("Sale parked — start a new one");
+                      }}
+                    >
+                      <Pause className="size-3" />
+                      Hold
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCart([])}
+                      className="text-destructive h-7 text-[11px]"
+                    >
+                      Clear
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {/* Customer / Pet / Booking Link - Links sale to client file, pet, and/or booking */}
-            <div className="bg-muted/30 mb-3 shrink-0 space-y-3 rounded-lg border p-3">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5 text-xs font-medium">
-                  <LinkIcon className="size-3.5" />
-                  Attach to Account / Pet / Booking
-                </Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setIsLinkModalOpen(true)}
-                >
-                  <Search className="mr-1 size-3" />
-                  Search
-                </Button>
-              </div>
+          <CardContent className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-4">
+            {/* Customer Link */}
+            <div className="bg-muted/10 mb-4 shrink-0 space-y-2 rounded-lg border border-dashed p-3">
+              <Label className="flex items-center gap-1.5 text-xs font-medium">
+                <LinkIcon className="size-3.5" />
+                Customer
+              </Label>
 
               {/* Selected Customer */}
               {selectedClientId && selectedClientId !== "__walk_in__" ? (
@@ -1892,15 +2039,15 @@ export default function POSPage() {
                   )}
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-full text-xs"
-                  onClick={() => setIsLinkModalOpen(true)}
-                >
-                  <LinkIcon className="mr-1 size-3" />
-                  Link to Customer / Pet / Booking
-                </Button>
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                  <Input
+                    placeholder="Search customer by name or email..."
+                    className="h-8 pl-8 text-xs"
+                    onClick={() => setIsLinkModalOpen(true)}
+                    readOnly
+                  />
+                </div>
               )}
 
               {selectedClientId && selectedClientId !== "__walk_in__" && (
@@ -1912,24 +2059,45 @@ export default function POSPage() {
 
             <Separator className="mb-3 shrink-0" />
 
-            {/* Cart Items - Scrollable area */}
+            {/* Line Items */}
             {cart.length === 0 ? (
-              <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
-                <ShoppingCart className="mb-2 size-12" />
-                <p>Cart is empty</p>
-                <p className="text-sm">Scan a barcode to add items</p>
+              <div className="flex flex-col items-center justify-center py-10">
+                <ShoppingCart className="text-muted-foreground/20 size-10" />
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Cart is empty
+                </p>
+                <p className="text-muted-foreground/60 text-xs">
+                  Scan a barcode or search to add items
+                </p>
               </div>
             ) : (
-              <ScrollArea className="max-h-[400px] min-h-[200px] flex-1">
-                <div className="space-y-2 pr-2">
+              <ScrollArea className="min-h-[150px] flex-1">
+                <div className="divide-y pr-2">
                   {cart.map((item) => (
                     <div
                       key={item.id}
-                      className="bg-card flex items-start gap-2 rounded-lg border p-2"
+                      className="group flex items-start gap-3 py-3 first:pt-0"
                     >
+                      {/* Thumbnail */}
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.productName}
+                          className="size-10 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-lg">
+                          <ShoppingCart className="text-muted-foreground/30 size-4" />
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
+                        <p className="text-sm leading-tight font-medium">
                           {item.productName}
+                          {item.quantity > 1 && (
+                            <span className="text-muted-foreground ml-1 font-normal">
+                              ×{item.quantity}
+                            </span>
+                          )}
                         </p>
                         {item.variantName && (
                           <p className="text-muted-foreground text-xs">
@@ -1940,9 +2108,9 @@ export default function POSPage() {
                           ${item.unitPrice.toFixed(2)} each
                         </p>
                         {item.discount > 0 && (
-                          <Badge variant="secondary" className="mt-1 text-xs">
+                          <span className="text-xs font-medium text-emerald-600">
                             -${item.discount.toFixed(2)} discount
-                          </Badge>
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
@@ -1956,9 +2124,19 @@ export default function POSPage() {
                         >
                           <Minus className="size-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm">
-                          {item.quantity}
-                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(val) && val > 0) {
+                              updateQuantity(item.id, val);
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          className="focus:border-primary h-6 w-8 rounded border bg-transparent text-center text-sm font-medium focus:outline-none"
+                        />
                         <Button
                           variant="outline"
                           size="icon"
@@ -2031,24 +2209,72 @@ export default function POSPage() {
               </ScrollArea>
             )}
 
-            {/* Cart Summary - Always visible at bottom */}
-            <div className="mt-3 shrink-0 space-y-2 border-t pt-3">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+            {/* Invoice Summary */}
+            <div className="mt-4 shrink-0 space-y-1.5 border-t pt-3">
+              <div className="flex justify-between py-0.5 text-sm">
+                <span className="font-semibold">Subtotal</span>
+                <span className="font-[tabular-nums] font-semibold">
+                  ${subtotal.toFixed(2)}
+                </span>
               </div>
               {discountTotal > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
+                <div className="flex justify-between py-0.5 text-sm text-emerald-600">
                   <span>Discount</span>
-                  <span>-${discountTotal.toFixed(2)}</span>
+                  <span className="font-[tabular-nums]">
+                    -${discountTotal.toFixed(2)}
+                  </span>
                 </div>
               )}
-              {taxTotal > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Tax</span>
-                  <span>${taxTotal.toFixed(2)}</span>
-                </div>
-              )}
+              {/* Separate tax lines from facility config */}
+              {(() => {
+                const facility = facilities.find(
+                  (f: { id: number }) => f.id === 11,
+                );
+                const tc = facility?.taxConfig;
+                if (tc && tc.showTaxesSeparately && tc.taxes) {
+                  const taxableAmount = subtotal - discountTotal;
+                  return (
+                    tc.taxes as {
+                      name: string;
+                      rate: number;
+                      enabled: boolean;
+                    }[]
+                  )
+                    .filter((t) => t.enabled)
+                    .map((t, idx) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between py-0.5 text-sm"
+                      >
+                        <span className="text-muted-foreground">
+                          {t.name} (
+                          {(t.rate * 100).toFixed(
+                            (t.rate * 100) % 1 === 0 ? 0 : 3,
+                          )}
+                          %)
+                        </span>
+                        <span className="font-[tabular-nums]">
+                          $
+                          {(
+                            Math.round(taxableAmount * t.rate * 100) / 100
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                    ));
+                }
+                // Fallback: single tax line
+                if (taxTotal > 0) {
+                  return (
+                    <div className="flex justify-between py-0.5 text-sm">
+                      <span className="text-muted-foreground">Tax</span>
+                      <span className="font-[tabular-nums]">
+                        ${taxTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
               {/* Tips Section - Only show if tips are enabled for this service type */}
               {tipsConfig.enabled && subtotal - discountTotal > 0 && (
@@ -2118,18 +2344,212 @@ export default function POSPage() {
                 </>
               )}
 
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>${grandTotal.toFixed(2)}</span>
+              <Separator className="my-2" />
+              <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
+                <span className="text-base font-bold">Total</span>
+                <span className="font-[tabular-nums] text-base font-bold">
+                  ${grandTotal.toFixed(2)}
+                </span>
               </div>
 
-              <div className="space-y-2 pt-2">
-                {/* Pay Now Options */}
+              {/* Available Benefits — only when customer linked */}
+              {selectedClientId &&
+                selectedClientId !== "__walk_in__" &&
+                cart.length > 0 && (
+                  <div className="mt-3 space-y-1.5">
+                    <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+                      Available Benefits
+                    </p>
+                    <button
+                      onClick={() =>
+                        toast.success(
+                          "Package credit applied — deducted from balance",
+                        )
+                      }
+                      className="flex w-full items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-left transition-all hover:bg-emerald-100"
+                    >
+                      <div className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-emerald-800">
+                          Package Credit
+                        </p>
+                        <p className="text-[10px] text-emerald-600">
+                          Client may have eligible package credits
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-medium text-emerald-700">
+                        Apply →
+                      </span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        toast.success(
+                          "Membership discount auto-applied — 15% off",
+                        )
+                      }
+                      className="flex w-full items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-2 text-left transition-all hover:bg-blue-100"
+                    >
+                      <div className="size-1.5 shrink-0 rounded-full bg-blue-500" />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-blue-800">
+                          Membership Discount
+                        </p>
+                        <p className="text-[10px] text-blue-600">
+                          Check for active membership benefits
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-medium text-blue-700">
+                        Apply →
+                      </span>
+                    </button>
+                    <p className="text-muted-foreground text-[9px] italic">
+                      Order: Package → Membership → Discount → Store Credit →
+                      Tax
+                    </p>
+                  </div>
+                )}
+
+              {/* Action buttons — same as booking invoice panel */}
+              {cart.length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-[10px]"
+                          >
+                            <Percent className="size-3" />
+                            Discount
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          side="top"
+                          align="start"
+                          className="w-52"
+                        >
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium">
+                              Apply Discount
+                            </p>
+                            <Input
+                              placeholder="Amount or %"
+                              className="h-7 text-xs"
+                            />
+                            <Input
+                              placeholder="Reason (e.g. Loyalty 10%)"
+                              className="h-7 text-xs"
+                            />
+                            <Button
+                              size="sm"
+                              className="h-7 w-full text-xs"
+                              onClick={() => toast.success("Discount applied")}
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1 text-[10px]"
+                        onClick={() => toast.success("Fee added to cart")}
+                      >
+                        <DollarSign className="size-3" />
+                        Add Fee
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-[10px]"
+                          >
+                            <DollarSign className="size-3" />
+                            Add Tip
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          side="top"
+                          align="start"
+                          className="w-52"
+                        >
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium">Add Tip</p>
+                            <div className="flex gap-1.5">
+                              {[5, 10, 15, 20].map((amt) => (
+                                <button
+                                  key={amt}
+                                  onClick={() =>
+                                    toast.success(`$${amt} tip added`)
+                                  }
+                                  className="hover:bg-foreground hover:text-background flex-1 rounded-md border px-2 py-1.5 text-center text-xs font-medium transition-all"
+                                >
+                                  ${amt}
+                                </button>
+                              ))}
+                            </div>
+                            <Input
+                              placeholder="Custom amount"
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              className="h-7 text-xs"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const val = (e.target as HTMLInputElement)
+                                    .value;
+                                  if (val) toast.success(`$${val} tip added`);
+                                }
+                              }}
+                            />
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {selectedClientId &&
+                        selectedClientId !== "__walk_in__" && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-[10px]"
+                              onClick={() =>
+                                toast.success("Store credit applied")
+                              }
+                            >
+                              Use Store Credit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-[10px]"
+                              onClick={() =>
+                                toast.success(
+                                  "Membership discount applied — 15% off",
+                                )
+                              }
+                            >
+                              Redeem Membership
+                            </Button>
+                          </>
+                        )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-3 pt-3">
+                {/* Payment Methods */}
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground text-xs font-medium">
-                    Pay Now
-                  </Label>
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                    Payment Method
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
@@ -2186,6 +2606,53 @@ export default function POSPage() {
                     <SplitSquareHorizontal className="size-4" />
                     Split Payment
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    disabled={cart.length === 0}
+                    onClick={() => {
+                      const facility = facilities.find(
+                        (f: { id: number }) => f.id === 11,
+                      );
+                      const w = window.open(
+                        "",
+                        "_blank",
+                        "width=500,height=600",
+                      );
+                      if (!w) return;
+                      const itemsHtml = cart
+                        .map(
+                          (item) =>
+                            `<div class="row"><span>${item.productName}${item.quantity > 1 ? ` × ${item.quantity}` : ""}</span><span>$${item.total.toFixed(2)}</span></div>`,
+                        )
+                        .join("");
+                      w.document
+                        .write(`<!DOCTYPE html><html><head><title>Receipt</title>
+<style>body{font-family:-apple-system,sans-serif;padding:40px;color:#111;max-width:420px;margin:0 auto}
+.row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #eee}
+.row.total{border-top:2px solid #111;border-bottom:none;font-weight:700;font-size:15px;padding-top:10px}
+.row.sub{color:#666}
+.badge{background:#ecfdf5;color:#059669;padding:8px 16px;border-radius:8px;text-align:center;margin-top:16px;font-weight:600;font-size:13px}
+.footer{margin-top:24px;text-align:center;font-size:10px;color:#999}
+@media print{body{padding:20px}}</style></head><body>
+${invoiceHeaderHtml(facility)}
+<h1 style="font-size:18px;margin:0">Retail Receipt</h1>
+<p style="font-size:12px;color:#666;margin:4px 0 20px">${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+${itemsHtml}
+<div class="row sub"><span>Subtotal</span><span>$${subtotal.toFixed(2)}</span></div>
+${discountTotal > 0 ? `<div class="row sub"><span>Discount</span><span>-$${discountTotal.toFixed(2)}</span></div>` : ""}
+${taxTotal > 0 ? `<div class="row sub"><span>Tax</span><span>$${taxTotal.toFixed(2)}</span></div>` : ""}
+${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calculatedTipAmount.toFixed(2)}</span></div>` : ""}
+<div class="row total"><span>Total</span><span>$${grandTotal.toFixed(2)}</span></div>
+<div class="footer">Thank you for your purchase!<br>${facility?.name ?? ""}</div>
+<script>window.print()</script>
+</body></html>`);
+                      w.document.close();
+                    }}
+                  >
+                    <Printer className="size-4" />
+                    Print Receipt
+                  </Button>
                 </div>
 
                 {/* Charge Options - Only show if customer is selected */}
@@ -2193,9 +2660,9 @@ export default function POSPage() {
                   <>
                     <Separator />
                     <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-medium">
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                         Charge Options
-                      </Label>
+                      </p>
 
                       {/* Add to Booking */}
                       {bookableBookings.length > 0 && (

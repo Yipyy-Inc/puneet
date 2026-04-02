@@ -364,8 +364,8 @@ export function BelongingsSection({
                             </div>
                           </>
                         ) : (
-                          <div className="bg-muted/50 flex size-16 items-center justify-center transition-colors group-hover:bg-muted">
-                            <Camera className="text-muted-foreground/30 size-5 transition-colors group-hover:text-muted-foreground/60" />
+                          <div className="bg-muted/50 group-hover:bg-muted flex size-16 items-center justify-center transition-colors">
+                            <Camera className="text-muted-foreground/30 group-hover:text-muted-foreground/60 size-5 transition-colors" />
                           </div>
                         )}
                       </button>
@@ -506,7 +506,11 @@ export function BelongingsSection({
 
       {/* Lightbox */}
       <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
-        <DialogContent className="max-w-lg p-2" showCloseButton aria-describedby={undefined}>
+        <DialogContent
+          className="max-w-lg p-2"
+          showCloseButton
+          aria-describedby={undefined}
+        >
           <DialogTitle className="sr-only">Belonging Photo</DialogTitle>
           {lightboxUrl && (
             <img
