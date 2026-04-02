@@ -11,6 +11,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
+import { VariantSelector } from "@/components/retail/VariantSelector";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
@@ -47,6 +54,7 @@ import {
   ChevronDown,
   Camera,
   ScanLine,
+  Package,
   Wallet,
   Gift,
 } from "lucide-react";
@@ -138,6 +146,8 @@ export default function POSPage() {
     currentUserId || undefined,
   );
   const isManager = facilityRole === "manager" || facilityRole === "owner";
+  const [variantProduct, setVariantProduct] = useState<Product | null>(null);
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
 
   const [cart, setCart] = useState<CartItemWithId[]>([]);
   const [heldSales, setHeldSales] = useState<
@@ -493,6 +503,14 @@ export default function POSPage() {
     if (stock != null && minStock != null && stock <= minStock) {
       toast.warning(`Low stock: ${product.name} — only ${stock} left`, {
         duration: 4000,
+      });
+    }
+
+    // Track recent products
+    if (product) {
+      setRecentProducts((prev) => {
+        const filtered = prev.filter((p) => p.id !== product.id);
+        return [product, ...filtered].slice(0, 5);
       });
     }
   };
@@ -1518,7 +1536,13 @@ export default function POSPage() {
       <div className="space-y-4 lg:col-span-2">
         {/* Stats Row */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Card>
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => {
+              window.location.href =
+                "/facility/dashboard/services/retail/orders";
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Today&apos;s Sales
@@ -1534,7 +1558,13 @@ export default function POSPage() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => {
+              window.location.href =
+                "/facility/dashboard/services/retail/orders";
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Items Sold</CardTitle>
               <ShoppingCart className="text-muted-foreground size-4" />
@@ -1544,7 +1574,13 @@ export default function POSPage() {
               <p className="text-muted-foreground text-xs">Today</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => {
+              window.location.href =
+                "/facility/dashboard/services/retail/inventory";
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
               <Badge
@@ -1560,7 +1596,13 @@ export default function POSPage() {
               </p>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            onClick={() => {
+              window.location.href =
+                "/facility/dashboard/services/retail/inventory";
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Pending Alerts
@@ -1664,20 +1706,58 @@ export default function POSPage() {
                     return results.slice(0, 8).map((product) => (
                       <button
                         key={product.id}
-                        className="hover:bg-muted/50 flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors"
+                        className="hover:bg-muted/50 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
                         onClick={() => {
-                          addToCart(product);
                           setBarcodeInput("");
+                          if (
+                            product.hasVariants &&
+                            product.variants &&
+                            product.variants.length > 0
+                          ) {
+                            setVariantProduct(product);
+                          } else {
+                            addToCart(product);
+                          }
                         }}
                       >
+                        {/* Product image */}
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="size-12 shrink-0 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-lg">
+                            <Package className="text-muted-foreground/30 size-5" />
+                          </div>
+                        )}
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{product.name}</p>
                           <p className="text-muted-foreground text-xs">
                             SKU: {product.sku}
                             {product.category ? ` · ${product.category}` : ""}
                           </p>
+                          {product.brand && (
+                            <p className="text-muted-foreground/70 text-[10px]">
+                              {product.brand}
+                            </p>
+                          )}
+                          {product.hasVariants &&
+                            product.variants &&
+                            product.variants.length > 0 && (
+                              <p className="mt-0.5 text-[10px] text-blue-600">
+                                {product.variants.length} variants:{" "}
+                                {product.variants
+                                  .slice(0, 3)
+                                  .map((v) => v.name)
+                                  .join(", ")}
+                                {product.variants.length > 3 &&
+                                  ` +${product.variants.length - 3} more`}
+                              </p>
+                            )}
                         </div>
-                        <div className="ml-4 shrink-0 text-right">
+                        <div className="shrink-0 text-right">
                           <p className="font-[tabular-nums] text-sm font-semibold">
                             ${product.basePrice.toFixed(2)}
                           </p>
@@ -1689,7 +1769,9 @@ export default function POSPage() {
                                 : "text-emerald-600",
                             )}
                           >
-                            {product.stock ?? 0} in stock
+                            {(product.stock ?? 0) <= (product.minStock ?? 5)
+                              ? "Low stock"
+                              : `${product.stock ?? 0} in stock`}
                           </p>
                         </div>
                       </button>
@@ -1701,36 +1783,131 @@ export default function POSPage() {
           </CardContent>
         </Card>
 
+        {/* Recently Added */}
+        {recentProducts.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Clock className="text-muted-foreground size-4" />
+                Recently Added
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {recentProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    className="hover:border-primary/40 bg-background flex shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2 transition-all hover:shadow-sm"
+                    onClick={() => {
+                      if (product.hasVariants && product.variants.length > 0) {
+                        setVariantProduct(product);
+                      } else {
+                        addToCart(product);
+                      }
+                    }}
+                  >
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="size-9 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                        <Package className="text-muted-foreground/30 size-4" />
+                      </div>
+                    )}
+                    <div className="text-left">
+                      <p className="max-w-[120px] truncate text-xs font-medium">
+                        {product.name}
+                      </p>
+                      <p className="text-muted-foreground font-[tabular-nums] text-[10px]">
+                        ${product.basePrice.toFixed(2)}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Product Grid */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Quick Add</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              {products.slice(0, 8).map((product) => (
-                <Button
-                  key={product.id}
-                  variant="outline"
-                  className="flex h-auto flex-col items-start py-3"
-                  onClick={() => {
-                    if (product.hasVariants && product.variants.length > 0) {
-                      // If has variants, add the first variant
-                      addToCart(product.variants[0]);
-                    } else {
-                      addToCart(product);
-                    }
-                  }}
-                >
-                  <span className="w-full truncate text-left text-sm font-medium">
-                    {product.name}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    ${product.basePrice.toFixed(2)}
-                  </span>
-                </Button>
-              ))}
-            </div>
+            <TooltipProvider delayDuration={300}>
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                {products.slice(0, 8).map((product) => (
+                  <Tooltip key={product.id}>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="hover:border-primary/40 bg-background flex flex-col items-center rounded-xl border p-3 transition-all hover:shadow-sm"
+                        onClick={() => {
+                          if (
+                            product.hasVariants &&
+                            product.variants.length > 0
+                          ) {
+                            setVariantProduct(product);
+                          } else {
+                            addToCart(product);
+                          }
+                        }}
+                      >
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="mb-2 size-16 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="bg-muted mb-2 flex size-16 items-center justify-center rounded-lg">
+                            <Package className="text-muted-foreground/30 size-6" />
+                          </div>
+                        )}
+                        <span className="w-full truncate text-center text-sm font-medium">
+                          {product.name}
+                        </span>
+                        <span className="text-muted-foreground font-[tabular-nums] text-xs">
+                          ${product.basePrice.toFixed(2)}
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[200px] p-3">
+                      <p className="text-xs font-semibold">{product.name}</p>
+                      {product.description && (
+                        <p className="text-muted-foreground mt-0.5 text-[10px]">
+                          {product.description}
+                        </p>
+                      )}
+                      <div className="mt-1.5 flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">
+                          SKU: {product.sku}
+                        </span>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            (product.stock ?? 0) <= (product.minStock ?? 5)
+                              ? "text-red-600"
+                              : "text-emerald-600",
+                          )}
+                        >
+                          {product.stock ?? 0} in stock
+                        </span>
+                      </div>
+                      {product.hasVariants && product.variants.length > 0 && (
+                        <p className="mt-1 text-[10px] text-blue-600">
+                          {product.variants.length} variant
+                          {product.variants.length !== 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
           </CardContent>
         </Card>
 
@@ -2107,13 +2284,18 @@ export default function POSPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm leading-tight font-medium">
                           {item.productName}
+                          {item.variantName && (
+                            <span className="text-muted-foreground ml-1 text-xs font-normal">
+                              — {item.variantName}
+                            </span>
+                          )}
                           {item.quantity > 1 && (
                             <span className="text-muted-foreground ml-1 font-normal">
                               ×{item.quantity}
                             </span>
                           )}
                         </p>
-                        {item.variantName && (
+                        {false && item.variantName && (
                           <p className="text-muted-foreground text-xs">
                             {item.variantName}
                           </p>
@@ -2750,6 +2932,23 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
           </CardContent>
         </Card>
       </div>
+
+      {/* Variant Selector */}
+      {variantProduct && (
+        <VariantSelector
+          open={!!variantProduct}
+          onOpenChange={(open) => {
+            if (!open) setVariantProduct(null);
+          }}
+          product={variantProduct}
+          onAddToCart={(variant, qty) => {
+            for (let i = 0; i < qty; i++) {
+              addToCart(variant);
+            }
+            setVariantProduct(null);
+          }}
+        />
+      )}
 
       {/* Camera Barcode/QR Scanner */}
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
