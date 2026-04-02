@@ -45,6 +45,8 @@ import {
   RotateCcw,
   Pause,
   ChevronDown,
+  Camera,
+  ScanLine,
   Wallet,
   Gift,
 } from "lucide-react";
@@ -141,6 +143,7 @@ export default function POSPage() {
   const [heldSales, setHeldSales] = useState<
     { id: number; items: CartItemWithId[]; heldAt: string; label: string }[]
   >([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -1615,15 +1618,26 @@ export default function POSPage() {
                   }
                 }}
               >
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                  <Input
-                    placeholder="Scan barcode, search product name, or enter SKU..."
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    className="h-11 pl-10 text-sm"
-                    autoFocus
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      placeholder="Scan barcode, search product name, or enter SKU..."
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      className="h-11 pl-10 text-sm"
+                      autoFocus
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 gap-1.5 px-3"
+                    onClick={() => setCameraOpen(true)}
+                  >
+                    <Camera className="size-4" />
+                    <span className="hidden text-xs sm:inline">Scan</span>
+                  </Button>
                 </div>
               </form>
 
@@ -2736,6 +2750,170 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
           </CardContent>
         </Card>
       </div>
+
+      {/* Camera Barcode/QR Scanner */}
+      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
+        <DialogContent className="max-w-md overflow-hidden p-0">
+          <DialogHeader className="px-5 pt-5 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <ScanLine className="size-5" />
+              Scan Barcode or QR Code
+            </DialogTitle>
+            <DialogDescription>
+              Point your camera at a barcode or QR code
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-5 pb-5">
+            <div className="relative mt-3 overflow-hidden rounded-xl bg-black">
+              {/* Camera viewfinder */}
+              <div className="flex aspect-square items-center justify-center">
+                <video
+                  ref={(el) => {
+                    if (!el || !cameraOpen) return;
+                    // Start camera
+                    navigator.mediaDevices
+                      ?.getUserMedia({
+                        video: { facingMode: "environment" },
+                      })
+                      .then((stream) => {
+                        el.srcObject = stream;
+                        el.play();
+
+                        // Try BarcodeDetector API (Chrome 83+, Safari 17.2+)
+                        const BarcodeDetectorAPI = (
+                          window as unknown as Record<string, unknown>
+                        ).BarcodeDetector as
+                          | (new (opts: { formats: string[] }) => {
+                              detect: (
+                                source: HTMLVideoElement,
+                              ) => Promise<{ rawValue: string }[]>;
+                            })
+                          | undefined;
+
+                        if (BarcodeDetectorAPI) {
+                          const detector = new BarcodeDetectorAPI({
+                            formats: [
+                              "ean_13",
+                              "ean_8",
+                              "upc_a",
+                              "upc_e",
+                              "code_128",
+                              "code_39",
+                              "qr_code",
+                            ],
+                          });
+                          let scanning = true;
+                          const scan = () => {
+                            if (!scanning) return;
+                            detector
+                              .detect(el)
+                              .then((barcodes) => {
+                                if (barcodes.length > 0) {
+                                  scanning = false;
+                                  const code = barcodes[0].rawValue;
+                                  stream.getTracks().forEach((t) => t.stop());
+                                  setCameraOpen(false);
+
+                                  // Try to find product
+                                  const found = getProductByBarcode(code);
+                                  if (found) {
+                                    addToCart(found);
+                                    toast.success(
+                                      `Scanned: ${(found as Product).name ?? code}`,
+                                    );
+                                  } else {
+                                    setBarcodeInput(code);
+                                    toast.info(
+                                      `Scanned: ${code} — no product match`,
+                                    );
+                                  }
+                                  return;
+                                }
+                                requestAnimationFrame(scan);
+                              })
+                              .catch(() => requestAnimationFrame(scan));
+                          };
+                          // Wait a moment for camera to initialize
+                          setTimeout(scan, 500);
+                        }
+
+                        // Cleanup on close
+                        el.addEventListener("pause", () => {
+                          stream.getTracks().forEach((t) => t.stop());
+                        });
+                      })
+                      .catch(() => {
+                        // Camera denied — show fallback in the same dialog
+                        el.parentElement!.innerHTML = `
+                          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px;text-align:center;color:#888">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m16.24 3.56.17.24 4.32 6.04c.38.53.27 1.27-.27 1.65l-.11.07-4.21 2.28"/><path d="m7.76 3.56-.17.24-4.32 6.04c-.38.53-.27 1.27.27 1.65l.11.07 4.21 2.28"/><line x1="1" y1="1" x2="23" y2="23"/><path d="M21 15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2"/></svg>
+                            <p style="margin-top:12px;font-size:14px;font-weight:600;color:#333">Camera not available</p>
+                            <p style="margin-top:4px;font-size:12px">Allow camera access in your browser settings, or use manual entry below</p>
+                          </div>
+                        `;
+                      });
+                  }}
+                  className="h-full w-full object-cover"
+                  playsInline
+                  muted
+                />
+                {/* Scan overlay */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="size-48 rounded-2xl border-2 border-white/60 shadow-[inset_0_0_40px_rgba(0,0,0,0.3)]" />
+                </div>
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 bg-red-500/70"
+                  style={{ animation: "pulse 2s ease-in-out infinite" }}
+                />
+              </div>
+            </div>
+            <p className="text-muted-foreground mt-3 text-center text-xs">
+              Supports barcodes (EAN, UPC, Code 128) and QR codes
+            </p>
+
+            {/* Manual entry */}
+            <form
+              className="mt-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.querySelector("input");
+                const code = input?.value.trim();
+                if (!code) return;
+                setCameraOpen(false);
+                const found = getProductByBarcode(code);
+                if (found) {
+                  addToCart(found);
+                  toast.success(`Added: ${(found as Product).name ?? code}`);
+                } else {
+                  setBarcodeInput(code);
+                  toast.info(`Code: ${code} — no product match`);
+                }
+              }}
+            >
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter barcode or SKU manually..."
+                  className="h-9 flex-1 text-sm"
+                  autoComplete="off"
+                />
+                <Button type="submit" size="sm" className="h-9">
+                  Add
+                </Button>
+              </div>
+            </form>
+
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setCameraOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Product Search Modal */}
       <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
