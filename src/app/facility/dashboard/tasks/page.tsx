@@ -431,9 +431,24 @@ export default function TaskManagementPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
+                <SelectItem value="pending">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-amber-500" />
+                    Pending
+                  </span>
+                </SelectItem>
+                <SelectItem value="completed">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500" />
+                    Completed
+                  </span>
+                </SelectItem>
+                <SelectItem value="overdue">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-red-500" />
+                    Overdue
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -441,7 +456,32 @@ export default function TaskManagementPage() {
       </Card>
 
       {/* Task groups */}
-      <div className="space-y-6">
+      {grouped.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center py-16">
+            <ListChecks className="text-muted-foreground/20 size-12" />
+            <p className="text-muted-foreground mt-3 text-sm font-medium">
+              No tasks for {fmtDate(today)}
+            </p>
+            <p className="text-muted-foreground/60 mt-1 text-xs">
+              {dateOffset !== 0
+                ? "Try navigating to today or another date with active bookings"
+                : "Tasks are generated from bookings with care instructions"}
+            </p>
+            {dateOffset !== 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 gap-1.5"
+                onClick={() => setDateOffset(0)}
+              >
+                Go to Today
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      <div className="space-y-5">
         {grouped.map(([groupKey, tasks]) => {
           const shiftDef = shifts.find((s) => s.id === groupKey);
           const ShiftIcon = shiftIcons[groupKey] ?? Clock;
@@ -493,6 +533,20 @@ export default function TaskManagementPage() {
                         }}
                       />
                     </div>
+                    {groupDone < tasks.length && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px]"
+                        onClick={() =>
+                          toast.success(
+                            `${tasks.length - groupDone} tasks marked complete`,
+                          )
+                        }
+                      >
+                        Complete All
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -550,6 +604,27 @@ export default function TaskManagementPage() {
                               Overdue
                             </Badge>
                           )}
+                          {!task.isOverdue &&
+                            task.status === "pending" &&
+                            (() => {
+                              const [h, m] = task.scheduledTime
+                                .split(":")
+                                .map(Number);
+                              const taskMin = h * 60 + m;
+                              const now = new Date();
+                              const nowMin =
+                                now.getHours() * 60 + now.getMinutes();
+                              return (
+                                taskMin - nowMin > 0 && taskMin - nowMin <= 15
+                              );
+                            })() && (
+                              <Badge
+                                variant="outline"
+                                className="border-orange-200 bg-orange-50 px-1.5 py-0 text-[9px] text-orange-700"
+                              >
+                                Due soon
+                              </Badge>
+                            )}
                           {task.autoAssigned && (
                             <span className="text-muted-foreground/50 text-[9px]">
                               auto
@@ -568,7 +643,16 @@ export default function TaskManagementPage() {
                           </span>
                           <span>{task.petName}</span>
                           {task.assignedToName && (
-                            <span>→ {task.assignedToName}</span>
+                            <span className="flex items-center gap-1">
+                              <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[7px] font-bold">
+                                {task.assignedToName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .slice(0, 2)}
+                              </span>
+                              {task.assignedToName}
+                            </span>
                           )}
                           {task.requiredSkill && (
                             <span className="italic">
