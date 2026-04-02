@@ -182,6 +182,13 @@ export function FacilitySidebar() {
             count: 8,
           },
           {
+            title: "Tasks",
+            url: "/facility/dashboard/tasks",
+            icon: ClipboardList,
+            disabled: false,
+            count: 2,
+          },
+          {
             title: "Online Booking",
             url: "/facility/dashboard/online-booking",
             icon: CalendarClock,
