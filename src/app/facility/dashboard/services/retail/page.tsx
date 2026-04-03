@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -12,7 +13,13 @@ import {
 } from "@/components/ui/popover";
 import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { VariantSelector } from "@/components/retail/VariantSelector";
-import { CameraScanner } from "@/components/retail/CameraScanner";
+import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
+
+const CameraScanner = dynamic(
+  () =>
+    import("@/components/retail/CameraScanner").then((m) => m.CameraScanner),
+  { ssr: false },
+);
 import {
   Tooltip,
   TooltipContent,
@@ -147,6 +154,7 @@ export default function POSPage() {
     currentUserId || undefined,
   );
   const isManager = facilityRole === "manager" || facilityRole === "owner";
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
 
@@ -444,20 +452,6 @@ export default function POSPage() {
 
   const grandTotal = subtotal - discountTotal + taxTotal + calculatedTipAmount;
 
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcodeInput.trim()) return;
-
-    const found = getProductByBarcode(barcodeInput.trim());
-    if (found) {
-      addToCart(found);
-      setBarcodeInput("");
-    } else {
-      // Could show an error toast here
-      alert("Product not found");
-    }
-  };
-
   const addToCart = (item: Product | ProductVariant) => {
     const isVariant = "variantType" in item;
     const product = isVariant
@@ -515,6 +509,73 @@ export default function POSPage() {
       });
     }
   };
+
+  // Plays a short confirmation beep via Web Audio API (no asset needed)
+  const playBeep = () => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 1800;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {
+      // AudioContext may be blocked before user gesture — silently ignore
+    }
+  };
+
+  // Central scan handler — used by camera scanner AND hardware scanner hook
+  const handleScan = useCallback(
+    (code: string) => {
+      setCameraOpen(false);
+      const trimmed = code.trim();
+      const found = getProductByBarcode(trimmed);
+
+      if (found) {
+        const isVariant = "variantType" in found;
+        if (!isVariant) {
+          const product = found as Product;
+          if (product.hasVariants && product.variants.length > 0) {
+            // Base-product barcode on a multi-variant item → pick a variant
+            setVariantProduct(product);
+          } else {
+            addToCart(found);
+            playBeep();
+            navigator.vibrate?.(50);
+            toast.success(`Added: ${product.name}`);
+          }
+        } else {
+          // Specific variant barcode — add straight to cart
+          addToCart(found);
+          playBeep();
+          navigator.vibrate?.(50);
+          const parentProduct = products.find((p) =>
+            p.variants.some((v) => v.id === (found as ProductVariant).id),
+          );
+          toast.success(
+            `Added: ${parentProduct?.name ?? ""} — ${(found as ProductVariant).name}`,
+          );
+        }
+        setBarcodeInput("");
+      } else {
+        // No match — pre-fill the search bar so staff can see it and act
+        setBarcodeInput(trimmed);
+        toast.error(`No product found for barcode: ${trimmed}`);
+      }
+
+      // Re-focus the search bar after dialog animation settles
+      setTimeout(() => searchInputRef.current?.focus(), 200);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [addToCart],
+  );
+
+  // Wire up hardware barcode scanner detection (USB/Bluetooth HID)
+  useHardwareBarcodeScanner(searchInputRef, handleScan);
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -1628,43 +1689,14 @@ export default function POSPage() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!barcodeInput.trim()) return;
-                  // Try barcode/SKU exact match first
-                  const found = getProductByBarcode(barcodeInput.trim());
-                  if (found) {
-                    addToCart(found);
-                    setBarcodeInput("");
-                    return;
-                  }
-                  // Try SKU match
-                  const skuMatch = products.find(
-                    (p) =>
-                      p.sku.toLowerCase() === barcodeInput.trim().toLowerCase(),
-                  );
-                  if (skuMatch) {
-                    addToCart(skuMatch);
-                    setBarcodeInput("");
-                    return;
-                  }
-                  // If search has results, add the first one
-                  const q = barcodeInput.toLowerCase();
-                  const searchMatch = products.find(
-                    (p) =>
-                      p.name.toLowerCase().includes(q) ||
-                      p.sku.toLowerCase().includes(q),
-                  );
-                  if (searchMatch) {
-                    addToCart(searchMatch);
-                    setBarcodeInput("");
-                  } else {
-                    toast.error("Product not found");
-                  }
+                  if (barcodeInput.trim()) handleScan(barcodeInput);
                 }}
               >
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                     <Input
+                      ref={searchInputRef}
                       placeholder="Scan barcode, search product name, or enter SKU..."
                       value={barcodeInput}
                       onChange={(e) => setBarcodeInput(e.target.value)}
@@ -1698,9 +1730,31 @@ export default function POSPage() {
                           p.category.toLowerCase().includes(q)),
                     );
                     if (results.length === 0) {
+                      // Detect barcode-like input (digits / alphanumeric, no spaces)
+                      const looksLikeBarcode =
+                        /^[A-Z0-9\-]{4,}$/i.test(barcodeInput.trim()) &&
+                        !barcodeInput.includes(" ");
                       return (
-                        <div className="text-muted-foreground p-4 text-center text-sm">
-                          No products found
+                        <div className="p-4 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            No products found
+                          </p>
+                          {looksLikeBarcode && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2 gap-1.5 text-xs"
+                              onClick={() => {
+                                window.open(
+                                  `/facility/dashboard/services/retail/products?barcode=${encodeURIComponent(barcodeInput.trim())}`,
+                                  "_blank",
+                                );
+                              }}
+                            >
+                              <Plus className="size-3" />
+                              Add new product with this barcode
+                            </Button>
+                          )}
                         </div>
                       );
                     }
@@ -2953,8 +3007,9 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
 
       {/* Camera Barcode/QR Scanner */}
       <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
+        {/* Full-screen on mobile, centered modal on sm+ */}
+        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-sm">
+          <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
               <ScanLine className="size-5" />
               Scan Barcode or QR Code
@@ -2963,28 +3018,16 @@ ${calculatedTipAmount > 0 ? `<div class="row sub"><span>Tip</span><span>$${calcu
               Point your camera at a product barcode or QR code
             </DialogDescription>
           </DialogHeader>
-          {cameraOpen && (
-            <CameraScanner
-              onScan={(code) => {
-                setCameraOpen(false);
-                const found = getProductByBarcode(code);
-                if (found) {
-                  addToCart(found);
-                  toast.success(`Scanned: ${(found as Product).name}`);
-                } else {
-                  setBarcodeInput(code);
-                  toast.info(`Scanned: ${code} — no product match`);
-                }
-              }}
-            />
-          )}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setCameraOpen(false)}
-          >
-            Close
-          </Button>
+          <div className="flex-1 overflow-auto px-5 pb-5">
+            {cameraOpen && <CameraScanner onScan={handleScan} />}
+            <Button
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => setCameraOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
