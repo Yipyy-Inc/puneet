@@ -24,6 +24,7 @@ import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
+import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { Button } from "@/components/ui/button";
@@ -3615,6 +3616,13 @@ export default function SettingsPage() {
           {activeSection === "tags-notes" && (
             <div className="space-y-6">
               <TagNotesSettings />
+            </div>
+          )}
+
+          {/* Departments */}
+          {activeSection === "departments" && (
+            <div className="space-y-6">
+              <DepartmentSettings />
             </div>
           )}
 

@@ -48,6 +48,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { departments, getStaffDepartment } from "@/data/shifts";
 import {
   ListChecks,
   CheckCircle as CheckCircleIcon,
@@ -123,6 +124,7 @@ export default function TaskManagementPage() {
   const [staffFilter, setStaffFilter] = useState<"mine" | "all">(
     isManager ? "all" : "mine",
   );
+  const [deptFilter, setDeptFilter] = useState("all");
   const [completeTask, setCompleteTask] = useState<FacilityTask | null>(null);
   const [feedback, setFeedback] = useState("");
   const [notes, setNotes] = useState("");
@@ -161,8 +163,15 @@ export default function TaskManagementPage() {
     if (statusFilter !== "all") {
       tasks = tasks.filter((t) => t.status === statusFilter);
     }
+    if (deptFilter !== "all") {
+      tasks = tasks.filter((t) => {
+        if (!t.assignedToId) return false;
+        const dept = getStaffDepartment(t.assignedToId);
+        return dept?.id === deptFilter;
+      });
+    }
     return tasks;
-  }, [dateStr, statusFilter, staffFilter, currentStaffName]);
+  }, [dateStr, statusFilter, staffFilter, deptFilter, currentStaffName]);
 
   const totalTasks = dayTasks.length;
   const completedTasks = dayTasks.filter(
@@ -452,6 +461,49 @@ export default function TaskManagementPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="bg-border hidden h-5 w-px sm:block" />
+
+          {/* Department filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-[11px] font-medium">
+              Dept:
+            </span>
+            <Select value={deptFilter} onValueChange={setDeptFilter}>
+              <SelectTrigger className="h-8 w-[160px] rounded-lg text-xs">
+                <SelectValue placeholder="All departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map((dept) => {
+                  const dotColor: Record<string, string> = {
+                    blue: "bg-blue-500",
+                    emerald: "bg-emerald-500",
+                    purple: "bg-purple-500",
+                    amber: "bg-amber-500",
+                    orange: "bg-orange-500",
+                    red: "bg-red-500",
+                    teal: "bg-teal-500",
+                    pink: "bg-pink-500",
+                    slate: "bg-slate-500",
+                  };
+                  return (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "size-2 rounded-full",
+                            dotColor[dept.color] ?? "bg-slate-500",
+                          )}
+                        />
+                        {dept.name}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -652,6 +704,30 @@ export default function TaskManagementPage() {
                                   .slice(0, 2)}
                               </span>
                               {task.assignedToName}
+                              {task.assignedToId &&
+                                (() => {
+                                  const dept = getStaffDepartment(
+                                    task.assignedToId,
+                                  );
+                                  if (!dept) return null;
+                                  const dotColor: Record<string, string> = {
+                                    blue: "bg-blue-500",
+                                    emerald: "bg-emerald-500",
+                                    purple: "bg-purple-500",
+                                    amber: "bg-amber-500",
+                                    orange: "bg-orange-500",
+                                  };
+                                  return (
+                                    <span
+                                      className={cn(
+                                        "rounded-full px-1.5 py-0 text-[8px] font-medium",
+                                        `bg-${dept.color}-50 text-${dept.color}-700 border border-${dept.color}-200`,
+                                      )}
+                                    >
+                                      {dept.name}
+                                    </span>
+                                  );
+                                })()}
                             </span>
                           )}
                           {task.requiredSkill && (

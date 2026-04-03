@@ -77,6 +77,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
   {
     label: "Operations",
     sections: [
+      { id: "departments", label: "Departments", icon: Building2 },
       { id: "booking-statuses", label: "Booking Statuses", icon: CircleDot },
       {
         id: "checkin-requirements",
