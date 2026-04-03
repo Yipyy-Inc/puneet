@@ -1,4 +1,11 @@
-// ── Shift definitions and staff schedule ──────────────────────────────────────
+// ── Departments, shifts, and staff schedule ───────────────────────────────────
+
+export interface Department {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+}
 
 export interface ShiftDefinition {
   id: string;
@@ -12,6 +19,7 @@ export interface StaffSkills {
   staffId: string;
   staffName: string;
   skills: string[];
+  departmentId: string;
 }
 
 export interface StaffShiftEntry {
@@ -20,6 +28,41 @@ export interface StaffShiftEntry {
   day: string; // "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
   shiftId: string;
 }
+
+// ── Departments (configurable per facility) ──────────────────────────────────
+
+export const departments: Department[] = [
+  {
+    id: "dept-boh",
+    name: "Back of House",
+    color: "blue",
+    description: "Pet care, feeding, medication, walking",
+  },
+  {
+    id: "dept-foh",
+    name: "Front of House",
+    color: "emerald",
+    description: "Reception, check-in/out, customer service",
+  },
+  {
+    id: "dept-groom",
+    name: "Grooming / Bathing",
+    color: "purple",
+    description: "Groomers, bathers, nail trimmers",
+  },
+  {
+    id: "dept-sanit",
+    name: "Sanitation",
+    color: "amber",
+    description: "Cleaning, disinfection, laundry",
+  },
+  {
+    id: "dept-train",
+    name: "Training",
+    color: "orange",
+    description: "Obedience, agility, behavior",
+  },
+];
 
 export const SKILL_OPTIONS = [
   { id: "feeding", label: "Feeding & treats" },
@@ -64,6 +107,7 @@ export const staffSkills: StaffSkills[] = [
   {
     staffId: "staff-1",
     staffName: "Jessica M.",
+    departmentId: "dept-boh",
     skills: [
       "feeding",
       "medication",
@@ -76,6 +120,7 @@ export const staffSkills: StaffSkills[] = [
   {
     staffId: "staff-2",
     staffName: "Amy C.",
+    departmentId: "dept-groom",
     skills: [
       "feeding",
       "medication",
@@ -88,16 +133,19 @@ export const staffSkills: StaffSkills[] = [
   {
     staffId: "staff-3",
     staffName: "Marcus T.",
+    departmentId: "dept-boh",
     skills: ["feeding", "walking", "pool_supervision", "transport"],
   },
   {
     staffId: "staff-4",
     staffName: "Sophie L.",
+    departmentId: "dept-foh",
     skills: ["feeding", "medication", "walking", "bathing"],
   },
   {
     staffId: "staff-5",
     staffName: "Sarah K.",
+    departmentId: "dept-groom",
     skills: ["grooming_full", "nail_trim", "bathing", "massage"],
   },
 ];
@@ -252,4 +300,14 @@ export function getStaffOnShiftWithSkill(
   const onShift = getStaffOnShift(date, shiftId);
   const qualified = new Set(getStaffWithSkill(skill).map((s) => s.staffId));
   return onShift.filter((e) => qualified.has(e.staffId));
+}
+
+export function getStaffDepartment(staffId: string): Department | undefined {
+  const staff = staffSkills.find((s) => s.staffId === staffId);
+  if (!staff) return undefined;
+  return departments.find((d) => d.id === staff.departmentId);
+}
+
+export function getStaffByDepartment(departmentId: string): StaffSkills[] {
+  return staffSkills.filter((s) => s.departmentId === departmentId);
 }
