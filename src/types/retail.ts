@@ -119,6 +119,8 @@ export const productVariantSchema = z.object({
   customVariantType: z.string().optional(),
   imageUrl: z.string().optional(),
   imageUrls: z.array(z.string()).optional(),
+  // Multi-dimensional variant attributes, e.g. { Size: "Small", Color: "Red" }
+  variantAttributes: z.record(z.string(), z.string()).optional(),
 });
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 
