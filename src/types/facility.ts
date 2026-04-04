@@ -372,6 +372,30 @@ export type ServiceNotificationDefault = z.infer<
   typeof serviceNotificationDefaultSchema
 >;
 
+export const tipOptionSchema = z.object({
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number(),
+});
+export type TipOption = z.infer<typeof tipOptionSchema>;
+
+export const tipTierConfigSchema = z.object({
+  options: z.tuple([tipOptionSchema, tipOptionSchema, tipOptionSchema]),
+  preferredIndex: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+});
+export type TipTierConfig = z.infer<typeof tipTierConfigSchema>;
+
+export const tipConfigSchema = z.object({
+  enabled: z.boolean(),
+  mode: z.enum(["general", "smart"]),
+  general: tipTierConfigSchema,
+  smart: z.object({
+    thresholdAmount: z.number(),
+    belowThreshold: tipTierConfigSchema,
+    aboveThreshold: tipTierConfigSchema,
+  }),
+});
+export type TipConfig = z.infer<typeof tipConfigSchema>;
+
 export const integrationSchema = z.object({
   id: z.string(),
   name: z.string(),

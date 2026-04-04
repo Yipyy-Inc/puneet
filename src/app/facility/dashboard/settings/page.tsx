@@ -28,6 +28,7 @@ import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequir
 import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
+import { TipSettings } from "@/components/facility/TipSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 
 const AddOnsSettings = dynamic(
@@ -3001,6 +3002,8 @@ export default function SettingsPage() {
           {/* Financial Settings */}
           {activeSection === "financial" && (
             <div className="space-y-6">
+              <TipSettings />
+
               {/* Payment Gateways */}
               <Card>
                 <CardHeader>

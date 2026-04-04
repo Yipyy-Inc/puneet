@@ -16,6 +16,7 @@ import type {
   CurrencySettings,
   NotificationToggle,
   ServiceNotificationDefault,
+  TipConfig,
   Integration,
   SubscriptionPlan,
   ModuleAddon,
@@ -688,6 +689,42 @@ export const notificationToggles: NotificationToggle[] = [
     category: "system",
   },
 ];
+
+// ========================================
+// TIP CONFIGURATION DATA
+// ========================================
+
+export const tipConfig: TipConfig = {
+  enabled: true,
+  mode: "general",
+  general: {
+    options: [
+      { type: "percentage", value: 15 },
+      { type: "percentage", value: 20 },
+      { type: "percentage", value: 25 },
+    ],
+    preferredIndex: 1,
+  },
+  smart: {
+    thresholdAmount: 50,
+    belowThreshold: {
+      options: [
+        { type: "fixed", value: 5 },
+        { type: "fixed", value: 10 },
+        { type: "fixed", value: 15 },
+      ],
+      preferredIndex: 1,
+    },
+    aboveThreshold: {
+      options: [
+        { type: "percentage", value: 15 },
+        { type: "percentage", value: 20 },
+        { type: "percentage", value: 25 },
+      ],
+      preferredIndex: 1,
+    },
+  },
+};
 
 /** Per-service notification defaults — controls pre-selected toggles in the booking confirmation */
 export const serviceNotificationDefaults: ServiceNotificationDefault[] = [
