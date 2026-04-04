@@ -506,6 +506,28 @@ export function SimpleFeedingForm({
             className="resize-none text-sm"
           />
         </div>
+
+        {/* Save to profile */}
+        {item.occasions.length > 0 && (
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={item.saveToProfile ?? false}
+              onChange={(e) =>
+                saveItem({ ...item, saveToProfile: e.target.checked })
+              }
+              className="size-4 rounded accent-blue-600"
+            />
+            <div>
+              <p className="text-xs font-medium text-blue-800">
+                Save to pet profile for future visits
+              </p>
+              <p className="text-[10px] text-blue-600">
+                These feeding instructions will auto-populate next time
+              </p>
+            </div>
+          </label>
+        )}
       </div>
     );
   };

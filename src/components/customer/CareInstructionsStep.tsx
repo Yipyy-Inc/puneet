@@ -33,6 +33,7 @@ export interface CustomerFeedingEntry {
   foodType: string;
   feedingInstruction: string;
   instructions: string;
+  saveToProfile?: boolean;
 }
 
 export interface CustomerMedicationEntry {
@@ -44,6 +45,9 @@ export interface CustomerMedicationEntry {
   times: string[];
   instructions: string;
   isCritical: boolean;
+  supplyCount?: number;
+  drugAllergies?: string[];
+  saveToProfile?: boolean;
 }
 
 interface CareInstructionsStepProps {
@@ -446,6 +450,26 @@ function FeedingCard({
             rows={2}
           />
         </div>
+
+        {/* Save to profile */}
+        <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={entry.saveToProfile ?? false}
+            onChange={(e) =>
+              onChange({ ...entry, saveToProfile: e.target.checked })
+            }
+            className="size-4 rounded accent-blue-600"
+          />
+          <div>
+            <p className="text-xs font-medium text-blue-800">
+              Save to pet profile for future visits
+            </p>
+            <p className="text-[10px] text-blue-600">
+              These feeding instructions will auto-populate next time
+            </p>
+          </div>
+        </label>
       </CardContent>
     </Card>
   );
@@ -605,6 +629,97 @@ function MedicationCard({
           </div>
         </div>
 
+        {/* Drug allergies */}
+        <div className="mt-3">
+          <Label className="text-xs">Drug Allergies</Label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {(entry.drugAllergies ?? []).map((a, ai) => (
+              <span
+                key={ai}
+                className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+              >
+                <AlertTriangle className="size-3" />
+                {a}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...entry,
+                      drugAllergies: (entry.drugAllergies ?? []).filter(
+                        (_, i) => i !== ai,
+                      ),
+                    })
+                  }
+                  className="ml-0.5 text-red-400 hover:text-red-700"
+                >
+                  <Trash2 className="size-2.5" />
+                </button>
+              </span>
+            ))}
+            <form
+              className="flex items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const input = (e.target as HTMLFormElement).querySelector(
+                  "input",
+                ) as HTMLInputElement;
+                const val = input.value.trim();
+                if (val && !(entry.drugAllergies ?? []).includes(val)) {
+                  onChange({
+                    ...entry,
+                    drugAllergies: [...(entry.drugAllergies ?? []), val],
+                  });
+                  input.value = "";
+                }
+              }}
+            >
+              <Input placeholder="+ Add allergy" className="h-7 w-28 text-xs" />
+            </form>
+          </div>
+        </div>
+
+        {/* Supply count */}
+        <div className="mt-3">
+          <Label className="text-xs">Supply Brought (number of doses)</Label>
+          <Input
+            type="number"
+            min={0}
+            value={entry.supplyCount ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...entry,
+                supplyCount: e.target.value
+                  ? parseInt(e.target.value, 10)
+                  : undefined,
+              })
+            }
+            placeholder="e.g. 10"
+            className="mt-1 h-9 w-32 text-xs"
+          />
+          {entry.supplyCount != null &&
+            entry.supplyCount > 0 &&
+            (() => {
+              const dosesPerDay =
+                entry.frequency === "Twice daily"
+                  ? 2
+                  : entry.frequency === "Three times daily"
+                    ? 3
+                    : entry.times.length || 1;
+              const daysOfSupply = Math.floor(entry.supplyCount / dosesPerDay);
+              const isLow = daysOfSupply <= 3;
+              return (
+                <p
+                  className={`mt-1 text-[11px] ${isLow ? "font-medium text-amber-700" : "text-muted-foreground"}`}
+                >
+                  {isLow && "\u26A0 "}
+                  {entry.supplyCount} doses = ~{daysOfSupply} day
+                  {daysOfSupply !== 1 ? "s" : ""} of supply
+                  {isLow ? " — may need refill" : ""}
+                </p>
+              );
+            })()}
+        </div>
+
         <div className="mt-3">
           <Label className="text-xs">Special Instructions (optional)</Label>
           <Textarea
@@ -617,6 +732,26 @@ function MedicationCard({
             rows={2}
           />
         </div>
+
+        {/* Save to profile */}
+        <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={entry.saveToProfile ?? false}
+            onChange={(e) =>
+              onChange({ ...entry, saveToProfile: e.target.checked })
+            }
+            className="size-4 rounded accent-blue-600"
+          />
+          <div>
+            <p className="text-xs font-medium text-blue-800">
+              Save to pet profile for future visits
+            </p>
+            <p className="text-[10px] text-blue-600">
+              This medication will auto-populate next time
+            </p>
+          </div>
+        </label>
       </CardContent>
     </Card>
   );
