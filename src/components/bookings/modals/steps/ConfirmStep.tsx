@@ -21,8 +21,38 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { evaluationConfig } from "@/data/settings";
+import { defaultServiceAddOns } from "@/data/service-addons";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
-import type { TipConfig } from "@/types/facility";
+import type { ServiceAddOn, TipConfig } from "@/types/facility";
+
+function getStoredAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const stored = localStorage.getItem("settings-service-addons");
+    if (stored) return JSON.parse(stored) as ServiceAddOn[];
+  } catch {
+    /* ignore */
+  }
+  return defaultServiceAddOns;
+}
+
+function formatAddonPrice(addon: ServiceAddOn, qty: number): string {
+  const total = addon.price * qty;
+  return `$${total.toFixed(2)}`;
+}
+
+function formatAddonUnit(addon: ServiceAddOn): string {
+  switch (addon.pricingType) {
+    case "flat":
+      return "";
+    case "per_day":
+      return `/${addon.unitLabel || "day"}`;
+    case "per_session":
+      return `/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `/${addon.unitLabel || "hr"}`;
+  }
+}
 import { TipSelector } from "@/components/bookings/TipSelector";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
@@ -411,40 +441,66 @@ export function ConfirmStep({
       )}
 
       {/* ── Add-ons ─────────────────────────────────────────────── */}
-      {hasAddons && (
-        <div className="rounded-2xl border p-4">
-          <SectionHeader
-            icon={Sparkles}
-            label="Add-ons"
-            onEdit={
-              onEditStep ? () => onEditStep(detailsStepIdx, 2) : undefined
-            }
-          />
-          <div className="space-y-1.5">
-            {extraServices.map((es) => {
-              const pet = selectedPets.find((p) => p.id === es.petId);
-              return (
-                <div
-                  key={`${es.serviceId}-${es.petId}`}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="bg-primary/10 text-primary flex size-4 items-center justify-center rounded-full text-[8px] font-bold">
-                      {pet?.name[0]}
-                    </span>
-                    <span className="capitalize">
-                      {es.serviceId.replace(/-/g, " ")}
-                    </span>
-                  </div>
-                  <span className="text-muted-foreground font-[tabular-nums]">
-                    × {es.quantity}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {hasAddons &&
+        (() => {
+          const addOns = getStoredAddOns();
+          return (
+            <div className="rounded-2xl border p-4">
+              <SectionHeader
+                icon={Sparkles}
+                label="Add-ons"
+                onEdit={
+                  onEditStep ? () => onEditStep(detailsStepIdx, 2) : undefined
+                }
+              />
+              <div className="space-y-2">
+                {extraServices.map((es) => {
+                  const pet = selectedPets.find((p) => p.id === es.petId);
+                  const addon = addOns.find((a) => a.id === es.serviceId);
+                  const unitPrice = addon?.price ?? 0;
+                  const lineTotal = unitPrice * es.quantity;
+                  return (
+                    <div
+                      key={`${es.serviceId}-${es.petId}`}
+                      className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="bg-primary/10 text-primary flex size-5 items-center justify-center rounded-full text-[9px] font-bold">
+                          {pet?.name[0]}
+                        </span>
+                        <div>
+                          <span className="text-xs font-medium">
+                            {addon?.name ?? es.serviceId.replace(/-/g, " ")}
+                          </span>
+                          <span className="text-muted-foreground ml-1.5 text-[10px]">
+                            {pet?.name}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                          ${unitPrice.toFixed(2)}
+                          {formatAddonUnit(
+                            addon ??
+                              ({
+                                pricingType: "flat",
+                                price: 0,
+                                unitLabel: "",
+                              } as ServiceAddOn),
+                          )}{" "}
+                          × {es.quantity}
+                        </span>
+                        <span className="font-[tabular-nums] font-semibold">
+                          ${lineTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
       {/* ── Care Notes ──────────────────────────────────────────── */}
       {isDaycareOrBoarding && (
@@ -460,7 +516,7 @@ export function ConfirmStep({
             />
             {feedingSchedule.length > 0 ? (
               feedingSchedule.map((item, idx) => (
-                <div key={idx} className="space-y-1">
+                <div key={idx} className="space-y-1.5">
                   {item.occasions.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {item.occasions.map((occ) => (
@@ -471,6 +527,20 @@ export function ConfirmStep({
                           {occ.label} · {fmtTime(occ.time)}
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {(item.feedingUnit || item.feedingInstruction) && (
+                    <div className="flex flex-wrap gap-1">
+                      {item.feedingUnit && (
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                          {item.feedingUnit}
+                        </span>
+                      )}
+                      {item.feedingInstruction && (
+                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                          {item.feedingInstruction}
+                        </span>
+                      )}
                     </div>
                   )}
                   {item.allergies && item.allergies.length > 0 && (
@@ -506,10 +576,17 @@ export function ConfirmStep({
             {medications.length > 0 ? (
               <div className="space-y-2">
                 {medications.map((med, idx) => (
-                  <div key={idx}>
-                    <p className="text-xs font-semibold">
-                      {med.name || `Medication ${idx + 1}`}
-                    </p>
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold">
+                        {med.name || `Medication ${idx + 1}`}
+                      </p>
+                      {med.isHighRisk && (
+                        <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
+                          HIGH RISK
+                        </span>
+                      )}
+                    </div>
                     <p className="text-muted-foreground text-[11px]">
                       {med.amount}
                       {med.strength ? ` (${med.strength})` : ""} ·{" "}
@@ -517,6 +594,16 @@ export function ConfirmStep({
                       {med.times.length > 0 &&
                         ` · ${med.times.map(fmtTime).join(", ")}`}
                     </p>
+                    {med.drugAllergies && med.drugAllergies.length > 0 && (
+                      <p className="text-[11px] text-red-600">
+                        Drug allergies: {med.drugAllergies.join(", ")}
+                      </p>
+                    )}
+                    {med.supplyCount != null && (
+                      <p className="text-muted-foreground text-[11px]">
+                        Supply: {med.supplyCount} doses
+                      </p>
+                    )}
                     {med.notes && (
                       <p className="text-muted-foreground text-[11px] italic">
                         {med.notes}
@@ -624,17 +711,41 @@ export function ConfirmStep({
               ${calculatePrice.basePrice.toFixed(2)}
             </span>
           </div>
-          {hasAddons && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Add-ons ({extraServices.reduce((s, e) => s + e.quantity, 0)}{" "}
-                items)
-              </span>
-              <span className="font-[tabular-nums] font-medium">
-                ${(calculatePrice.total - calculatePrice.basePrice).toFixed(2)}
-              </span>
-            </div>
-          )}
+          {hasAddons &&
+            (() => {
+              const addOns = getStoredAddOns();
+              const addonsTotal =
+                calculatePrice.total - calculatePrice.basePrice;
+              return (
+                <div className="space-y-1">
+                  {extraServices.map((es, i) => {
+                    const addon = addOns.find((a) => a.id === es.serviceId);
+                    const lineTotal = (addon?.price ?? 0) * es.quantity;
+                    return (
+                      <div
+                        key={i}
+                        className="text-muted-foreground flex items-center justify-between text-xs"
+                      >
+                        <span>
+                          {addon?.name ?? es.serviceId} × {es.quantity}
+                        </span>
+                        <span className="font-[tabular-nums]">
+                          ${lineTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">
+                      Add-ons subtotal
+                    </span>
+                    <span className="font-[tabular-nums] font-medium">
+                      ${addonsTotal.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
