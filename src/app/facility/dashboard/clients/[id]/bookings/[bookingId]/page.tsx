@@ -69,6 +69,7 @@ import { MedicationSection } from "@/components/bookings/MedicationSection";
 import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
+import { facilityBookingFlowConfig } from "@/data/settings";
 import type { InvoiceLineItem } from "@/types/booking";
 import {
   daycareConfig,
@@ -239,6 +240,72 @@ export default function ClientBookingDetailPage({
       />
 
       <div className="space-y-5 p-5 md:p-7">
+        {/* Evaluation Reminder — non-blocking mode */}
+        {!isCancelled &&
+          booking.status !== "completed" &&
+          facilityBookingFlowConfig.evaluationRequired &&
+          facilityBookingFlowConfig.servicesRequiringEvaluation.includes(
+            booking.service,
+          ) &&
+          !facilityBookingFlowConfig.hideServicesUntilEvaluationCompleted && (
+            <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+                  <ClipboardList className="size-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    Evaluation Recommended
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    This pet may need an evaluation for {booking.service}.
+                    Consider scheduling one before check-in.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 bg-amber-600 text-white hover:bg-amber-700"
+                onClick={() => toast.success("Evaluation appointment created")}
+              >
+                <ClipboardList className="size-3.5" />
+                Add Evaluation
+              </Button>
+            </div>
+          )}
+
+        {/* Checkout Alert — unrecorded evaluation results */}
+        {booking.service === "evaluation" &&
+          booking.status === "confirmed" &&
+          !isCancelled && (
+            <div className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-orange-100">
+                  <ClipboardList className="size-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-orange-800">
+                    Evaluation results not recorded
+                  </p>
+                  <p className="text-xs text-orange-600">
+                    Please complete the evaluation form and record pass/fail
+                    before checkout
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="gap-1.5 bg-orange-600 text-white hover:bg-orange-700"
+                onClick={() =>
+                  toast.info("Open the evaluation form to record results")
+                }
+              >
+                <ClipboardList className="size-3.5" />
+                Record Results
+              </Button>
+            </div>
+          )}
+
         {/* Estimate Sent — waiting for client confirmation */}
         {isEstimateSent && (
           <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-violet-50 px-4 py-3">
