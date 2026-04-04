@@ -7,6 +7,7 @@ import {
   groomingConfig,
   trainingConfig,
   evaluationConfig,
+  evaluationFormTemplate as defaultEvalFormTemplate,
   evaluationReportCardConfig,
   businessHours,
   businessProfile,
@@ -26,6 +27,7 @@ import {
 import type {
   ModuleConfig,
   EvaluationConfig,
+  EvaluationFormTemplate,
   EvaluationReportCardConfig,
   BusinessHours,
   BusinessProfile,
@@ -48,6 +50,7 @@ interface SettingsContextValue {
   grooming: ModuleConfig;
   training: ModuleConfig;
   evaluation: EvaluationConfig;
+  evaluationFormTemplate: EvaluationFormTemplate;
   evaluationReportCard: EvaluationReportCardConfig;
   hours: BusinessHours;
   profile: BusinessProfile;
@@ -68,6 +71,7 @@ interface SettingsContextValue {
   updateGrooming: (config: ModuleConfig) => void;
   updateTraining: (config: ModuleConfig) => void;
   updateEvaluation: (config: EvaluationConfig) => void;
+  updateEvaluationFormTemplate: (config: EvaluationFormTemplate) => void;
   updateEvaluationReportCard: (config: EvaluationReportCardConfig) => void;
   updateHours: (hours: BusinessHours) => void;
   updateProfile: (profile: BusinessProfile) => void;
@@ -132,6 +136,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       evaluationConfig,
     ),
   );
+  const [evalFormTemplateData, setEvalFormTemplateData] =
+    useState<EvaluationFormTemplate>(() =>
+      loadStored("settings-eval-form-template", defaultEvalFormTemplate),
+    );
   const [evaluationReportCardData, setEvaluationReportCardData] =
     useState<EvaluationReportCardConfig>(() =>
       loadStored("settings-evaluation-report-card", evaluationReportCardConfig),
@@ -206,6 +214,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateEvaluation = (config: EvaluationConfig) => {
     setEvaluation(config);
     localStorage.setItem("settings-evaluation", JSON.stringify(config));
+  };
+  const updateEvaluationFormTemplate = (config: EvaluationFormTemplate) => {
+    setEvalFormTemplateData(config);
+    localStorage.setItem("settings-eval-form-template", JSON.stringify(config));
   };
   const updateEvaluationReportCard = (config: EvaluationReportCardConfig) => {
     setEvaluationReportCardData(config);
@@ -290,6 +302,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setGrooming(groomingConfig);
     setTraining(trainingConfig);
     setEvaluation(evaluationConfig);
+    setEvalFormTemplateData(defaultEvalFormTemplate);
     setEvaluationReportCardData(evaluationReportCardConfig);
     setHours(businessHours);
     setProfile(businessProfile);
@@ -309,6 +322,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-grooming");
     localStorage.removeItem("settings-training");
     localStorage.removeItem("settings-evaluation");
+    localStorage.removeItem("settings-eval-form-template");
     localStorage.removeItem("settings-evaluation-report-card");
     localStorage.removeItem("settings-hours");
     localStorage.removeItem("settings-profile");
@@ -333,6 +347,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         grooming,
         training,
         evaluation,
+        evaluationFormTemplate: evalFormTemplateData,
         evaluationReportCard: evaluationReportCardData,
         hours,
         profile,
@@ -353,6 +368,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateGrooming,
         updateTraining,
         updateEvaluation,
+        updateEvaluationFormTemplate,
         updateEvaluationReportCard,
         updateHours,
         updateProfile,

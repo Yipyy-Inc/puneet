@@ -294,6 +294,62 @@ export const bookingRulesSchema = z.object({
 });
 export type BookingRules = z.infer<typeof bookingRulesSchema>;
 
+// ============================================================================
+// Evaluation Form Template (configurable by facility)
+// ============================================================================
+
+export const evalFieldTypeEnum = z.enum([
+  "yes_no",
+  "scale",
+  "single_select",
+  "multi_select",
+  "text",
+  "number",
+]);
+export type EvalFieldType = z.infer<typeof evalFieldTypeEnum>;
+
+export const evalQuestionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: evalFieldTypeEnum,
+  required: z.boolean(),
+  options: z.array(z.string()).optional(),
+  scaleLabels: z
+    .object({
+      low: z.string().optional(),
+      mid: z.string().optional(),
+      high: z.string().optional(),
+    })
+    .optional(),
+  placeholder: z.string().optional(),
+  helpText: z.string().optional(),
+  allowNotes: z.boolean().optional(),
+});
+export type EvalQuestion = z.infer<typeof evalQuestionSchema>;
+
+export const evalSectionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  questions: z.array(evalQuestionSchema),
+});
+export type EvalSection = z.infer<typeof evalSectionSchema>;
+
+export const evaluationFormTemplateSchema = z.object({
+  sections: z.array(evalSectionSchema),
+  behaviorCodes: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      color: z.string(),
+    }),
+  ),
+  internalNotesEnabled: z.boolean(),
+});
+export type EvaluationFormTemplate = z.infer<
+  typeof evaluationFormTemplateSchema
+>;
+
 export const facilityBookingFlowConfigSchema = z.object({
   evaluationRequired: z.boolean(),
   hideServicesUntilEvaluationCompleted: z.boolean(),
