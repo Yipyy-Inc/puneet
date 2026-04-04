@@ -203,34 +203,30 @@ export function EvaluationSettings() {
 
   return (
     <div className="space-y-6">
-      {/* ── Premium header ── */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-6 py-6">
-        <div className="absolute -top-10 -right-10 size-40 rounded-full bg-indigo-100/40" />
-        <div className="absolute -bottom-6 -left-6 size-24 rounded-full bg-violet-100/30" />
-        <div className="relative">
-          <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200">
-              <ClipboardCheck className="size-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-gray-900">
-                Evaluation System
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                Configure pet assessments, scheduling, pricing, and result
-                delivery
-              </p>
-            </div>
+      {/* ── Header ── */}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-slate-800">
+            <ClipboardCheck className="size-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-slate-900">
+              Evaluation System
+            </h2>
+            <p className="text-sm text-slate-500">
+              Configure pet assessments, scheduling, pricing, and result
+              delivery
+            </p>
           </div>
         </div>
       </div>
 
       {/* ── Master Toggle ── */}
-      <Card className="overflow-hidden">
+      <Card>
         <CardContent className="flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100">
-              <ClipboardCheck className="size-5 text-indigo-600" />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-slate-100">
+              <ClipboardCheck className="size-5 text-slate-700" />
             </div>
             <div>
               <p className="font-semibold">Enable Evaluation Requirement</p>
@@ -960,8 +956,8 @@ export function EvaluationSettings() {
       )}
 
       {/* Save */}
-      <div className="sticky bottom-0 z-10 flex justify-end rounded-xl border bg-white/80 p-4 shadow-sm backdrop-blur-sm">
-        <Button onClick={handleSave} className="gap-1.5 px-6 shadow-md">
+      <div className="flex justify-end pt-2">
+        <Button onClick={handleSave} className="gap-1.5 px-6">
           Save Evaluation Settings
         </Button>
       </div>
