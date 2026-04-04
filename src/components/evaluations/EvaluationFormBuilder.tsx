@@ -123,9 +123,7 @@ function QuestionEditor({
   const typeConfig = FIELD_TYPE_OPTIONS.find((o) => o.value === question.type);
 
   return (
-    <div
-      className={`group rounded-lg border border-l-4 bg-white transition-all hover:shadow-md ${typeConfig?.accent ?? "border-l-slate-300"}`}
-    >
+    <div className="group rounded-lg border bg-white transition-all hover:shadow-md">
       {/* Header row */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         <GripVertical className="text-muted-foreground/30 size-4 shrink-0 transition-colors group-hover:text-slate-400" />
@@ -737,7 +735,7 @@ export function EvaluationFormBuilder() {
                     return (
                       <div
                         key={q.id}
-                        className={`flex items-center gap-3 border-l-3 px-4 py-2.5 ${tc?.accent ?? "border-l-slate-300"}`}
+                        className="flex items-center gap-3 px-4 py-2.5"
                       >
                         <span
                           className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${tc?.badgeBg ?? "bg-slate-100"} ${tc?.badgeText ?? "text-slate-600"}`}
