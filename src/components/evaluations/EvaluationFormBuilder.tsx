@@ -36,19 +36,64 @@ import {
   Save,
 } from "lucide-react";
 
-// ── Field type labels ────────────────────────────────────────────────
+// ── Field type config (color + label) ────────────────────────────────
 
 const FIELD_TYPE_OPTIONS: {
   value: EvalFieldType;
   label: string;
   desc: string;
+  badgeBg: string;
+  badgeText: string;
+  accent: string;
 }[] = [
-  { value: "yes_no", label: "Yes / No", desc: "Toggle question" },
-  { value: "scale", label: "Low / Med / High", desc: "Three-point scale" },
-  { value: "single_select", label: "Single choice", desc: "Pick one option" },
-  { value: "multi_select", label: "Multi choice", desc: "Pick multiple" },
-  { value: "text", label: "Free text", desc: "Open-ended answer" },
-  { value: "number", label: "Number", desc: "Numeric input" },
+  {
+    value: "yes_no",
+    label: "Yes / No",
+    desc: "Toggle question",
+    badgeBg: "bg-emerald-50",
+    badgeText: "text-emerald-700",
+    accent: "border-l-emerald-400",
+  },
+  {
+    value: "scale",
+    label: "Low / Med / High",
+    desc: "Three-point scale",
+    badgeBg: "bg-amber-50",
+    badgeText: "text-amber-700",
+    accent: "border-l-amber-400",
+  },
+  {
+    value: "single_select",
+    label: "Single choice",
+    desc: "Pick one option",
+    badgeBg: "bg-sky-50",
+    badgeText: "text-sky-700",
+    accent: "border-l-sky-400",
+  },
+  {
+    value: "multi_select",
+    label: "Multi choice",
+    desc: "Pick multiple",
+    badgeBg: "bg-violet-50",
+    badgeText: "text-violet-700",
+    accent: "border-l-violet-400",
+  },
+  {
+    value: "text",
+    label: "Free text",
+    desc: "Open-ended answer",
+    badgeBg: "bg-slate-100",
+    badgeText: "text-slate-600",
+    accent: "border-l-slate-400",
+  },
+  {
+    value: "number",
+    label: "Number",
+    desc: "Numeric input",
+    badgeBg: "bg-rose-50",
+    badgeText: "text-rose-700",
+    accent: "border-l-rose-400",
+  },
 ];
 
 // ── Question editor ──────────────────────────────────────────────────
@@ -75,11 +120,15 @@ function QuestionEditor({
     question.type === "single_select" || question.type === "multi_select";
   const isScale = question.type === "scale";
 
+  const typeConfig = FIELD_TYPE_OPTIONS.find((o) => o.value === question.type);
+
   return (
-    <div className="group rounded-lg border bg-white transition-shadow hover:shadow-sm">
+    <div
+      className={`group rounded-lg border border-l-4 bg-white transition-all hover:shadow-md ${typeConfig?.accent ?? "border-l-slate-300"}`}
+    >
       {/* Header row */}
       <div className="flex items-center gap-2 px-3 py-2.5">
-        <GripVertical className="text-muted-foreground/40 size-4 shrink-0" />
+        <GripVertical className="text-muted-foreground/30 size-4 shrink-0 transition-colors group-hover:text-slate-400" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -89,11 +138,15 @@ function QuestionEditor({
               className="h-8 border-0 px-1 text-sm font-medium shadow-none focus-visible:ring-1"
               placeholder="Question label..."
             />
-            <Badge variant="secondary" className="shrink-0 text-[10px]">
-              {FIELD_TYPE_OPTIONS.find((o) => o.value === question.type)?.label}
-            </Badge>
+            <span
+              className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${typeConfig?.badgeBg ?? "bg-slate-100"} ${typeConfig?.badgeText ?? "text-slate-600"}`}
+            >
+              {typeConfig?.label}
+            </span>
             {question.required && (
-              <span className="text-destructive text-xs font-bold">*</span>
+              <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
+                REQ
+              </span>
             )}
           </div>
         </div>
@@ -138,7 +191,7 @@ function QuestionEditor({
 
       {/* Expanded config */}
       {expanded && (
-        <div className="space-y-3 border-t px-4 py-3">
+        <div className="space-y-3 border-t bg-slate-50/60 px-4 py-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Field type</Label>
@@ -387,9 +440,9 @@ function SectionEditor({
   };
 
   return (
-    <div className="rounded-xl border">
+    <div className="overflow-hidden rounded-xl border shadow-sm transition-shadow hover:shadow-md">
       {/* Section header */}
-      <div className="flex items-center gap-2 border-b bg-gray-50/50 px-4 py-3">
+      <div className="flex items-center gap-2 border-b bg-slate-50 px-4 py-3">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -469,15 +522,14 @@ function SectionEditor({
               isLast={i === section.questions.length - 1}
             />
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full gap-1.5 border-dashed"
+          <button
+            type="button"
             onClick={addQuestion}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-slate-200 py-2.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
           >
             <Plus className="size-3.5" />
             Add question
-          </Button>
+          </button>
         </div>
       )}
     </div>
@@ -663,52 +715,68 @@ export function EvaluationFormBuilder() {
       <CardContent>
         {!editing ? (
           /* ── Read-only preview ── */
-          <div className="space-y-3">
+          <div className="space-y-4">
             {local.sections.map((section) => (
-              <div key={section.id} className="rounded-lg border p-3">
-                <p className="text-sm font-semibold">{section.title}</p>
-                {section.description && (
-                  <p className="text-muted-foreground text-xs">
-                    {section.description}
-                  </p>
-                )}
-                <div className="mt-2 space-y-1">
-                  {section.questions.map((q) => (
-                    <div
-                      key={q.id}
-                      className="flex items-center gap-2 rounded px-2 py-1 text-xs"
-                    >
-                      <span className="text-muted-foreground w-20 shrink-0">
-                        {
-                          FIELD_TYPE_OPTIONS.find((o) => o.value === q.type)
-                            ?.label
-                        }
-                      </span>
-                      <span className="font-medium">{q.label}</span>
-                      {q.required && (
-                        <span className="text-destructive text-[10px]">
-                          Required
+              <div
+                key={section.id}
+                className="overflow-hidden rounded-xl border"
+              >
+                <div className="border-b bg-slate-50 px-4 py-2.5">
+                  <p className="text-sm font-semibold">{section.title}</p>
+                  {section.description && (
+                    <p className="text-muted-foreground text-xs">
+                      {section.description}
+                    </p>
+                  )}
+                </div>
+                <div className="divide-y">
+                  {section.questions.map((q) => {
+                    const tc = FIELD_TYPE_OPTIONS.find(
+                      (o) => o.value === q.type,
+                    );
+                    return (
+                      <div
+                        key={q.id}
+                        className={`flex items-center gap-3 border-l-3 px-4 py-2.5 ${tc?.accent ?? "border-l-slate-300"}`}
+                      >
+                        <span
+                          className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-semibold ${tc?.badgeBg ?? "bg-slate-100"} ${tc?.badgeText ?? "text-slate-600"}`}
+                        >
+                          {tc?.label}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        <span className="flex-1 text-sm font-medium">
+                          {q.label}
+                        </span>
+                        {q.required && (
+                          <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
+                            REQ
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
             {local.behaviorCodes.length > 0 && (
-              <div className="rounded-lg border p-3">
-                <p className="mb-2 text-sm font-semibold">Behavior Codes</p>
-                <div className="flex flex-wrap gap-1.5">
+              <div className="overflow-hidden rounded-xl border">
+                <div className="border-b bg-slate-50 px-4 py-2.5">
+                  <p className="text-sm font-semibold">Behavior Codes</p>
+                  <p className="text-muted-foreground text-xs">
+                    {local.behaviorCodes.length} tags available for staff
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 p-4">
                   {local.behaviorCodes.map((code) => (
                     <div
                       key={code.id}
-                      className="flex items-center gap-1.5 rounded-full border px-2.5 py-1"
+                      className="flex items-center gap-2 rounded-full border px-3 py-1.5 shadow-sm"
                     >
                       <div
-                        className="size-2 rounded-full"
+                        className="size-2.5 rounded-full ring-2 ring-white"
                         style={{ backgroundColor: code.color }}
                       />
-                      <span className="text-xs">{code.label}</span>
+                      <span className="text-xs font-medium">{code.label}</span>
                     </div>
                   ))}
                 </div>
@@ -760,14 +828,14 @@ export function EvaluationFormBuilder() {
                     isLast={i === local.sections.length - 1}
                   />
                 ))}
-                <Button
-                  variant="outline"
-                  className="w-full gap-1.5 border-dashed"
+                <button
+                  type="button"
                   onClick={addSection}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-4 text-sm font-medium text-slate-400 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
                 >
                   <Plus className="size-4" />
                   Add section
-                </Button>
+                </button>
 
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
