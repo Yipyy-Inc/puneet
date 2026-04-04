@@ -305,13 +305,8 @@ export function ServiceStep({
                 isDisabled
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg",
-                // #5 — selected border uses accent color, not always border-primary
                 isSelected
-                  ? cn(
-                      "shadow-md ring-2 ring-offset-2",
-                      accent.ring,
-                      accent.border,
-                    )
+                  ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
                   : "border-border hover:border-primary/40",
               )}
             >
@@ -378,30 +373,8 @@ export function ServiceStep({
 
                 {/* Selected checkmark badge */}
                 {isSelected && (
-                  <div
-                    className={cn(
-                      "absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full shadow-md",
-                      // match badge color to service accent
-                      service.id === "daycare"
-                        ? "bg-amber-500"
-                        : service.id === "boarding"
-                          ? "bg-indigo-500"
-                          : service.id === "grooming"
-                            ? "bg-pink-500"
-                            : service.id === "training"
-                              ? "bg-sky-500"
-                              : service.id === "retail"
-                                ? "bg-emerald-500"
-                                : service.id === "evaluation"
-                                  ? "bg-violet-500"
-                                  : service.id === "vet"
-                                    ? "bg-rose-500"
-                                    : service.id === "store"
-                                      ? "bg-teal-500"
-                                      : "bg-primary",
-                    )}
-                  >
-                    <Check className="size-4 text-white" strokeWidth={3} />
+                  <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full shadow-md">
+                    <Check className="size-4" strokeWidth={3} />
                   </div>
                 )}
               </div>
