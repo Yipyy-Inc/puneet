@@ -27,6 +27,7 @@ import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
 import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
+import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 
 const AddOnsSettings = dynamic(
@@ -3181,6 +3182,8 @@ export default function SettingsPage() {
           {activeSection === "notifications" && (
             <div className="space-y-6">
               <NotificationSettingsCard />
+
+              <ServiceNotificationSettings />
 
               {/* Template Editor */}
               <Card>

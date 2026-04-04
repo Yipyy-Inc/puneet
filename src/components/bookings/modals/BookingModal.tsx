@@ -85,7 +85,14 @@ export function BookingModal({
   preSelectedService,
   booking,
 }: NewBookingModalProps) {
-  const { daycare, boarding, grooming, training, bookingFlow } = useSettings();
+  const {
+    daycare,
+    boarding,
+    grooming,
+    training,
+    bookingFlow,
+    serviceNotifDefaults,
+  } = useSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
     [daycare, boarding, grooming, training],
@@ -161,6 +168,10 @@ export function BookingModal({
       setServiceType("");
     }
     setCurrentSubStep(0);
+    // Apply per-service notification defaults from settings
+    const defaults = getNotifDefaults(service);
+    setNotificationEmail(defaults.email);
+    setNotificationSMS(defaults.sms);
   };
 
   // Service-specific state
@@ -205,8 +216,21 @@ export function BookingModal({
     "feeding" | "medication"
   >("feeding");
   const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
-  const [notificationEmail, setNotificationEmail] = useState(true);
-  const [notificationSMS, setNotificationSMS] = useState(false);
+
+  // Derive notification defaults for a given service from settings
+  const getNotifDefaults = useCallback(
+    (serviceId: string) => {
+      const def = serviceNotifDefaults.find((d) => d.serviceId === serviceId);
+      return { email: def?.email ?? true, sms: def?.sms ?? false };
+    },
+    [serviceNotifDefaults],
+  );
+
+  const initDefaults = getNotifDefaults(preSelectedService ?? "");
+  const [notificationEmail, setNotificationEmail] = useState(
+    initDefaults.email,
+  );
+  const [notificationSMS, setNotificationSMS] = useState(initDefaults.sms);
 
   // Get current sub-steps based on selected service
   const currentSubSteps = useMemo(() => {

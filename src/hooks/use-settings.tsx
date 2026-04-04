@@ -16,6 +16,7 @@ import {
   scheduleTimeOverrides as defaultScheduleTimeOverrides,
   dropOffPickUpOverrides as defaultDropOffPickUpOverrides,
   notificationToggles,
+  serviceNotificationDefaults,
   integrations,
   moduleAddons,
   facilityHolidays,
@@ -32,6 +33,7 @@ import type {
   ScheduleTimeOverride,
   DropOffPickUpOverride,
   NotificationToggle,
+  ServiceNotificationDefault,
   Integration,
   ModuleAddon,
 } from "@/types/facility";
@@ -51,6 +53,7 @@ interface SettingsContextValue {
   scheduleTimeOverrides: ScheduleTimeOverride[];
   dropOffPickUpOverrides: DropOffPickUpOverride[];
   notifications: NotificationToggle[];
+  serviceNotifDefaults: ServiceNotificationDefault[];
   integrations: Integration[];
   addons: ModuleAddon[];
   holidays: Array<{ month: number; day: number; name: string }>;
@@ -68,6 +71,7 @@ interface SettingsContextValue {
   updateScheduleTimeOverrides: (overrides: ScheduleTimeOverride[]) => void;
   updateDropOffPickUpOverrides: (overrides: DropOffPickUpOverride[]) => void;
   updateNotifications: (notifications: NotificationToggle[]) => void;
+  updateServiceNotifDefaults: (defaults: ServiceNotificationDefault[]) => void;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
   resetModules: () => void;
@@ -156,6 +160,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationToggle[]>(() =>
     loadStored("settings-notifications", notificationToggles),
   );
+  const [serviceNotifDefaultsData, setServiceNotifDefaultsData] = useState<
+    ServiceNotificationDefault[]
+  >(() =>
+    loadStored("settings-service-notif-defaults", serviceNotificationDefaults),
+  );
   const [integrationsData, setIntegrationsData] = useState<Integration[]>(() =>
     loadStored("settings-integrations", integrations),
   );
@@ -231,6 +240,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       JSON.stringify(notifications),
     );
   };
+  const updateServiceNotifDefaults = (
+    defaults: ServiceNotificationDefault[],
+  ) => {
+    setServiceNotifDefaultsData(defaults);
+    localStorage.setItem(
+      "settings-service-notif-defaults",
+      JSON.stringify(defaults),
+    );
+  };
   const updateIntegrations = (integrations: Integration[]) => {
     setIntegrationsData(integrations);
     localStorage.setItem("settings-integrations", JSON.stringify(integrations));
@@ -255,6 +273,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setScheduleTimeOverridesState(defaultScheduleTimeOverrides);
     setDropOffPickUpOverridesState(defaultDropOffPickUpOverrides);
     setNotifications(notificationToggles);
+    setServiceNotifDefaultsData(serviceNotificationDefaults);
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
     localStorage.removeItem("settings-daycare");
@@ -271,6 +290,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-schedule-time-overrides");
     localStorage.removeItem("settings-drop-off-pick-up-overrides");
     localStorage.removeItem("settings-notifications");
+    localStorage.removeItem("settings-service-notif-defaults");
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
   };
@@ -292,6 +312,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         scheduleTimeOverrides: scheduleTimeOverridesState,
         dropOffPickUpOverrides: dropOffPickUpOverridesState,
         notifications,
+        serviceNotifDefaults: serviceNotifDefaultsData,
         integrations: integrationsData,
         addons,
         holidays: facilityHolidays,
@@ -309,6 +330,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateScheduleTimeOverrides,
         updateDropOffPickUpOverrides,
         updateNotifications,
+        updateServiceNotifDefaults,
         updateIntegrations,
         updateAddons,
         resetModules,
