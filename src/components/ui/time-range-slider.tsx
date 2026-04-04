@@ -88,8 +88,8 @@ export function TimeRangeSlider({
   const endPercent = ((endMinutes - trackMin) / trackSpan) * 100;
 
   const durationMinutes = endMinutes - startMinutes;
-  const hours = Math.floor(durationMinutes / 60);
-  const minutes = durationMinutes % 60;
+  const hours = Math.floor(Math.abs(durationMinutes) / 60);
+  const minutes = Math.abs(durationMinutes) % 60;
   const durationText = minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`;
   const daycareType = durationMinutes / 60 <= 5 ? "Half Day" : "Full Day";
 
@@ -117,58 +117,41 @@ export function TimeRangeSlider({
     ],
   );
 
-  const percentToMinutes = useCallback(
-    (percent: number) => {
-      const m = trackMin + (percent / 100) * trackSpan;
-      return snap(Math.round(m));
-    },
-    [trackMin, trackSpan, snap],
-  );
-
-  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!trackRef.current) return;
-    const rect = trackRef.current.getBoundingClientRect();
-    const percent = Math.max(
-      0,
-      Math.min(100, ((e.clientX - rect.left) / rect.width) * 100),
-    );
-    const clickedMinutes = percentToMinutes(percent);
-    const distToStart = Math.abs(clickedMinutes - startMinutes);
-    const distToEnd = Math.abs(clickedMinutes - endMinutes);
-    if (distToStart <= distToEnd) {
-      if (clickedMinutes >= endMinMinutes && clickedMinutes <= endMaxMinutes)
-        enforceAndEmit(startMinutes, clickedMinutes);
-      else if (clickedMinutes < startMinutes)
-        enforceAndEmit(
-          Math.max(startMinMinutes, clickedMinutes),
-          Math.max(clickedMinutes + step, endMinutes),
-        );
-    } else {
-      if (
-        clickedMinutes >= startMinMinutes &&
-        clickedMinutes <= startMaxMinutes
-      )
-        enforceAndEmit(clickedMinutes, endMinutes);
-      else if (clickedMinutes > endMinutes)
-        enforceAndEmit(
-          Math.min(startMinutes, clickedMinutes - step),
-          Math.min(endMaxMinutes, clickedMinutes),
-        );
-    }
-  };
-
-  const handleThumbMouseDown = (which: "start" | "end") => () =>
-    setDragging(which);
-  const handleMouseUp = useCallback(() => setDragging(null), []);
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!dragging || !trackRef.current) return;
+  // Convert a pixel position on the track to minutes
+  const clientXToMinutes = useCallback(
+    (clientX: number) => {
+      if (!trackRef.current) return startMinutes;
       const rect = trackRef.current.getBoundingClientRect();
       const percent = Math.max(
         0,
-        Math.min(100, ((e.clientX - rect.left) / rect.width) * 100),
+        Math.min(100, ((clientX - rect.left) / rect.width) * 100),
       );
-      const m = percentToMinutes(percent);
+      return snap(Math.round(trackMin + (percent / 100) * trackSpan));
+    },
+    [trackMin, trackSpan, snap, startMinutes],
+  );
+
+  // Click on track — move the nearest thumb
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const clickedMinutes = clientXToMinutes(e.clientX);
+    const distToStart = Math.abs(clickedMinutes - startMinutes);
+    const distToEnd = Math.abs(clickedMinutes - endMinutes);
+
+    if (distToStart <= distToEnd) {
+      // Closer to start thumb — move start
+      enforceAndEmit(clickedMinutes, endMinutes);
+    } else {
+      // Closer to end thumb — move end
+      enforceAndEmit(startMinutes, clickedMinutes);
+    }
+  };
+
+  // ── Drag handling (mouse + touch) ──────────────────────────────────────────
+
+  const handleDragMove = useCallback(
+    (clientX: number) => {
+      if (!dragging) return;
+      const m = clientXToMinutes(clientX);
       if (dragging === "start") {
         const newStart = clamp(m, startMinMinutes, startMaxMinutes);
         if (newStart < endMinutes - step) enforceAndEmit(newStart, endMinutes);
@@ -179,11 +162,11 @@ export function TimeRangeSlider({
     },
     [
       dragging,
+      clientXToMinutes,
       enforceAndEmit,
       endMinutes,
       startMinutes,
       step,
-      percentToMinutes,
       startMinMinutes,
       startMaxMinutes,
       endMinMinutes,
@@ -191,22 +174,38 @@ export function TimeRangeSlider({
     ],
   );
 
-  useEffect(() => {
-    const up = () => setDragging(null);
-    window.addEventListener("mouseup", up);
-    return () => window.removeEventListener("mouseup", up);
-  }, []);
+  const handleDragEnd = useCallback(() => setDragging(null), []);
 
   useEffect(() => {
     if (!dragging) return;
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragging, handleMouseMove, handleMouseUp]);
 
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientX);
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      handleDragMove(e.touches[0].clientX);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", handleDragEnd);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", handleDragEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", handleDragEnd);
+    };
+  }, [dragging, handleDragMove, handleDragEnd]);
+
+  const startDrag =
+    (which: "start" | "end") => (e: React.MouseEvent | React.TouchEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setDragging(which);
+    };
+
+  // Time markers along the track
   const timeMarkers: string[] = [];
   for (let m = trackMin; m <= trackMax; m += 120) {
     timeMarkers.push(minutesToTime(m));
@@ -234,6 +233,7 @@ export function TimeRangeSlider({
 
   return (
     <div className={cn("space-y-3", className)}>
+      {/* Time summary header */}
       <div className="flex items-center justify-between gap-2">
         <div>
           <div className="text-lg font-bold">{startTime}</div>
@@ -255,6 +255,7 @@ export function TimeRangeSlider({
         </div>
       </div>
 
+      {/* Slider track */}
       <div
         ref={trackRef}
         role="slider"
@@ -262,52 +263,54 @@ export function TimeRangeSlider({
         aria-valuemax={trackMax}
         aria-valuenow={startMinutes}
         tabIndex={0}
-        className="relative h-10 w-full cursor-pointer select-none"
+        className="relative h-10 w-full cursor-pointer touch-none select-none"
         onClick={handleTrackClick}
         onMouseDown={(e) => e.preventDefault()}
       >
         <div className="absolute inset-0 flex items-center">
+          {/* Background track */}
           <div className="bg-muted h-2 w-full rounded-full" />
+          {/* Active range */}
           <div
             className="bg-primary absolute h-2 rounded-full"
             style={{
               left: `${startPercent}%`,
-              width: `${endPercent - startPercent}%`,
+              width: `${Math.max(0, endPercent - startPercent)}%`,
             }}
           />
+          {/* Start thumb */}
           <div
-            className="border-primary bg-background absolute size-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
+            className="border-primary bg-background absolute size-5 rounded-full border-2 shadow-md transition-none hover:scale-110"
             style={{
               left: `${startPercent}%`,
               top: "50%",
               transform: "translate(-50%, -50%)",
             }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              handleThumbMouseDown("start")();
-            }}
+            onMouseDown={startDrag("start")}
+            onTouchStart={startDrag("start")}
           />
+          {/* End thumb */}
           <div
-            className="border-primary bg-background absolute size-5 -translate-x-1/2 rounded-full border-2 shadow-md transition-none hover:scale-110"
+            className="border-primary bg-background absolute size-5 rounded-full border-2 shadow-md transition-none hover:scale-110"
             style={{
               left: `${endPercent}%`,
               top: "50%",
               transform: "translate(-50%, -50%)",
             }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              handleThumbMouseDown("end")();
-            }}
+            onMouseDown={startDrag("end")}
+            onTouchStart={startDrag("end")}
           />
         </div>
       </div>
 
+      {/* Time markers */}
       <div className="text-muted-foreground flex justify-between text-[10px]">
         {timeMarkers.map((t) => (
           <span key={t}>{t}</span>
         ))}
       </div>
 
+      {/* Manual time inputs */}
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="space-y-1">
           <Label className="text-muted-foreground text-xs">Check-in</Label>
@@ -343,6 +346,7 @@ export function TimeRangeSlider({
         </div>
       </div>
 
+      {/* Action buttons */}
       <div className="flex justify-end gap-2">
         <Button
           type="button"
