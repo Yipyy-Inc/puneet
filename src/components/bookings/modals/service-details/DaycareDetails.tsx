@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { PawPrint, Check } from "lucide-react";
+import { PawPrint, Check, Sun } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { Pet } from "@/types/pet";
@@ -256,47 +256,60 @@ export function DaycareDetails({
       {/* Step Content */}
       <div className="min-h-[400px]">
         {currentSubStep === 0 && (
-          <div>
-            <Label className="text-base">Select Daycare Days</Label>
-            <p className="text-muted-foreground mt-1 mb-2 text-xs">
-              Daycare type (Half Day or Full Day) will be automatically
-              determined based on check-in/out times
-            </p>
-            <DateSelectionCalendar
-              mode="multi"
-              selectedDates={daycareSelectedDates}
-              onSelectionChange={setDaycareSelectedDates}
-              showTimeSelection
-              dateTimes={daycareDateTimes}
-              onDateTimesChange={(times) => {
-                setDaycareDateTimes(times);
-                if (times.length > 0) {
-                  const firstTime = times[0];
-                  const checkIn = firstTime.checkInTime.split(":");
-                  const checkOut = firstTime.checkOutTime.split(":");
-                  const checkInMinutes =
-                    parseInt(checkIn[0]) * 60 + parseInt(checkIn[1]);
-                  const checkOutMinutes =
-                    parseInt(checkOut[0]) * 60 + parseInt(checkOut[1]);
-                  const hoursSpent = (checkOutMinutes - checkInMinutes) / 60;
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+                <Sun className="size-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Select Daycare Days</h3>
+                <p className="text-muted-foreground text-sm">
+                  Pick one or more days and set drop-off/pick-up times. Half Day
+                  or Full Day is determined automatically.
+                </p>
+              </div>
+            </div>
 
-                  if (hoursSpent <= 5) {
-                    setServiceType("half_day");
-                  } else {
-                    setServiceType("full_day");
+            <div className="overflow-hidden rounded-xl border shadow-sm">
+              <DateSelectionCalendar
+                mode="multi"
+                selectedDates={daycareSelectedDates}
+                onSelectionChange={setDaycareSelectedDates}
+                showTimeSelection
+                dateTimes={daycareDateTimes}
+                onDateTimesChange={(times) => {
+                  setDaycareDateTimes(times);
+                  if (times.length > 0) {
+                    const firstTime = times[0];
+                    const checkIn = firstTime.checkInTime.split(":");
+                    const checkOut = firstTime.checkOutTime.split(":");
+                    const checkInMinutes =
+                      parseInt(checkIn[0]) * 60 + parseInt(checkIn[1]);
+                    const checkOutMinutes =
+                      parseInt(checkOut[0]) * 60 + parseInt(checkOut[1]);
+                    const hoursSpent = (checkOutMinutes - checkInMinutes) / 60;
+
+                    if (hoursSpent <= 5) {
+                      setServiceType("half_day");
+                    } else {
+                      setServiceType("full_day");
+                    }
                   }
+                }}
+                facilityHours={hours}
+                scheduleTimeOverrides={scheduleTimeOverridesForDaycare}
+                dropOffPickUpWindowsByDate={
+                  dropOffPickUpWindowsByDateForDaycare
                 }
-              }}
-              facilityHours={hours}
-              scheduleTimeOverrides={scheduleTimeOverridesForDaycare}
-              dropOffPickUpWindowsByDate={dropOffPickUpWindowsByDateForDaycare}
-              bookingRules={{
-                minimumAdvanceBooking: rules.minimumAdvanceBooking,
-                maximumAdvanceBooking: rules.maximumAdvanceBooking,
-              }}
-              disabledDates={blockedDatesForDaycare}
-              disabledDateMessages={blockedDateMessagesForDaycare}
-            />
+                bookingRules={{
+                  minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                  maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                }}
+                disabledDates={blockedDatesForDaycare}
+                disabledDateMessages={blockedDateMessagesForDaycare}
+              />
+            </div>
           </div>
         )}
 

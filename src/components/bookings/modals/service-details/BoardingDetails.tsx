@@ -4,7 +4,7 @@ import React from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Check, PawPrint } from "lucide-react";
+import { Check, PawPrint, Bed } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -274,19 +274,22 @@ export function BoardingDetails({
       {/* Step Content */}
       <div className="min-h-[400px]">
         {currentSubStep === 0 && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-base">Select Boarding Dates</Label>
-              <p className="text-muted-foreground mt-1 mb-2 text-xs">
-                Choose check-in and check-out dates for boarding
-              </p>
-              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>How it works:</strong> Click on the start date and
-                  drag or click on the end date to select a range for boarding.
-                  Set check-in and check-out times for the stay.
+          <div className="space-y-5">
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+                <Bed className="size-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Select Boarding Dates</h3>
+                <p className="text-muted-foreground text-sm">
+                  Click the check-in date, then click the check-out date to
+                  select a range. Set drop-off and pick-up times for the stay.
                 </p>
               </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border shadow-sm">
               <DateSelectionCalendar
                 mode="range"
                 rangeStart={boardingRangeStart}
