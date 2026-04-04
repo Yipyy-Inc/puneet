@@ -172,6 +172,7 @@ export const newBookingSchema = z.object({
   specialRequests: z.string().optional(),
   notificationEmail: z.boolean().optional(),
   notificationSMS: z.boolean().optional(),
+  tipAmount: z.number().optional(),
   // Service-specific fields
   daycareSelectedDates: z.array(z.string()).optional(),
   daycareDateTimes: z.array(daycareDateTimeSchema).optional(),

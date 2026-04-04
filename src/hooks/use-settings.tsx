@@ -17,6 +17,7 @@ import {
   dropOffPickUpOverrides as defaultDropOffPickUpOverrides,
   notificationToggles,
   serviceNotificationDefaults,
+  tipConfig as defaultTipConfig,
   integrations,
   moduleAddons,
   facilityHolidays,
@@ -34,6 +35,7 @@ import type {
   DropOffPickUpOverride,
   NotificationToggle,
   ServiceNotificationDefault,
+  TipConfig,
   Integration,
   ModuleAddon,
 } from "@/types/facility";
@@ -54,6 +56,7 @@ interface SettingsContextValue {
   dropOffPickUpOverrides: DropOffPickUpOverride[];
   notifications: NotificationToggle[];
   serviceNotifDefaults: ServiceNotificationDefault[];
+  tipConfig: TipConfig;
   integrations: Integration[];
   addons: ModuleAddon[];
   holidays: Array<{ month: number; day: number; name: string }>;
@@ -72,6 +75,7 @@ interface SettingsContextValue {
   updateDropOffPickUpOverrides: (overrides: DropOffPickUpOverride[]) => void;
   updateNotifications: (notifications: NotificationToggle[]) => void;
   updateServiceNotifDefaults: (defaults: ServiceNotificationDefault[]) => void;
+  updateTipConfig: (config: TipConfig) => void;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
   resetModules: () => void;
@@ -165,6 +169,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   >(() =>
     loadStored("settings-service-notif-defaults", serviceNotificationDefaults),
   );
+  const [tipConfigData, setTipConfigData] = useState<TipConfig>(() =>
+    loadStored("settings-tip-config", defaultTipConfig),
+  );
   const [integrationsData, setIntegrationsData] = useState<Integration[]>(() =>
     loadStored("settings-integrations", integrations),
   );
@@ -249,6 +256,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       JSON.stringify(defaults),
     );
   };
+  const updateTipConfig = (config: TipConfig) => {
+    setTipConfigData(config);
+    localStorage.setItem("settings-tip-config", JSON.stringify(config));
+  };
   const updateIntegrations = (integrations: Integration[]) => {
     setIntegrationsData(integrations);
     localStorage.setItem("settings-integrations", JSON.stringify(integrations));
@@ -274,6 +285,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setDropOffPickUpOverridesState(defaultDropOffPickUpOverrides);
     setNotifications(notificationToggles);
     setServiceNotifDefaultsData(serviceNotificationDefaults);
+    setTipConfigData(defaultTipConfig);
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
     localStorage.removeItem("settings-daycare");
@@ -291,6 +303,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-drop-off-pick-up-overrides");
     localStorage.removeItem("settings-notifications");
     localStorage.removeItem("settings-service-notif-defaults");
+    localStorage.removeItem("settings-tip-config");
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
   };
@@ -313,6 +326,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         dropOffPickUpOverrides: dropOffPickUpOverridesState,
         notifications,
         serviceNotifDefaults: serviceNotifDefaultsData,
+        tipConfig: tipConfigData,
         integrations: integrationsData,
         addons,
         holidays: facilityHolidays,
@@ -331,6 +345,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateDropOffPickUpOverrides,
         updateNotifications,
         updateServiceNotifDefaults,
+        updateTipConfig,
         updateIntegrations,
         updateAddons,
         resetModules,

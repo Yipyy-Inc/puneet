@@ -92,6 +92,7 @@ export function BookingModal({
     training,
     bookingFlow,
     serviceNotifDefaults,
+    tipConfig,
   } = useSettings();
   const configs = useMemo(
     () => ({ daycare, boarding, grooming, training }),
@@ -231,6 +232,7 @@ export function BookingModal({
     initDefaults.email,
   );
   const [notificationSMS, setNotificationSMS] = useState(initDefaults.sms);
+  const [tipAmount, setTipAmount] = useState(0);
 
   // Get current sub-steps based on selected service
   const currentSubSteps = useMemo(() => {
@@ -670,6 +672,7 @@ export function BookingModal({
       extraServices: extraServices.length > 0 ? extraServices : undefined,
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
+      tipAmount: tipAmount > 0 ? tipAmount : undefined,
     };
 
     onCreateBooking(booking);
@@ -705,6 +708,7 @@ export function BookingModal({
     setExtraServices([]);
     setNotificationEmail(true);
     setNotificationSMS(false);
+    setTipAmount(0);
   };
 
   const isViewMode = !!booking;
@@ -1611,8 +1615,14 @@ export function BookingModal({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>Total Price</span>
-                  <span>${calculatePrice.total.toFixed(2)}</span>
+                  <span>${(calculatePrice.total + tipAmount).toFixed(2)}</span>
                 </div>
+                {tipAmount > 0 && (
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>Incl. tip</span>
+                    <span>+${tipAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1721,6 +1731,9 @@ export function BookingModal({
                     setNotificationEmail={setNotificationEmail}
                     notificationSMS={notificationSMS}
                     setNotificationSMS={setNotificationSMS}
+                    tipConfig={tipConfig}
+                    tipAmount={tipAmount}
+                    onTipChange={setTipAmount}
                     onEditStep={(stepIdx, subStep) => {
                       setCurrentStep(stepIdx);
                       setCurrentSubStep(subStep ?? 0);
