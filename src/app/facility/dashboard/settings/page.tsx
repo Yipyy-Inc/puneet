@@ -32,6 +32,7 @@ import { ServiceNotificationSettings } from "@/components/facility/ServiceNotifi
 import { TipSettings } from "@/components/facility/TipSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
+import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -3361,6 +3362,8 @@ export default function SettingsPage() {
               </Card>
 
               <EvaluationSettingsCard />
+
+              <EvaluationFormBuilder />
 
               <EvaluationReportCardBuilder />
 

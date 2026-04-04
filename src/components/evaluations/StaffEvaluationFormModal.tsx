@@ -18,28 +18,22 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Evaluation } from "@/types/pet";
-import { X, Send } from "lucide-react";
+import type { EvalQuestion, EvalSection } from "@/types/facility";
+import { X, Send, Info } from "lucide-react";
 import { SendEvaluationResultModal } from "@/components/evaluations/SendEvaluationResultModal";
 import type { EvaluationResultCardData } from "@/components/evaluations/EvaluationResultCard";
 import { useSettings } from "@/hooks/use-settings";
 
-type YesNo = "yes" | "no" | "";
+// ── Dynamic form state ───────────────────────────────────────────────
+
+type Answers = Record<string, unknown>;
 type EvaluationResult = "pass" | "fail" | "";
 
-type FormState = {
-  dogFriendly: YesNo;
-  dogFriendlyNotes: string;
-  humanFriendly: YesNo;
-  humanFriendlyNotes: string;
-  energyLevel: "" | "low" | "medium" | "high";
-  anxietyLevel: "" | "low" | "medium" | "high";
-  reactivity: "" | "low" | "medium" | "high";
-  playStyle: "" | "gentle" | "balanced" | "rough" | "chase" | "wrestle";
-  temperamentNotes: string;
+interface FormState {
+  answers: Answers;
+  answerNotes: Record<string, string>;
+  behaviorCodes: string[];
   internalComments: string;
-  playGroup: "" | "small" | "large" | "mixed" | "solo" | "puppies" | "seniors";
-  behaviorTags: string[];
-  internalWarnings: string[];
   evaluationResult: EvaluationResult;
   approvedServices: {
     daycare: boolean;
@@ -47,34 +41,31 @@ type FormState = {
     customApproved: string[];
     customDenied: string[];
   };
+}
+
+const defaultApprovedServices = {
+  daycare: false,
+  boarding: false,
+  customApproved: [] as string[],
+  customDenied: [] as string[],
 };
 
-const defaultState: FormState = {
-  dogFriendly: "",
-  dogFriendlyNotes: "",
-  humanFriendly: "",
-  humanFriendlyNotes: "",
-  energyLevel: "",
-  anxietyLevel: "",
-  reactivity: "",
-  playStyle: "",
-  temperamentNotes: "",
-  internalComments: "",
-  playGroup: "",
-  behaviorTags: [],
-  internalWarnings: [],
-  evaluationResult: "",
-  approvedServices: {
-    daycare: false,
-    boarding: false,
-    customApproved: [],
-    customDenied: [],
-  },
-};
+function makeDefaultState(): FormState {
+  return {
+    answers: {},
+    answerNotes: {},
+    behaviorCodes: [],
+    internalComments: "",
+    evaluationResult: "",
+    approvedServices: { ...defaultApprovedServices },
+  };
+}
 
 function storageKey(evaluationId: string) {
   return `staff-evaluation-form:${evaluationId}`;
 }
+
+// ── Tag input helper ─────────────────────────────────────────────────
 
 function TagInput({
   label,
@@ -90,18 +81,15 @@ function TagInput({
   disabled?: boolean;
 }) {
   const [draft, setDraft] = useState("");
-
   const add = () => {
-    const nextTag = draft.trim();
-    if (!nextTag) return;
-    if (value.includes(nextTag)) {
+    const t = draft.trim();
+    if (!t || value.includes(t)) {
       setDraft("");
       return;
     }
-    onChange([...value, nextTag]);
+    onChange([...value, t]);
     setDraft("");
   };
-
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -148,6 +136,216 @@ function TagInput({
   );
 }
 
+// ── Dynamic question renderer ────────────────────────────────────────
+
+function QuestionField({
+  question,
+  value,
+  noteValue,
+  onChange,
+  onNoteChange,
+}: {
+  question: EvalQuestion;
+  value: unknown;
+  noteValue: string;
+  onChange: (val: unknown) => void;
+  onNoteChange: (val: string) => void;
+}) {
+  const strVal = typeof value === "string" ? value : "";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <Label>
+          {question.label}
+          {question.required && (
+            <span className="text-destructive ml-0.5">*</span>
+          )}
+        </Label>
+        {question.helpText && (
+          <span
+            className="text-muted-foreground cursor-help"
+            title={question.helpText}
+          >
+            <Info className="size-3.5" />
+          </span>
+        )}
+      </div>
+
+      {question.type === "yes_no" && (
+        <RadioGroup
+          value={strVal}
+          onValueChange={(v) => onChange(v)}
+          className="grid grid-cols-2 gap-3"
+        >
+          <label className="flex items-center gap-2 rounded-md border p-3">
+            <RadioGroupItem value="yes" />
+            Yes
+          </label>
+          <label className="flex items-center gap-2 rounded-md border p-3">
+            <RadioGroupItem value="no" />
+            No
+          </label>
+        </RadioGroup>
+      )}
+
+      {question.type === "scale" && (
+        <RadioGroup
+          value={strVal}
+          onValueChange={(v) => onChange(v)}
+          className="grid grid-cols-3 gap-3"
+        >
+          {(["low", "mid", "high"] as const).map((level) => (
+            <label
+              key={level}
+              className="flex items-center gap-2 rounded-md border p-3"
+            >
+              <RadioGroupItem value={level} />
+              {question.scaleLabels?.[level] ??
+                (level === "low" ? "Low" : level === "mid" ? "Medium" : "High")}
+            </label>
+          ))}
+        </RadioGroup>
+      )}
+
+      {question.type === "single_select" && (
+        <Select value={strVal} onValueChange={(v) => onChange(v)}>
+          <SelectTrigger className="w-full">
+            <SelectValue
+              placeholder={`Select ${question.label.toLowerCase()}`}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {(question.options ?? []).map((opt) => (
+              <SelectItem key={opt} value={opt}>
+                {opt}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {question.type === "multi_select" && (
+        <div className="flex flex-wrap gap-2">
+          {(question.options ?? []).map((opt) => {
+            const selected = Array.isArray(value) && value.includes(opt);
+            return (
+              <label
+                key={opt}
+                className="flex items-center gap-2 rounded-md border px-3 py-2"
+              >
+                <Checkbox
+                  checked={selected}
+                  onCheckedChange={(checked) => {
+                    const prev = Array.isArray(value) ? value : [];
+                    onChange(
+                      checked
+                        ? [...prev, opt]
+                        : prev.filter((v: string) => v !== opt),
+                    );
+                  }}
+                />
+                <span className="text-sm">{opt}</span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+
+      {question.type === "text" && (
+        <Textarea
+          value={strVal}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder ?? ""}
+          className="min-h-20"
+        />
+      )}
+
+      {question.type === "number" && (
+        <Input
+          type="number"
+          value={typeof value === "number" ? value : ""}
+          onChange={(e) =>
+            onChange(e.target.value ? parseFloat(e.target.value) : "")
+          }
+          placeholder={question.placeholder ?? ""}
+        />
+      )}
+
+      {question.allowNotes && (
+        <Textarea
+          placeholder="Optional notes..."
+          value={noteValue}
+          onChange={(e) => onNoteChange(e.target.value)}
+          className="min-h-16 text-sm"
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Section renderer ─────────────────────────────────────────────────
+
+function SectionBlock({
+  section,
+  answers,
+  answerNotes,
+  onAnswer,
+  onNote,
+}: {
+  section: EvalSection;
+  answers: Answers;
+  answerNotes: Record<string, string>;
+  onAnswer: (questionId: string, val: unknown) => void;
+  onNote: (questionId: string, val: string) => void;
+}) {
+  // Layout: pair yes/no and scale questions side-by-side
+  const pairable = ["yes_no", "scale"];
+  const rows: EvalQuestion[][] = [];
+  let i = 0;
+  while (i < section.questions.length) {
+    const q = section.questions[i];
+    const next = section.questions[i + 1];
+    if (pairable.includes(q.type) && next && pairable.includes(next.type)) {
+      rows.push([q, next]);
+      i += 2;
+    } else {
+      rows.push([q]);
+      i += 1;
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-sm font-semibold">{section.title}</p>
+        {section.description && (
+          <p className="text-muted-foreground text-xs">{section.description}</p>
+        )}
+      </div>
+      {rows.map((row, ri) => (
+        <div
+          key={ri}
+          className={`grid gap-6 ${row.length === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
+        >
+          {row.map((q) => (
+            <QuestionField
+              key={q.id}
+              question={q}
+              value={answers[q.id]}
+              noteValue={answerNotes[q.id] ?? ""}
+              onChange={(val) => onAnswer(q.id, val)}
+              onNoteChange={(val) => onNote(q.id, val)}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────
+
 export function StaffEvaluationFormModal({
   open,
   onOpenChange,
@@ -163,50 +361,56 @@ export function StaffEvaluationFormModal({
   ownerName?: string;
   evaluatorName?: string;
 }) {
-  const { evaluationReportCard } = useSettings();
+  const { evaluationReportCard, evaluationFormTemplate: template } =
+    useSettings();
   const key = useMemo(() => storageKey(evaluation.id), [evaluation.id]);
 
-  const loadFormFromStorage = (storageKey: string): FormState => {
-    if (typeof window === "undefined") return defaultState;
+  const loadForm = (k: string): FormState => {
+    if (typeof window === "undefined") return makeDefaultState();
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
+      const raw = localStorage.getItem(k);
+      if (raw)
         return {
-          ...defaultState,
+          ...makeDefaultState(),
           ...(JSON.parse(raw) as Partial<FormState>),
         };
-      }
     } catch {
-      // ignore
+      /* ignore */
     }
-    return defaultState;
+    return makeDefaultState();
   };
 
   const [form, setForm] = useState<FormState>(() =>
-    open ? loadFormFromStorage(key) : defaultState,
+    open ? loadForm(key) : makeDefaultState(),
   );
   const [prevKey, setPrevKey] = useState(key);
   const [prevOpen, setPrevOpen] = useState(open);
   const [resultError, setResultError] = useState("");
   const [saved, setSaved] = useState(false);
   const [sendModalOpen, setSendModalOpen] = useState(false);
+
   if (open !== prevOpen || key !== prevKey) {
     setPrevOpen(open);
     setPrevKey(key);
     if (open) {
-      setForm(loadFormFromStorage(key));
+      setForm(loadForm(key));
       setSaved(false);
     }
   }
 
+  // Check all required questions are answered
+  const requiredQuestions = template.sections.flatMap((s) =>
+    s.questions.filter((q) => q.required),
+  );
+  const allRequiredAnswered = requiredQuestions.every((q) => {
+    const v = form.answers[q.id];
+    if (v === undefined || v === "" || v === null) return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    return true;
+  });
+
   const canSave =
-    form.dogFriendly !== "" &&
-    form.humanFriendly !== "" &&
-    form.energyLevel !== "" &&
-    form.anxietyLevel !== "" &&
-    form.reactivity !== "" &&
-    form.playStyle !== "" &&
-    form.playGroup !== "" &&
+    allRequiredAnswered &&
     form.evaluationResult !== "" &&
     (form.evaluationResult === "fail" ||
       form.approvedServices.daycare ||
@@ -232,6 +436,69 @@ export function StaffEvaluationFormModal({
     setSaved(true);
   };
 
+  const setAnswer = (qId: string, val: unknown) => {
+    setForm((p) => ({ ...p, answers: { ...p.answers, [qId]: val } }));
+  };
+
+  const setNote = (qId: string, val: string) => {
+    setForm((p) => ({
+      ...p,
+      answerNotes: { ...p.answerNotes, [qId]: val },
+    }));
+  };
+
+  // Build result card data from dynamic answers
+  const buildCardData = (): EvaluationResultCardData => ({
+    petName,
+    ownerName,
+    facilityName: "PawCare Facility",
+    evaluatorName,
+    evaluationDate: new Date().toISOString(),
+    result: form.evaluationResult as "pass" | "fail",
+    dogFriendly:
+      form.answers.dog_friendly === "yes" || form.answers.dog_friendly === "no"
+        ? (form.answers.dog_friendly as "yes" | "no")
+        : undefined,
+    humanFriendly:
+      form.answers.human_friendly === "yes" ||
+      form.answers.human_friendly === "no"
+        ? (form.answers.human_friendly as "yes" | "no")
+        : undefined,
+    energyLevel:
+      typeof form.answers.energy_level === "string" && form.answers.energy_level
+        ? (form.answers.energy_level as "low" | "mid" | "high")
+        : undefined,
+    anxietyLevel:
+      typeof form.answers.anxiety_level === "string" &&
+      form.answers.anxiety_level
+        ? (form.answers.anxiety_level as "low" | "mid" | "high")
+        : undefined,
+    reactivity:
+      typeof form.answers.reactivity === "string" && form.answers.reactivity
+        ? (form.answers.reactivity as "low" | "mid" | "high")
+        : undefined,
+    playStyle:
+      typeof form.answers.play_style === "string"
+        ? form.answers.play_style
+        : undefined,
+    playGroup:
+      typeof form.answers.play_group === "string"
+        ? form.answers.play_group
+        : undefined,
+    behaviorTags:
+      form.behaviorCodes.length > 0 ? form.behaviorCodes : undefined,
+    staffNotes:
+      typeof form.answers.temperament_notes === "string" &&
+      form.answers.temperament_notes
+        ? form.answers.temperament_notes
+        : undefined,
+    approvedServices: {
+      daycare: form.approvedServices.daycare,
+      boarding: form.approvedServices.boarding,
+      customApproved: form.approvedServices.customApproved,
+    },
+  });
+
   return (
     <Modal
       type="form"
@@ -242,221 +509,78 @@ export function StaffEvaluationFormModal({
       size="lg"
     >
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-3">
-            <Label>Dog-friendly</Label>
-            <RadioGroup
-              value={form.dogFriendly}
-              onValueChange={(v) =>
-                setForm((p) => ({ ...p, dogFriendly: v as YesNo }))
-              }
-              className="grid grid-cols-2 gap-3"
-            >
-              <label className="flex items-center gap-2 rounded-md border p-3">
-                <RadioGroupItem value="yes" />
-                Yes
-              </label>
-              <label className="flex items-center gap-2 rounded-md border p-3">
-                <RadioGroupItem value="no" />
-                No
-              </label>
-            </RadioGroup>
-            <Textarea
-              placeholder="Optional notes"
-              value={form.dogFriendlyNotes}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, dogFriendlyNotes: e.target.value }))
-              }
-            />
-          </div>
+        {/* ── Dynamic sections from template ── */}
+        {template.sections.map((section) => (
+          <SectionBlock
+            key={section.id}
+            section={section}
+            answers={form.answers}
+            answerNotes={form.answerNotes}
+            onAnswer={setAnswer}
+            onNote={setNote}
+          />
+        ))}
 
-          <div className="space-y-3">
-            <Label>Human-friendly</Label>
-            <RadioGroup
-              value={form.humanFriendly}
-              onValueChange={(v) =>
-                setForm((p) => ({ ...p, humanFriendly: v as YesNo }))
-              }
-              className="grid grid-cols-2 gap-3"
-            >
-              <label className="flex items-center gap-2 rounded-md border p-3">
-                <RadioGroupItem value="yes" />
-                Yes
-              </label>
-              <label className="flex items-center gap-2 rounded-md border p-3">
-                <RadioGroupItem value="no" />
-                No
-              </label>
-            </RadioGroup>
-            <Textarea
-              placeholder="Optional notes"
-              value={form.humanFriendlyNotes}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, humanFriendlyNotes: e.target.value }))
-              }
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {/* ── Behavior codes ── */}
+        {template.behaviorCodes.length > 0 && (
           <div className="space-y-2">
-            <Label>Energy level</Label>
-            <Select
-              value={form.energyLevel}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  energyLevel: v as FormState["energyLevel"],
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select energy level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Behavior Codes</Label>
+            <div className="flex flex-wrap gap-2">
+              {template.behaviorCodes.map((code) => {
+                const selected = form.behaviorCodes.includes(code.label);
+                return (
+                  <button
+                    key={code.id}
+                    type="button"
+                    onClick={() =>
+                      setForm((p) => ({
+                        ...p,
+                        behaviorCodes: selected
+                          ? p.behaviorCodes.filter((c) => c !== code.label)
+                          : [...p.behaviorCodes, code.label],
+                      }))
+                    }
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      selected
+                        ? "border-transparent text-white shadow-sm"
+                        : "hover:bg-muted"
+                    }`}
+                    style={
+                      selected ? { backgroundColor: code.color } : undefined
+                    }
+                  >
+                    <div
+                      className="size-2 rounded-full"
+                      style={
+                        selected
+                          ? { backgroundColor: "rgba(255,255,255,0.5)" }
+                          : { backgroundColor: code.color }
+                      }
+                    />
+                    {code.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+        )}
 
+        {/* ── Internal notes ── */}
+        {template.internalNotesEnabled && (
           <div className="space-y-2">
-            <Label>Anxiety level</Label>
-            <Select
-              value={form.anxietyLevel}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  anxietyLevel: v as FormState["anxietyLevel"],
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select anxiety level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Reactivity</Label>
-            <Select
-              value={form.reactivity}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  reactivity: v as FormState["reactivity"],
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select reactivity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Play style</Label>
-            <Select
-              value={form.playStyle}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  playStyle: v as FormState["playStyle"],
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select play style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gentle">Gentle</SelectItem>
-                <SelectItem value="balanced">Balanced</SelectItem>
-                <SelectItem value="rough">Rough</SelectItem>
-                <SelectItem value="chase">Chase</SelectItem>
-                <SelectItem value="wrestle">Wrestle</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Assign Play Group</Label>
-            <Select
-              value={form.playGroup}
-              onValueChange={(v) =>
-                setForm((p) => ({
-                  ...p,
-                  playGroup: v as FormState["playGroup"],
-                }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select play group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="small">Small Dogs</SelectItem>
-                <SelectItem value="large">Large Dogs</SelectItem>
-                <SelectItem value="mixed">Mixed</SelectItem>
-                <SelectItem value="puppies">Puppies</SelectItem>
-                <SelectItem value="seniors">Seniors</SelectItem>
-                <SelectItem value="solo">Solo / Separate</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <TagInput
-          label="Behavior Tags"
-          value={form.behaviorTags}
-          onChange={(next) => setForm((p) => ({ ...p, behaviorTags: next }))}
-          placeholder="e.g. loves-toy, food-motivated"
-        />
-
-        <TagInput
-          label="Internal Warnings / Notes"
-          value={form.internalWarnings}
-          onChange={(next) =>
-            setForm((p) => ({ ...p, internalWarnings: next }))
-          }
-          placeholder="e.g. resource-guarding"
-        />
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Temperament notes</Label>
-            <Textarea
-              className="min-h-28"
-              value={form.temperamentNotes}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, temperamentNotes: e.target.value }))
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Additional internal comments (staff-only)</Label>
+            <Label>Internal staff comments (not shared with customer)</Label>
             <Textarea
               className="min-h-28"
               value={form.internalComments}
               onChange={(e) =>
                 setForm((p) => ({ ...p, internalComments: e.target.value }))
               }
+              placeholder="Private notes for staff only..."
             />
           </div>
-        </div>
+        )}
 
-        {/* Evaluation Result (staff-only) */}
+        {/* ── Evaluation Result (always shown) ── */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Evaluation Result</CardTitle>
@@ -474,12 +598,7 @@ export function StaffEvaluationFormModal({
                       return {
                         ...p,
                         evaluationResult: next,
-                        approvedServices: {
-                          daycare: false,
-                          boarding: false,
-                          customApproved: [],
-                          customDenied: [],
-                        },
+                        approvedServices: { ...defaultApprovedServices },
                       };
                     }
                     return { ...p, evaluationResult: next };
@@ -633,37 +752,7 @@ export function StaffEvaluationFormModal({
         <SendEvaluationResultModal
           open={sendModalOpen}
           onOpenChange={setSendModalOpen}
-          cardData={
-            {
-              petName,
-              ownerName,
-              facilityName: "PawCare Facility",
-              evaluatorName,
-              evaluationDate: new Date().toISOString(),
-              result: form.evaluationResult as "pass" | "fail",
-              dogFriendly:
-                form.dogFriendly !== ""
-                  ? (form.dogFriendly as "yes" | "no")
-                  : undefined,
-              humanFriendly:
-                form.humanFriendly !== ""
-                  ? (form.humanFriendly as "yes" | "no")
-                  : undefined,
-              energyLevel: form.energyLevel || undefined,
-              anxietyLevel: form.anxietyLevel || undefined,
-              reactivity: form.reactivity || undefined,
-              playStyle: form.playStyle || undefined,
-              playGroup: form.playGroup || undefined,
-              behaviorTags:
-                form.behaviorTags.length > 0 ? form.behaviorTags : undefined,
-              staffNotes: form.temperamentNotes || undefined,
-              approvedServices: {
-                daycare: form.approvedServices.daycare,
-                boarding: form.approvedServices.boarding,
-                customApproved: form.approvedServices.customApproved,
-              },
-            } satisfies EvaluationResultCardData
-          }
+          cardData={buildCardData()}
         />
       )}
     </Modal>

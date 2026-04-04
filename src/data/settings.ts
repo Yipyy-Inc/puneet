@@ -4,6 +4,7 @@
 
 import type {
   EvaluationConfig,
+  EvaluationFormTemplate,
   EvaluationReportCardConfig,
   BusinessProfile,
   BusinessHours,
@@ -79,6 +80,131 @@ export const evaluationConfig: EvaluationConfig = {
   taxSettings: {
     taxable: false,
   },
+};
+
+export const evaluationFormTemplate: EvaluationFormTemplate = {
+  sections: [
+    {
+      id: "temperament",
+      title: "Temperament Assessment",
+      description: "Evaluate the pet's behavior around dogs and people",
+      questions: [
+        {
+          id: "dog_friendly",
+          label: "Dog-friendly",
+          type: "yes_no",
+          required: true,
+          allowNotes: true,
+          helpText: "Does the pet interact well with other dogs?",
+        },
+        {
+          id: "human_friendly",
+          label: "Human-friendly",
+          type: "yes_no",
+          required: true,
+          allowNotes: true,
+          helpText: "Does the pet interact well with unfamiliar people?",
+        },
+        {
+          id: "energy_level",
+          label: "Energy level",
+          type: "scale",
+          required: true,
+          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
+        },
+        {
+          id: "anxiety_level",
+          label: "Anxiety level",
+          type: "scale",
+          required: true,
+          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
+        },
+        {
+          id: "reactivity",
+          label: "Reactivity",
+          type: "scale",
+          required: true,
+          scaleLabels: { low: "Low", mid: "Medium", high: "High" },
+          helpText: "Reaction to stimuli like loud sounds, quick movements",
+        },
+      ],
+    },
+    {
+      id: "play_profile",
+      title: "Play Profile",
+      description: "Assess play style and assign an appropriate group",
+      questions: [
+        {
+          id: "play_style",
+          label: "Play style",
+          type: "single_select",
+          required: true,
+          options: ["Gentle", "Balanced", "Rough", "Chase", "Wrestle"],
+        },
+        {
+          id: "play_group",
+          label: "Recommended play group",
+          type: "single_select",
+          required: true,
+          options: [
+            "Small dogs",
+            "Large dogs",
+            "Mixed",
+            "Puppies",
+            "Seniors",
+            "Solo / Separate",
+          ],
+        },
+      ],
+    },
+    {
+      id: "additional",
+      title: "Additional Observations",
+      description: "Any other notes or concerns",
+      questions: [
+        {
+          id: "temperament_notes",
+          label: "Temperament notes",
+          type: "text",
+          required: false,
+          placeholder: "General observations about the pet's temperament...",
+        },
+        {
+          id: "resource_guarding",
+          label: "Resource guarding observed?",
+          type: "yes_no",
+          required: false,
+          allowNotes: true,
+          helpText: "Food, toys, or space guarding behavior",
+        },
+        {
+          id: "leash_behavior",
+          label: "Leash behavior",
+          type: "single_select",
+          required: false,
+          options: [
+            "Calm",
+            "Pulls slightly",
+            "Reactive on leash",
+            "Not tested",
+          ],
+        },
+      ],
+    },
+  ],
+  behaviorCodes: [
+    { id: "bc-1", label: "Food motivated", color: "#22c55e" },
+    { id: "bc-2", label: "Toy motivated", color: "#3b82f6" },
+    { id: "bc-3", label: "Shy / Timid", color: "#f59e0b" },
+    { id: "bc-4", label: "Mouthy", color: "#ef4444" },
+    { id: "bc-5", label: "Resource guarder", color: "#ef4444" },
+    { id: "bc-6", label: "Escape artist", color: "#f59e0b" },
+    { id: "bc-7", label: "Jumper", color: "#f59e0b" },
+    { id: "bc-8", label: "Excellent recall", color: "#22c55e" },
+    { id: "bc-9", label: "Needs slow intro", color: "#8b5cf6" },
+    { id: "bc-10", label: "Velcro dog", color: "#ec4899" },
+  ],
+  internalNotesEnabled: true,
 };
 
 // ========================================
