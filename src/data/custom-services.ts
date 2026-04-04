@@ -215,6 +215,11 @@ export function createDefaultCustomServiceModule(
       requiredRole: "general",
       taskGeneration: [],
     },
+    careInstructions: {
+      feeding: "optional",
+      medication: "optional",
+      belongings: "optional",
+    },
     yipyyGoRequired: false,
     requiresEvaluation: false,
     showInSidebar: true,

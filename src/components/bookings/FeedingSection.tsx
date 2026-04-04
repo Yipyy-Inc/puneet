@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,7 @@ import type { FeedingEntry } from "@/types/booking";
 
 interface FeedingSectionProps {
   entries: FeedingEntry[];
+  required?: boolean;
 }
 
 const FEEDBACK_OPTIONS = facilityConfig.careTaskFeedback.feeding;
@@ -57,7 +59,7 @@ function fmtTimestamp(ts: string) {
 
 let _feedId = 100;
 
-export function FeedingSection({ entries }: FeedingSectionProps) {
+export function FeedingSection({ entries, required }: FeedingSectionProps) {
   const [items, setItems] = useState(entries);
   const [addOpen, setAddOpen] = useState(false);
   const [newEntry, setNewEntry] = useState({
@@ -119,6 +121,11 @@ export function FeedingSection({ entries }: FeedingSectionProps) {
           <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
             <UtensilsCrossed className="size-3.5" />
             Feeding Instructions
+            {required && (
+              <Badge variant="destructive" className="text-[10px] normal-case">
+                Required
+              </Badge>
+            )}
           </CardTitle>
           <Button
             variant="outline"

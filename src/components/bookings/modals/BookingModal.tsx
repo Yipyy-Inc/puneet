@@ -3,6 +3,16 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +124,7 @@ export function BookingModal({
       : 0,
   );
   const [currentSubStep, setCurrentSubStep] = useState(0);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Client selection state
   const [searchQuery, setSearchQuery] = useState("");
@@ -1223,7 +1234,17 @@ export function BookingModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Prevent closing via overlay/escape if user has progress — show confirm instead
+        if (!nextOpen && (currentStep > 0 || selectedService)) {
+          setShowCancelConfirm(true);
+        } else {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
       <DialogContent className="flex h-[90vh] w-[95vw] min-w-7xl flex-col overflow-hidden p-0 [&>button]:hidden">
         <DialogTitle className="sr-only">New Booking</DialogTitle>
         <div className="flex min-h-0 flex-1">
@@ -1510,6 +1531,10 @@ export function BookingModal({
                     setNotificationEmail={setNotificationEmail}
                     notificationSMS={notificationSMS}
                     setNotificationSMS={setNotificationSMS}
+                    onEditStep={(stepIdx, subStep) => {
+                      setCurrentStep(stepIdx);
+                      setCurrentSubStep(subStep ?? 0);
+                    }}
                   />
                 )}
               </div>
@@ -1529,7 +1554,14 @@ export function BookingModal({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => {
+                    // If user has made progress, confirm before discarding
+                    if (currentStep > 0 || selectedService) {
+                      setShowCancelConfirm(true);
+                    } else {
+                      onOpenChange(false);
+                    }
+                  }}
                 >
                   Cancel
                 </Button>
@@ -1555,6 +1587,31 @@ export function BookingModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Cancel confirmation */}
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All information you&apos;ve entered will be lost. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                resetForm();
+                onOpenChange(false);
+              }}
+            >
+              Discard booking
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

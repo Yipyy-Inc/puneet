@@ -33,7 +33,8 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "grooming",
-    image: "/services/grooming.jpg",
+    image:
+      "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=600&h=360&fit=crop",
     name: "Grooming",
     icon: Scissors,
     description: "Bath, grooming, and styling services by experienced staff.",
@@ -42,7 +43,8 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "training",
-    image: "/services/training.jpg",
+    image:
+      "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=600&h=360&fit=crop",
     name: "Training",
     icon: GraduationCap,
     description: "Obedience and specialized training programs.",
@@ -51,7 +53,8 @@ export const SERVICE_CATEGORIES = [
   },
   {
     id: "evaluation",
-    image: "/services/evaluation.jpg",
+    image:
+      "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=600&h=360&fit=crop",
     name: "Pet Evaluation",
     icon: CheckCircle,
     description: "Assessment to ensure your pet is ready for group services.",

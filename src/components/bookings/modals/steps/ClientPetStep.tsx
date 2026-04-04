@@ -2,15 +2,26 @@ import React from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, PawPrint, Check, Cat, FileWarning, Info } from "lucide-react";
+import {
+  Search,
+  PawPrint,
+  Check,
+  Cat,
+  FileWarning,
+  Info,
+  CheckCheck,
+  XCircle,
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { Client } from "@/types/client";
 import type { ModuleConfig } from "@/types/facility";
 import type { Pet } from "@/types/pet";
@@ -94,101 +105,151 @@ export function ClientPetStep({
     return selectedClient.pets.filter((pet) => selectedPetIds.includes(pet.id));
   }, [selectedClient, selectedPetIds]);
 
-  // Check if there are pets that need evaluation
-  const petsNeedingEvaluation = React.useMemo(() => {
-    if (!serviceRequiresEvaluation || isEvaluationOptional) return [];
-    return selectedPets.filter((pet) => !hasValidEvaluation(pet));
-  }, [selectedPets, serviceRequiresEvaluation, isEvaluationOptional]);
+  // #2 — Consolidated list of pets with evaluation issues (expired, failed, or missing)
+  const petEvalIssues = React.useMemo(() => {
+    if (!serviceRequiresEvaluation || selectedService === "evaluation")
+      return [];
+    const issues: { pet: Pet; reason: string }[] = [];
+    for (const pet of selectedPets) {
+      if (hasExpiredEvaluation(pet)) {
+        issues.push({ pet, reason: "expired" });
+      } else if (hasFailedEvaluation(pet)) {
+        issues.push({ pet, reason: "failed" });
+      } else if (!hasValidEvaluation(pet) && !isEvaluationOptional) {
+        issues.push({ pet, reason: "missing" });
+      }
+    }
+    return issues;
+  }, [
+    selectedPets,
+    serviceRequiresEvaluation,
+    isEvaluationOptional,
+    selectedService,
+  ]);
 
-  const petsWithExpiredEvaluation = React.useMemo(() => {
-    if (!serviceRequiresEvaluation) return [];
-    return selectedPets.filter((pet) => hasExpiredEvaluation(pet));
-  }, [selectedPets, serviceRequiresEvaluation]);
+  // #5 — select all / deselect all
+  const allPetIds =
+    selectedClient?.pets
+      .filter((p) => canSelectForEvaluation(p))
+      .map((p) => p.id) ?? [];
+  const allSelected =
+    allPetIds.length > 0 &&
+    allPetIds.every((id) => selectedPetIds.includes(id));
 
-  const petsWithFailedEvaluation = React.useMemo(() => {
-    if (!serviceRequiresEvaluation) return [];
-    return selectedPets.filter((pet) => hasFailedEvaluation(pet));
-  }, [selectedPets, serviceRequiresEvaluation]);
+  const handleToggleAll = () => {
+    if (allSelected) {
+      setSelectedPetIds([]);
+    } else {
+      setSelectedPetIds(allPetIds);
+    }
+  };
+
+  // Evaluation badge for a pet — returns null when nothing to show
+  const renderEvalBadge = (pet: Pet) => {
+    if (hasExpiredEvaluation(pet)) {
+      return (
+        <Badge variant="destructive" className="text-xs">
+          <FileWarning className="mr-1 size-3" />
+          Evaluation Expired
+        </Badge>
+      );
+    }
+    if (hasFailedEvaluation(pet)) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
+        >
+          <FileWarning className="mr-1 size-3" />
+          Evaluation Failed
+        </Badge>
+      );
+    }
+    if (hasValidEvaluation(pet)) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-green-100 text-xs text-green-800 hover:bg-green-100"
+        >
+          <Check className="mr-1 size-3" />
+          Evaluation Passed
+        </Badge>
+      );
+    }
+    if (selectedService === "evaluation") {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-blue-100 text-xs text-blue-800 hover:bg-blue-100"
+        >
+          Can be evaluated
+        </Badge>
+      );
+    }
+    if (serviceRequiresEvaluation && !isEvaluationOptional) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
+        >
+          Evaluation Required
+        </Badge>
+      );
+    }
+    if (serviceRequiresEvaluation && isEvaluationOptional) {
+      return (
+        <Badge
+          variant="secondary"
+          className="bg-yellow-100 text-xs text-yellow-800 hover:bg-yellow-100"
+        >
+          <FileWarning className="mr-1 size-3" />
+          No Evaluation
+        </Badge>
+      );
+    }
+    return null;
+  };
+
+  const handlePetToggle = (petId: number) => {
+    setSelectedPetIds((prev) =>
+      prev.includes(petId)
+        ? prev.filter((id) => id !== petId)
+        : [...prev, petId],
+    );
+  };
 
   return (
     <div className="space-y-6">
-      {/* Expired Evaluation Warning (customer-facing) */}
-      {selectedService !== "evaluation" &&
-        petsWithExpiredEvaluation.length > 0 && (
-          <Alert variant="destructive">
-            <FileWarning className="size-4" />
-            <AlertTitle>Evaluation expired</AlertTitle>
-            <AlertDescription>
-              <p>
-                Evaluation expired — please book a new evaluation to unlock
-                services.
-              </p>
-              <ul className="mt-2 space-y-1">
-                {petsWithExpiredEvaluation.map((pet) => (
-                  <li key={pet.id} className="flex items-center gap-2">
-                    <PawPrint className="size-4" />
-                    {pet.name} ({pet.type})
-                  </li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-      {/* Failed Evaluation Warning (customer-facing, no reason shown) */}
-      {selectedService !== "evaluation" &&
-        petsWithFailedEvaluation.length > 0 && (
-          <Alert variant="destructive">
-            <FileWarning className="size-4" />
-            <AlertTitle>Evaluation required</AlertTitle>
-            <AlertDescription>
-              <p>
-                Evaluation not passed — please book a new evaluation to unlock
-                services.
-              </p>
-              <ul className="mt-2 space-y-1">
-                {petsWithFailedEvaluation.map((pet) => (
-                  <li key={pet.id} className="flex items-center gap-2">
-                    <PawPrint className="size-4" />
-                    {pet.name} ({pet.type})
-                  </li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
-      {/* Evaluation Warning */}
-      {petsNeedingEvaluation.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <div className="flex items-start gap-3">
-            <FileWarning className="mt-0.5 size-5 text-red-600" />
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-red-800">
-                Evaluation Required
-              </h4>
-              <p className="mt-1 text-sm text-red-700">
-                The following pets require a passed evaluation before booking
-                this service:
-              </p>
-              <ul className="mt-2 space-y-1">
-                {petsNeedingEvaluation.map((pet) => (
-                  <li
-                    key={pet.id}
-                    className="flex items-center gap-2 text-sm text-red-700"
-                  >
-                    <PawPrint className="size-4" />
-                    {pet.name} ({pet.type})
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-sm text-red-700">
-                Please complete evaluations for these pets or select different
-                pets to proceed.
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* #2 — Single consolidated alert for all evaluation issues */}
+      {petEvalIssues.length > 0 && (
+        <Alert variant="destructive">
+          <FileWarning className="size-4" />
+          <AlertTitle>Evaluation issues</AlertTitle>
+          <AlertDescription>
+            <p>
+              The following pets cannot access this service until their
+              evaluation status is resolved:
+            </p>
+            <ul className="mt-2 space-y-1">
+              {petEvalIssues.map(({ pet, reason }) => (
+                <li key={pet.id} className="flex items-center gap-2">
+                  <PawPrint className="size-3.5 shrink-0" />
+                  <span>
+                    {pet.name} ({pet.type}) —{" "}
+                    {reason === "expired"
+                      ? "evaluation expired"
+                      : reason === "failed"
+                        ? "evaluation not passed"
+                        : "no evaluation on file"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2">
+              Please book an evaluation first or select different pets.
+            </p>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Client Selection */}
@@ -207,7 +268,7 @@ export function ClientPetStep({
               />
             </div>
 
-            {/* Client list */}
+            {/* Client list — #3: cn() instead of template literals */}
             <div>
               <div className="p-2">
                 {filteredClients.length === 0 ? (
@@ -221,14 +282,14 @@ export function ClientPetStep({
                       return (
                         <div
                           key={client.id}
-                          className={`cursor-pointer rounded-lg p-3 transition-all ${
+                          className={cn(
+                            "cursor-pointer rounded-lg p-3 transition-all",
                             isSelected
-                              ? `border-primary bg-primary/10 row-span-2 border-2`
-                              : `hover:bg-muted border-2 border-transparent`
-                          } `}
+                              ? "border-primary bg-primary/10 row-span-2 border-2"
+                              : "hover:bg-muted border-2 border-transparent",
+                          )}
                           onClick={() => {
                             setSelectedClientId(client.id);
-                            // Auto-select pet if client has only one pet
                             if (client.pets.length === 1) {
                               setSelectedPetIds([client.pets[0].id]);
                             } else {
@@ -238,7 +299,10 @@ export function ClientPetStep({
                         >
                           <div className="flex items-center gap-3">
                             <Avatar
-                              className={` ${isSelected ? "size-12" : `size-10`} transition-all`}
+                              className={cn(
+                                "transition-all",
+                                isSelected ? "size-12" : "size-10",
+                              )}
                             >
                               <AvatarImage
                                 src={client.imageUrl}
@@ -257,13 +321,8 @@ export function ClientPetStep({
                               <p className="truncate font-medium">
                                 {client.name}
                               </p>
-                              <p
-                                className={`truncate text-sm ${
-                                  isSelected
-                                    ? `text-muted-foreground`
-                                    : `text-muted-foreground`
-                                } `}
-                              >
+                              {/* #4 — removed dead ternary */}
+                              <p className="text-muted-foreground truncate text-sm">
                                 {client.email}
                               </p>
                               {isSelected && client.phone && (
@@ -322,12 +381,35 @@ export function ClientPetStep({
               </Tooltip>
             )}
           </div>
-          {selectedClient && (
-            <Badge variant="secondary">
-              {selectedPetIds.length} pet
-              {selectedPetIds.length !== 1 ? "s" : ""} selected
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {/* #5 — Select all / Deselect all */}
+            {selectedClient && allPetIds.length >= 3 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={handleToggleAll}
+              >
+                {allSelected ? (
+                  <>
+                    <XCircle className="size-3" />
+                    Deselect all
+                  </>
+                ) : (
+                  <>
+                    <CheckCheck className="size-3" />
+                    Select all
+                  </>
+                )}
+              </Button>
+            )}
+            {selectedClient && (
+              <Badge variant="secondary">
+                {selectedPetIds.length} pet
+                {selectedPetIds.length !== 1 ? "s" : ""} selected
+              </Badge>
+            )}
+          </div>
         </div>
         {selectedClient ? (
           <div className="space-y-3">
@@ -338,23 +420,38 @@ export function ClientPetStep({
                     const isSelected = selectedPetIds.includes(pet.id);
                     const canSelect = canSelectForEvaluation(pet);
                     const isDisabled = !canSelect;
+                    const evalBadge = renderEvalBadge(pet);
+
                     return (
                       <div
                         key={pet.id}
-                        className={`rounded-lg border p-3 transition-all ${
+                        // #6 — accessibility
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        aria-disabled={isDisabled}
+                        aria-label={`${pet.name}, ${pet.type}, ${pet.breed}`}
+                        tabIndex={isDisabled ? -1 : 0}
+                        onKeyDown={(e) => {
+                          if (
+                            !isDisabled &&
+                            (e.key === "Enter" || e.key === " ")
+                          ) {
+                            e.preventDefault();
+                            handlePetToggle(pet.id);
+                          }
+                        }}
+                        // #3 — cn() instead of template literals
+                        className={cn(
+                          "rounded-lg border p-3 transition-all outline-none",
+                          "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
                           isDisabled
                             ? "bg-muted cursor-not-allowed opacity-50"
                             : isSelected
-                              ? `border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2`
-                              : `hover:border-primary/50 cursor-pointer`
-                        } `}
+                              ? "border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2"
+                              : "hover:border-primary/50 cursor-pointer",
+                        )}
                         onClick={() => {
-                          if (isDisabled) return;
-                          setSelectedPetIds((prev) =>
-                            prev.includes(pet.id)
-                              ? prev.filter((id) => id !== pet.id)
-                              : [...prev, pet.id],
-                          );
+                          if (!isDisabled) handlePetToggle(pet.id);
                         }}
                       >
                         <div className="flex gap-3">
@@ -364,11 +461,11 @@ export function ClientPetStep({
                               alt={pet.name}
                               width={64}
                               height={64}
-                              className="h-16 w-16 rounded-lg object-cover"
+                              className="size-16 rounded-lg object-cover"
                               unoptimized
                             />
                           ) : (
-                            <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
+                            <div className="bg-muted flex size-16 items-center justify-center rounded-lg">
                               {pet.type === "Cat" ? (
                                 <Cat className="text-muted-foreground size-8" />
                               ) : (
@@ -389,49 +486,9 @@ export function ClientPetStep({
                                   {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
                                   {pet.weight}kg
                                 </p>
-                                {(serviceRequiresEvaluation ||
-                                  selectedService === "evaluation") && (
-                                  <div className="mt-1">
-                                    {hasExpiredEvaluation(pet) ? (
-                                      <Badge
-                                        variant="destructive"
-                                        className="text-xs"
-                                      >
-                                        <FileWarning className="mr-1 size-3" />
-                                        Evaluation Expired
-                                      </Badge>
-                                    ) : hasValidEvaluation(pet) ? (
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-green-100 text-xs text-green-800 hover:bg-green-100"
-                                      >
-                                        <Check className="mr-1 size-3" />
-                                        Evaluation Passed
-                                      </Badge>
-                                    ) : selectedService === "evaluation" ? (
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-blue-100 text-xs text-blue-800 hover:bg-blue-100"
-                                      >
-                                        Can be evaluated
-                                      </Badge>
-                                    ) : isEvaluationOptional ? (
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-yellow-100 text-xs text-yellow-800 hover:bg-yellow-100"
-                                      >
-                                        <FileWarning className="mr-1 size-3" />
-                                        No Evaluation
-                                      </Badge>
-                                    ) : (
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-red-100 text-xs text-red-800 hover:bg-red-100"
-                                      >
-                                        Evaluation Required
-                                      </Badge>
-                                    )}
-                                  </div>
+                                {/* #1 — only render wrapper when badge exists */}
+                                {evalBadge && (
+                                  <div className="mt-1">{evalBadge}</div>
                                 )}
                               </div>
                               {isSelected && !isDisabled && (

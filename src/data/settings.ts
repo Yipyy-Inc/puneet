@@ -904,6 +904,11 @@ export const daycareConfig: ModuleConfig = {
       enabled: true,
       optional: false,
     },
+    careInstructions: {
+      feeding: "required",
+      medication: "optional",
+      belongings: "optional",
+    },
   },
   status: {
     disabled: false,
@@ -924,6 +929,11 @@ export const boardingConfig: ModuleConfig = {
     evaluation: {
       enabled: false,
     },
+    careInstructions: {
+      feeding: "required",
+      medication: "required",
+      belongings: "required",
+    },
   },
   status: {
     disabled: false,
@@ -942,6 +952,11 @@ export const groomingConfig: ModuleConfig = {
   settings: {
     evaluation: {
       enabled: false,
+    },
+    careInstructions: {
+      feeding: "disabled",
+      medication: "disabled",
+      belongings: "optional",
     },
   },
   status: {
@@ -962,6 +977,11 @@ export const trainingConfig: ModuleConfig = {
   settings: {
     evaluation: {
       enabled: false,
+    },
+    careInstructions: {
+      feeding: "disabled",
+      medication: "disabled",
+      belongings: "disabled",
     },
   },
   status: {

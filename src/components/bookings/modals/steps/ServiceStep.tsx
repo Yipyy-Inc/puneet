@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import Image from "next/image";
-import { Check } from "lucide-react";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Lock, Ban, Check, Sparkles } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { SERVICE_CATEGORIES } from "../constants";
 import { evaluationConfig } from "@/data/settings";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
@@ -20,6 +20,77 @@ interface ServiceStepProps {
   bookingFlow: FacilityBookingFlowConfig;
   selectedPets?: Pet[];
 }
+
+// Per-service accent palette — pastel bg, icon, price, ring AND border
+const SERVICE_ACCENTS: Record<
+  string,
+  { bg: string; icon: string; price: string; ring: string; border: string }
+> = {
+  daycare: {
+    bg: "bg-amber-50",
+    icon: "text-amber-500",
+    price: "text-amber-600",
+    ring: "ring-amber-400",
+    border: "border-amber-400",
+  },
+  boarding: {
+    bg: "bg-indigo-50",
+    icon: "text-indigo-500",
+    price: "text-indigo-600",
+    ring: "ring-indigo-400",
+    border: "border-indigo-400",
+  },
+  grooming: {
+    bg: "bg-pink-50",
+    icon: "text-pink-500",
+    price: "text-pink-600",
+    ring: "ring-pink-400",
+    border: "border-pink-400",
+  },
+  training: {
+    bg: "bg-sky-50",
+    icon: "text-sky-500",
+    price: "text-sky-600",
+    ring: "ring-sky-400",
+    border: "border-sky-400",
+  },
+  retail: {
+    bg: "bg-emerald-50",
+    icon: "text-emerald-500",
+    price: "text-emerald-600",
+    ring: "ring-emerald-400",
+    border: "border-emerald-400",
+  },
+  evaluation: {
+    bg: "bg-violet-50",
+    icon: "text-violet-500",
+    price: "text-violet-600",
+    ring: "ring-violet-400",
+    border: "border-violet-400",
+  },
+  vet: {
+    bg: "bg-rose-50",
+    icon: "text-rose-500",
+    price: "text-rose-600",
+    ring: "ring-rose-400",
+    border: "border-rose-400",
+  },
+  store: {
+    bg: "bg-teal-50",
+    icon: "text-teal-500",
+    price: "text-teal-600",
+    ring: "ring-teal-400",
+    border: "border-teal-400",
+  },
+};
+
+const DEFAULT_ACCENT = {
+  bg: "bg-primary/5",
+  icon: "text-primary",
+  price: "text-primary",
+  ring: "ring-primary",
+  border: "border-primary",
+};
 
 export function ServiceStep({
   selectedService,
@@ -56,12 +127,11 @@ export function ServiceStep({
     })[0];
   };
 
-  const isExpiredEvaluation = (ev: Evaluation | null) => {
-    return ev?.isExpired === true || ev?.status === "outdated";
-  };
-
+  const isExpiredEvaluation = (ev: Evaluation | null) =>
+    ev?.isExpired === true || ev?.status === "outdated";
   const isPassedEvaluation = (ev: Evaluation | null) => ev?.status === "passed";
   const isFailedEvaluation = (ev: Evaluation | null) => ev?.status === "failed";
+
   const hasValidEvaluation = (pet: Pet) => {
     const latest = getLatestEvaluation(pet);
     if (!latest) return false;
@@ -117,141 +187,284 @@ export function ServiceStep({
     return isServiceApprovedByEvaluation(latest, serviceId);
   };
 
-  return (
-    <div className="space-y-4">
-      <Label className="text-base">Select a service</Label>
-      <div className="grid grid-cols-2 gap-4">
-        {allCategories
-          .filter((service) => {
-            if (service.id === "evaluation") return true;
-            if (bookingFlow.hiddenServices.includes(service.id)) return false;
-            if (
-              bookingFlow.evaluationRequired &&
-              bookingFlow.hideServicesUntilEvaluationCompleted
-            ) {
-              if (selectedPets.length === 0) return false;
-              return selectedPets.every((pet) => hasValidEvaluation(pet));
-            }
-            return true;
-          })
-          .map((service) => {
-            const Icon = service.icon;
-            const config = configs[service.id as keyof typeof configs];
-            // Special handling for evaluation service
-            const isEvaluation = service.id === "evaluation";
-            const evaluationDisabled = false; // Evaluation is always available
-            const requiresEvaluation =
-              !isEvaluation &&
-              (bookingFlow.evaluationRequired ||
-                bookingFlow.servicesRequiringEvaluation.includes(service.id) ||
-                ((config?.settings.evaluation.enabled ?? false) &&
-                  !(config?.settings.evaluation.optional ?? false)));
-            const hasPetContext = selectedPets.length > 0;
-            const isLockedByEvaluation =
-              requiresEvaluation && hasPetContext
-                ? selectedPets.some(
-                    (p) => !isPetUnlockedForService(p, service.id),
-                  )
-                : false;
+  const visibleServices = useMemo(
+    () =>
+      allCategories.filter((service) => {
+        if (service.id === "evaluation") return true;
+        if (bookingFlow.hiddenServices.includes(service.id)) return false;
+        if (
+          bookingFlow.evaluationRequired &&
+          bookingFlow.hideServicesUntilEvaluationCompleted
+        ) {
+          if (selectedPets.length === 0) return false;
+          return selectedPets.every((pet) => hasValidEvaluation(pet));
+        }
+        return true;
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allCategories, bookingFlow, selectedPets],
+  );
 
-            const isDisabled = isEvaluation
-              ? evaluationDisabled
-              : (config?.status.disabled ?? false) || isLockedByEvaluation;
-            return (
-              <div
-                key={service.id}
-                className={`relative overflow-hidden rounded-lg border transition-colors ${
-                  isDisabled
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer"
-                } ${
-                  selectedService === service.id && !isDisabled
-                    ? "border-primary bg-primary/5"
-                    : !isDisabled
-                      ? "hover:border-primary/50"
-                      : ""
-                } `}
-                onClick={() => {
-                  if (!isDisabled) {
-                    setSelectedService(service.id);
-                    setServiceType("");
-                    setCurrentSubStep(0);
-                  }
-                }}
-              >
-                {isLockedByEvaluation && (
-                  <div className="absolute top-2 left-2 z-10">
-                    <Badge variant="destructive" className="text-xs">
-                      Locked
-                    </Badge>
-                  </div>
-                )}
-                {config?.bannerImage ? (
-                  <div className="relative h-32 w-full">
-                    <Image
-                      src={config.bannerImage}
-                      alt={config.clientFacingName}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ) : service.image ? (
-                  <div className="relative h-32 w-full">
-                    <Image
-                      src={service.image}
-                      alt={service.name}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
+  // Show "Required first" nudge on evaluation card when facility requires it
+  // and at least one selected pet still lacks a valid evaluation
+  const showEvaluationNudge =
+    bookingFlow.evaluationRequired &&
+    (selectedPets.length === 0 ||
+      selectedPets.some((p) => !hasValidEvaluation(p)));
+
+  const handleSelect = (serviceId: string) => {
+    setSelectedService(serviceId);
+    setServiceType("");
+    setCurrentSubStep(0);
+  };
+
+  const isOddCount = visibleServices.length % 2 !== 0;
+
+  return (
+    // #4 — scroll protection so many custom modules don't overflow the modal
+    <ScrollArea className="max-h-[440px]">
+      {/* #8 — radiogroup role for screen readers */}
+      <div
+        role="radiogroup"
+        aria-label="Select a service"
+        className="grid grid-cols-2 gap-3 pr-1 pb-1"
+      >
+        {visibleServices.map((service, idx) => {
+          const Icon = service.icon;
+          const config = configs[service.id as keyof typeof configs];
+          const isEvaluation = service.id === "evaluation";
+          const accent = SERVICE_ACCENTS[service.id] ?? DEFAULT_ACCENT;
+
+          const requiresEvaluation =
+            !isEvaluation &&
+            (bookingFlow.evaluationRequired ||
+              bookingFlow.servicesRequiringEvaluation.includes(service.id) ||
+              ((config?.settings.evaluation.enabled ?? false) &&
+                !(config?.settings.evaluation.optional ?? false)));
+
+          const hasPetContext = selectedPets.length > 0;
+          const isLockedByEvaluation =
+            requiresEvaluation && hasPetContext
+              ? selectedPets.some(
+                  (p) => !isPetUnlockedForService(p, service.id),
+                )
+              : false;
+
+          const isDisabled = isEvaluation
+            ? false
+            : (config?.status.disabled ?? false) || isLockedByEvaluation;
+
+          const isSelected = selectedService === service.id && !isDisabled;
+
+          const displayName = isEvaluation
+            ? evaluationConfig.customerName
+            : (config?.clientFacingName ?? service.name);
+
+          const displaySlogan = isEvaluation
+            ? evaluationConfig.description
+            : (config?.slogan ?? service.description ?? "");
+
+          // #2 — show "Free" instead of "$0"
+          const rawPrice = isEvaluation
+            ? evaluationConfig.price
+            : (config?.basePrice ?? service.basePrice);
+          const displayPrice = rawPrice === 0 ? "Free" : `From $${rawPrice}`;
+
+          const bannerImg = config?.bannerImage ?? service.image ?? null;
+          // #7 — only skip optimization for external URLs
+          const isExternalImg = bannerImg?.startsWith("http") ?? false;
+
+          // #3 — included bullets: up to 3 items
+          const includedItems = service.included.slice(0, 3);
+
+          // #1 — last card spans full row when total count is odd
+          const isLastOdd = isOddCount && idx === visibleServices.length - 1;
+
+          return (
+            <div
+              key={service.id}
+              // #8 — accessibility attributes
+              role="radio"
+              aria-checked={isSelected}
+              aria-disabled={isDisabled}
+              tabIndex={isDisabled ? -1 : 0}
+              onClick={() => {
+                if (!isDisabled) handleSelect(service.id);
+              }}
+              onKeyDown={(e) => {
+                if (!isDisabled && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  handleSelect(service.id);
+                }
+              }}
+              className={cn(
+                // #1 — span full row when last in odd-count grid
+                isLastOdd && "col-span-2",
+                "group relative overflow-hidden rounded-2xl border-2 transition-all duration-200 outline-none select-none",
+                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
+                isDisabled
+                  ? "cursor-not-allowed opacity-60"
+                  : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg",
+                // #5 — selected border uses accent color, not always border-primary
+                isSelected
+                  ? cn(
+                      "shadow-md ring-2 ring-offset-2",
+                      accent.ring,
+                      accent.border,
+                    )
+                  : "border-border hover:border-primary/40",
+              )}
+            >
+              {/* ── Visual area ─────────────────────────────── */}
+              <div className="relative h-36 w-full overflow-hidden">
+                {bannerImg ? (
+                  <Image
+                    src={bannerImg}
+                    alt={displayName}
+                    fill
+                    // #7 — proper sizes hint; unoptimized only for external CDN images
+                    sizes="(max-width: 640px) 100vw, 280px"
+                    unoptimized={isExternalImg}
+                    className={cn(
+                      "object-cover transition-transform duration-300",
+                      !isDisabled && "group-hover:scale-105",
+                    )}
+                  />
                 ) : (
                   <div
-                    className={`flex h-32 w-full items-center justify-center ${
-                      selectedService === service.id && !isDisabled
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    } `}
+                    className={cn(
+                      "flex h-full w-full items-center justify-center",
+                      accent.bg,
+                    )}
                   >
-                    <Icon className="size-12" />
+                    <Icon
+                      className={cn(
+                        "size-16 transition-transform duration-300",
+                        accent.icon,
+                        !isDisabled && "group-hover:scale-110",
+                      )}
+                    />
                   </div>
                 )}
-                <div className="space-y-3 p-4">
-                  <div className="text-center">
-                    <p className="font-medium">
-                      {isEvaluation
-                        ? evaluationConfig.customerName
-                        : config?.clientFacingName || service.name}
-                    </p>
-                    <p className="text-muted-foreground text-sm">
-                      {isEvaluation
-                        ? evaluationConfig.description
-                        : config?.slogan || service.description}
-                    </p>
-                    {config && !isEvaluation && (
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {isLockedByEvaluation
-                          ? "Evaluation required (expired, failed, or not approved)"
-                          : isDisabled
-                            ? config.status.reason
-                            : config.description}
-                      </p>
-                    )}
-                    <p className="text-primary font-semibold">
-                      {isEvaluation
-                        ? `$${evaluationConfig.price}`
-                        : `From $${config?.basePrice || service.basePrice}`}
-                    </p>
+
+                {/* #6 — "Required first" nudge on evaluation card */}
+                {isEvaluation && showEvaluationNudge && (
+                  <div className="absolute top-2 left-2">
+                    <span className="flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
+                      <Sparkles className="size-3" />
+                      Start here
+                    </span>
                   </div>
-                </div>
-                {selectedService === service.id && !isDisabled && (
-                  <Check className="text-primary absolute top-2 right-2 size-5" />
+                )}
+
+                {/* Lock overlay */}
+                {isLockedByEvaluation && (
+                  <div className="bg-background/75 absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <div className="bg-destructive/10 border-destructive/20 flex items-center gap-1.5 rounded-full border px-3 py-1.5">
+                      <Lock className="text-destructive size-3.5" />
+                      <span className="text-destructive text-xs font-semibold">
+                        Evaluation required
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Disabled (non-lock) overlay */}
+                {!isLockedByEvaluation && isDisabled && (
+                  <div className="bg-background/60 absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <Ban className="text-muted-foreground size-8" />
+                  </div>
+                )}
+
+                {/* Selected checkmark badge */}
+                {isSelected && (
+                  <div
+                    className={cn(
+                      "absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full shadow-md",
+                      // match badge color to service accent
+                      service.id === "daycare"
+                        ? "bg-amber-500"
+                        : service.id === "boarding"
+                          ? "bg-indigo-500"
+                          : service.id === "grooming"
+                            ? "bg-pink-500"
+                            : service.id === "training"
+                              ? "bg-sky-500"
+                              : service.id === "retail"
+                                ? "bg-emerald-500"
+                                : service.id === "evaluation"
+                                  ? "bg-violet-500"
+                                  : service.id === "vet"
+                                    ? "bg-rose-500"
+                                    : service.id === "store"
+                                      ? "bg-teal-500"
+                                      : "bg-primary",
+                    )}
+                  >
+                    <Check className="size-4 text-white" strokeWidth={3} />
+                  </div>
                 )}
               </div>
-            );
-          })}
+
+              {/* ── Content strip ───────────────────────────── */}
+              <div className="p-3.5">
+                <p className="text-sm leading-tight font-semibold">
+                  {displayName}
+                </p>
+                {displaySlogan && (
+                  <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                    {displaySlogan}
+                  </p>
+                )}
+
+                {/* #3 — included bullets */}
+                {includedItems.length > 0 && !isDisabled && (
+                  <ul className="mt-2 space-y-0.5">
+                    {includedItems.map((item) => (
+                      <li
+                        key={item}
+                        className="text-muted-foreground flex items-center gap-1.5 text-[11px]"
+                      >
+                        <span
+                          className={cn(
+                            "size-1 shrink-0 rounded-full",
+                            accent.bg
+                              .replace("bg-", "bg-")
+                              .replace("-50", "-400"),
+                          )}
+                          aria-hidden
+                        />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="mt-2.5">
+                  {isLockedByEvaluation ? (
+                    <span className="text-destructive flex items-center gap-1 text-xs font-medium">
+                      <Lock className="size-3" />
+                      Locked — needs evaluation
+                    </span>
+                  ) : isDisabled && config?.status.reason ? (
+                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                      <Ban className="size-3" />
+                      <span className="line-clamp-1">
+                        {config.status.reason}
+                      </span>
+                    </span>
+                  ) : (
+                    // #2 — "Free" for $0, colored per accent
+                    <span className={cn("text-xs font-bold", accent.price)}>
+                      {displayPrice}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </ScrollArea>
   );
 }
