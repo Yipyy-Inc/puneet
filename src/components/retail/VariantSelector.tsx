@@ -36,6 +36,46 @@ const TYPE_LABELS: Record<string, string> = {
 const VISUAL_DIMS = new Set(["color", "colour", "pattern", "design", "style"]);
 const isVisual = (dim: string) => VISUAL_DIMS.has(dim.toLowerCase());
 
+// Accent colors for known color names — drives border glow + dot badge
+const COLOR_HEX: Record<string, string> = {
+  red: "#EF4444",
+  coral: "#FB7185",
+  pink: "#F472B6",
+  rose: "#F43F5E",
+  orange: "#F97316",
+  amber: "#F59E0B",
+  yellow: "#FBBF24",
+  lime: "#84CC16",
+  green: "#22C55E",
+  forest: "#166534",
+  emerald: "#10B981",
+  teal: "#0D9488",
+  cyan: "#06B6D4",
+  sky: "#0EA5E9",
+  blue: "#3B82F6",
+  navy: "#1E3A5F",
+  indigo: "#6366F1",
+  violet: "#8B5CF6",
+  purple: "#A855F7",
+  lavender: "#C4B5FD",
+  fuchsia: "#E879F9",
+  brown: "#92400E",
+  gray: "#9CA3AF",
+  grey: "#9CA3AF",
+  blush: "#FBA4C0",
+  white: "#F8FAFC",
+  black: "#1F2937",
+  silver: "#CBD5E1",
+  gold: "#D97706",
+  beige: "#E5D4B3",
+  tan: "#D4A574",
+  cream: "#FEF3C7",
+  charcoal: "#374151",
+};
+
+/** Returns the hex for a color label, or undefined if not mapped. */
+const getColorHex = (label: string) => COLOR_HEX[label.toLowerCase().trim()];
+
 // ─── Multi-dimensional selector ───────────────────────────────────────────────
 // Used when variants have variantAttributes (e.g. { Size: "Small", Color: "Red" })
 
@@ -163,6 +203,7 @@ function MultiDimSelector({
                 const match = getVariantForDimValue(dim, val);
                 const isSelected = selected[dim] === val;
                 const available = isComboAvailable(dim, val);
+                const colorHex = getColorHex(val);
 
                 return (
                   <button
@@ -172,16 +213,26 @@ function MultiDimSelector({
                     onClick={() =>
                       setSelected((prev) => ({ ...prev, [dim]: val }))
                     }
+                    style={
+                      isSelected && colorHex
+                        ? {
+                            borderColor: colorHex,
+                            boxShadow: `0 0 0 3px ${colorHex}30`,
+                          }
+                        : undefined
+                    }
                     className={cn(
                       "relative flex w-[72px] flex-col items-center gap-1 rounded-xl border-2 p-1.5 transition-all",
                       isSelected
-                        ? "border-primary ring-primary/20 ring-2"
+                        ? colorHex
+                          ? "" // border + shadow via inline style
+                          : "border-primary ring-primary/20 ring-2"
                         : "border-border hover:border-muted-foreground/30",
                       !available && "cursor-not-allowed opacity-40",
                     )}
                   >
-                    {/* Variant thumbnail */}
-                    <div className="size-12 overflow-hidden rounded-lg">
+                    {/* Variant thumbnail with accent strip + color dot */}
+                    <div className="relative size-12 overflow-hidden rounded-lg">
                       {match?.imageUrl ? (
                         <img
                           src={match.imageUrl}
@@ -192,6 +243,20 @@ function MultiDimSelector({
                         <div className="bg-muted flex size-full items-center justify-center">
                           <Package className="text-muted-foreground/30 size-5" />
                         </div>
+                      )}
+                      {/* Colored accent strip at bottom of thumbnail */}
+                      {colorHex && (
+                        <div
+                          className="absolute right-0 bottom-0 left-0 h-1"
+                          style={{ backgroundColor: colorHex }}
+                        />
+                      )}
+                      {/* Color dot badge — bottom-right corner */}
+                      {colorHex && (
+                        <div
+                          className="absolute right-0.5 bottom-1.5 size-3 rounded-full border-2 border-white shadow-sm"
+                          style={{ backgroundColor: colorHex }}
+                        />
                       )}
                     </div>
                     <span className="w-full truncate text-center text-[10px] leading-tight font-medium">
@@ -412,25 +477,38 @@ function SingleDimSelector({
               {groupVariants.map((v) => {
                 const isSelected = selectedId === v.id;
                 const outOfStock = v.stock <= 0;
+                const label = v.variantValue ?? v.name;
+                const colorHex = getColorHex(label);
+
                 return (
                   <button
                     key={v.id}
                     type="button"
                     disabled={outOfStock}
                     onClick={() => setSelectedId(v.id)}
+                    style={
+                      isSelected && colorHex
+                        ? {
+                            borderColor: colorHex,
+                            boxShadow: `0 0 0 3px ${colorHex}30`,
+                          }
+                        : undefined
+                    }
                     className={cn(
                       "relative flex w-[72px] flex-col items-center gap-1 rounded-xl border-2 p-1.5 transition-all",
                       isSelected
-                        ? "border-primary ring-primary/20 ring-2"
+                        ? colorHex
+                          ? ""
+                          : "border-primary ring-primary/20 ring-2"
                         : "border-border hover:border-muted-foreground/30",
                       outOfStock && "cursor-not-allowed opacity-40",
                     )}
                   >
-                    <div className="size-12 overflow-hidden rounded-lg">
+                    <div className="relative size-12 overflow-hidden rounded-lg">
                       {v.imageUrl ? (
                         <img
                           src={v.imageUrl}
-                          alt={v.variantValue ?? v.name}
+                          alt={label}
                           className="size-full object-cover"
                         />
                       ) : (
@@ -438,9 +516,23 @@ function SingleDimSelector({
                           <Package className="text-muted-foreground/30 size-5" />
                         </div>
                       )}
+                      {/* Colored accent strip */}
+                      {colorHex && (
+                        <div
+                          className="absolute right-0 bottom-0 left-0 h-1"
+                          style={{ backgroundColor: colorHex }}
+                        />
+                      )}
+                      {/* Color dot badge */}
+                      {colorHex && (
+                        <div
+                          className="absolute right-0.5 bottom-1.5 size-3 rounded-full border-2 border-white shadow-sm"
+                          style={{ backgroundColor: colorHex }}
+                        />
+                      )}
                     </div>
                     <span className="w-full truncate text-center text-[10px] leading-tight font-medium">
-                      {v.variantValue ?? v.name}
+                      {label}
                     </span>
                     <span className="text-muted-foreground font-[tabular-nums] text-[10px]">
                       ${v.price.toFixed(2)}
