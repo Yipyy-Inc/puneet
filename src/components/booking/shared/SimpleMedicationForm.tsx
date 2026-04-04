@@ -407,6 +407,106 @@ export function SimpleMedicationForm({
                   </div>
                 </div>
 
+                {/* Drug allergies */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px]">Drug allergies</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(item.drugAllergies ?? []).map((a, ai) => (
+                      <span
+                        key={ai}
+                        className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+                      >
+                        <ShieldAlert className="size-3" />
+                        {a}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateMed(index, {
+                              drugAllergies: (item.drugAllergies ?? []).filter(
+                                (_, i) => i !== ai,
+                              ),
+                            })
+                          }
+                          className="ml-0.5 text-red-400 hover:text-red-700"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <form
+                      className="flex items-center"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const input = (
+                          e.target as HTMLFormElement
+                        ).querySelector("input") as HTMLInputElement;
+                        const val = input.value.trim();
+                        if (val && !(item.drugAllergies ?? []).includes(val)) {
+                          updateMed(index, {
+                            drugAllergies: [...(item.drugAllergies ?? []), val],
+                          });
+                          input.value = "";
+                        }
+                      }}
+                    >
+                      <Input
+                        placeholder="+ Add allergy"
+                        className="h-7 w-28 text-xs"
+                      />
+                    </form>
+                  </div>
+                </div>
+
+                {/* Supply count + refill alert */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px]">
+                    Supply brought (number of doses)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={item.supplyCount ?? ""}
+                    onChange={(e) =>
+                      updateMed(index, {
+                        supplyCount: e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined,
+                      })
+                    }
+                    placeholder="e.g. 10"
+                    className="h-8 w-28 text-xs"
+                  />
+                  {item.supplyCount != null &&
+                    item.supplyCount > 0 &&
+                    (() => {
+                      const dosesPerDay =
+                        item.frequency === "twice_daily"
+                          ? 2
+                          : item.frequency === "every_8hrs"
+                            ? 3
+                            : item.times.length || 1;
+                      const daysOfSupply = Math.floor(
+                        item.supplyCount / dosesPerDay,
+                      );
+                      const isLow = daysOfSupply <= 3;
+                      return (
+                        <p
+                          className={cn(
+                            "text-[11px]",
+                            isLow
+                              ? "font-medium text-amber-700"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {isLow && "⚠ "}
+                          {item.supplyCount} doses = ~{daysOfSupply} day
+                          {daysOfSupply !== 1 ? "s" : ""} of supply
+                          {isLow ? " — may need refill" : ""}
+                        </p>
+                      );
+                    })()}
+                </div>
+
                 {/* Notes */}
                 <Textarea
                   value={item.notes}
@@ -415,6 +515,26 @@ export function SimpleMedicationForm({
                   rows={2}
                   className="resize-none text-xs"
                 />
+
+                {/* Save to profile */}
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={item.parentConfirmed ?? false}
+                    onChange={(e) =>
+                      updateMed(index, { parentConfirmed: e.target.checked })
+                    }
+                    className="size-4 rounded accent-blue-600"
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-blue-800">
+                      Save to pet profile for future visits
+                    </p>
+                    <p className="text-[10px] text-blue-600">
+                      This medication will auto-populate next time
+                    </p>
+                  </div>
+                </label>
               </div>
             );
           })}

@@ -63,6 +63,7 @@ export const feedingScheduleItemSchema = z.object({
   notes: z.string(),
   feedingUnit: z.string().optional(),
   feedingInstruction: z.string().optional(),
+  saveToProfile: z.boolean().optional(),
 });
 export type FeedingScheduleItem = z.infer<typeof feedingScheduleItemSchema>;
 
@@ -90,6 +91,8 @@ export const medicationItemSchema = z.object({
   isHighRisk: z.boolean().optional(),
   parentConfirmed: z.boolean().optional(),
   notes: z.string(),
+  supplyCount: z.number().optional(),
+  drugAllergies: z.array(z.string()).optional(),
 });
 export type MedicationItem = z.infer<typeof medicationItemSchema>;
 
