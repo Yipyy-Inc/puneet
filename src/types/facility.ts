@@ -460,6 +460,47 @@ export const serviceDateBlockSchema = z.object({
 export type ServiceDateBlock = z.infer<typeof serviceDateBlockSchema>;
 
 // ============================================================================
+// Service Add-Ons
+// ============================================================================
+
+export const addOnPricingTypeEnum = z.enum([
+  "flat",
+  "per_day",
+  "per_session",
+  "per_hour",
+]);
+export type AddOnPricingType = z.infer<typeof addOnPricingTypeEnum>;
+
+export const serviceAddOnSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  image: z.string().optional(),
+  pricingType: addOnPricingTypeEnum,
+  price: z.number(),
+  unitLabel: z.string().optional(),
+  maxQuantity: z.number().optional(),
+  applicableServices: z.array(z.string()),
+  requiresScheduling: z.boolean(),
+  generatesTask: z.boolean(),
+  taskCategory: z.string().optional(),
+  sizePricing: z
+    .array(
+      z.object({
+        size: z.enum(["small", "medium", "large", "giant"]),
+        priceModifier: z.number(),
+        modifierType: z.enum(["flat", "percentage"]),
+      }),
+    )
+    .optional(),
+  isActive: z.boolean(),
+  sortOrder: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type ServiceAddOn = z.infer<typeof serviceAddOnSchema>;
+
+// ============================================================================
 // Report Card Config
 // ============================================================================
 

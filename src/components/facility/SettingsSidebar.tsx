@@ -20,6 +20,7 @@ import {
   Scissors,
   GraduationCap,
   Puzzle,
+  Package,
   ChevronDown,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
@@ -57,6 +58,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "daycare", label: "Daycare", icon: Sun },
       { id: "grooming", label: "Grooming", icon: Scissors },
       { id: "training", label: "Training", icon: GraduationCap },
+      { id: "addons", label: "Add-Ons", icon: Package },
     ],
   },
   {

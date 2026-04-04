@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/use-settings";
 import type {
@@ -27,6 +28,14 @@ import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequir
 import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
+
+const AddOnsSettings = dynamic(
+  () =>
+    import("@/components/facility/AddOnsSettings").then(
+      (mod) => mod.AddOnsSettings,
+    ),
+  { ssr: false },
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -3747,6 +3756,13 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* Add-Ons */}
+          {activeSection === "addons" && (
+            <div className="space-y-6">
+              <AddOnsSettings />
             </div>
           )}
         </div>
