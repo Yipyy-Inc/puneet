@@ -130,6 +130,19 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   hiddenServices: [],
 };
 
+/** Recurring holidays — facility is closed on these dates every year */
+export const facilityHolidays: Array<{
+  month: number;
+  day: number;
+  name: string;
+}> = [
+  { month: 1, day: 1, name: "New Year's Day" },
+  { month: 7, day: 4, name: "Independence Day" },
+  { month: 12, day: 25, name: "Christmas Day" },
+  { month: 12, day: 31, name: "New Year's Eve" },
+  { month: 11, day: 28, name: "Thanksgiving" },
+];
+
 export const serviceDateBlocks: ServiceDateBlock[] = [];
 export const scheduleTimeOverrides: ScheduleTimeOverride[] = [];
 export const dropOffPickUpOverrides: DropOffPickUpOverride[] = [];

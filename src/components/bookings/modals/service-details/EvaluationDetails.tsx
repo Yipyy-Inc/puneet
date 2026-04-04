@@ -90,6 +90,7 @@ export function EvaluationDetails({
     serviceDateBlocks,
     scheduleTimeOverrides,
     dropOffPickUpOverrides,
+    holidays,
   } = useSettings();
 
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
@@ -305,6 +306,7 @@ export function EvaluationDetails({
                   }}
                   disabledDates={blockedDatesForEvaluation}
                   disabledDateMessages={blockedDateMessagesForEvaluation}
+                  holidays={holidays}
                 />
               </div>
             </div>

@@ -194,6 +194,7 @@ export function BoardingDetails({
     serviceDateBlocks,
     scheduleTimeOverrides,
     dropOffPickUpOverrides,
+    holidays,
   } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
@@ -325,6 +326,7 @@ export function BoardingDetails({
                 disabledStartDates={blockedStartDatesForBoarding}
                 disabledEndDates={blockedEndDatesForBoarding}
                 disabledDateMessages={blockedDateMessagesForBoarding}
+                holidays={holidays}
               />
             </div>
           </div>

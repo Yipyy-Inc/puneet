@@ -131,6 +131,9 @@ function ScheduleStep({
   selectedPets: Pet[];
   Icon: React.ComponentType<{ className?: string }>;
 }) {
+  const { hours, rules, serviceDateBlocks, scheduleTimeOverrides, holidays } =
+    useSettings();
+
   const [dateTimes, setDateTimes] = React.useState<
     Array<{ date: string; checkInTime: string; checkOutTime: string }>
   >(
@@ -138,6 +141,29 @@ function ScheduleStep({
       ? [{ date: startDate, checkInTime, checkOutTime }]
       : [],
   );
+
+  const scheduleOverrides = React.useMemo(
+    () =>
+      scheduleTimeOverrides.filter(
+        (o) => !o.services?.length || o.services.includes(serviceModule.slug),
+      ),
+    [scheduleTimeOverrides, serviceModule.slug],
+  );
+
+  const { blockedDates, blockedMessages } = React.useMemo(() => {
+    const blocks = serviceDateBlocks.filter(
+      (b) => b.closed && b.services.includes(serviceModule.slug),
+    );
+    const dates = blocks.map((b) => {
+      const [y, m, d] = b.date.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+    const messages: Record<string, string> = {};
+    blocks.forEach(
+      (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+    );
+    return { blockedDates: dates, blockedMessages: messages };
+  }, [serviceDateBlocks, serviceModule.slug]);
 
   return (
     <div className="space-y-5">
@@ -177,6 +203,15 @@ function ScheduleStep({
               setCheckOutTime(times[0].checkOutTime);
             }
           }}
+          facilityHours={hours}
+          scheduleTimeOverrides={scheduleOverrides}
+          bookingRules={{
+            minimumAdvanceBooking: rules.minimumAdvanceBooking,
+            maximumAdvanceBooking: rules.maximumAdvanceBooking,
+          }}
+          disabledDates={blockedDates}
+          disabledDateMessages={blockedMessages}
+          holidays={holidays}
         />
       </div>
     </div>
@@ -204,7 +239,7 @@ function BuiltinServiceSchedule({
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
 }) {
-  const { hours, rules, serviceDateBlocks, scheduleTimeOverrides } =
+  const { hours, rules, serviceDateBlocks, scheduleTimeOverrides, holidays } =
     useSettings();
 
   const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === serviceId);
@@ -296,6 +331,7 @@ function BuiltinServiceSchedule({
           }}
           disabledDates={blockedDates}
           disabledDateMessages={blockedMessages}
+          holidays={holidays}
         />
       </div>
     </div>

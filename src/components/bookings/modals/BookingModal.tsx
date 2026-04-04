@@ -44,6 +44,7 @@ import {
 } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
+import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 
@@ -124,6 +125,17 @@ export function BookingModal({
       : 0,
   );
   const [currentSubStep, setCurrentSubStep] = useState(0);
+  const [highestStepReached, setHighestStepReached] = useState(
+    preSelectedService
+      ? displayedSteps.findIndex(
+          (s) =>
+            s.id ===
+            (preSelectedClientId && preSelectedPetId
+              ? "details"
+              : "client-pet"),
+        )
+      : 0,
+  );
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Client selection state
@@ -499,8 +511,10 @@ export function BookingModal({
       }
     }
     if (currentStep < displayedSteps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
       setCurrentSubStep(0);
+      setHighestStepReached((prev) => Math.max(prev, nextStep));
     }
   };
 
@@ -642,6 +656,7 @@ export function BookingModal({
   const resetForm = () => {
     setCurrentStep(0);
     setCurrentSubStep(0);
+    setHighestStepReached(0);
     setSearchQuery("");
     setSelectedClientId(null);
     setSelectedPetIds([]);
@@ -1296,6 +1311,31 @@ export function BookingModal({
                 })()}
               </p>
             </div>
+            {/* #2 — Progress indicator */}
+            <div className="border-b px-4 py-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                  Step {currentStep + 1} of {displayedSteps.length}
+                </span>
+                <span className="text-muted-foreground text-[10px]">
+                  {Math.round(
+                    ((currentStep + (canProceed ? 1 : 0)) /
+                      displayedSteps.length) *
+                      100,
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="bg-muted mt-1.5 h-1 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-primary h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${((currentStep + (canProceed ? 1 : 0)) / displayedSteps.length) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-4">
                 {displayedSteps.map((step, idx) => {
@@ -1311,30 +1351,105 @@ export function BookingModal({
                   const showSubSteps =
                     step.id === "details" &&
                     isActive &&
-                    (selectedService === "daycare" ||
-                      selectedService === "boarding" ||
-                      selectedService === "evaluation");
+                    currentSubSteps.length > 0;
+
+                  // #1 — clickable any visited step (not just completed)
+                  const canClickStep = !isActive && idx <= highestStepReached;
+
+                  // #6 — simplified Details description (just date, sub-steps handle rest)
+                  const detailsDesc = (() => {
+                    if (step.id !== "details" || !isCompleted) return null;
+                    if (
+                      selectedService === "daycare" &&
+                      daycareSelectedDates.length > 0
+                    )
+                      return `${daycareSelectedDates.length} day${daycareSelectedDates.length !== 1 ? "s" : ""} scheduled`;
+                    if (
+                      selectedService === "boarding" &&
+                      boardingRangeStart &&
+                      boardingRangeEnd
+                    )
+                      return `${boardingRangeStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${boardingRangeEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+                    if (startDate)
+                      return new Date(
+                        startDate + "T12:00:00",
+                      ).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      });
+                    return null;
+                  })();
+
+                  // #5 — pet names with truncation
+                  const petSummary = (() => {
+                    if (selectedPets.length === 0) return "";
+                    if (selectedPets.length <= 2)
+                      return selectedPets.map((p) => p.name).join(", ");
+                    return `${selectedPets[0].name}, ${selectedPets[1].name} +${selectedPets.length - 2} more`;
+                  })();
+
+                  const stepDesc = (() => {
+                    if (step.id === "service" && selectedService)
+                      return (
+                        configs[selectedService as keyof typeof configs]
+                          ?.clientFacingName ??
+                        getModuleBySlug(selectedService)?.name ??
+                        selectedService.charAt(0).toUpperCase() +
+                          selectedService.slice(1)
+                      );
+                    if (step.id === "client-pet" && selectedClient)
+                      return `${selectedClient.name}${petSummary ? ` · ${petSummary}` : ""}`;
+                    if (step.id === "details" && detailsDesc)
+                      return detailsDesc;
+                    // #3 — Confirm shows action text, not price (price is in footer)
+                    if (step.id === "confirm") return "Review & create";
+                    return step.description;
+                  })();
 
                   return (
                     <div key={step.id}>
+                      {/* #1 — clickable step card */}
                       <div
-                        className={`w-full rounded-lg border p-3 text-left transition-all ${
+                        role={canClickStep ? "button" : undefined}
+                        tabIndex={canClickStep ? 0 : undefined}
+                        onClick={() => {
+                          if (canClickStep) {
+                            setCurrentStep(idx);
+                            setCurrentSubStep(0);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            canClickStep &&
+                            (e.key === "Enter" || e.key === " ")
+                          ) {
+                            e.preventDefault();
+                            setCurrentStep(idx);
+                            setCurrentSubStep(0);
+                          }
+                        }}
+                        className={cn(
+                          "w-full rounded-lg border p-3 text-left transition-all",
                           isActive
-                            ? `border-primary bg-primary text-primary-foreground shadow-sm`
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
                             : isCompleted
                               ? "border-border bg-background"
-                              : `border-muted-foreground/30 bg-muted/50 border-dashed opacity-60`
-                        } `}
+                              : "border-muted-foreground/30 bg-muted/50 border-dashed opacity-60",
+                          canClickStep &&
+                            "hover:border-primary/50 hover:bg-primary/5 cursor-pointer",
+                        )}
                       >
                         <div className="flex items-start gap-3">
                           <div
-                            className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                            className={cn(
+                              "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                               isActive
                                 ? "bg-primary-foreground text-primary"
                                 : isCompleted
                                   ? "bg-primary text-primary-foreground"
-                                  : `bg-muted-foreground/20 text-muted-foreground`
-                            } `}
+                                  : "bg-muted-foreground/20 text-muted-foreground",
+                            )}
                           >
                             {isCompleted ? (
                               <Check className="size-3" />
@@ -1344,30 +1459,30 @@ export function BookingModal({
                           </div>
                           <div className="min-w-0 flex-1">
                             <p
-                              className={`mb-0.5 text-sm font-medium ${
-                                isActive
-                                  ? ""
-                                  : isCompleted
-                                    ? ""
-                                    : "text-muted-foreground"
-                              } `}
+                              className={cn(
+                                "mb-0.5 text-sm font-medium",
+                                !isActive &&
+                                  !isCompleted &&
+                                  "text-muted-foreground",
+                              )}
                             >
                               {step.title}
                             </p>
                             <p
-                              className={`text-xs ${
+                              className={cn(
+                                "truncate text-xs",
                                 isActive
                                   ? "text-primary-foreground/80"
-                                  : "text-muted-foreground"
-                              } `}
+                                  : "text-muted-foreground",
+                              )}
                             >
-                              {step.description}
+                              {stepDesc}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Sub-steps for Details step when daycare/boarding */}
+                      {/* Sub-steps */}
                       {showSubSteps && (
                         <div className="border-primary/30 mt-2 ml-6 space-y-1 border-l-2 pl-4">
                           {currentSubSteps.map((subStep, subIdx) => {
@@ -1376,34 +1491,85 @@ export function BookingModal({
                             const isVisitedAndCompleted =
                               subIdx < currentSubStep && isSubCompleted;
 
+                            // #4 — only show summary when there's actual data
+                            const subSummary = (() => {
+                              if (!isVisitedAndCompleted) return null;
+                              if (subStep.id === 0) {
+                                if (
+                                  selectedService === "daycare" &&
+                                  daycareSelectedDates.length > 0
+                                )
+                                  return `${daycareSelectedDates.length} day${daycareSelectedDates.length !== 1 ? "s" : ""}`;
+                                if (
+                                  selectedService === "boarding" &&
+                                  boardingRangeStart &&
+                                  boardingRangeEnd
+                                )
+                                  return `${boardingRangeStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${boardingRangeEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+                                if (startDate)
+                                  return new Date(
+                                    startDate + "T12:00:00",
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  });
+                              }
+                              if (
+                                subStep.id === 1 &&
+                                roomAssignments.length > 0
+                              )
+                                return `${roomAssignments.length} pet${roomAssignments.length !== 1 ? "s" : ""} assigned`;
+                              if (subStep.id === 2 && extraServices.length > 0)
+                                return `${extraServices.reduce((s, e) => s + e.quantity, 0)} add-on${extraServices.reduce((s, e) => s + e.quantity, 0) !== 1 ? "s" : ""}`;
+                              if (subStep.id === 3) {
+                                const parts = [
+                                  feedingSchedule.length > 0 &&
+                                    `${feedingSchedule.reduce((s, f) => s + f.occasions.length, 0)} meals`,
+                                  medications.length > 0 &&
+                                    `${medications.length} med${medications.length !== 1 ? "s" : ""}`,
+                                ].filter(Boolean);
+                                return parts.length > 0
+                                  ? parts.join(" · ")
+                                  : null;
+                              }
+                              return null;
+                            })();
+
                             return (
                               <div
                                 key={subStep.id}
-                                className={`w-full rounded-md px-3 py-2 text-left text-sm transition-all ${
+                                className={cn(
+                                  "w-full rounded-md px-3 py-2 text-left text-sm transition-all",
                                   isSubActive
                                     ? "bg-primary/20 text-primary font-medium"
                                     : isVisitedAndCompleted
                                       ? "text-foreground"
-                                      : "text-muted-foreground"
-                                } `}
+                                      : "text-muted-foreground",
+                                )}
                               >
                                 <div className="flex items-center gap-2">
                                   <div
-                                    className={`flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-                                      isSubActive
+                                    className={cn(
+                                      "flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
+                                      isSubActive || isVisitedAndCompleted
                                         ? "bg-primary text-primary-foreground"
-                                        : isVisitedAndCompleted
-                                          ? "bg-primary text-primary-foreground"
-                                          : `bg-muted-foreground/20 text-muted-foreground`
-                                    } `}
+                                        : "bg-muted-foreground/20 text-muted-foreground",
+                                    )}
                                   >
                                     {isVisitedAndCompleted ? (
-                                      <Check className="h-2.5 w-2.5" />
+                                      <Check className="size-2.5" />
                                     ) : (
                                       subIdx + 1
                                     )}
                                   </div>
-                                  <span>{subStep.title}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <span>{subStep.title}</span>
+                                    {subSummary && (
+                                      <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
+                                        {subSummary}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             );

@@ -93,10 +93,14 @@ export function TimeRangeSlider({
   const durationText = minutes > 0 ? `${hours}h ${minutes}m` : `${hours} hours`;
   const daycareType = durationMinutes / 60 <= 5 ? "Half Day" : "Full Day";
 
+  // #6 — start can't be so late that the minimum slot exceeds closing
+  const effectiveStartMax = Math.min(startMaxMinutes, endMaxMinutes - step);
+
   const enforceAndEmit = useCallback(
     (nextStartMinutes: number, nextEndMinutes: number) => {
-      let s = snap(clamp(nextStartMinutes, startMinMinutes, startMaxMinutes));
+      let s = snap(clamp(nextStartMinutes, startMinMinutes, effectiveStartMax));
       let e = snap(clamp(nextEndMinutes, endMinMinutes, endMaxMinutes));
+      // Ensure minimum duration
       if (e - s < step) {
         if (s + step <= endMaxMinutes) {
           e = s + step;
@@ -104,12 +108,14 @@ export function TimeRangeSlider({
           s = Math.max(startMinMinutes, e - step);
         }
       }
+      // Final safety: end can never exceed facility close
+      if (e > endMaxMinutes) e = endMaxMinutes;
       onTimeChange(minutesToTime(s), minutesToTime(e));
     },
     [
       snap,
       startMinMinutes,
-      startMaxMinutes,
+      effectiveStartMax,
       endMinMinutes,
       endMaxMinutes,
       step,
@@ -153,7 +159,7 @@ export function TimeRangeSlider({
       if (!dragging) return;
       const m = clientXToMinutes(clientX);
       if (dragging === "start") {
-        const newStart = clamp(m, startMinMinutes, startMaxMinutes);
+        const newStart = clamp(m, startMinMinutes, effectiveStartMax);
         if (newStart < endMinutes - step) enforceAndEmit(newStart, endMinutes);
       } else {
         const newEnd = clamp(m, endMinMinutes, endMaxMinutes);
@@ -168,7 +174,7 @@ export function TimeRangeSlider({
       startMinutes,
       step,
       startMinMinutes,
-      startMaxMinutes,
+      effectiveStartMax,
       endMinMinutes,
       endMaxMinutes,
     ],
