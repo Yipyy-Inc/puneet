@@ -347,6 +347,8 @@ export const shiftSwapRequestSchema = z.object({
   reviewedByStaffName: z.string().optional(),
   reviewedAt: z.string().optional(),
   reviewNotes: z.string().optional(),
+  requestedChanges: z.string().optional(),
+  coverageAlertTriggered: z.boolean().optional(),
   facility: z.string(),
 });
 export type ShiftSwapRequest = z.infer<typeof shiftSwapRequestSchema>;
@@ -535,4 +537,25 @@ export interface SchedulingConflict {
   conflictingShiftId?: number;
   timeOffRequestId?: number;
   details?: Record<string, unknown>;
+}
+
+// ============================================================================
+// Staff Skills (for evaluation and service assignment)
+// ============================================================================
+
+export type StaffSkill =
+  | "evaluation"
+  | "grooming"
+  | "training"
+  | "daycare"
+  | "boarding"
+  | "veterinary"
+  | "administration";
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  skills: StaffSkill[];
+  isActive: boolean;
 }

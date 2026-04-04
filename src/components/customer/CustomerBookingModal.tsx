@@ -1408,12 +1408,11 @@ export function CustomerBookingModal({
                         <AlertCircle className="size-4 text-amber-600" />
                         <AlertDescription>
                           <p className="font-semibold text-amber-800 dark:text-amber-200">
-                            Book an evaluation first
+                            Evaluation required
                           </p>
                           <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-                            You must book an evaluation before you can book any
-                            other services. Select your pet(s) above, then
-                            choose Evaluation below.
+                            {bookingFlow.evaluationLockedMessage ??
+                              "Please book an evaluation before accessing other services."}
                           </p>
                         </AlertDescription>
                       </Alert>
@@ -1444,8 +1443,8 @@ export function CustomerBookingModal({
                                   : `The following pets need an evaluation first: ${petsNeedingEvaluation.map((p) => p.name).join(", ")}`}
                               </p>
                               <p className="text-muted-foreground mt-2 text-xs">
-                                Book an evaluation below. Once completed and
-                                approved, you can book other services.
+                                {bookingFlow.evaluationLockedMessage ??
+                                  "Please book an evaluation below. Once completed and approved, other services will be unlocked."}
                               </p>
                             </AlertDescription>
                           </Alert>

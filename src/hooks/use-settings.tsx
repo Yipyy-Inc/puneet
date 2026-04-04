@@ -7,6 +7,7 @@ import {
   groomingConfig,
   trainingConfig,
   evaluationConfig,
+  evaluationReportCardConfig,
   businessHours,
   businessProfile,
   bookingRules,
@@ -25,6 +26,7 @@ import {
 import type {
   ModuleConfig,
   EvaluationConfig,
+  EvaluationReportCardConfig,
   BusinessHours,
   BusinessProfile,
   BookingRules,
@@ -46,6 +48,7 @@ interface SettingsContextValue {
   grooming: ModuleConfig;
   training: ModuleConfig;
   evaluation: EvaluationConfig;
+  evaluationReportCard: EvaluationReportCardConfig;
   hours: BusinessHours;
   profile: BusinessProfile;
   rules: BookingRules;
@@ -65,6 +68,7 @@ interface SettingsContextValue {
   updateGrooming: (config: ModuleConfig) => void;
   updateTraining: (config: ModuleConfig) => void;
   updateEvaluation: (config: EvaluationConfig) => void;
+  updateEvaluationReportCard: (config: EvaluationReportCardConfig) => void;
   updateHours: (hours: BusinessHours) => void;
   updateProfile: (profile: BusinessProfile) => void;
   updateRules: (rules: BookingRules) => void;
@@ -128,6 +132,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       evaluationConfig,
     ),
   );
+  const [evaluationReportCardData, setEvaluationReportCardData] =
+    useState<EvaluationReportCardConfig>(() =>
+      loadStored("settings-evaluation-report-card", evaluationReportCardConfig),
+    );
   const [hours, setHours] = useState<BusinessHours>(() =>
     loadStored("settings-hours", businessHours),
   );
@@ -198,6 +206,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const updateEvaluation = (config: EvaluationConfig) => {
     setEvaluation(config);
     localStorage.setItem("settings-evaluation", JSON.stringify(config));
+  };
+  const updateEvaluationReportCard = (config: EvaluationReportCardConfig) => {
+    setEvaluationReportCardData(config);
+    localStorage.setItem(
+      "settings-evaluation-report-card",
+      JSON.stringify(config),
+    );
   };
   const updateHours = (hours: BusinessHours) => {
     setHours(hours);
@@ -275,6 +290,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setGrooming(groomingConfig);
     setTraining(trainingConfig);
     setEvaluation(evaluationConfig);
+    setEvaluationReportCardData(evaluationReportCardConfig);
     setHours(businessHours);
     setProfile(businessProfile);
     setRules(bookingRules);
@@ -293,6 +309,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-grooming");
     localStorage.removeItem("settings-training");
     localStorage.removeItem("settings-evaluation");
+    localStorage.removeItem("settings-evaluation-report-card");
     localStorage.removeItem("settings-hours");
     localStorage.removeItem("settings-profile");
     localStorage.removeItem("settings-rules");
@@ -316,6 +333,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         grooming,
         training,
         evaluation,
+        evaluationReportCard: evaluationReportCardData,
         hours,
         profile,
         rules,
@@ -335,6 +353,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateGrooming,
         updateTraining,
         updateEvaluation,
+        updateEvaluationReportCard,
         updateHours,
         updateProfile,
         updateRules,

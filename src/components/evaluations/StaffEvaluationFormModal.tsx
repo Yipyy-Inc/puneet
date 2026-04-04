@@ -18,7 +18,10 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Evaluation } from "@/types/pet";
-import { X } from "lucide-react";
+import { X, Send } from "lucide-react";
+import { SendEvaluationResultModal } from "@/components/evaluations/SendEvaluationResultModal";
+import type { EvaluationResultCardData } from "@/components/evaluations/EvaluationResultCard";
+import { useSettings } from "@/hooks/use-settings";
 
 type YesNo = "yes" | "no" | "";
 type EvaluationResult = "pass" | "fail" | "";
@@ -150,12 +153,17 @@ export function StaffEvaluationFormModal({
   onOpenChange,
   evaluation,
   petName,
+  ownerName = "Pet Owner",
+  evaluatorName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   evaluation: Evaluation;
   petName: string;
+  ownerName?: string;
+  evaluatorName?: string;
 }) {
+  const { evaluationReportCard } = useSettings();
   const key = useMemo(() => storageKey(evaluation.id), [evaluation.id]);
 
   const loadFormFromStorage = (storageKey: string): FormState => {
@@ -179,14 +187,17 @@ export function StaffEvaluationFormModal({
   );
   const [prevKey, setPrevKey] = useState(key);
   const [prevOpen, setPrevOpen] = useState(open);
+  const [resultError, setResultError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
   if (open !== prevOpen || key !== prevKey) {
     setPrevOpen(open);
     setPrevKey(key);
     if (open) {
       setForm(loadFormFromStorage(key));
+      setSaved(false);
     }
   }
-  const [resultError, setResultError] = useState("");
 
   const canSave =
     form.dogFriendly !== "" &&
@@ -218,7 +229,7 @@ export function StaffEvaluationFormModal({
     }
     setResultError("");
     localStorage.setItem(key, JSON.stringify(form));
-    onOpenChange(false);
+    setSaved(true);
   };
 
   return (
@@ -593,13 +604,68 @@ export function StaffEvaluationFormModal({
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {saved ? "Close" : "Cancel"}
           </Button>
-          <Button onClick={save} disabled={!canSave}>
-            Save Evaluation Form
-          </Button>
+          {saved ? (
+            <>
+              <Button variant="outline" onClick={() => setSaved(false)}>
+                Edit Form
+              </Button>
+              {evaluationReportCard.enabled && (
+                <Button
+                  className="gap-2"
+                  onClick={() => setSendModalOpen(true)}
+                >
+                  <Send className="size-4" />
+                  Send Result Card
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button onClick={save} disabled={!canSave}>
+              Save Evaluation Form
+            </Button>
+          )}
         </div>
       </div>
+
+      {sendModalOpen && form.evaluationResult !== "" && (
+        <SendEvaluationResultModal
+          open={sendModalOpen}
+          onOpenChange={setSendModalOpen}
+          cardData={
+            {
+              petName,
+              ownerName,
+              facilityName: "PawCare Facility",
+              evaluatorName,
+              evaluationDate: new Date().toISOString(),
+              result: form.evaluationResult as "pass" | "fail",
+              dogFriendly:
+                form.dogFriendly !== ""
+                  ? (form.dogFriendly as "yes" | "no")
+                  : undefined,
+              humanFriendly:
+                form.humanFriendly !== ""
+                  ? (form.humanFriendly as "yes" | "no")
+                  : undefined,
+              energyLevel: form.energyLevel || undefined,
+              anxietyLevel: form.anxietyLevel || undefined,
+              reactivity: form.reactivity || undefined,
+              playStyle: form.playStyle || undefined,
+              playGroup: form.playGroup || undefined,
+              behaviorTags:
+                form.behaviorTags.length > 0 ? form.behaviorTags : undefined,
+              staffNotes: form.temperamentNotes || undefined,
+              approvedServices: {
+                daycare: form.approvedServices.daycare,
+                boarding: form.approvedServices.boarding,
+                customApproved: form.approvedServices.customApproved,
+              },
+            } satisfies EvaluationResultCardData
+          }
+        />
+      )}
     </Modal>
   );
 }
