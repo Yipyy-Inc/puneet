@@ -424,14 +424,16 @@ export const DAYCARE_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select dates and times" },
   { id: 1, title: "Room Assignment", description: "Assign to room" },
   { id: 2, title: "Add-ons", description: "Add-on services" },
-  { id: 3, title: "Feeding & Medication", description: "Care instructions" },
+  { id: 3, title: "Feeding", description: "Feeding schedule" },
+  { id: 4, title: "Medication", description: "Medication details" },
 ];
 
 export const BOARDING_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select dates" },
   { id: 1, title: "Room Type", description: "Choose room" },
   { id: 2, title: "Add-ons", description: "Add-on services" },
-  { id: 3, title: "Feeding & Medication", description: "Care instructions" },
+  { id: 3, title: "Feeding", description: "Feeding schedule" },
+  { id: 4, title: "Medication", description: "Medication details" },
 ];
 
 export const EVALUATION_SUB_STEPS = [

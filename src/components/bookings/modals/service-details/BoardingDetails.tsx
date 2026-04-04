@@ -615,9 +615,9 @@ export function BoardingDetails({
         {currentSubStep === 3 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-base font-semibold">Feeding & Medication</h3>
+              <h3 className="text-base font-semibold">Feeding Schedule</h3>
               <p className="text-muted-foreground mt-1 text-xs">
-                Add feeding schedules and medication details for your pet
+                Add feeding times, portions, and dietary notes for your pet
                 (optional)
               </p>
             </div>
@@ -631,27 +631,46 @@ export function BoardingDetails({
             )}
 
             {isStepAccessible(3) && (
-              <div className="space-y-8">
-                <SimpleFeedingForm
-                  feedingSchedule={feedingSchedule}
-                  setFeedingSchedule={setFeedingSchedule}
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    type: p.type,
-                  }))}
-                />
-                <div className="border-border border-t" />
-                <SimpleMedicationForm
-                  medications={medications}
-                  setMedications={setMedications}
-                  selectedPets={selectedPets.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    type: p.type,
-                  }))}
-                />
+              <SimpleFeedingForm
+                feedingSchedule={feedingSchedule}
+                setFeedingSchedule={setFeedingSchedule}
+                selectedPets={selectedPets.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  type: p.type,
+                }))}
+              />
+            )}
+          </div>
+        )}
+
+        {currentSubStep === 4 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold">Medication</h3>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Add any medications your pet needs during their stay (optional)
+              </p>
+            </div>
+
+            {!isStepAccessible(4) && (
+              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
+                <p className="text-muted-foreground">
+                  Please complete the previous steps first
+                </p>
               </div>
+            )}
+
+            {isStepAccessible(4) && (
+              <SimpleMedicationForm
+                medications={medications}
+                setMedications={setMedications}
+                selectedPets={selectedPets.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  type: p.type,
+                }))}
+              />
             )}
           </div>
         )}

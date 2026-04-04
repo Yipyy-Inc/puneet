@@ -258,6 +258,8 @@ export function BookingModal({
             return true;
           case 3:
             return true;
+          case 4:
+            return true;
           default:
             return false;
         }
@@ -271,6 +273,8 @@ export function BookingModal({
           case 2:
             return true;
           case 3:
+            return true;
+          case 4:
             return true;
           default:
             return false;
