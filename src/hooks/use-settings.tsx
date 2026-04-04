@@ -18,6 +18,7 @@ import {
   notificationToggles,
   integrations,
   moduleAddons,
+  facilityHolidays,
 } from "@/data/settings";
 import type {
   ModuleConfig,
@@ -52,6 +53,7 @@ interface SettingsContextValue {
   notifications: NotificationToggle[];
   integrations: Integration[];
   addons: ModuleAddon[];
+  holidays: Array<{ month: number; day: number; name: string }>;
   updateDaycare: (config: ModuleConfig) => void;
   updateBoarding: (config: ModuleConfig) => void;
   updateGrooming: (config: ModuleConfig) => void;
@@ -292,6 +294,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         notifications,
         integrations: integrationsData,
         addons,
+        holidays: facilityHolidays,
         updateDaycare,
         updateBoarding,
         updateGrooming,

@@ -185,6 +185,7 @@ export function DaycareDetails({
     serviceDateBlocks,
     scheduleTimeOverrides,
     dropOffPickUpOverrides,
+    holidays,
   } = useSettings();
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
@@ -308,6 +309,7 @@ export function DaycareDetails({
                 }}
                 disabledDates={blockedDatesForDaycare}
                 disabledDateMessages={blockedDateMessagesForDaycare}
+                holidays={holidays}
               />
             </div>
           </div>

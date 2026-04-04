@@ -99,6 +99,9 @@ export interface DateSelectionCalendarProps {
   pricePerDay?: number;
   priceLabel?: string; // e.g., "per night" or "per day"
 
+  /** Recurring holidays — auto-blocked every year. Each entry has month (1-12) and day. */
+  holidays?: Array<{ month: number; day: number; name: string }>;
+
   // Styling
   className?: string;
 
@@ -179,6 +182,7 @@ export function DateSelectionCalendar({
   disabledEndDates,
   disabledDateMessages,
   unavailableDates = [],
+  holidays = [],
   className,
   initialMonth,
 }: DateSelectionCalendarProps) {
@@ -280,11 +284,40 @@ export function DateSelectionCalendar({
     disabledEndDates,
   ]);
 
+  // #4 — check if date is a recurring holiday
+  const getHolidayName = (date: Date): string | null => {
+    const m = date.getMonth() + 1;
+    const d = date.getDate();
+    const match = holidays.find((h) => h.month === m && h.day === d);
+    return match?.name ?? null;
+  };
+
   const isDateDisabled = (date: Date): boolean => {
     if (effectiveMinDate && date < effectiveMinDate) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
     if (facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
+    if (getHolidayName(date)) return true;
     return effectiveDisabledDates.some((d) => isSameDay(d, date));
+  };
+
+  // #2 — generate tooltip for disabled dates
+  const getDisabledReason = (date: Date): string | undefined => {
+    // Check user-provided messages first
+    const userMsg = disabledDateMessages?.[formatDateString(date)];
+    if (userMsg) return userMsg;
+    // Holiday
+    const holiday = getHolidayName(date);
+    if (holiday) return `Closed — ${holiday}`;
+    // Facility closed
+    if (facilityHours && !getFacilityHoursForDate(date)?.isOpen)
+      return "Facility closed";
+    // Before minimum advance
+    if (effectiveMinDate && date < effectiveMinDate)
+      return "Too soon — advance booking required";
+    // After maximum advance
+    if (effectiveMaxDate && date > effectiveMaxDate)
+      return "Too far in advance";
+    return undefined;
   };
 
   const isDateUnavailable = (date: Date): boolean => {
@@ -561,10 +594,19 @@ export function DateSelectionCalendar({
       }
     }
 
-    const closureMessage =
-      (disabled || unavailable) && disabledDateMessages
-        ? disabledDateMessages[formatDateString(date)]
-        : undefined;
+    // #2 — tooltip for any disabled date
+    const disabledReason =
+      disabled || unavailable ? getDisabledReason(date) : undefined;
+
+    // #1 — detect reduced/modified hours compared to standard weekday
+    const dateHours = !disabled ? getFacilityHoursForDate(date) : null;
+    const hasModifiedHours = (() => {
+      if (!facilityHours || !dateHours?.isOpen) return false;
+      const stdOpen = facilityHours.monday?.openTime;
+      const stdClose = facilityHours.monday?.closeTime;
+      if (!stdOpen || !stdClose) return false;
+      return dateHours.openTime !== stdOpen || dateHours.closeTime !== stdClose;
+    })();
 
     return (
       <button
@@ -573,7 +615,12 @@ export function DateSelectionCalendar({
         onMouseEnter={() => setHoverDate(date)}
         onMouseLeave={() => setHoverDate(null)}
         disabled={disabled || unavailable}
-        title={closureMessage}
+        title={
+          disabledReason ??
+          (hasModifiedHours && dateHours
+            ? `Hours: ${dateHours.openTime} – ${dateHours.closeTime}`
+            : undefined)
+        }
         className={cn(
           `relative m-2 aspect-square w-full rounded-full text-[10px] font-medium transition-all`,
           "hover:bg-accent hover:text-accent-foreground",
@@ -601,6 +648,10 @@ export function DateSelectionCalendar({
         )}
       >
         {date.getDate()}
+        {/* #1 — small dot indicator for reduced/modified hours */}
+        {hasModifiedHours && !selected && !disabled && (
+          <span className="absolute right-0.5 bottom-0.5 size-1 rounded-full bg-amber-400" />
+        )}
       </button>
     );
   };
@@ -736,6 +787,41 @@ export function DateSelectionCalendar({
                     </div>
                   ))}
                 </div>
+
+                {/* #5 — Next available date hint */}
+                {mode === "single" &&
+                  selectedDates.length === 0 &&
+                  (() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    for (let i = 0; i < 90; i++) {
+                      const candidate = new Date(today);
+                      candidate.setDate(today.getDate() + i);
+                      if (
+                        !isDateDisabled(candidate) &&
+                        !isDateUnavailable(candidate)
+                      ) {
+                        const label = candidate.toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        });
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentMonth(candidate);
+                              handleDateClick(candidate);
+                            }}
+                            className="text-primary hover:bg-primary/5 mt-1 w-full rounded-md px-2 py-1.5 text-center text-[10px] font-medium transition-colors"
+                          >
+                            Next available: {label} →
+                          </button>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
               </div>
             </>
           )}
