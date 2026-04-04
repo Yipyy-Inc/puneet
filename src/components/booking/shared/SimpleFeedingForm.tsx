@@ -373,48 +373,35 @@ export function SimpleFeedingForm({
                     )}
 
                     <Input
+                      type="number"
+                      min={0}
+                      step={0.25}
                       value={comp?.amount || ""}
                       onChange={(e) =>
                         updateMealAmount(item, occ.id, e.target.value)
                       }
-                      placeholder="1 cup"
-                      className="h-8 w-20 shrink-0 text-xs"
+                      placeholder="Qty"
+                      className="h-8 w-16 shrink-0 text-xs"
                     />
+                    <select
+                      value={item.feedingUnit || "Cup"}
+                      onChange={(e) =>
+                        saveItem({ ...item, feedingUnit: e.target.value })
+                      }
+                      className="border-border h-8 shrink-0 rounded-md border bg-transparent px-2 text-xs"
+                    >
+                      {FEEDING_UNITS.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-
-        {/* Feeding unit */}
-        <div>
-          <Label className="text-muted-foreground mb-2 block text-xs font-semibold tracking-wide uppercase">
-            Feeding unit
-          </Label>
-          <div className="flex flex-wrap gap-1.5">
-            {FEEDING_UNITS.map((u) => {
-              const active = item.feedingUnit === u;
-              return (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() =>
-                    saveItem({ ...item, feedingUnit: active ? undefined : u })
-                  }
-                  className={cn(
-                    "rounded-lg border-2 px-3 py-1.5 text-xs font-medium transition-all",
-                    active
-                      ? "border-orange-400 bg-orange-50 text-orange-700"
-                      : "border-border hover:border-orange-200",
-                  )}
-                >
-                  {u}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Feeding instruction */}
         <div>

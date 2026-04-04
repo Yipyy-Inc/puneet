@@ -359,12 +359,32 @@ function FeedingCard({
           </div>
           <div>
             <Label className="text-xs">Amount</Label>
-            <Input
-              value={entry.amount}
-              onChange={(e) => onChange({ ...entry, amount: e.target.value })}
-              placeholder="e.g. 1 cup"
-              className="mt-1 h-9 text-xs"
-            />
+            <div className="mt-1 flex gap-1.5">
+              <Input
+                type="number"
+                min={0}
+                step={0.25}
+                value={entry.amount}
+                onChange={(e) => onChange({ ...entry, amount: e.target.value })}
+                placeholder="Qty"
+                className="h-9 w-20 text-xs"
+              />
+              <Select
+                value={entry.unit || "Cup"}
+                onValueChange={(v) => onChange({ ...entry, unit: v })}
+              >
+                <SelectTrigger className="h-9 w-24 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FEEDING_UNITS.map((u) => (
+                    <SelectItem key={u} value={u} className="text-xs">
+                      {u}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div>
             <Label className="text-xs">Food Type</Label>
@@ -383,30 +403,6 @@ function FeedingCard({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
-
-        {/* Unit */}
-        <div className="mt-3">
-          <Label className="text-xs">Feeding Unit</Label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {FEEDING_UNITS.map((u) => (
-              <button
-                key={u}
-                type="button"
-                onClick={() =>
-                  onChange({ ...entry, unit: entry.unit === u ? "" : u })
-                }
-                className={cn(
-                  "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
-                  entry.unit === u
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "hover:bg-muted",
-                )}
-              >
-                {u}
-              </button>
-            ))}
           </div>
         </div>
 
