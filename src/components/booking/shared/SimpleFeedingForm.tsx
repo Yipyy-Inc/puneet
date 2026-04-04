@@ -20,7 +20,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FeedingScheduleItem, FoodSource } from "@/types/booking";
+import type { FeedingScheduleItem } from "@/types/booking";
 
 interface PetOption {
   id: number;
@@ -39,12 +39,6 @@ const MEAL_PRESETS = [
   { label: "Lunch", time: "12:00" },
   { label: "Dinner", time: "17:00" },
   { label: "Snack", time: "15:00" },
-];
-
-const SOURCE_OPTIONS: { value: FoodSource; label: string }[] = [
-  { value: "parent_brings", label: "Owner brings" },
-  { value: "facility_provides", label: "Facility provides" },
-  { value: "mix", label: "Both" },
 ];
 
 const FOOD_TYPES = ["Kibble", "Wet food", "Raw", "Prescription"];
@@ -375,30 +369,6 @@ export function SimpleFeedingForm({
             })}
           </div>
         )}
-
-        {/* Food source */}
-        <div>
-          <Label className="text-muted-foreground mb-2 block text-xs font-semibold tracking-wide uppercase">
-            Who provides the food?
-          </Label>
-          <div className="flex gap-2">
-            {SOURCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => saveItem({ ...item, source: opt.value })}
-                className={cn(
-                  "rounded-lg border-2 px-3 py-2 text-xs font-medium transition-all",
-                  item.source === opt.value
-                    ? "border-orange-400 bg-orange-50 text-orange-700"
-                    : "border-border hover:border-orange-200",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Allergies */}
         <div>
