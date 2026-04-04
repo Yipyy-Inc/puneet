@@ -362,6 +362,16 @@ export const notificationToggleSchema = z.object({
 });
 export type NotificationToggle = z.infer<typeof notificationToggleSchema>;
 
+export const serviceNotificationDefaultSchema = z.object({
+  serviceId: z.string(),
+  serviceLabel: z.string(),
+  email: z.boolean(),
+  sms: z.boolean(),
+});
+export type ServiceNotificationDefault = z.infer<
+  typeof serviceNotificationDefaultSchema
+>;
+
 export const integrationSchema = z.object({
   id: z.string(),
   name: z.string(),

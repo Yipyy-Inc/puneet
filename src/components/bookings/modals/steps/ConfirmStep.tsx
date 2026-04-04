@@ -530,6 +530,10 @@ export function ConfirmStep({
       {/* ── Notifications ───────────────────────────────────────── */}
       <div className="rounded-2xl border p-4">
         <SectionHeader icon={Mail} label="Notifications" />
+        <p className="text-muted-foreground mb-3 text-[11px]">
+          Defaults are set per service in Settings → Notifications. Toggle off
+          to skip for this booking.
+        </p>
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <Label

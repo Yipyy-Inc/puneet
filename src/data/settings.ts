@@ -15,6 +15,7 @@ import type {
   TaxRate,
   CurrencySettings,
   NotificationToggle,
+  ServiceNotificationDefault,
   Integration,
   SubscriptionPlan,
   ModuleAddon,
@@ -685,6 +686,20 @@ export const notificationToggles: NotificationToggle[] = [
     sms: false,
     push: true,
     category: "system",
+  },
+];
+
+/** Per-service notification defaults — controls pre-selected toggles in the booking confirmation */
+export const serviceNotificationDefaults: ServiceNotificationDefault[] = [
+  { serviceId: "daycare", serviceLabel: "Daycare", email: true, sms: false },
+  { serviceId: "boarding", serviceLabel: "Boarding", email: true, sms: false },
+  { serviceId: "grooming", serviceLabel: "Grooming", email: true, sms: true },
+  { serviceId: "training", serviceLabel: "Training", email: true, sms: false },
+  {
+    serviceId: "evaluation",
+    serviceLabel: "Pet Evaluation",
+    email: true,
+    sms: false,
   },
 ];
 
