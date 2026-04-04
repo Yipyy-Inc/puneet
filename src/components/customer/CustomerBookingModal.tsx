@@ -3698,28 +3698,42 @@ export function CustomerBookingModal({
                           ) : (
                             <div className="mt-1 space-y-1">
                               {feedingEntries.length > 0 && (
-                                <p className="text-xs">
-                                  <span className="font-medium">Feeding:</span>{" "}
-                                  {feedingEntries
-                                    .map(
-                                      (f) =>
-                                        `${f.label} at ${f.time}${f.amount ? ` (${f.amount})` : ""}`,
-                                    )
-                                    .join(", ")}
-                                </p>
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-medium">
+                                    Feeding:
+                                  </p>
+                                  {feedingEntries.map((f, fi) => (
+                                    <p key={fi} className="text-xs">
+                                      {f.label} at {f.time}
+                                      {f.amount ? ` · ${f.amount}` : ""}
+                                      {f.unit ? ` ${f.unit}` : ""}
+                                      {f.feedingInstruction
+                                        ? ` · ${f.feedingInstruction}`
+                                        : ""}
+                                    </p>
+                                  ))}
+                                </div>
                               )}
                               {medicationEntries.length > 0 && (
-                                <p className="text-xs">
-                                  <span className="font-medium">
+                                <div className="space-y-0.5">
+                                  <p className="text-xs font-medium">
                                     Medications:
-                                  </span>{" "}
-                                  {medicationEntries
-                                    .map(
-                                      (m) =>
-                                        `${m.name || "Unnamed"} ${m.dosage ? `(${m.dosage})` : ""} — ${m.frequency}${m.isCritical ? " ⚠" : ""}`,
-                                    )
-                                    .join(", ")}
-                                </p>
+                                  </p>
+                                  {medicationEntries.map((m, mi) => (
+                                    <p key={mi} className="text-xs">
+                                      {m.name || "Unnamed"}{" "}
+                                      {m.dosage ? `(${m.dosage})` : ""} —{" "}
+                                      {m.frequency}
+                                      {m.isCritical ? " ⚠" : ""}
+                                      {m.supplyCount
+                                        ? ` · ${m.supplyCount} doses`
+                                        : ""}
+                                      {m.drugAllergies?.length
+                                        ? ` · Allergies: ${m.drugAllergies.join(", ")}`
+                                        : ""}
+                                    </p>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           )}
@@ -3746,6 +3760,36 @@ export function CustomerBookingModal({
                             Pricing breakdown
                           </p>
                           <div className="space-y-2 text-sm">
+                            {extraServices.length > 0 && (
+                              <div className="space-y-1">
+                                {extraServices.map((es, i) => {
+                                  const addon = eligibleAddons.find(
+                                    (a) => a.id === es.serviceId,
+                                  );
+                                  const unitPrice =
+                                    addon?.hasUnits && addon?.pricePerUnit
+                                      ? addon.pricePerUnit
+                                      : (addon?.basePrice ?? 0);
+                                  const lineTotal = unitPrice * es.quantity;
+                                  const pet = selectedPets.find(
+                                    (p) => p.id === es.petId,
+                                  );
+                                  return (
+                                    <div
+                                      key={i}
+                                      className="text-muted-foreground flex justify-between text-xs"
+                                    >
+                                      <span>
+                                        {addon?.name ?? es.serviceId} ×{" "}
+                                        {es.quantity}
+                                        {pet ? ` (${pet.name})` : ""}
+                                      </span>
+                                      <span>${lineTotal.toFixed(2)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
                                 Subtotal
