@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useMemo } from "react";
+import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
@@ -59,7 +59,7 @@ import type { Client } from "@/types/client";
 import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
-import { DataTable } from "@/components/ui/DataTable";
+import { PetEvaluationProfile } from "@/components/evaluations/PetEvaluationProfile";
 import { NotesButton } from "@/components/shared/NotesButton";
 import { TagsButton } from "@/components/shared/TagsButton";
 import { ClientInfoStrip } from "@/components/clients/ClientInfoStrip";
@@ -195,25 +195,6 @@ export default function PetDetailPage({
   const petEvaluations = (pet as { evaluations?: Evaluation[] } | undefined)
     ?.evaluations;
 
-  const latestEvaluation = useMemo(() => {
-    const evals = petEvaluations || [];
-    return [...evals].sort((a, b) => {
-      const da = a.evaluatedAt ? new Date(a.evaluatedAt).getTime() : 0;
-      const db = b.evaluatedAt ? new Date(b.evaluatedAt).getTime() : 0;
-      return db - da;
-    })[0];
-  }, [petEvaluations]);
-
-  const latestFailedEvaluation = useMemo(() => {
-    const failed = petEvaluations?.filter((e) => e.status === "failed") || [];
-    return failed
-      .map((e) => ({
-        ...e,
-        evaluatedAtValue: e.evaluatedAt ? new Date(e.evaluatedAt).getTime() : 0,
-      }))
-      .sort((a, b) => b.evaluatedAtValue - a.evaluatedAtValue)[0];
-  }, [petEvaluations]);
-
   if (!client || !pet) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -273,18 +254,6 @@ export default function PetDetailPage({
       minute: "2-digit",
     });
   };
-
-  const hasValidEvaluation =
-    petEvaluations?.some(
-      (e) => e.status === "passed" && e.isExpired !== true,
-    ) ?? false;
-
-  const hasExpiredEvaluation =
-    petEvaluations?.some(
-      (e) =>
-        (e.status === "passed" && e.isExpired === true) ||
-        e.status === "outdated",
-    ) ?? false;
 
   const getVaccinationStatus = (
     vaccination: (typeof vaccinationRecords)[0],
@@ -512,55 +481,15 @@ export default function PetDetailPage({
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold">
-                  Evaluation Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-muted-foreground text-sm">
-                    {hasValidEvaluation ? "Valid" : "Expired"}
-                  </div>
-                  <Badge
-                    variant={
-                      hasValidEvaluation && !hasExpiredEvaluation
-                        ? "secondary"
-                        : "destructive"
-                    }
-                  >
-                    {hasValidEvaluation && !hasExpiredEvaluation
-                      ? "Valid"
-                      : "Expired"}
-                  </Badge>
-                </div>
-                {latestEvaluation && (
-                  <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                    <span className="font-medium">Last outcome:</span>
-                    <Badge
-                      variant={
-                        latestEvaluation.status === "passed"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                      className="capitalize"
-                    >
-                      {latestEvaluation.status}
-                    </Badge>
-                    {latestEvaluation.isExpired && (
-                      <Badge variant="destructive">Expired</Badge>
-                    )}
-                  </div>
-                )}
-                {latestFailedEvaluation?.notes && (
-                  <div className="text-muted-foreground space-y-1 text-sm">
-                    <p className="font-semibold">Last failure reason (staff)</p>
-                    <p>{latestFailedEvaluation.notes}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PetEvaluationProfile
+              evaluations={petEvaluations}
+              petName={pet.name}
+              onStartEvaluation={
+                canUseEvaluationForm
+                  ? (ev) => setActiveEvaluation(ev)
+                  : undefined
+              }
+            />
 
             <Card>
               <CardHeader>
@@ -1334,114 +1263,11 @@ export default function PetDetailPage({
 
           {canUseEvaluationForm && (
             <TabsContent value="evaluations" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-semibold">
-                    Evaluations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {(() => {
-                    const evals = ((pet as Pet).evaluations ?? []).map((ev) => {
-                      const expired =
-                        ev.isExpired === true || ev.status === "outdated";
-                      const outcome =
-                        ev.status === "passed"
-                          ? "PASS"
-                          : ev.status === "failed"
-                            ? "FAIL"
-                            : ev.status.toUpperCase();
-                      const validity = expired ? "Expired" : "Valid";
-                      return { ...ev, expired, outcome, validity };
-                    });
-
-                    if (evals.length === 0) {
-                      return (
-                        <p className="text-muted-foreground text-sm">
-                          No evaluations found for this pet.
-                        </p>
-                      );
-                    }
-
-                    return (
-                      <DataTable
-                        data={evals}
-                        searchKeys={["id", "status", "evaluatedBy", "notes"]}
-                        searchPlaceholder="Search evaluations..."
-                        columns={[
-                          {
-                            key: "evaluatedAt",
-                            label: "Date",
-                            render: (row) =>
-                              row.evaluatedAt
-                                ? formatDateTime(row.evaluatedAt)
-                                : "Not completed",
-                          },
-                          {
-                            key: "outcome",
-                            label: "Outcome",
-                            render: (row) => (
-                              <Badge
-                                variant={
-                                  row.outcome === "PASS"
-                                    ? "secondary"
-                                    : row.outcome === "FAIL"
-                                      ? "destructive"
-                                      : "outline"
-                                }
-                              >
-                                {row.outcome}
-                              </Badge>
-                            ),
-                          },
-                          {
-                            key: "validity",
-                            label: "Validity",
-                            render: (row) =>
-                              row.status === "passed" ||
-                              row.status === "outdated" ? (
-                                <Badge
-                                  variant={
-                                    row.expired ? "destructive" : "secondary"
-                                  }
-                                >
-                                  {row.validity}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              ),
-                          },
-                          {
-                            key: "evaluatedBy",
-                            label: "Evaluator",
-                            render: (row) => row.evaluatedBy || "—",
-                          },
-                          {
-                            key: "notes",
-                            label: "Notes (staff)",
-                            render: (row) =>
-                              row.notes ? (
-                                <span className="text-muted-foreground line-clamp-2">
-                                  {row.notes}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              ),
-                          },
-                        ]}
-                        actions={(row) => (
-                          <Button
-                            size="sm"
-                            onClick={() => setActiveEvaluation(row)}
-                          >
-                            Complete Evaluation
-                          </Button>
-                        )}
-                      />
-                    );
-                  })()}
-                </CardContent>
-              </Card>
+              <PetEvaluationProfile
+                evaluations={petEvaluations}
+                petName={pet.name}
+                onStartEvaluation={(ev) => setActiveEvaluation(ev)}
+              />
 
               {activeEvaluation && (
                 <StaffEvaluationFormModal
@@ -1449,6 +1275,8 @@ export default function PetDetailPage({
                   onOpenChange={(open) => !open && setActiveEvaluation(null)}
                   evaluation={activeEvaluation}
                   petName={pet.name}
+                  ownerName={client.name}
+                  evaluatorName={activeEvaluation.evaluatedBy}
                 />
               )}
             </TabsContent>

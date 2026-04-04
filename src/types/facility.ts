@@ -183,6 +183,34 @@ export const evaluationConfigSchema = z.object({
   price: z.number(),
   duration: evaluationDurationEnum,
   customHours: z.number().optional(),
+  colorCode: z.string().optional(),
+  // Validity
+  validityMode: z.enum(["always_valid", "expires_after_inactivity"]).optional(),
+  expirationDays: z.number().optional(),
+  // Staff assignment
+  staffAssignment: z.enum(["auto", "manual"]).optional(),
+  assignedStaffIds: z.array(z.string()).optional(),
+  // Booking window
+  minLeadTimeHours: z.number().optional(),
+  maxAdvanceDays: z.number().optional(),
+  // Daily capacity
+  dailyPetLimits: z
+    .object({
+      enabled: z.boolean(),
+      defaultLimit: z.number(),
+      perDay: z
+        .object({
+          mon: z.number().optional(),
+          tue: z.number().optional(),
+          wed: z.number().optional(),
+          thu: z.number().optional(),
+          fri: z.number().optional(),
+          sat: z.number().optional(),
+          sun: z.number().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   schedule: z.object({
     durationOptionsMinutes: z.array(z.number()),
     defaultDurationMinutes: z.number().optional(),

@@ -41,6 +41,33 @@ export const clients: Client[] = [
         coatType: "medium",
         energyLevel: "high",
         petStatus: "active",
+        evaluations: [
+          {
+            id: "eval-buddy-001",
+            petId: 1,
+            status: "passed" as const,
+            evaluatedAt: "2026-02-10T10:30:00Z",
+            evaluatedBy: "Emily Davis",
+            notes:
+              "Buddy was a joy to work with. He settled quickly, engaged well with other dogs, and showed great recall. Approved for daycare and boarding.",
+            validityType: "ALWAYS_VALID" as const,
+            isExpired: false,
+            approvedServices: {
+              daycare: true,
+              boarding: true,
+              customApproved: [],
+              customDenied: [],
+            },
+          },
+          {
+            id: "eval-buddy-000",
+            petId: 1,
+            status: "pending" as const,
+            evaluatedAt: undefined,
+            evaluatedBy: undefined,
+            notes: undefined,
+          },
+        ],
       },
       {
         id: 2,
@@ -148,13 +175,29 @@ export const clients: Client[] = [
         petStatus: "active",
         evaluations: [
           {
-            id: "eval-max-expired",
+            id: "eval-max-002",
+            petId: 3,
+            status: "pending" as const,
+            notes: "Re-evaluation scheduled after previous pass expired",
+          },
+          {
+            id: "eval-max-001",
             petId: 3,
             status: "passed" as const,
             isExpired: true,
             evaluatedAt: "2024-01-01T10:00:00Z",
-            evaluatedBy: "Staff User",
-            notes: "Demo: expired evaluation for booking lock",
+            evaluatedBy: "Mike Chen",
+            notes:
+              "Max was friendly and well-socialized. Slightly stiff on hind legs due to hip dysplasia — cleared for light-activity daycare. No boarding due to medication schedule.",
+            validityType: "EXPIRES_AFTER_INACTIVITY" as const,
+            expiresAt: "2024-07-01T00:00:00Z",
+            lastActivityAt: "2024-03-15T00:00:00Z",
+            approvedServices: {
+              daycare: true,
+              boarding: false,
+              customApproved: [],
+              customDenied: ["boarding"],
+            },
           },
         ],
       },
@@ -611,12 +654,21 @@ export const clients: Client[] = [
         petStatus: "active",
         evaluations: [
           {
-            id: "eval-001",
+            id: "eval-cooper-001",
             petId: 13,
             status: "passed" as const,
-            evaluatedAt: "2024-01-15T10:00:00Z",
-            evaluatedBy: "Dr. Smith",
-            notes: "Passed temperament evaluation",
+            evaluatedAt: "2026-01-15T10:00:00Z",
+            evaluatedBy: "Lisa Rodriguez",
+            notes:
+              "Cooper is extremely well-socialized. Loves playing fetch with other dogs. Gentle with smaller breeds. Highly food-motivated — useful for redirecting.",
+            validityType: "ALWAYS_VALID" as const,
+            isExpired: false,
+            approvedServices: {
+              daycare: true,
+              boarding: true,
+              customApproved: ["grooming"],
+              customDenied: [],
+            },
           },
         ],
       },
@@ -640,13 +692,26 @@ export const clients: Client[] = [
         petStatus: "active",
         evaluations: [
           {
-            id: "eval-bella-failed",
+            id: "eval-bella-002",
+            petId: 19,
+            status: "pending" as const,
+            notes: "Re-evaluation requested after behavior training completed",
+          },
+          {
+            id: "eval-bella-001",
             petId: 19,
             status: "failed" as const,
             isExpired: false,
-            evaluatedAt: "2024-12-01T10:00:00Z",
-            evaluatedBy: "Staff User",
-            notes: "Demo: failed evaluation — staff can see this reason",
+            evaluatedAt: "2026-01-08T14:00:00Z",
+            evaluatedBy: "Emily Davis",
+            notes:
+              "Bella showed strong herding instinct and nipped at two dogs during group play. High reactivity to fast movement. Recommend 4-week private training before re-evaluation.",
+            approvedServices: {
+              daycare: false,
+              boarding: false,
+              customApproved: [],
+              customDenied: ["daycare", "boarding"],
+            },
           },
         ],
       },
