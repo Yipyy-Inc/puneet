@@ -159,6 +159,45 @@ export const peakSurchargeSchema = z
 export type PeakSurcharge = z.infer<typeof peakSurchargeSchema>;
 
 // ============================================================================
+// Late / Overflow / Custom Fees
+// ============================================================================
+
+export const latePickupFeeSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  graceMinutes: z.number(),
+  feeType: z.enum(["flat", "per_hour", "per_30min"]),
+  amount: z.number(),
+  maxFee: z.number().optional(),
+  scope: z.enum(["per_booking", "per_pet"]),
+  basedOn: z.enum(["business_hours", "custom_time"]),
+  customTime: z.string().optional(),
+});
+export type LatePickupFee = z.infer<typeof latePickupFeeSchema>;
+
+export const exceed24HourFeeSchema = z.object({
+  id: z.string(),
+  enabled: z.boolean(),
+  amount: z.number(),
+  scope: z.enum(["per_booking", "per_pet"]),
+  description: z.string().optional(),
+});
+export type Exceed24HourFee = z.infer<typeof exceed24HourFeeSchema>;
+
+export const customFeeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  amount: z.number(),
+  feeType: z.enum(["flat", "percentage"]),
+  scope: z.enum(["per_booking", "per_pet"]),
+  autoApply: z.boolean(),
+  applicableServices: z.array(z.string()),
+  isActive: z.boolean(),
+});
+export type CustomFee = z.infer<typeof customFeeSchema>;
+
+// ============================================================================
 // Care Sheet Logs
 // ============================================================================
 

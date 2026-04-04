@@ -720,9 +720,20 @@ function BoardingAddOnsSubStep({
   ) => void;
   selectedPets: Pet[];
 }) {
-  const boardingAddOns = getStoredAddOns().filter(
-    (a) => a.isActive && a.applicableServices.includes("boarding"),
-  );
+  const boardingAddOns = getStoredAddOns().filter((a) => {
+    if (!a.isActive || !a.applicableServices.includes("boarding")) return false;
+    if (a.petTypeFilter && selectedPets.length > 0) {
+      const pf = a.petTypeFilter;
+      const allMatch = selectedPets.every((pet) => {
+        if (pf.types?.length && !pf.types.includes(pet.type)) return false;
+        if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
+        if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
+        return true;
+      });
+      if (!allMatch) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -777,8 +788,20 @@ function BoardingAddOnsSubStep({
                     </div>
                   )}
                   {/* Price badge */}
-                  <div className="bg-foreground/80 text-background absolute top-2.5 left-2.5 rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                    {priceLabel}
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                    <div className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
+                      {priceLabel}
+                    </div>
+                    {service.isDefault && (
+                      <div className="rounded-lg bg-blue-600 px-2 py-1 text-xs font-bold text-white">
+                        Default
+                      </div>
+                    )}
+                    {service.duration && (
+                      <div className="rounded-lg bg-white/90 px-2 py-1 text-xs font-medium text-slate-700 backdrop-blur-sm">
+                        {service.duration}min
+                      </div>
+                    )}
                   </div>
                   {/* Added count badge */}
                   {isAdded && (

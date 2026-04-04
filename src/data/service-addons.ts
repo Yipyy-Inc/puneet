@@ -1,6 +1,7 @@
 import type { ServiceAddOn } from "@/types/facility";
 
 export const defaultServiceAddOns: ServiceAddOn[] = [
+  // ── Activity & Exercise ────────────────────────────────────────────
   {
     id: "addon-001",
     name: "Extended Walk",
@@ -8,14 +9,19 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Additional 30-minute walk session for your pet to burn extra energy and explore the neighborhood",
     image:
       "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=300&fit=crop",
+    category: "Activity & Exercise",
+    colorCode: "#22c55e",
     pricingType: "per_session",
     price: 15,
     unitLabel: "walk",
     maxQuantity: 3,
+    duration: 30,
     applicableServices: ["daycare", "boarding"],
+    requiresStaff: true,
     requiresScheduling: true,
     generatesTask: true,
     taskCategory: "exercise",
+    petTypeFilter: { types: ["Dog"] },
     isActive: true,
     sortOrder: 1,
     createdAt: "2025-01-15T10:00:00.000Z",
@@ -28,15 +34,19 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Extra supervised play session with interactive toys and games for enrichment",
     image:
       "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop",
+    category: "Activity & Exercise",
+    colorCode: "#22c55e",
     pricingType: "per_session",
     price: 12,
     unitLabel: "session",
     maxQuantity: 5,
+    duration: 20,
     applicableServices: ["daycare", "boarding"],
     requiresScheduling: false,
     generatesTask: true,
     taskCategory: "enrichment",
     isActive: true,
+    isDefault: true,
     sortOrder: 2,
     createdAt: "2025-01-15T10:00:00.000Z",
     updatedAt: "2025-01-15T10:00:00.000Z",
@@ -48,11 +58,15 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Dedicated individual time with a staff member for personalized care and attention",
     image:
       "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400&h=300&fit=crop",
+    category: "Activity & Exercise",
+    colorCode: "#22c55e",
     pricingType: "per_hour",
     price: 20,
     unitLabel: "hr",
     maxQuantity: 4,
+    duration: 60,
     applicableServices: ["daycare", "boarding"],
+    requiresStaff: true,
     requiresScheduling: true,
     generatesTask: true,
     taskCategory: "care",
@@ -61,6 +75,8 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     createdAt: "2025-01-15T10:00:00.000Z",
     updatedAt: "2025-01-15T10:00:00.000Z",
   },
+
+  // ── Grooming & Hygiene ─────────────────────────────────────────────
   {
     id: "addon-004",
     name: "Bath & Groom",
@@ -68,9 +84,13 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Full bathing and grooming service before checkout to keep your pet fresh and clean",
     image:
       "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=400&h=300&fit=crop",
+    category: "Grooming & Hygiene",
+    colorCode: "#8b5cf6",
     pricingType: "flat",
     price: 35,
+    duration: 45,
     applicableServices: ["boarding"],
+    requiresStaff: true,
     requiresScheduling: true,
     generatesTask: true,
     taskCategory: "grooming",
@@ -86,12 +106,39 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     updatedAt: "2025-01-15T10:00:00.000Z",
   },
   {
+    id: "addon-006",
+    name: "Nail Trim",
+    description:
+      "Professional nail trimming service to keep your pet comfortable and safe",
+    image:
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
+    category: "Grooming & Hygiene",
+    colorCode: "#8b5cf6",
+    pricingType: "flat",
+    price: 12,
+    duration: 15,
+    applicableServices: ["daycare", "boarding", "grooming"],
+    requiresStaff: true,
+    requiresScheduling: true,
+    generatesTask: true,
+    taskCategory: "grooming",
+    isActive: true,
+    isDefault: true,
+    sortOrder: 5,
+    createdAt: "2025-01-15T10:00:00.000Z",
+    updatedAt: "2025-01-15T10:00:00.000Z",
+  },
+
+  // ── Communication & Monitoring ─────────────────────────────────────
+  {
     id: "addon-005",
     name: "Daily Video Call",
     description:
       "Scheduled daily video call to check in on your pet during their boarding stay",
     image:
       "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=400&h=300&fit=crop",
+    category: "Communication & Monitoring",
+    colorCode: "#3b82f6",
     pricingType: "per_day",
     price: 10,
     unitLabel: "day",
@@ -99,24 +146,6 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     requiresScheduling: true,
     generatesTask: true,
     taskCategory: "communication",
-    isActive: true,
-    sortOrder: 5,
-    createdAt: "2025-01-15T10:00:00.000Z",
-    updatedAt: "2025-01-15T10:00:00.000Z",
-  },
-  {
-    id: "addon-006",
-    name: "Nail Trim",
-    description:
-      "Professional nail trimming service to keep your pet comfortable and safe",
-    image:
-      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=240&fit=crop",
-    pricingType: "flat",
-    price: 12,
-    applicableServices: ["daycare", "boarding", "grooming"],
-    requiresScheduling: true,
-    generatesTask: true,
-    taskCategory: "grooming",
     isActive: true,
     sortOrder: 6,
     createdAt: "2025-01-15T10:00:00.000Z",
@@ -129,6 +158,8 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Live webcam access to watch your pet throughout their stay from anywhere",
     image:
       "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=400&h=300&fit=crop",
+    category: "Communication & Monitoring",
+    colorCode: "#3b82f6",
     pricingType: "per_day",
     price: 10,
     unitLabel: "day",
@@ -140,6 +171,8 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     createdAt: "2025-01-15T10:00:00.000Z",
     updatedAt: "2025-01-15T10:00:00.000Z",
   },
+
+  // ── Treats & Enrichment ────────────────────────────────────────────
   {
     id: "addon-008",
     name: "Premium Treat Time",
@@ -147,6 +180,8 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
       "Special gourmet treats and enrichment activities throughout the day",
     image:
       "https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?w=400&h=300&fit=crop",
+    category: "Treats & Enrichment",
+    colorCode: "#f59e0b",
     pricingType: "per_day",
     price: 10,
     unitLabel: "day",
@@ -155,6 +190,26 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     generatesTask: false,
     isActive: true,
     sortOrder: 8,
+    createdAt: "2025-01-15T10:00:00.000Z",
+    updatedAt: "2025-01-15T10:00:00.000Z",
+  },
+  {
+    id: "addon-009",
+    name: "Frozen Kong",
+    description:
+      "Frozen peanut butter Kong to keep your pet occupied and mentally stimulated",
+    image:
+      "https://images.unsplash.com/photo-1623387641168-d9803ddd3f35?w=400&h=300&fit=crop",
+    category: "Treats & Enrichment",
+    colorCode: "#f59e0b",
+    pricingType: "flat",
+    price: 5,
+    applicableServices: ["daycare", "boarding"],
+    requiresScheduling: false,
+    generatesTask: false,
+    petTypeFilter: { types: ["Dog"] },
+    isActive: true,
+    sortOrder: 9,
     createdAt: "2025-01-15T10:00:00.000Z",
     updatedAt: "2025-01-15T10:00:00.000Z",
   },
