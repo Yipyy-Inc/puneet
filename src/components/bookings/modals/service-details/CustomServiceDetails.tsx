@@ -14,11 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock, MapPin, Users } from "lucide-react";
+import { Clock, MapPin, Users, CalendarDays } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
+import { useSettings } from "@/hooks/use-settings";
 import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
-import { resolveIcon } from "@/lib/service-registry";
+import { resolveIcon, isBuiltinService } from "@/lib/service-registry";
+import { SERVICE_CATEGORIES } from "../constants";
 
 // Module-level constants
 const TIME_SLOTS: string[] = [];
@@ -72,7 +74,22 @@ export function CustomServiceDetails({
   const { getModuleBySlug } = useCustomServices();
   const serviceModule = getModuleBySlug(serviceId);
 
+  // For built-in services (grooming, training, etc.) that don't have a
+  // custom module, show a basic scheduling form instead of "not found."
   if (!serviceModule) {
+    if (isBuiltinService(serviceId) && currentSubStep === 0) {
+      return (
+        <BuiltinServiceSchedule
+          serviceId={serviceId}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          checkInTime={checkInTime}
+          setCheckInTime={setCheckInTime}
+          checkOutTime={checkOutTime}
+          setCheckOutTime={setCheckOutTime}
+        />
+      );
+    }
     return (
       <div className="text-muted-foreground py-8 text-center">
         Service configuration not found.
@@ -300,6 +317,170 @@ function ScheduleStep({
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+// ========================================
+// BUILT-IN SERVICE SCHEDULE (grooming, training, etc.)
+// ========================================
+
+function BuiltinServiceSchedule({
+  serviceId,
+  startDate,
+  setStartDate,
+  checkInTime,
+  setCheckInTime,
+  checkOutTime,
+  setCheckOutTime,
+}: {
+  serviceId: string;
+  startDate: string;
+  setStartDate: (date: string) => void;
+  checkInTime: string;
+  setCheckInTime: (time: string) => void;
+  checkOutTime: string;
+  setCheckOutTime: (time: string) => void;
+}) {
+  const { hours, rules, serviceDateBlocks, scheduleTimeOverrides } =
+    useSettings();
+
+  const serviceInfo = SERVICE_CATEGORIES.find((s) => s.id === serviceId);
+  const ServiceIcon = serviceInfo?.icon ?? CalendarDays;
+
+  const scheduleOverrides = React.useMemo(
+    () =>
+      scheduleTimeOverrides.filter(
+        (o) => !o.services?.length || o.services.includes(serviceId),
+      ),
+    [scheduleTimeOverrides, serviceId],
+  );
+
+  const { blockedDates, blockedMessages } = React.useMemo(() => {
+    const blocks = serviceDateBlocks.filter(
+      (b) => b.closed && b.services.includes(serviceId),
+    );
+    const dates = blocks.map((b) => {
+      const [y, m, d] = b.date.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    });
+    const messages: Record<string, string> = {};
+    blocks.forEach(
+      (b) => b.closureMessage && (messages[b.date] = b.closureMessage),
+    );
+    return { blockedDates: dates, blockedMessages: messages };
+  }, [serviceDateBlocks, serviceId]);
+
+  const selectedDates = React.useMemo(() => {
+    if (!startDate) return [];
+    const [y, m, d] = startDate.split("-").map(Number);
+    return [new Date(y, m - 1, d)];
+  }, [startDate]);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <ServiceIcon className="text-primary size-5" />
+        </div>
+        <div>
+          <h3 className="font-semibold">
+            Schedule {serviceInfo?.name ?? "Service"}
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            {serviceInfo?.description ??
+              "Choose a date and time for your appointment."}
+          </p>
+        </div>
+      </div>
+
+      {/* Two-column: Calendar + Time */}
+      <div className="flex gap-5">
+        {/* Calendar */}
+        <div className="min-w-[280px] flex-1">
+          <div className="mb-2 flex items-center gap-1.5">
+            <CalendarDays className="text-muted-foreground size-3.5" />
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              Pick a date
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-xl border shadow-sm">
+            <DateSelectionCalendar
+              mode="single"
+              selectedDates={selectedDates}
+              onSelectionChange={(dates) => {
+                if (dates.length > 0) {
+                  setStartDate(formatDateString(dates[0]));
+                } else {
+                  setStartDate("");
+                }
+              }}
+              showTimeSelection={false}
+              dateTimes={[]}
+              facilityHours={hours}
+              scheduleTimeOverrides={scheduleOverrides}
+              bookingRules={{
+                minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                maximumAdvanceBooking: rules.maximumAdvanceBooking,
+              }}
+              disabledDates={blockedDates}
+              disabledDateMessages={blockedMessages}
+            />
+          </div>
+        </div>
+
+        {/* Time selectors */}
+        <div className="flex w-56 shrink-0 flex-col gap-3">
+          <div className="flex items-center gap-1.5">
+            <Clock className="text-muted-foreground size-3.5" />
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              Time
+            </p>
+          </div>
+
+          {!startDate ? (
+            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground px-6 py-12 text-center text-xs leading-relaxed">
+                Select a date to set the time
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 rounded-lg border p-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">Start time</Label>
+                <Select value={checkInTime} onValueChange={setCheckInTime}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[11px]">End time</Label>
+                <Select value={checkOutTime} onValueChange={setCheckOutTime}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -201,7 +201,7 @@ export function BookingModal({
     if (selectedService === "daycare") return DAYCARE_SUB_STEPS;
     if (selectedService === "boarding") return BOARDING_SUB_STEPS;
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
-    if (selectedService && !isBuiltinService(selectedService)) {
+    if (selectedService) {
       return CUSTOM_SERVICE_SUB_STEPS;
     }
     return [];
@@ -245,6 +245,10 @@ export function BookingModal({
           default:
             return false;
         }
+      }
+      // Grooming, training, custom services — schedule sub-step
+      if (stepIndex === 0) {
+        return !!startDate && !!checkInTime && !!checkOutTime;
       }
       return true;
     },
@@ -434,25 +438,21 @@ export function BookingModal({
           return petsWithoutEvaluation.length === 0;
         }
         return true;
-      case "details":
+      case "details": {
         if (
-          selectedService === "daycare" ||
-          selectedService === "boarding" ||
-          selectedService === "evaluation"
+          selectedService !== "evaluation" &&
+          (selectedService === "daycare" || selectedService === "boarding")
         ) {
-          if (selectedService !== "evaluation") {
-            const hasExpired = selectedPets.some((pet) =>
-              petHasExpiredEvaluation(pet),
-            );
-            const hasFailed = selectedPets.some((pet) =>
-              petHasFailedEvaluation(pet),
-            );
-            if (hasExpired || hasFailed) return false;
-          }
-          return isSubStepComplete(currentSubStep);
+          const hasExpired = selectedPets.some((pet) =>
+            petHasExpiredEvaluation(pet),
+          );
+          const hasFailed = selectedPets.some((pet) =>
+            petHasFailedEvaluation(pet),
+          );
+          if (hasExpired || hasFailed) return false;
         }
-        // For other services
-        return !!startDate;
+        return isSubStepComplete(currentSubStep);
+      }
       case "confirm":
         if (selectedService !== "evaluation") {
           const hasExpired = selectedPets.some((pet) =>
