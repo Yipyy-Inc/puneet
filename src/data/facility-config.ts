@@ -291,6 +291,53 @@ export const facilityConfig = {
     },
   },
 
+  // ── Fee rules (late pickup, overflow, custom) ──────────────────
+  feeRules: {
+    latePickup: {
+      id: "late-pickup-default",
+      enabled: true,
+      graceMinutes: 15,
+      feeType: "per_30min" as const,
+      amount: 10,
+      maxFee: 50,
+      scope: "per_pet" as const,
+      basedOn: "business_hours" as const,
+    },
+    exceed24Hour: {
+      id: "exceed-24h-default",
+      enabled: false,
+      amount: 25,
+      scope: "per_pet" as const,
+      description:
+        "One-time fee when a boarding stay exceeds 24 hours per night",
+    },
+    customFees: [
+      {
+        id: "custom-fee-001",
+        name: "Holiday Surcharge",
+        description:
+          "Applied during major holidays (Christmas, Thanksgiving, July 4th)",
+        amount: 15,
+        feeType: "flat" as const,
+        scope: "per_pet" as const,
+        autoApply: false,
+        applicableServices: ["boarding", "daycare"],
+        isActive: true,
+      },
+      {
+        id: "custom-fee-002",
+        name: "After-Hours Pickup",
+        description: "Pickup requested outside regular business hours",
+        amount: 20,
+        feeType: "flat" as const,
+        scope: "per_booking" as const,
+        autoApply: false,
+        applicableServices: ["boarding", "daycare"],
+        isActive: true,
+      },
+    ],
+  },
+
   // ── Care task feedback options (configurable per facility) ──────
   careTaskFeedback: {
     feeding: [

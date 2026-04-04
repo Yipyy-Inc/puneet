@@ -16,8 +16,9 @@ import {
   CUSTOMER_BOARDING_ROOM_TYPES,
   GROOMING_PACKAGES,
   GROOMING_ADDONS,
-  CUSTOMER_ADDONS,
 } from "@/components/bookings/modals/constants";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import type { ServiceAddOn } from "@/types/facility";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
   getAllServiceCategories,
@@ -100,6 +101,44 @@ interface CustomerBookingModalProps {
   onCancel?: () => void;
   existingBooking?: Booking | null;
   onBookingCreated: () => void;
+}
+
+// Load add-ons from settings (same source as facility side)
+function getCustomerAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const stored = localStorage.getItem("settings-service-addons");
+    if (stored)
+      return (JSON.parse(stored) as ServiceAddOn[]).filter((a) => a.isActive);
+  } catch {
+    /* ignore */
+  }
+  return defaultServiceAddOns.filter((a) => a.isActive);
+}
+
+// Adapt ServiceAddOn to the shape the customer flow expects
+function toCustomerAddon(a: ServiceAddOn) {
+  return {
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    image: a.image ?? "",
+    services: a.applicableServices as ("daycare" | "boarding")[],
+    hasUnits: a.pricingType !== "flat",
+    pricePerUnit: a.pricingType !== "flat" ? a.price : undefined,
+    unit:
+      a.unitLabel ??
+      (a.pricingType === "per_day"
+        ? "day"
+        : a.pricingType === "per_hour"
+          ? "hr"
+          : "session"),
+    basePrice: a.pricingType === "flat" ? a.price : undefined,
+    included: [] as string[],
+    isDefault: a.isDefault ?? false,
+    duration: a.duration,
+    petTypeFilter: a.petTypeFilter,
+  };
 }
 
 const STEPS = [
@@ -402,12 +441,24 @@ export function CustomerBookingModal({
     return 1;
   }, [selectedService, selectedCustomModule]);
 
-  // Add-ons for current service (daycare or boarding only; grooming uses GROOMING_ADDONS)
+  // Add-ons from settings (dynamic, filtered by service + pet eligibility)
   const eligibleAddons = useMemo(() => {
     if (selectedService !== "daycare" && selectedService !== "boarding")
       return [];
-    return CUSTOMER_ADDONS.filter((a) => a.services.includes(selectedService));
-  }, [selectedService]);
+    return getCustomerAddOns()
+      .filter((a) => a.applicableServices.includes(selectedService))
+      .filter((a) => {
+        if (!a.petTypeFilter || selectedPets.length === 0) return true;
+        const pf = a.petTypeFilter;
+        return selectedPets.every((pet) => {
+          if (pf.types?.length && !pf.types.includes(pet.type)) return false;
+          if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
+          if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
+          return true;
+        });
+      })
+      .map(toCustomerAddon);
+  }, [selectedService, selectedPets]);
 
   // Boarding: filter room types by pet eligibility (type, weight limits)
   const eligibleBoardingRooms = useMemo(() => {
@@ -993,7 +1044,7 @@ export function CustomerBookingModal({
   // Add-ons total (daycare/boarding extra services)
   const extraServicesTotal = useMemo(() => {
     return extraServices.reduce((sum, es) => {
-      const addon = CUSTOMER_ADDONS.find((a) => a.id === es.serviceId);
+      const addon = eligibleAddons.find((a) => a.id === es.serviceId);
       if (!addon) return sum;
       if (addon.hasUnits && addon.pricePerUnit != null)
         return sum + addon.pricePerUnit * es.quantity;
@@ -3614,7 +3665,7 @@ export function CustomerBookingModal({
                             </p>
                             <div className="space-y-0.5">
                               {extraServices.map((es, idx) => {
-                                const addon = CUSTOMER_ADDONS.find(
+                                const addon = eligibleAddons.find(
                                   (a) => a.id === es.serviceId,
                                 );
                                 const pet = selectedPets.find(

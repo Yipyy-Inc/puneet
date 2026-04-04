@@ -107,14 +107,21 @@ function createEmptyAddOn(): Omit<
     name: "",
     description: "",
     image: "",
+    category: "",
+    colorCode: "",
     pricingType: "flat",
     price: 0,
     unitLabel: "",
     maxQuantity: undefined,
+    duration: undefined,
+    taxRate: undefined,
     applicableServices: [],
+    requiresStaff: false,
     requiresScheduling: false,
     generatesTask: false,
     taskCategory: "",
+    isDefault: false,
+    petTypeFilter: undefined,
     sizePricing: undefined,
     isActive: true,
   };
@@ -191,14 +198,21 @@ export function AddOnsSettings() {
       name: addon.name,
       description: addon.description,
       image: addon.image || "",
+      category: addon.category || "",
+      colorCode: addon.colorCode || "",
       pricingType: addon.pricingType,
       price: addon.price,
       unitLabel: addon.unitLabel || "",
       maxQuantity: addon.maxQuantity,
+      duration: addon.duration,
+      taxRate: addon.taxRate,
       applicableServices: [...addon.applicableServices],
+      requiresStaff: addon.requiresStaff ?? false,
       requiresScheduling: addon.requiresScheduling,
       generatesTask: addon.generatesTask,
       taskCategory: addon.taskCategory || "",
+      isDefault: addon.isDefault ?? false,
+      petTypeFilter: addon.petTypeFilter,
       sizePricing: addon.sizePricing,
       isActive: addon.isActive,
     });
@@ -229,32 +243,39 @@ export function AddOnsSettings() {
 
     const now = new Date().toISOString();
 
+    const sharedFields = {
+      ...form,
+      image: form.image || undefined,
+      category: form.category || undefined,
+      colorCode: form.colorCode || undefined,
+      unitLabel: form.unitLabel || undefined,
+      duration: form.duration || undefined,
+      taxRate: form.taxRate || undefined,
+      taskCategory: form.generatesTask
+        ? form.taskCategory || undefined
+        : undefined,
+      sizePricing: sizePricingEnabled ? sizePricingRows : undefined,
+      petTypeFilter:
+        form.petTypeFilter &&
+        (form.petTypeFilter.types?.length ||
+          form.petTypeFilter.breeds?.length ||
+          form.petTypeFilter.weightMin ||
+          form.petTypeFilter.weightMax ||
+          form.petTypeFilter.coatTypes?.length)
+          ? form.petTypeFilter
+          : undefined,
+    };
+
     if (editingId) {
-      // Edit
       const next = addOns.map((a) =>
-        a.id === editingId
-          ? {
-              ...a,
-              ...form,
-              image: form.image || undefined,
-              unitLabel: form.unitLabel || undefined,
-              taskCategory: form.generatesTask
-                ? form.taskCategory || undefined
-                : undefined,
-              sizePricing: sizePricingEnabled ? sizePricingRows : undefined,
-              updatedAt: now,
-            }
-          : a,
+        a.id === editingId ? { ...a, ...sharedFields, updatedAt: now } : a,
       );
       updateAndPersist(next);
       toast.success(`"${form.name}" updated`);
     } else {
-      // Create
       const newAddOn: ServiceAddOn = {
         id: `addon-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        ...form,
-        image: form.image || undefined,
-        unitLabel: form.unitLabel || undefined,
+        ...sharedFields,
         taskCategory: form.generatesTask
           ? form.taskCategory || undefined
           : undefined,
@@ -303,6 +324,24 @@ export function AddOnsSettings() {
 
   const sortedAddOns = [...addOns].sort((a, b) => a.sortOrder - b.sortOrder);
 
+  // Group by category for list display
+  const existingCategories = [
+    ...new Set(addOns.map((a) => a.category).filter(Boolean)),
+  ] as string[];
+  const grouped = sortedAddOns.reduce<Record<string, ServiceAddOn[]>>(
+    (acc, addon) => {
+      const cat = addon.category || "Uncategorized";
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(addon);
+      return acc;
+    },
+    {},
+  );
+  const categoryOrder = [
+    ...existingCategories,
+    ...(grouped["Uncategorized"] ? ["Uncategorized"] : []),
+  ].filter((c, i, arr) => arr.indexOf(c) === i);
+
   // --------------------------------------------------
   // Render
   // --------------------------------------------------
@@ -324,99 +363,125 @@ export function AddOnsSettings() {
         </Button>
       </div>
 
-      {/* Add-on cards list */}
-      <div className="space-y-3">
-        {sortedAddOns.map((addon) => (
-          <div
-            key={addon.id}
-            className={cn(
-              "flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
-              !addon.isActive && "opacity-60",
-            )}
-          >
-            {/* Thumbnail */}
-            <div className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
-              {addon.image ? (
-                <img
-                  src={addon.image}
-                  alt={addon.name}
-                  className="size-full object-cover"
-                />
-              ) : (
-                <Package className="text-muted-foreground size-5" />
-              )}
+      {/* Add-on cards list grouped by category */}
+      <div className="space-y-6">
+        {categoryOrder.map((cat) => (
+          <div key={cat} className="space-y-3">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-700">{cat}</h3>
+              <Badge variant="secondary" className="text-[10px]">
+                {grouped[cat]?.length ?? 0}
+              </Badge>
             </div>
+            {(grouped[cat] ?? []).map((addon) => (
+              <div
+                key={addon.id}
+                className={cn(
+                  "flex items-center gap-4 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
+                  !addon.isActive && "opacity-60",
+                )}
+              >
+                {/* Thumbnail */}
+                <div className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                  {addon.image ? (
+                    <img
+                      src={addon.image}
+                      alt={addon.name}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <Package className="text-muted-foreground size-5" />
+                  )}
+                </div>
 
-            {/* Content */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="truncate font-medium">{addon.name}</span>
-                <Badge variant="secondary" className="shrink-0 text-[10px]">
-                  {PRICING_TYPE_LABELS[addon.pricingType]}
-                </Badge>
-                <Badge variant="outline" className="shrink-0 text-[10px]">
-                  {formatPriceLabel(addon)}
-                </Badge>
-                {addon.requiresScheduling && (
-                  <Badge
-                    variant="outline"
-                    className="text-muted-foreground shrink-0 gap-1 text-[10px]"
-                  >
-                    <Calendar className="size-3" />
-                    Scheduling
-                  </Badge>
-                )}
-                {addon.generatesTask && (
-                  <Badge
-                    variant="outline"
-                    className="text-muted-foreground shrink-0 gap-1 text-[10px]"
-                  >
-                    <ListChecks className="size-3" />
-                    Auto-Task
-                  </Badge>
-                )}
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {addon.colorCode && (
+                      <div
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: addon.colorCode }}
+                      />
+                    )}
+                    <span className="truncate font-medium">{addon.name}</span>
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                      {PRICING_TYPE_LABELS[addon.pricingType]}
+                    </Badge>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {formatPriceLabel(addon)}
+                    </Badge>
+                    {addon.requiresScheduling && (
+                      <Badge
+                        variant="outline"
+                        className="text-muted-foreground shrink-0 gap-1 text-[10px]"
+                      >
+                        <Calendar className="size-3" />
+                        Scheduling
+                      </Badge>
+                    )}
+                    {addon.generatesTask && (
+                      <Badge
+                        variant="outline"
+                        className="text-muted-foreground shrink-0 gap-1 text-[10px]"
+                      >
+                        <ListChecks className="size-3" />
+                        Auto-Task
+                      </Badge>
+                    )}
+                    {addon.isDefault && (
+                      <Badge className="shrink-0 bg-blue-100 text-[10px] text-blue-700">
+                        Default
+                      </Badge>
+                    )}
+                    {addon.duration && (
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {addon.duration}min
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-1 text-sm">
+                    {addon.description}
+                  </p>
+                  <p className="text-muted-foreground/70 mt-1 text-xs">
+                    {addon.applicableServices
+                      .map(
+                        (s) =>
+                          allCategories.find((c) => c.id === s)?.name ||
+                          s.charAt(0).toUpperCase() + s.slice(1),
+                      )
+                      .join(", ")}
+                  </p>
+                </div>
+
+                {/* Controls */}
+                <div className="flex shrink-0 items-center gap-3">
+                  <Switch
+                    checked={addon.isActive}
+                    onCheckedChange={() => handleToggleActive(addon)}
+                  />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="size-8 p-0">
+                        <MoreVertical className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(addon)}>
+                        <Pencil className="mr-2 size-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(addon)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-              <p className="text-muted-foreground mt-0.5 line-clamp-1 text-sm">
-                {addon.description}
-              </p>
-              <p className="text-muted-foreground/70 mt-1 text-xs">
-                {addon.applicableServices
-                  .map(
-                    (s) =>
-                      allCategories.find((c) => c.id === s)?.name ||
-                      s.charAt(0).toUpperCase() + s.slice(1),
-                  )
-                  .join(", ")}
-              </p>
-            </div>
-
-            {/* Controls */}
-            <div className="flex shrink-0 items-center gap-3">
-              <Switch
-                checked={addon.isActive}
-                onCheckedChange={() => handleToggleActive(addon)}
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="size-8 p-0">
-                    <MoreVertical className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEdit(addon)}>
-                    <Pencil className="mr-2 size-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleDelete(addon)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 size-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            ))}
           </div>
         ))}
 
@@ -487,6 +552,217 @@ export function AddOnsSettings() {
                   }
                   placeholder="https://..."
                 />
+              </div>
+
+              {/* Category + Color */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Input
+                    value={form.category || ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, category: e.target.value }))
+                    }
+                    placeholder="e.g. Grooming & Hygiene"
+                    list="addon-categories"
+                  />
+                  <datalist id="addon-categories">
+                    {existingCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="space-y-2">
+                  <Label>Color Code</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={form.colorCode || "#6366f1"}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          colorCode: e.target.value,
+                        }))
+                      }
+                      className="size-9 cursor-pointer rounded-lg border p-0.5"
+                    />
+                    <Input
+                      value={form.colorCode || ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          colorCode: e.target.value,
+                        }))
+                      }
+                      placeholder="#6366f1"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration + Tax */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.duration ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        duration: e.target.value
+                          ? parseInt(e.target.value, 10)
+                          : undefined,
+                      }))
+                    }
+                    placeholder="e.g. 30"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tax Rate % (override)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={form.taxRate ?? ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        taxRate: e.target.value
+                          ? parseFloat(e.target.value)
+                          : undefined,
+                      }))
+                    }
+                    placeholder="Uses facility default"
+                  />
+                </div>
+              </div>
+
+              {/* Requires Staff + Default */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">Requires Staff</p>
+                    <p className="text-muted-foreground text-xs">
+                      Staff member must be assigned when this add-on is booked
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.requiresStaff ?? false}
+                    onCheckedChange={(c) =>
+                      setForm((prev) => ({ ...prev, requiresStaff: c }))
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      Default Add-On
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Auto-applied to new bookings for applicable services
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.isDefault ?? false}
+                    onCheckedChange={(c) =>
+                      setForm((prev) => ({ ...prev, isDefault: c }))
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Pet Eligibility */}
+              <div className="space-y-2">
+                <Label>Pet Eligibility (optional)</Label>
+                <p className="text-muted-foreground text-xs">
+                  Restrict this add-on to specific pet types or sizes. Leave
+                  blank to allow all pets.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Pet Types</Label>
+                    <Input
+                      value={form.petTypeFilter?.types?.join(", ") ?? ""}
+                      onChange={(e) => {
+                        const types = e.target.value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean);
+                        setForm((prev) => ({
+                          ...prev,
+                          petTypeFilter: {
+                            ...prev.petTypeFilter,
+                            types: types.length > 0 ? types : undefined,
+                          },
+                        }));
+                      }}
+                      placeholder="e.g. Dog, Cat"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Coat Types</Label>
+                    <Input
+                      value={form.petTypeFilter?.coatTypes?.join(", ") ?? ""}
+                      onChange={(e) => {
+                        const coats = e.target.value
+                          .split(",")
+                          .map((t) => t.trim())
+                          .filter(Boolean);
+                        setForm((prev) => ({
+                          ...prev,
+                          petTypeFilter: {
+                            ...prev.petTypeFilter,
+                            coatTypes: coats.length > 0 ? coats : undefined,
+                          },
+                        }));
+                      }}
+                      placeholder="e.g. long, wire"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Min Weight (lbs)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.petTypeFilter?.weightMin ?? ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          petTypeFilter: {
+                            ...prev.petTypeFilter,
+                            weightMin: e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined,
+                          },
+                        }))
+                      }
+                      placeholder="Any"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Max Weight (lbs)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.petTypeFilter?.weightMax ?? ""}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          petTypeFilter: {
+                            ...prev.petTypeFilter,
+                            weightMax: e.target.value
+                              ? parseFloat(e.target.value)
+                              : undefined,
+                          },
+                        }))
+                      }
+                      placeholder="Any"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Pricing Type */}

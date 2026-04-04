@@ -25,7 +25,10 @@ import {
   Calendar,
   Moon,
   TrendingUp,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
+import { facilityConfig } from "@/data/facility-config";
 import {
   boardingRates,
   multiNightDiscounts,
@@ -595,6 +598,149 @@ export default function BoardingRatesPage() {
             searchKey="name"
             searchPlaceholder="Search peak periods..."
           />
+        </CardContent>
+      </Card>
+
+      {/* Late Pickup Fee */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Clock className="size-5" />
+              Late Pickup Fee
+            </span>
+            <Switch
+              checked={facilityConfig.feeRules?.latePickup?.enabled ?? false}
+              onCheckedChange={() => {}}
+            />
+          </CardTitle>
+        </CardHeader>
+        {facilityConfig.feeRules?.latePickup?.enabled && (
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Grace period</Label>
+                <p className="text-sm font-medium">
+                  {facilityConfig.feeRules.latePickup.graceMinutes} min
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Fee</Label>
+                <p className="text-sm font-medium">
+                  ${facilityConfig.feeRules.latePickup.amount}/
+                  {facilityConfig.feeRules.latePickup.feeType === "per_30min"
+                    ? "30 min"
+                    : facilityConfig.feeRules.latePickup.feeType === "per_hour"
+                      ? "hour"
+                      : "flat"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max fee</Label>
+                <p className="text-sm font-medium">
+                  {facilityConfig.feeRules.latePickup.maxFee
+                    ? `$${facilityConfig.feeRules.latePickup.maxFee}`
+                    : "No cap"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {facilityConfig.feeRules.latePickup.scope === "per_pet"
+                  ? "Per pet"
+                  : "Per booking"}
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                Based on{" "}
+                {facilityConfig.feeRules.latePickup.basedOn === "business_hours"
+                  ? "business hours"
+                  : "custom time"}
+              </Badge>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* 24-Hour Overflow Fee */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="size-5" />
+              Exceed 24-Hour Fee
+            </span>
+            <Switch
+              checked={facilityConfig.feeRules?.exceed24Hour?.enabled ?? false}
+              onCheckedChange={() => {}}
+            />
+          </CardTitle>
+        </CardHeader>
+        {facilityConfig.feeRules?.exceed24Hour?.enabled && (
+          <CardContent className="space-y-2">
+            <p className="text-sm">
+              <span className="font-medium">
+                ${facilityConfig.feeRules.exceed24Hour.amount}
+              </span>{" "}
+              <span className="text-muted-foreground">
+                {facilityConfig.feeRules.exceed24Hour.scope === "per_pet"
+                  ? "per pet"
+                  : "per booking"}
+              </span>
+            </p>
+            {facilityConfig.feeRules.exceed24Hour.description && (
+              <p className="text-muted-foreground text-xs">
+                {facilityConfig.feeRules.exceed24Hour.description}
+              </p>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Custom Fees */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="size-5" />
+            Custom Fees
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(facilityConfig.feeRules?.customFees ?? []).map((fee) => (
+            <div
+              key={fee.id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium">{fee.name}</p>
+                  <Badge variant="outline" className="text-[10px]">
+                    {fee.feeType === "flat"
+                      ? `$${fee.amount}`
+                      : `${fee.amount}%`}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
+                  </Badge>
+                  {fee.autoApply && (
+                    <Badge className="bg-blue-100 text-[10px] text-blue-700">
+                      Auto-apply
+                    </Badge>
+                  )}
+                </div>
+                {fee.description && (
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {fee.description}
+                  </p>
+                )}
+              </div>
+              <Switch checked={fee.isActive} onCheckedChange={() => {}} />
+            </div>
+          ))}
+          {(facilityConfig.feeRules?.customFees ?? []).length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              No custom fees configured
+            </p>
+          )}
         </CardContent>
       </Card>
 

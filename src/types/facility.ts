@@ -611,19 +611,35 @@ export const addOnPricingTypeEnum = z.enum([
 ]);
 export type AddOnPricingType = z.infer<typeof addOnPricingTypeEnum>;
 
+export const petTypeFilterSchema = z.object({
+  types: z.array(z.string()).optional(),
+  breeds: z.array(z.string()).optional(),
+  weightMin: z.number().optional(),
+  weightMax: z.number().optional(),
+  coatTypes: z.array(z.string()).optional(),
+});
+export type PetTypeFilter = z.infer<typeof petTypeFilterSchema>;
+
 export const serviceAddOnSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
   image: z.string().optional(),
+  category: z.string().optional(),
+  colorCode: z.string().optional(),
   pricingType: addOnPricingTypeEnum,
   price: z.number(),
   unitLabel: z.string().optional(),
   maxQuantity: z.number().optional(),
+  duration: z.number().optional(),
+  taxRate: z.number().optional(),
   applicableServices: z.array(z.string()),
+  requiresStaff: z.boolean().optional(),
   requiresScheduling: z.boolean(),
   generatesTask: z.boolean(),
   taskCategory: z.string().optional(),
+  isDefault: z.boolean().optional(),
+  petTypeFilter: petTypeFilterSchema.optional(),
   sizePricing: z
     .array(
       z.object({
