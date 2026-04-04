@@ -203,21 +203,34 @@ export function EvaluationSettings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Evaluation System</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Configure pet evaluations — require assessments before pets can access
-          specific services. Customize scheduling, pricing, staff assignment,
-          and the result report card sent to customers.
-        </p>
+      {/* ── Premium header ── */}
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-6 py-6">
+        <div className="absolute -top-10 -right-10 size-40 rounded-full bg-indigo-100/40" />
+        <div className="absolute -bottom-6 -left-6 size-24 rounded-full bg-violet-100/30" />
+        <div className="relative">
+          <div className="flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-600 shadow-lg shadow-indigo-200">
+              <ClipboardCheck className="size-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-gray-900">
+                Evaluation System
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Configure pet assessments, scheduling, pricing, and result
+                delivery
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Master Toggle ── */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/10 flex size-10 items-center justify-center rounded-lg">
-              <ClipboardCheck className="text-primary size-5" />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100">
+              <ClipboardCheck className="size-5 text-indigo-600" />
             </div>
             <div>
               <p className="font-semibold">Enable Evaluation Requirement</p>
@@ -947,8 +960,8 @@ export function EvaluationSettings() {
       )}
 
       {/* Save */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} className="gap-1.5">
+      <div className="sticky bottom-0 z-10 flex justify-end rounded-xl border bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+        <Button onClick={handleSave} className="gap-1.5 px-6 shadow-md">
           Save Evaluation Settings
         </Button>
       </div>

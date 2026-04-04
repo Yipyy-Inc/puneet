@@ -116,11 +116,13 @@ export function EvaluationReportCardBuilder() {
   ) => setLocal((prev) => ({ ...prev, [key]: value }));
 
   return (
-    <div className="rounded-xl border">
+    <div className="overflow-hidden rounded-xl border">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <LayoutTemplate className="text-muted-foreground size-4" />
+      <div className="flex items-center justify-between border-b bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-violet-100">
+            <LayoutTemplate className="size-4.5 text-violet-600" />
+          </div>
           <div>
             <p className="text-sm font-semibold">Evaluation Result Card</p>
             <p className="text-muted-foreground text-xs">
