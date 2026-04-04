@@ -395,8 +395,8 @@ export function CustomerBookingModal({
   // Number of Details sub-steps: daycare 2 (Schedule, Add-ons); boarding 3 (Schedule, Room Type, Add-ons); grooming 3 (Schedule, Package, Add-ons)
   // Custom modules: 2 (Schedule, Service Details — duration/resource/capacity)
   const detailsSubStepCount = useMemo(() => {
-    if (selectedService === "daycare") return 3; // schedule, add-ons, care instructions
-    if (selectedService === "boarding") return 4; // schedule, room, add-ons, care instructions
+    if (selectedService === "daycare") return 4; // schedule, add-ons, feeding, medication
+    if (selectedService === "boarding") return 5; // schedule, room, add-ons, feeding, medication
     if (selectedService === "grooming") return 3;
     if (selectedCustomModule) return 2;
     return 1;
@@ -2927,7 +2927,7 @@ export function CustomerBookingModal({
                       </div>
                     )}
 
-                  {/* Care Instructions sub-step (Daycare: 2, Boarding: 3) */}
+                  {/* Feeding sub-step (Daycare: 2, Boarding: 3) */}
                   {((currentDetailsSubStep === 2 &&
                     selectedService === "daycare") ||
                     (currentDetailsSubStep === 3 &&
@@ -2935,9 +2935,25 @@ export function CustomerBookingModal({
                     <CareInstructionsStep
                       feedingEntries={feedingEntries}
                       onFeedingChange={setFeedingEntries}
+                      medicationEntries={[]}
+                      onMedicationChange={() => {}}
+                      petNames={selectedPets.map((p) => p.name)}
+                      mode="feeding"
+                    />
+                  )}
+
+                  {/* Medication sub-step (Daycare: 3, Boarding: 4) */}
+                  {((currentDetailsSubStep === 3 &&
+                    selectedService === "daycare") ||
+                    (currentDetailsSubStep === 4 &&
+                      selectedService === "boarding")) && (
+                    <CareInstructionsStep
+                      feedingEntries={[]}
+                      onFeedingChange={() => {}}
                       medicationEntries={medicationEntries}
                       onMedicationChange={setMedicationEntries}
                       petNames={selectedPets.map((p) => p.name)}
+                      mode="medication"
                     />
                   )}
 

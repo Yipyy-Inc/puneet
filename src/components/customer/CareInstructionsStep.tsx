@@ -50,6 +50,7 @@ interface CareInstructionsStepProps {
   medicationEntries: CustomerMedicationEntry[];
   onMedicationChange: (entries: CustomerMedicationEntry[]) => void;
   petNames: string[];
+  mode?: "feeding" | "medication" | "both";
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,171 +95,188 @@ export function CareInstructionsStep({
   medicationEntries,
   onMedicationChange,
   petNames,
+  mode = "both",
 }: CareInstructionsStepProps) {
   const petLabel =
     petNames.length === 1
       ? petNames[0]
       : `your pet${petNames.length > 1 ? "s" : ""}`;
 
+  const showFeeding = mode === "both" || mode === "feeding";
+  const showMedication = mode === "both" || mode === "medication";
+
   return (
     <div className="space-y-8">
       {/* Intro */}
       <div>
-        <h3 className="text-lg font-semibold">Care Instructions</h3>
+        <h3 className="text-lg font-semibold">
+          {mode === "feeding"
+            ? "Feeding Schedule"
+            : mode === "medication"
+              ? "Medication"
+              : "Care Instructions"}
+        </h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          Help us take the best care of {petLabel}. Add feeding schedules and
-          any medications so our staff knows exactly what&apos;s needed.
+          {mode === "feeding"
+            ? `Add meal times, portions, and food type for ${petLabel} so our staff knows exactly what to serve.`
+            : mode === "medication"
+              ? `Add any medications ${petLabel} needs during their stay so our staff can administer them on schedule.`
+              : `Help us take the best care of ${petLabel}. Add feeding schedules and any medications so our staff knows exactly what's needed.`}
         </p>
       </div>
 
       {/* ── Feeding ── */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-              <UtensilsCrossed className="text-primary size-4" />
+      {showFeeding && (
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                <UtensilsCrossed className="text-primary size-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold">Feeding Schedule</h4>
+                <p className="text-muted-foreground text-xs">
+                  Meal times, portions, and food type
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold">Feeding Schedule</h4>
-              <p className="text-muted-foreground text-xs">
-                Meal times, portions, and food type
-              </p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => {
+                onFeedingChange([
+                  ...feedingEntries,
+                  {
+                    id: nextId("cf"),
+                    label:
+                      MEAL_LABELS[
+                        Math.min(feedingEntries.length, MEAL_LABELS.length - 1)
+                      ],
+                    time: feedingEntries.length === 0 ? "08:00" : "18:00",
+                    amount: "",
+                    foodType: "",
+                    instructions: "",
+                  },
+                ]);
+              }}
+            >
+              <Plus className="size-3.5" />
+              Add Meal
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => {
-              onFeedingChange([
-                ...feedingEntries,
-                {
-                  id: nextId("cf"),
-                  label:
-                    MEAL_LABELS[
-                      Math.min(feedingEntries.length, MEAL_LABELS.length - 1)
-                    ],
-                  time: feedingEntries.length === 0 ? "08:00" : "18:00",
-                  amount: "",
-                  foodType: "",
-                  instructions: "",
-                },
-              ]);
-            }}
-          >
-            <Plus className="size-3.5" />
-            Add Meal
-          </Button>
-        </div>
 
-        {feedingEntries.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center py-8">
-              <UtensilsCrossed className="text-muted-foreground/30 size-8" />
-              <p className="text-muted-foreground mt-2 text-sm">
-                No feeding instructions added
-              </p>
-              <p className="text-muted-foreground/60 text-xs">
-                Click &quot;Add Meal&quot; if {petLabel} has a specific feeding
-                schedule
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {feedingEntries.map((entry, idx) => (
-              <FeedingCard
-                key={entry.id}
-                entry={entry}
-                index={idx}
-                onChange={(updated) => {
-                  const next = [...feedingEntries];
-                  next[idx] = updated;
-                  onFeedingChange(next);
-                }}
-                onRemove={() => {
-                  onFeedingChange(feedingEntries.filter((_, i) => i !== idx));
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          {feedingEntries.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center py-8">
+                <UtensilsCrossed className="text-muted-foreground/30 size-8" />
+                <p className="text-muted-foreground mt-2 text-sm">
+                  No feeding instructions added
+                </p>
+                <p className="text-muted-foreground/60 text-xs">
+                  Click &quot;Add Meal&quot; if {petLabel} has a specific
+                  feeding schedule
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {feedingEntries.map((entry, idx) => (
+                <FeedingCard
+                  key={entry.id}
+                  entry={entry}
+                  index={idx}
+                  onChange={(updated) => {
+                    const next = [...feedingEntries];
+                    next[idx] = updated;
+                    onFeedingChange(next);
+                  }}
+                  onRemove={() => {
+                    onFeedingChange(feedingEntries.filter((_, i) => i !== idx));
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Medications ── */}
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-              <Pill className="text-primary size-4" />
+      {showMedication && (
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                <Pill className="text-primary size-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold">Medications</h4>
+                <p className="text-muted-foreground text-xs">
+                  Medications your pet needs during their stay
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-sm font-semibold">Medications</h4>
-              <p className="text-muted-foreground text-xs">
-                Medications your pet needs during their stay
-              </p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => {
+                onMedicationChange([
+                  ...medicationEntries,
+                  {
+                    id: nextId("cm"),
+                    name: "",
+                    dosage: "",
+                    method: "Oral",
+                    frequency: "Once daily",
+                    times: ["08:00"],
+                    instructions: "",
+                    isCritical: false,
+                  },
+                ]);
+              }}
+            >
+              <Plus className="size-3.5" />
+              Add Medication
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => {
-              onMedicationChange([
-                ...medicationEntries,
-                {
-                  id: nextId("cm"),
-                  name: "",
-                  dosage: "",
-                  method: "Oral",
-                  frequency: "Once daily",
-                  times: ["08:00"],
-                  instructions: "",
-                  isCritical: false,
-                },
-              ]);
-            }}
-          >
-            <Plus className="size-3.5" />
-            Add Medication
-          </Button>
-        </div>
 
-        {medicationEntries.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center py-8">
-              <Pill className="text-muted-foreground/30 size-8" />
-              <p className="text-muted-foreground mt-2 text-sm">
-                No medications added
-              </p>
-              <p className="text-muted-foreground/60 text-xs">
-                Click &quot;Add Medication&quot; if {petLabel} takes any
-                medication
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {medicationEntries.map((entry, idx) => (
-              <MedicationCard
-                key={entry.id}
-                entry={entry}
-                index={idx}
-                onChange={(updated) => {
-                  const next = [...medicationEntries];
-                  next[idx] = updated;
-                  onMedicationChange(next);
-                }}
-                onRemove={() => {
-                  onMedicationChange(
-                    medicationEntries.filter((_, i) => i !== idx),
-                  );
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          {medicationEntries.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center py-8">
+                <Pill className="text-muted-foreground/30 size-8" />
+                <p className="text-muted-foreground mt-2 text-sm">
+                  No medications added
+                </p>
+                <p className="text-muted-foreground/60 text-xs">
+                  Click &quot;Add Medication&quot; if {petLabel} takes any
+                  medication
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {medicationEntries.map((entry, idx) => (
+                <MedicationCard
+                  key={entry.id}
+                  entry={entry}
+                  index={idx}
+                  onChange={(updated) => {
+                    const next = [...medicationEntries];
+                    next[idx] = updated;
+                    onMedicationChange(next);
+                  }}
+                  onRemove={() => {
+                    onMedicationChange(
+                      medicationEntries.filter((_, i) => i !== idx),
+                    );
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
