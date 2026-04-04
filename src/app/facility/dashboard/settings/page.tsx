@@ -3361,12 +3361,6 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
-              <EvaluationSettingsCard />
-
-              <EvaluationFormBuilder />
-
-              <EvaluationReportCardBuilder />
-
               <ReportCardSettingsCard />
             </div>
           )}
@@ -4017,6 +4011,9 @@ export default function SettingsPage() {
           {activeSection === "evaluations" && (
             <div className="space-y-6">
               <EvaluationSettings />
+              <EvaluationSettingsCard />
+              <EvaluationFormBuilder />
+              <EvaluationReportCardBuilder />
             </div>
           )}
 
