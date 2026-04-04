@@ -4011,7 +4011,6 @@ export default function SettingsPage() {
           {activeSection === "evaluations" && (
             <div className="space-y-6">
               <EvaluationSettings />
-              <EvaluationSettingsCard />
               <EvaluationFormBuilder />
               <EvaluationReportCardBuilder />
             </div>

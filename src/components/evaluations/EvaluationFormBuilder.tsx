@@ -613,10 +613,12 @@ export function EvaluationFormBuilder() {
   );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="text-muted-foreground size-5" />
+    <Card className="overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-gradient-to-r from-slate-50 to-white">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100">
+            <ClipboardList className="size-4.5 text-indigo-600" />
+          </div>
           <div>
             <CardTitle className="text-base">Evaluation Form Builder</CardTitle>
             <p className="text-muted-foreground text-xs">
