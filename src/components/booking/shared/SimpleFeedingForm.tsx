@@ -284,9 +284,19 @@ export function SimpleFeedingForm({
                       <span className="shrink-0 rounded-md bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
                         {occ.label}
                       </span>
-                      <span className="text-muted-foreground text-xs">
-                        {fmtTime(occ.time)}
-                      </span>
+                      <input
+                        type="time"
+                        value={occ.time}
+                        onChange={(e) => {
+                          const next = item.occasions.map((o) =>
+                            o.id === occ.id
+                              ? { ...o, time: e.target.value }
+                              : o,
+                          );
+                          saveItem({ ...item, occasions: next });
+                        }}
+                        className="border-border h-7 rounded-md border px-2 text-xs"
+                      />
                     </div>
                     <Button
                       type="button"

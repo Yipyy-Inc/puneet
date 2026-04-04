@@ -492,22 +492,52 @@ function MedicationCard({
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2 sm:col-span-1">
+          <div className="col-span-2 sm:col-span-2">
             <Label className="text-xs">Time(s)</Label>
-            <Input
-              value={entry.times.join(", ")}
-              onChange={(e) =>
-                onChange({
-                  ...entry,
-                  times: e.target.value
-                    .split(",")
-                    .map((t) => t.trim())
-                    .filter(Boolean),
-                })
-              }
-              placeholder="e.g. 08:00, 20:00"
-              className="mt-1 h-9 text-xs"
-            />
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {entry.times.map((t, ti) => (
+                <div
+                  key={ti}
+                  className="flex items-center gap-1 rounded-md border px-1.5 py-1"
+                >
+                  <Clock className="text-muted-foreground size-3" />
+                  <input
+                    type="time"
+                    value={t}
+                    onChange={(e) => {
+                      const next = [...entry.times];
+                      next[ti] = e.target.value;
+                      onChange({ ...entry, times: next });
+                    }}
+                    className="h-6 border-0 bg-transparent text-xs"
+                  />
+                  {entry.times.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange({
+                          ...entry,
+                          times: entry.times.filter((_, i) => i !== ti),
+                        })
+                      }
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({ ...entry, times: [...entry.times, "12:00"] })
+                }
+                className="flex items-center gap-1 rounded-md border border-dashed px-2 py-1.5 text-[11px] text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600"
+              >
+                <Plus className="size-3" />
+                Add time
+              </button>
+            </div>
           </div>
         </div>
 

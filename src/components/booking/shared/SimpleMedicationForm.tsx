@@ -332,8 +332,8 @@ export function SimpleMedicationForm({
                   </div>
                 </div>
 
-                {/* Times — quick toggles */}
-                <div className="space-y-1.5">
+                {/* Times — quick toggles + custom */}
+                <div className="space-y-2">
                   <Label className="text-[11px]">Give at</Label>
                   <div className="flex flex-wrap gap-1.5">
                     {QUICK_TIMES.map(({ label, time }) => {
@@ -358,6 +358,52 @@ export function SimpleMedicationForm({
                         </button>
                       );
                     })}
+                  </div>
+                  {/* Custom times */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {item.times
+                      .filter((t) => !QUICK_TIMES.some((qt) => qt.time === t))
+                      .map((t) => (
+                        <div
+                          key={t}
+                          className="flex items-center gap-1 rounded-lg border-2 border-violet-400 bg-violet-50 px-2 py-1"
+                        >
+                          <input
+                            type="time"
+                            value={t}
+                            onChange={(e) => {
+                              const next = item.times.map((existing) =>
+                                existing === t ? e.target.value : existing,
+                              );
+                              updateMed(index, { times: next });
+                            }}
+                            className="h-5 border-0 bg-transparent text-xs text-violet-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateMed(index, {
+                                times: item.times.filter((x) => x !== t),
+                              })
+                            }
+                            className="text-violet-400 hover:text-violet-700"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </div>
+                      ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateMed(index, {
+                          times: [...item.times, "09:00"],
+                        })
+                      }
+                      className="flex items-center gap-1 rounded-lg border-2 border-dashed border-slate-200 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600"
+                    >
+                      <Plus className="size-3" />
+                      Custom time
+                    </button>
                   </div>
                 </div>
 
