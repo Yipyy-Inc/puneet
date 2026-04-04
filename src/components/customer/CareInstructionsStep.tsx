@@ -359,31 +359,33 @@ function FeedingCard({
           </div>
           <div>
             <Label className="text-xs">Amount</Label>
-            <div className="mt-1 flex gap-1.5">
-              <Input
+            <div className="mt-1 flex items-center overflow-hidden rounded-lg border">
+              <input
                 type="number"
                 min={0}
                 step={0.25}
                 value={entry.amount}
                 onChange={(e) => onChange({ ...entry, amount: e.target.value })}
-                placeholder="Qty"
-                className="h-9 w-20 text-xs"
+                placeholder="0"
+                className="h-9 w-16 border-0 bg-transparent px-2 text-center text-xs font-semibold outline-none"
               />
-              <Select
-                value={entry.unit || "Cup"}
-                onValueChange={(v) => onChange({ ...entry, unit: v })}
-              >
-                <SelectTrigger className="h-9 w-24 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FEEDING_UNITS.map((u) => (
-                    <SelectItem key={u} value={u} className="text-xs">
-                      {u}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-9 items-center border-l bg-slate-50">
+                {FEEDING_UNITS.map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => onChange({ ...entry, unit: u })}
+                    className={cn(
+                      "h-full px-2.5 text-[11px] font-medium transition-colors",
+                      (entry.unit || "Cup") === u
+                        ? "bg-primary text-primary-foreground"
+                        : "text-slate-500 hover:bg-slate-100",
+                    )}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div>

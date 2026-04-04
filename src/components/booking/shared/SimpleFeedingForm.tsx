@@ -372,30 +372,38 @@ export function SimpleFeedingForm({
                       />
                     )}
 
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.25}
-                      value={comp?.amount || ""}
-                      onChange={(e) =>
-                        updateMealAmount(item, occ.id, e.target.value)
-                      }
-                      placeholder="Qty"
-                      className="h-8 w-16 shrink-0 text-xs"
-                    />
-                    <select
-                      value={item.feedingUnit || "Cup"}
-                      onChange={(e) =>
-                        saveItem({ ...item, feedingUnit: e.target.value })
-                      }
-                      className="border-border h-8 shrink-0 rounded-md border bg-transparent px-2 text-xs"
-                    >
-                      {FEEDING_UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.25}
+                        value={comp?.amount || ""}
+                        onChange={(e) =>
+                          updateMealAmount(item, occ.id, e.target.value)
+                        }
+                        placeholder="0"
+                        className="h-8 w-14 border-0 bg-transparent px-2 text-center text-xs font-semibold outline-none"
+                      />
+                      <div className="flex h-8 items-center border-l bg-slate-50">
+                        {FEEDING_UNITS.map((u) => (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() =>
+                              saveItem({ ...item, feedingUnit: u })
+                            }
+                            className={cn(
+                              "h-full px-2 text-[11px] font-medium transition-colors",
+                              (item.feedingUnit || "Cup") === u
+                                ? "bg-orange-500 text-white"
+                                : "text-slate-500 hover:bg-slate-100",
+                            )}
+                          >
+                            {u}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
