@@ -271,9 +271,31 @@ export const facilityBookingFlowConfigSchema = z.object({
   hideServicesUntilEvaluationCompleted: z.boolean(),
   servicesRequiringEvaluation: z.array(z.string()),
   hiddenServices: z.array(z.string()),
+  evaluationLockedMessage: z.string().optional(),
 });
 export type FacilityBookingFlowConfig = z.infer<
   typeof facilityBookingFlowConfigSchema
+>;
+
+export const evaluationReportCardConfigSchema = z.object({
+  enabled: z.boolean(),
+  headerMessage: z.string(),
+  passMessage: z.string(),
+  failMessage: z.string(),
+  footerNote: z.string(),
+  showEvaluatorName: z.boolean(),
+  showEvaluationDate: z.boolean(),
+  showTemperament: z.boolean(),
+  showPlayStyle: z.boolean(),
+  showPlayGroup: z.boolean(),
+  showBehaviorTags: z.boolean(),
+  showStaffNotes: z.boolean(),
+  showApprovedServices: z.boolean(),
+  notifyViaEmail: z.boolean(),
+  notifyViaSMS: z.boolean(),
+});
+export type EvaluationReportCardConfig = z.infer<
+  typeof evaluationReportCardConfigSchema
 >;
 
 // ============================================================================

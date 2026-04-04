@@ -30,6 +30,7 @@ import { FormNotificationSettings } from "@/components/forms/FormNotificationSet
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
 import { TipSettings } from "@/components/facility/TipSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
+import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 
 const AddOnsSettings = dynamic(
   () =>
@@ -2623,26 +2624,47 @@ function FacilityBookingFlowCard() {
           </div>
 
           {localFlow.evaluationRequired ? (
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <div className="font-medium">
-                  Hide Services Until Evaluation Completed
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="font-medium">
+                    Hide Services Until Evaluation Completed
+                  </div>
+                  <div className="text-muted-foreground text-sm">
+                    Show only the Evaluation service until it is completed or
+                    booked.
+                  </div>
                 </div>
-                <div className="text-muted-foreground text-sm">
-                  Show only the Evaluation service until it is completed or
-                  booked.
-                </div>
+                <Switch
+                  checked={localFlow.hideServicesUntilEvaluationCompleted}
+                  disabled={!isEditing}
+                  onCheckedChange={(checked) =>
+                    setLocalFlow({
+                      ...localFlow,
+                      hideServicesUntilEvaluationCompleted: checked,
+                    })
+                  }
+                />
               </div>
-              <Switch
-                checked={localFlow.hideServicesUntilEvaluationCompleted}
-                disabled={!isEditing}
-                onCheckedChange={(checked) =>
-                  setLocalFlow({
-                    ...localFlow,
-                    hideServicesUntilEvaluationCompleted: checked,
-                  })
-                }
-              />
+              <div className="space-y-1.5">
+                <Label>Custom lock message shown to customers</Label>
+                <Textarea
+                  rows={3}
+                  disabled={!isEditing}
+                  placeholder="e.g. This service requires a pet evaluation first. Please book an evaluation so we can get to know your pet."
+                  value={localFlow.evaluationLockedMessage ?? ""}
+                  onChange={(e) =>
+                    setLocalFlow({
+                      ...localFlow,
+                      evaluationLockedMessage: e.target.value,
+                    })
+                  }
+                />
+                <p className="text-muted-foreground text-xs">
+                  Shown to customers when they try to book a service that
+                  requires evaluation.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
@@ -2994,6 +3016,8 @@ export default function SettingsPage() {
               </Card>
 
               <EvaluationSettingsCard />
+
+              <EvaluationReportCardBuilder />
 
               <ReportCardSettingsCard />
             </div>

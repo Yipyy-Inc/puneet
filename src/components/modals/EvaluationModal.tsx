@@ -12,8 +12,9 @@ import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, ShieldCheck } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
+import { staffMembers } from "@/data/staff";
 
 interface EvaluationModalProps {
   isOpen: boolean;
@@ -28,15 +29,10 @@ const formatDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const evaluatorOptions = [
-  { value: "Mike Chen", label: "Mike Chen" },
-  { value: "Emily Davis", label: "Emily Davis" },
-  { value: "David Wilson", label: "David Wilson" },
-  { value: "Lisa Rodriguez", label: "Lisa Rodriguez" },
-  { value: "Tom Anderson", label: "Tom Anderson" },
-  { value: "Manager One", label: "Manager One" },
-  { value: "Admin User", label: "Admin User" },
-];
+// Only staff with the "evaluation" skill can be assigned as evaluators
+const evaluatorOptions = staffMembers
+  .filter((s) => s.isActive && s.skills.includes("evaluation"))
+  .map((s) => ({ value: s.name, label: s.name, role: s.role }));
 
 export function EvaluationModal({
   isOpen,
@@ -293,22 +289,37 @@ export function EvaluationModal({
           </Card>
         )}
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">
-            Assign Evaluator
-          </label>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <Label>Assign Evaluator</Label>
+            <Badge variant="secondary" className="gap-1 text-[10px]">
+              <ShieldCheck className="size-2.5" />
+              Evaluation skill required
+            </Badge>
+          </div>
           <Select value={evaluator} onValueChange={setEvaluator}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select staff member" />
+              <SelectValue placeholder="Select qualified staff member" />
             </SelectTrigger>
             <SelectContent>
               {evaluatorOptions.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  <div className="flex flex-col">
+                    <span className="font-medium">{opt.label}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {opt.role}
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {evaluatorOptions.length === 0 && (
+            <p className="text-muted-foreground text-xs">
+              No staff with evaluation skill assigned. Add the skill in Staff
+              Settings.
+            </p>
+          )}
         </div>
 
         <div className="mt-4 flex justify-end gap-2">

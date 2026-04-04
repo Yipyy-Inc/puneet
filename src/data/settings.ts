@@ -4,6 +4,7 @@
 
 import type {
   EvaluationConfig,
+  EvaluationReportCardConfig,
   BusinessProfile,
   BusinessHours,
   Location,
@@ -130,6 +131,29 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   hideServicesUntilEvaluationCompleted: false,
   servicesRequiringEvaluation: ["daycare"],
   hiddenServices: [],
+  evaluationLockedMessage:
+    "This service requires a pet evaluation first. Please book an evaluation so we can get to know your pet before their first visit.",
+};
+
+export const evaluationReportCardConfig: EvaluationReportCardConfig = {
+  enabled: true,
+  headerMessage: "Thank you for bringing your pet in for an evaluation!",
+  passMessage:
+    "Great news — your pet has passed their evaluation and is ready to join us! The services below are now unlocked for booking.",
+  failMessage:
+    "After careful assessment, we feel your pet may need a little more time before joining our programs. We encourage you to reach out so we can discuss next steps.",
+  footerNote:
+    "We look forward to welcoming your pet. Feel free to contact us with any questions.",
+  showEvaluatorName: true,
+  showEvaluationDate: true,
+  showTemperament: true,
+  showPlayStyle: true,
+  showPlayGroup: true,
+  showBehaviorTags: false,
+  showStaffNotes: true,
+  showApprovedServices: true,
+  notifyViaEmail: true,
+  notifyViaSMS: false,
 };
 
 /** Recurring holidays — facility is closed on these dates every year */
