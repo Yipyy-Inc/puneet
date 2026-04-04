@@ -29,7 +29,9 @@ export interface CustomerFeedingEntry {
   label: string;
   time: string;
   amount: string;
+  unit: string;
   foodType: string;
+  feedingInstruction: string;
   instructions: string;
 }
 
@@ -62,6 +64,13 @@ function nextId(prefix: string) {
 }
 
 const MEAL_LABELS = ["Breakfast", "Lunch", "Dinner", "Snack", "Treats"];
+const FEEDING_UNITS = ["Scoop", "Cup", "Oz", "Tbsp", "Grams"];
+const FEEDING_INSTRUCTIONS_OPTIONS = [
+  "Feed alone",
+  "Free feed",
+  "Hand feed",
+  "Slow feeder",
+];
 const FOOD_TYPES = [
   "Dry Kibble",
   "Wet Food",
@@ -155,7 +164,9 @@ export function CareInstructionsStep({
                       ],
                     time: feedingEntries.length === 0 ? "08:00" : "18:00",
                     amount: "",
+                    unit: "",
                     foodType: "",
+                    feedingInstruction: "",
                     instructions: "",
                   },
                 ]);
@@ -370,8 +381,61 @@ function FeedingCard({
             </Select>
           </div>
         </div>
+
+        {/* Unit */}
         <div className="mt-3">
-          <Label className="text-xs">Special Instructions (optional)</Label>
+          <Label className="text-xs">Feeding Unit</Label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {FEEDING_UNITS.map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() =>
+                  onChange({ ...entry, unit: entry.unit === u ? "" : u })
+                }
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+                  entry.unit === u
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "hover:bg-muted",
+                )}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Feeding instruction */}
+        <div className="mt-3">
+          <Label className="text-xs">Feeding Instruction</Label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {FEEDING_INSTRUCTIONS_OPTIONS.map((fi) => (
+              <button
+                key={fi}
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...entry,
+                    feedingInstruction:
+                      entry.feedingInstruction === fi ? "" : fi,
+                  })
+                }
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+                  entry.feedingInstruction === fi
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "hover:bg-muted",
+                )}
+              >
+                {fi}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <Label className="text-xs">Feeding Note (optional)</Label>
           <Textarea
             value={entry.instructions}
             onChange={(e) =>

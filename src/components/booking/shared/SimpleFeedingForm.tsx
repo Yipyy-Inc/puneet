@@ -42,6 +42,13 @@ const MEAL_PRESETS = [
 ];
 
 const FOOD_TYPES = ["Kibble", "Wet food", "Raw", "Prescription"];
+const FEEDING_UNITS = ["Scoop", "Cup", "Oz", "Tbsp", "Grams"];
+const FEEDING_INSTRUCTIONS = [
+  "Feed alone",
+  "Free feed",
+  "Hand feed",
+  "Slow feeder",
+];
 const ALLERGY_PRESETS = ["Chicken", "Beef", "Grain-free", "Sensitive stomach"];
 
 function makeId() {
@@ -379,6 +386,67 @@ export function SimpleFeedingForm({
             })}
           </div>
         )}
+
+        {/* Feeding unit */}
+        <div>
+          <Label className="text-muted-foreground mb-2 block text-xs font-semibold tracking-wide uppercase">
+            Feeding unit
+          </Label>
+          <div className="flex flex-wrap gap-1.5">
+            {FEEDING_UNITS.map((u) => {
+              const active = item.feedingUnit === u;
+              return (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() =>
+                    saveItem({ ...item, feedingUnit: active ? undefined : u })
+                  }
+                  className={cn(
+                    "rounded-lg border-2 px-3 py-1.5 text-xs font-medium transition-all",
+                    active
+                      ? "border-orange-400 bg-orange-50 text-orange-700"
+                      : "border-border hover:border-orange-200",
+                  )}
+                >
+                  {u}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Feeding instruction */}
+        <div>
+          <Label className="text-muted-foreground mb-2 block text-xs font-semibold tracking-wide uppercase">
+            Feeding instruction
+          </Label>
+          <div className="flex flex-wrap gap-1.5">
+            {FEEDING_INSTRUCTIONS.map((fi) => {
+              const active = item.feedingInstruction === fi;
+              return (
+                <button
+                  key={fi}
+                  type="button"
+                  onClick={() =>
+                    saveItem({
+                      ...item,
+                      feedingInstruction: active ? undefined : fi,
+                    })
+                  }
+                  className={cn(
+                    "rounded-lg border-2 px-3 py-1.5 text-xs font-medium transition-all",
+                    active
+                      ? "border-orange-400 bg-orange-50 text-orange-700"
+                      : "border-border hover:border-orange-200",
+                  )}
+                >
+                  {fi}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Allergies */}
         <div>
