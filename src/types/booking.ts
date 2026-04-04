@@ -61,6 +61,8 @@ export const feedingScheduleItemSchema = z.object({
   frequencyDays: z.array(z.string()).optional(),
   allergies: z.array(z.string()),
   notes: z.string(),
+  feedingUnit: z.string().optional(),
+  feedingInstruction: z.string().optional(),
 });
 export type FeedingScheduleItem = z.infer<typeof feedingScheduleItemSchema>;
 
