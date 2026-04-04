@@ -70,6 +70,12 @@ import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import type { InvoiceLineItem } from "@/types/booking";
+import {
+  daycareConfig,
+  boardingConfig,
+  groomingConfig,
+  trainingConfig,
+} from "@/data/settings";
 import type { GeneratedTask } from "@/types/task";
 import {
   getTasksForBooking,
@@ -1006,25 +1012,44 @@ ${
               )}
             </div>
 
-            {/* Feeding Instructions — always show so staff can add */}
-            {!isCancelled && (
-              <FeedingSection entries={booking.feedingInstructions ?? []} />
-            )}
+            {/* Care-instruction visibility is per-service config; default "optional" is backwards-compatible */}
+            {(() => {
+              const serviceConfigMap: Record<string, typeof daycareConfig> = {
+                daycare: daycareConfig,
+                boarding: boardingConfig,
+                grooming: groomingConfig,
+                training: trainingConfig,
+              };
+              const svcConfig = serviceConfigMap[booking.service];
+              const care = svcConfig?.settings?.careInstructions;
+              const feedingMode = care?.feeding ?? "optional";
+              const medicationMode = care?.medication ?? "optional";
+              const belongingsMode = care?.belongings ?? "optional";
 
-            {/* Medications — always show so staff can add */}
-            {!isCancelled && (
-              <MedicationSection
-                entries={booking.medicationInstructions ?? []}
-              />
-            )}
-
-            {/* Belongings — always show so staff can add at check-in */}
-            {!isCancelled && (
-              <BelongingsSection
-                entries={booking.belongings ?? []}
-                isCompleted={booking.status === "completed"}
-              />
-            )}
+              return (
+                <>
+                  {!isCancelled && feedingMode !== "disabled" && (
+                    <FeedingSection
+                      entries={booking.feedingInstructions ?? []}
+                      required={feedingMode === "required"}
+                    />
+                  )}
+                  {!isCancelled && medicationMode !== "disabled" && (
+                    <MedicationSection
+                      entries={booking.medicationInstructions ?? []}
+                      required={medicationMode === "required"}
+                    />
+                  )}
+                  {!isCancelled && belongingsMode !== "disabled" && (
+                    <BelongingsSection
+                      entries={booking.belongings ?? []}
+                      isCompleted={booking.status === "completed"}
+                      required={belongingsMode === "required"}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
             {/* Notes */}
             <Card className="overflow-hidden">

@@ -161,7 +161,8 @@ function customModuleToServiceCategory(
 ): ServiceCategoryItem {
   return {
     id: module.slug,
-    image: "/services/custom-default.jpg",
+    image:
+      "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=360&fit=crop",
     name: module.name,
     icon: resolveIcon(module.icon),
     description: module.description,

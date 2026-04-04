@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,7 @@ import type { BelongingEntry } from "@/types/booking";
 interface BelongingsSectionProps {
   entries: BelongingEntry[];
   isCompleted?: boolean;
+  required?: boolean;
 }
 
 function fmtTimestamp(ts: string) {
@@ -47,6 +49,7 @@ let _belId = 300;
 export function BelongingsSection({
   entries,
   isCompleted,
+  required,
 }: BelongingsSectionProps) {
   const [items, setItems] = useState(entries);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -132,6 +135,14 @@ export function BelongingsSection({
             <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
               <Backpack className="size-3.5" />
               Belongings
+              {required && (
+                <Badge
+                  variant="destructive"
+                  className="text-[10px] normal-case"
+                >
+                  Required
+                </Badge>
+              )}
               {totalItems > 0 && (
                 <span className="text-muted-foreground font-normal normal-case">
                   — {returnedCount} of {totalItems} returned

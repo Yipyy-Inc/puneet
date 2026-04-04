@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ import type { MedicationEntry } from "@/types/booking";
 
 interface MedicationSectionProps {
   entries: MedicationEntry[];
+  required?: boolean;
 }
 
 const MED_METHODS = [
@@ -84,7 +86,10 @@ const doseStatusLabel = {
 
 let _medId = 200;
 
-export function MedicationSection({ entries }: MedicationSectionProps) {
+export function MedicationSection({
+  entries,
+  required,
+}: MedicationSectionProps) {
   const [meds, setMeds] = useState(entries);
   const [addOpen, setAddOpen] = useState(false);
   const [notePopover, setNotePopover] = useState<string | null>(null);
@@ -190,6 +195,11 @@ export function MedicationSection({ entries }: MedicationSectionProps) {
           <CardTitle className="flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
             <Pill className="size-3.5" />
             Medications
+            {required && (
+              <Badge variant="destructive" className="text-[10px] normal-case">
+                Required
+              </Badge>
+            )}
           </CardTitle>
           <Button
             variant="outline"

@@ -574,6 +574,13 @@ export const moduleConfigSchema = z.object({
       enabled: z.boolean(),
       optional: z.boolean().optional(),
     }),
+    careInstructions: z
+      .object({
+        feeding: z.enum(["required", "optional", "disabled"]),
+        medication: z.enum(["required", "optional", "disabled"]),
+        belongings: z.enum(["required", "optional", "disabled"]),
+      })
+      .optional(),
   }),
   status: z.object({
     disabled: z.boolean(),
@@ -774,6 +781,11 @@ export interface CustomServiceModule {
       tip: boolean;
     };
     customSections: YipyyGoCustomSection[];
+  };
+  careInstructions?: {
+    feeding: "required" | "optional" | "disabled";
+    medication: "required" | "optional" | "disabled";
+    belongings: "required" | "optional" | "disabled";
   };
   requiresEvaluation: boolean;
   showInSidebar: boolean;

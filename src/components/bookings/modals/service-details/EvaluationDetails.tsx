@@ -2,10 +2,7 @@
 
 import React from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -13,16 +10,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Clock } from "lucide-react";
+import {
+  ClipboardCheck,
+  CalendarDays,
+  CheckCircle2,
+  ArrowLeft,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 
-// Helper to format date without timezone issues
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+const todayString = (): string => formatDateString(new Date());
+
+const nowInMinutes = (): number => {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+};
+
+const fmtTime = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
+const fmtDate = (dateStr: string) => {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const timeToMinutes = (value: string) => {
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const minutesToTime = (minutes: number) => {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EvaluationDetailsProps {
   currentSubStep: number;
@@ -33,6 +73,8 @@ interface EvaluationDetailsProps {
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
 }
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function EvaluationDetails({
   currentSubStep,
@@ -49,13 +91,16 @@ export function EvaluationDetails({
     scheduleTimeOverrides,
     dropOffPickUpOverrides,
   } = useSettings();
+
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
 
-  const scheduleTimeOverridesForEvaluation = React.useMemo(() => {
-    return scheduleTimeOverrides.filter(
-      (o) => !o.services?.length || o.services.includes("evaluation"),
-    );
-  }, [scheduleTimeOverrides]);
+  const scheduleTimeOverridesForEvaluation = React.useMemo(
+    () =>
+      scheduleTimeOverrides.filter(
+        (o) => !o.services?.length || o.services.includes("evaluation"),
+      ),
+    [scheduleTimeOverrides],
+  );
 
   const dropOffPickUpWindowsByDateForEvaluation = React.useMemo(() => {
     const map: Record<
@@ -98,6 +143,7 @@ export function EvaluationDetails({
         blockedDateMessagesForEvaluation: messages,
       };
     }, [serviceDateBlocks]);
+
   const durationOptions = evaluation.schedule.durationOptionsMinutes;
   const defaultDuration =
     evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
@@ -110,38 +156,7 @@ export function EvaluationDetails({
     return [new Date(year, month - 1, day)];
   }, [startDate]);
 
-  // Don't pass dateTimes to calendar - we'll handle time selection separately
-  const dateTimes = React.useMemo(() => {
-    // Return empty array so calendar doesn't show time selection
-    return [];
-  }, []);
-
-  const handleSelectionChange = (dates: Date[]) => {
-    if (dates.length > 0) {
-      const dateStr = formatDateString(dates[0]);
-      setStartDate(dateStr);
-      // Reset slot selection when date changes
-      setSelectedSlot(null);
-      setCheckInTime("");
-      setCheckOutTime("");
-    } else {
-      setStartDate("");
-      setCheckInTime("");
-      setCheckOutTime("");
-      setSelectedSlot(null);
-    }
-  };
-
-  const timeToMinutes = (value: string) => {
-    const [h, m] = value.split(":").map(Number);
-    return h * 60 + m;
-  };
-
-  const minutesToTime = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  };
+  const dateTimes = React.useMemo(() => [], []);
 
   const timeWindows = React.useMemo(
     () =>
@@ -158,25 +173,21 @@ export function EvaluationDetails({
     [evaluation.schedule.timeWindows],
   );
 
+  // All slots for the selected duration
   const slots = React.useMemo(() => {
     const duration = selectedDuration || defaultDuration;
-    const windows = timeWindows;
     if (evaluation.schedule.slotMode === "fixed") {
       return evaluation.schedule.fixedStartTimes
         .map((startTime) => {
           const start = timeToMinutes(startTime);
           const end = start + duration;
-          const withinWindow = windows.some(
+          const withinWindow = timeWindows.some(
             (w) =>
               start >= timeToMinutes(w.startTime) &&
               end <= timeToMinutes(w.endTime),
           );
           if (!withinWindow) return null;
-          return {
-            startTime,
-            endTime: minutesToTime(end),
-            duration,
-          };
+          return { startTime, endTime: minutesToTime(end), duration };
         })
         .filter(Boolean) as Array<{
         startTime: string;
@@ -190,7 +201,7 @@ export function EvaluationDetails({
       endTime: string;
       duration: number;
     }> = [];
-    windows.forEach((window) => {
+    timeWindows.forEach((window) => {
       const start = timeToMinutes(window.startTime);
       const end = timeToMinutes(window.endTime);
       let current = start;
@@ -206,140 +217,266 @@ export function EvaluationDetails({
     return generated;
   }, [evaluation.schedule, selectedDuration, defaultDuration, timeWindows]);
 
+  // #3 — mark slots that are in the past when today is selected
+  const isToday = startDate === todayString();
+  const currentMinutes = isToday ? nowInMinutes() : -1;
+  const slotsWithPast = slots.map((slot) => ({
+    ...slot,
+    isPast: isToday && timeToMinutes(slot.startTime) <= currentMinutes,
+  }));
+
+  // #2 — available (non-past) slot count for the header badge
+  const availableCount = slotsWithPast.filter((s) => !s.isPast).length;
+
+  const handleSelectionChange = (dates: Date[]) => {
+    if (dates.length > 0) {
+      setStartDate(formatDateString(dates[0]));
+      setSelectedSlot(null);
+      setCheckInTime("");
+      setCheckOutTime("");
+    } else {
+      setStartDate("");
+      setCheckInTime("");
+      setCheckOutTime("");
+      setSelectedSlot(null);
+    }
+  };
+
   const handleSlotSelect = (slotStartTime: string) => {
     const slot = slots.find((s) => s.startTime === slotStartTime);
     if (!slot) return;
-
     setSelectedSlot(slotStartTime);
     setCheckInTime(slot.startTime);
     setCheckOutTime(slot.endTime);
   };
 
+  // #4 — clear date selection to let user pick another
+  const handleClearDate = () => {
+    handleSelectionChange([]);
+  };
+
+  const selectedSlotData = slots.find((s) => s.startTime === selectedSlot);
+
   return (
-    <div className="space-y-6">
-      <div className="min-h-[400px]">
-        {currentSubStep === 0 && (
-          <div className="space-y-6">
+    <div className="space-y-5">
+      {currentSubStep === 0 && (
+        <>
+          {/* ── Header ────────────────────────────────────────────────────── */}
+          <div className="flex items-start gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
+              <ClipboardCheck className="size-5 text-violet-600" />
+            </div>
             <div>
-              <Label className="text-base">Select Evaluation Date</Label>
-              <p className="text-muted-foreground mt-1 mb-2 text-xs">
-                Choose a date for your pet evaluation. {evaluation.description}
+              <h3 className="font-semibold">Schedule Your Evaluation</h3>
+              <p className="text-muted-foreground text-sm">
+                {evaluation.description ||
+                  "Choose a date and time for your pet's assessment session."}
               </p>
-              <DateSelectionCalendar
-                mode="single"
-                selectedDates={selectedDates}
-                onSelectionChange={handleSelectionChange}
-                showTimeSelection={false}
-                dateTimes={dateTimes}
-                facilityHours={hours}
-                scheduleTimeOverrides={scheduleTimeOverridesForEvaluation}
-                dropOffPickUpWindowsByDate={
-                  dropOffPickUpWindowsByDateForEvaluation
-                }
-                bookingRules={{
-                  minimumAdvanceBooking: rules.minimumAdvanceBooking,
-                  maximumAdvanceBooking: rules.maximumAdvanceBooking,
-                }}
-                disabledDates={blockedDatesForEvaluation}
-                disabledDateMessages={blockedDateMessagesForEvaluation}
-              />
+            </div>
+          </div>
+
+          {/* ── Two-column layout ─────────────────────────────────────────── */}
+          <div className="flex gap-5">
+            {/* Left — Calendar (#6: min-w guard) */}
+            <div className="min-w-[280px] flex-1">
+              <div className="mb-2 flex items-center gap-1.5">
+                <CalendarDays className="text-muted-foreground size-3.5" />
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Pick a date
+                </p>
+              </div>
+
+              {/* #10 — no forced bg-white; let calendar own its background */}
+              <div className="overflow-hidden rounded-xl border shadow-sm">
+                <DateSelectionCalendar
+                  mode="single"
+                  selectedDates={selectedDates}
+                  onSelectionChange={handleSelectionChange}
+                  showTimeSelection={false}
+                  dateTimes={dateTimes}
+                  facilityHours={hours}
+                  scheduleTimeOverrides={scheduleTimeOverridesForEvaluation}
+                  dropOffPickUpWindowsByDate={
+                    dropOffPickUpWindowsByDateForEvaluation
+                  }
+                  bookingRules={{
+                    minimumAdvanceBooking: rules.minimumAdvanceBooking,
+                    maximumAdvanceBooking: rules.maximumAdvanceBooking,
+                  }}
+                  disabledDates={blockedDatesForEvaluation}
+                  disabledDateMessages={blockedDateMessagesForEvaluation}
+                />
+              </div>
             </div>
 
-            {/* Time Slot Selection */}
-            {startDate && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    {durationOptions.length > 1 && (
-                      <div className="grid gap-2">
-                        <Label className="text-sm">Duration</Label>
-                        <Select
-                          value={String(selectedDuration)}
-                          onValueChange={(value) => {
-                            const next = Number(value);
-                            setSelectedDuration(next);
-                            setSelectedSlot(null);
-                            setCheckInTime("");
-                            setCheckOutTime("");
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select duration" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {durationOptions.map((opt) => (
-                              <SelectItem key={opt} value={String(opt)}>
-                                {opt / 60}h
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Clock className="text-muted-foreground size-5" />
-                      <Label className="text-base">
-                        Select Available Time Slot
-                      </Label>
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      Choose from the available evaluation time slots below
-                    </p>
+            {/* Right — Time slot panel */}
+            <div className="flex w-56 shrink-0 flex-col">
+              {/* Panel header */}
+              <div className="mb-2 flex items-baseline justify-between">
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Available times
+                </p>
+                {startDate && availableCount > 0 && (
+                  <span className="text-muted-foreground text-[10px] font-medium">
+                    {availableCount} slot{availableCount !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
 
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                      {slots.map((slot) => {
-                        const isSelected = selectedSlot === slot.startTime;
+              {!startDate ? (
+                /* Empty state — minimal, no icons */
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed">
+                  <p className="text-muted-foreground px-6 py-12 text-center text-xs/relaxed">
+                    Select a date to view times
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {/* Duration selector */}
+                  {durationOptions.length > 1 && (
+                    <Select
+                      value={String(selectedDuration)}
+                      onValueChange={(v) => {
+                        setSelectedDuration(Number(v));
+                        setSelectedSlot(null);
+                        setCheckInTime("");
+                        setCheckOutTime("");
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-full text-xs">
+                        <SelectValue placeholder="Session length" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {durationOptions.map((opt) => (
+                          <SelectItem key={opt} value={String(opt)}>
+                            {opt >= 60
+                              ? `${opt / 60}h session`
+                              : `${opt} min session`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* No-slots state */}
+                  {availableCount === 0 ? (
+                    <div className="space-y-3 rounded-lg border px-4 py-8 text-center">
+                      <p className="text-sm font-medium">No availability</p>
+                      <p className="text-muted-foreground text-xs">
+                        {isToday
+                          ? "All times have passed for today."
+                          : "This date has no open slots."}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs"
+                        onClick={handleClearDate}
+                      >
+                        <ArrowLeft className="size-3" />
+                        Choose another date
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Clean vertical schedule list */
+                    <div
+                      role="radiogroup"
+                      aria-label="Available time slots"
+                      className="max-h-[360px] overflow-hidden overflow-y-auto rounded-lg border"
+                    >
+                      {slotsWithPast.map((slot, i) => {
+                        const isSelected =
+                          selectedSlot === slot.startTime && !slot.isPast;
                         return (
-                          <Button
+                          <button
                             key={slot.startTime}
                             type="button"
-                            variant={isSelected ? "default" : "outline"}
-                            className="flex h-auto flex-col items-center gap-2 p-3"
-                            onClick={() => handleSlotSelect(slot.startTime)}
+                            role="radio"
+                            aria-checked={isSelected}
+                            aria-label={`${fmtTime(slot.startTime)} to ${fmtTime(slot.endTime)}${slot.isPast ? ", unavailable" : ""}`}
+                            disabled={slot.isPast}
+                            onClick={() =>
+                              !slot.isPast && handleSlotSelect(slot.startTime)
+                            }
+                            className={cn(
+                              "flex w-full items-center justify-between px-3.5 py-2.5 text-left transition-colors",
+                              i < slotsWithPast.length - 1 && "border-b",
+                              slot.isPast
+                                ? "cursor-not-allowed opacity-20"
+                                : isSelected
+                                  ? "bg-foreground text-background"
+                                  : "hover:bg-accent",
+                            )}
                           >
-                            <span className="text-sm font-medium">
-                              {slot.startTime} - {slot.endTime}
-                            </span>
-                            <Badge
-                              variant={isSelected ? "secondary" : "outline"}
-                              className="text-xs"
+                            <span
+                              className={cn(
+                                "font-[tabular-nums] text-sm",
+                                isSelected ? "font-semibold" : "font-medium",
+                              )}
                             >
-                              {slot.duration} min
-                            </Badge>
-                          </Button>
+                              {fmtTime(slot.startTime)}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-[11px]",
+                                isSelected
+                                  ? "opacity-50"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {slot.isPast
+                                ? "Unavailable"
+                                : fmtTime(slot.endTime)}
+                            </span>
+                          </button>
                         );
                       })}
                     </div>
-
-                    {slots.length === 0 && (
-                      <p className="text-muted-foreground py-4 text-center text-sm">
-                        No time slots available for evaluation.
-                      </p>
-                    )}
-
-                    {selectedSlot && (
-                      <div className="border-primary/20 bg-primary/5 mt-4 rounded-lg border p-3">
-                        <p className="text-primary text-sm font-medium">
-                          Selected:{" "}
-                          {
-                            slots.find((s) => s.startTime === selectedSlot)
-                              ?.startTime
-                          }{" "}
-                          -{" "}
-                          {
-                            slots.find((s) => s.startTime === selectedSlot)
-                              ?.endTime
-                          }
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* ── Summary strip ─────────────────────────────────────────────── */}
+          {startDate && selectedSlot && selectedSlotData && (
+            <div className="flex items-center gap-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+              <CheckCircle2 className="size-5 shrink-0 text-violet-600" />
+              <div className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-0.5">
+                <div>
+                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                    Date
+                  </p>
+                  <p className="text-sm font-semibold text-violet-800">
+                    {fmtDate(startDate)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                    Time
+                  </p>
+                  <p className="text-sm font-semibold text-violet-800">
+                    {fmtTime(selectedSlotData.startTime)} –{" "}
+                    {fmtTime(selectedSlotData.endTime)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                    Duration
+                  </p>
+                  <p className="text-sm font-semibold text-violet-800">
+                    {selectedSlotData.duration} min
+                  </p>
+                </div>
+              </div>
+              {/* #8 — continue affordance hint */}
+              <p className="text-muted-foreground hidden shrink-0 text-xs sm:block">
+                Click <span className="font-semibold">Next</span> to continue →
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
