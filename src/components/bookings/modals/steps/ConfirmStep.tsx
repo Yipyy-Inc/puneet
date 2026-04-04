@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   PawPrint,
   CalendarDays,
@@ -20,11 +19,11 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { evaluationConfig } from "@/data/settings";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { TipConfig } from "@/types/facility";
+import { TipSelector } from "@/components/bookings/TipSelector";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
@@ -119,189 +118,6 @@ function SectionHeader({
           Edit
         </button>
       )}
-    </div>
-  );
-}
-
-// ── Tip selector ──────────────────────────────────────────────────────────────
-
-function TipSelector({
-  tipConfig,
-  subtotal,
-  tipAmount,
-  onTipChange,
-}: {
-  tipConfig: TipConfig;
-  subtotal: number;
-  tipAmount: number;
-  onTipChange: (amount: number) => void;
-}) {
-  const [showCustom, setShowCustom] = useState(false);
-  const [customValue, setCustomValue] = useState("");
-
-  // Determine active tier (smart mode respects threshold)
-  const tier =
-    tipConfig.mode === "smart"
-      ? subtotal < tipConfig.smart.thresholdAmount
-        ? tipConfig.smart.belowThreshold
-        : tipConfig.smart.aboveThreshold
-      : tipConfig.general;
-
-  const calcTip = (idx: number) => {
-    const opt = tier.options[idx];
-    if (opt.type === "percentage") return (subtotal * opt.value) / 100;
-    return opt.value;
-  };
-
-  const optionLabel = (idx: number) => {
-    const opt = tier.options[idx];
-    if (opt.type === "percentage")
-      return `${opt.value}%\n$${((subtotal * opt.value) / 100).toFixed(2)}`;
-    return `$${opt.value.toFixed(2)}`;
-  };
-
-  const handlePreset = (idx: number) => {
-    setShowCustom(false);
-    setCustomValue("");
-    const amount = calcTip(idx);
-    // Toggle off if already selected
-    onTipChange(Math.abs(tipAmount - amount) < 0.01 ? 0 : amount);
-  };
-
-  const handleNoTip = () => {
-    setShowCustom(false);
-    setCustomValue("");
-    onTipChange(0);
-  };
-
-  const handleCustomApply = () => {
-    const val = parseFloat(customValue);
-    if (!isNaN(val) && val >= 0) onTipChange(val);
-  };
-
-  return (
-    <div className="rounded-2xl border p-4">
-      <SectionHeader icon={Star} label="Add a Tip" />
-
-      <div className="space-y-3">
-        {/* Preset buttons */}
-        <div className="grid grid-cols-4 gap-2">
-          {([0, 1, 2] as const).map((idx) => {
-            const amount = calcTip(idx);
-            const isSelected =
-              !showCustom && Math.abs(tipAmount - amount) < 0.01;
-            const isPreferred = tier.preferredIndex === idx;
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handlePreset(idx)}
-                className={cn(
-                  "relative flex flex-col items-center rounded-xl border-2 py-2.5 text-center text-xs font-medium transition-colors",
-                  isSelected
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "hover:border-primary/40 hover:bg-muted/50",
-                )}
-              >
-                {isPreferred && (
-                  <span className="bg-primary text-primary-foreground absolute -top-2 left-1/2 -translate-x-1/2 rounded-full px-1.5 py-0.5 text-[9px] font-semibold whitespace-nowrap">
-                    Popular
-                  </span>
-                )}
-                {tier.options[idx].type === "percentage" ? (
-                  <>
-                    <span className="text-sm font-bold">
-                      {tier.options[idx].value}%
-                    </span>
-                    <span className="text-muted-foreground text-[10px]">
-                      ${((subtotal * tier.options[idx].value) / 100).toFixed(2)}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-bold">
-                    ${tier.options[idx].value.toFixed(2)}
-                  </span>
-                )}
-                {/* keep optionLabel from causing TS unused error */}
-                <span className="hidden">{optionLabel(idx)}</span>
-              </button>
-            );
-          })}
-
-          {/* No tip */}
-          <button
-            type="button"
-            onClick={handleNoTip}
-            className={cn(
-              "flex flex-col items-center rounded-xl border-2 py-2.5 text-center text-xs font-medium transition-colors",
-              !showCustom && tipAmount === 0
-                ? "border-primary bg-primary/10 text-primary"
-                : "hover:border-primary/40 hover:bg-muted/50",
-            )}
-          >
-            <span className="text-sm font-bold">No</span>
-            <span className="text-[10px]">Tip</span>
-          </button>
-        </div>
-
-        {/* Custom amount */}
-        <div>
-          {!showCustom ? (
-            <button
-              type="button"
-              onClick={() => setShowCustom(true)}
-              className="text-muted-foreground hover:text-primary w-full text-center text-xs underline transition-colors"
-            >
-              Custom amount
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <span className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2 text-sm">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  placeholder="0.00"
-                  value={customValue}
-                  className="h-9 pl-7"
-                  onChange={(e) => setCustomValue(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCustomApply()}
-                  autoFocus
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleCustomApply}
-                className="bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium"
-              >
-                Apply
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCustom(false);
-                  setCustomValue("");
-                }}
-                className="text-muted-foreground text-xs underline"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-
-        {tipAmount > 0 && (
-          <p className="text-muted-foreground text-center text-[11px]">
-            Tip added:{" "}
-            <span className="text-foreground font-semibold">
-              ${tipAmount.toFixed(2)}
-            </span>
-          </p>
-        )}
-      </div>
     </div>
   );
 }
@@ -773,12 +589,15 @@ export function ConfirmStep({
 
       {/* ── Tip selector ─────────────────────────────────────────── */}
       {tipConfig.enabled && (
-        <TipSelector
-          tipConfig={tipConfig}
-          subtotal={calculatePrice.total}
-          tipAmount={tipAmount}
-          onTipChange={onTipChange}
-        />
+        <div className="rounded-2xl border p-4">
+          <SectionHeader icon={Star} label="Add a Tip" />
+          <TipSelector
+            tipConfig={tipConfig}
+            subtotal={calculatePrice.total}
+            tipAmount={tipAmount}
+            onTipChange={onTipChange}
+          />
+        </div>
       )}
 
       {/* ── #3 — Price breakdown ────────────────────────────────── */}
