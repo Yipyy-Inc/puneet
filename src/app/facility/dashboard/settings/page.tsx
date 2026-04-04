@@ -31,6 +31,7 @@ import { ServiceNotificationSettings } from "@/components/facility/ServiceNotifi
 import { TipSettings } from "@/components/facility/TipSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
+import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
   () =>
@@ -1417,6 +1418,349 @@ function EvaluationSettingsCard() {
               />
             </div>
           )}
+
+          {/* ── Color Code ── */}
+          <div className="space-y-2">
+            <Label>Color Code</Label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={localEvaluation.colorCode || "#6366f1"}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    colorCode: e.target.value,
+                  })
+                }
+                className="size-9 cursor-pointer rounded-lg border p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <div
+                className="h-6 flex-1 rounded-md"
+                style={{
+                  backgroundColor: localEvaluation.colorCode || "#6366f1",
+                }}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Used in schedules and calendars to distinguish evaluation
+              appointments
+            </p>
+          </div>
+
+          {/* ── Validity Settings ── */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div>
+              <div className="font-medium">Result Validity</div>
+              <div className="text-muted-foreground text-sm">
+                How long does a passing evaluation remain valid?
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={!isEditing}
+                onClick={() =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    validityMode: "always_valid",
+                  })
+                }
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  localEvaluation.validityMode === "always_valid"
+                    ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                    : "hover:bg-muted"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <p className="text-sm font-medium">Always valid</p>
+                <p className="text-muted-foreground text-xs">
+                  Once passed, the evaluation never expires
+                </p>
+              </button>
+              <button
+                type="button"
+                disabled={!isEditing}
+                onClick={() =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    validityMode: "expires_after_inactivity",
+                  })
+                }
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  localEvaluation.validityMode === "expires_after_inactivity"
+                    ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                    : "hover:bg-muted"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <p className="text-sm font-medium">Expire after inactivity</p>
+                <p className="text-muted-foreground text-xs">
+                  Clears pass if pet has no visits within a set period
+                </p>
+              </button>
+            </div>
+            {localEvaluation.validityMode === "expires_after_inactivity" && (
+              <div className="flex items-center gap-2">
+                <Label className="text-sm whitespace-nowrap">
+                  Expire after
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={localEvaluation.expirationDays ?? 90}
+                  onChange={(e) =>
+                    setLocalEvaluation({
+                      ...localEvaluation,
+                      expirationDays: parseInt(e.target.value) || 90,
+                    })
+                  }
+                  readOnly={!isEditing}
+                  className={`w-24 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""}`}
+                />
+                <span className="text-muted-foreground text-sm">
+                  days of inactivity
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Staff Assignment ── */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div>
+              <div className="font-medium">Evaluator Assignment</div>
+              <div className="text-muted-foreground text-sm">
+                Which staff members can conduct evaluations?
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                disabled={!isEditing}
+                onClick={() =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    staffAssignment: "auto",
+                  })
+                }
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  localEvaluation.staffAssignment === "auto"
+                    ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                    : "hover:bg-muted"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <p className="text-sm font-medium">Auto-assign</p>
+                <p className="text-muted-foreground text-xs">
+                  Any staff with the evaluation skill can be assigned
+                </p>
+              </button>
+              <button
+                type="button"
+                disabled={!isEditing}
+                onClick={() =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    staffAssignment: "manual",
+                  })
+                }
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  localEvaluation.staffAssignment === "manual"
+                    ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                    : "hover:bg-muted"
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                <p className="text-sm font-medium">Specific staff only</p>
+                <p className="text-muted-foreground text-xs">
+                  Only selected staff members can conduct evaluations
+                </p>
+              </button>
+            </div>
+            {localEvaluation.staffAssignment === "manual" && (
+              <div className="space-y-2">
+                <Label className="text-xs">Approved evaluators</Label>
+                <div className="space-y-1.5 rounded-lg border p-2">
+                  {staffMembers
+                    .filter(
+                      (s) => s.isActive && s.skills.includes("evaluation"),
+                    )
+                    .map((staff) => {
+                      const selected =
+                        localEvaluation.assignedStaffIds?.includes(staff.id) ??
+                        false;
+                      return (
+                        <label
+                          key={staff.id}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50"
+                        >
+                          <Checkbox
+                            checked={selected}
+                            disabled={!isEditing}
+                            onCheckedChange={(checked) => {
+                              const prev =
+                                localEvaluation.assignedStaffIds ?? [];
+                              setLocalEvaluation({
+                                ...localEvaluation,
+                                assignedStaffIds: checked
+                                  ? [...prev, staff.id]
+                                  : prev.filter((id) => id !== staff.id),
+                              });
+                            }}
+                          />
+                          <div>
+                            <p className="text-sm font-medium">{staff.name}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {staff.role}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Booking Window ── */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div>
+              <div className="font-medium">Booking Window</div>
+              <div className="text-muted-foreground text-sm">
+                Control how soon and how far in advance clients can book
+                evaluations
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Minimum lead time</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={localEvaluation.minLeadTimeHours ?? 24}
+                    onChange={(e) =>
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        minLeadTimeHours: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    readOnly={!isEditing}
+                    className={`w-24 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""}`}
+                  />
+                  <span className="text-muted-foreground text-xs">hours</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Maximum advance booking</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={localEvaluation.maxAdvanceDays ?? 30}
+                    onChange={(e) =>
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        maxAdvanceDays: parseInt(e.target.value) || 30,
+                      })
+                    }
+                    readOnly={!isEditing}
+                    className={`w-24 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""}`}
+                  />
+                  <span className="text-muted-foreground text-xs">days</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Daily Pet Limits ── */}
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Daily Pet Limits</div>
+                <div className="text-muted-foreground text-sm">
+                  Cap how many evaluations can be booked per day
+                </div>
+              </div>
+              <Switch
+                checked={localEvaluation.dailyPetLimits?.enabled ?? false}
+                disabled={!isEditing}
+                onCheckedChange={(checked) =>
+                  setLocalEvaluation({
+                    ...localEvaluation,
+                    dailyPetLimits: {
+                      ...(localEvaluation.dailyPetLimits ?? {
+                        enabled: false,
+                        defaultLimit: 4,
+                      }),
+                      enabled: checked,
+                    },
+                  })
+                }
+              />
+            </div>
+            {localEvaluation.dailyPetLimits?.enabled && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Default daily limit</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={localEvaluation.dailyPetLimits?.defaultLimit ?? 4}
+                    onChange={(e) =>
+                      setLocalEvaluation({
+                        ...localEvaluation,
+                        dailyPetLimits: {
+                          ...localEvaluation.dailyPetLimits!,
+                          defaultLimit: parseInt(e.target.value) || 4,
+                        },
+                      })
+                    }
+                    readOnly={!isEditing}
+                    className={`w-24 ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Per-day overrides</Label>
+                  <div className="grid grid-cols-7 gap-2">
+                    {(
+                      ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const
+                    ).map((day) => (
+                      <div key={day} className="space-y-1 text-center">
+                        <p className="text-muted-foreground text-[10px] font-semibold uppercase">
+                          {day}
+                        </p>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={
+                            localEvaluation.dailyPetLimits?.perDay?.[day] ?? ""
+                          }
+                          onChange={(e) => {
+                            const val = e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined;
+                            setLocalEvaluation({
+                              ...localEvaluation,
+                              dailyPetLimits: {
+                                ...localEvaluation.dailyPetLimits!,
+                                perDay: {
+                                  ...localEvaluation.dailyPetLimits?.perDay,
+                                  [day]: val,
+                                },
+                              },
+                            });
+                          }}
+                          placeholder="—"
+                          readOnly={!isEditing}
+                          className={`text-center text-xs ${!isEditing ? "cursor-not-allowed bg-gray-100" : ""}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground text-[10px]">
+                    Leave blank to use the default limit for that day
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">

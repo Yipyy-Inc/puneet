@@ -38,6 +38,29 @@ export const evaluationConfig: EvaluationConfig = {
   price: 0,
   duration: "custom",
   customHours: 1,
+  colorCode: "#6366f1",
+  // Validity
+  validityMode: "always_valid",
+  expirationDays: 90,
+  // Staff
+  staffAssignment: "manual",
+  assignedStaffIds: ["staff-001", "staff-002", "staff-004", "staff-006"],
+  // Booking window
+  minLeadTimeHours: 24,
+  maxAdvanceDays: 30,
+  // Daily capacity
+  dailyPetLimits: {
+    enabled: true,
+    defaultLimit: 4,
+    perDay: {
+      mon: 4,
+      tue: 4,
+      wed: 4,
+      thu: 4,
+      fri: 3,
+      sat: 2,
+    },
+  },
   schedule: {
     durationOptionsMinutes: [120, 240],
     defaultDurationMinutes: 120,
