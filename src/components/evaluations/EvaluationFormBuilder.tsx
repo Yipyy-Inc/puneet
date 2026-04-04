@@ -613,11 +613,11 @@ export function EvaluationFormBuilder() {
   );
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between border-b bg-gradient-to-r from-slate-50 to-white">
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50">
         <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-100">
-            <ClipboardList className="size-4.5 text-indigo-600" />
+          <div className="flex size-9 items-center justify-center rounded-lg bg-slate-200">
+            <ClipboardList className="size-4 text-slate-700" />
           </div>
           <div>
             <CardTitle className="text-base">Evaluation Form Builder</CardTitle>
