@@ -99,7 +99,10 @@ function persistAddOns(addOns: ServiceAddOn[]) {
 // Empty form state
 // ============================================================================
 
-function createEmptyAddOn(): Omit<ServiceAddOn, "id" | "createdAt" | "updatedAt" | "sortOrder"> {
+function createEmptyAddOn(): Omit<
+  ServiceAddOn,
+  "id" | "createdAt" | "updatedAt" | "sortOrder"
+> {
   return {
     name: "",
     description: "",
@@ -148,7 +151,11 @@ export function AddOnsSettings() {
   const [form, setForm] = useState(createEmptyAddOn());
   const [sizePricingEnabled, setSizePricingEnabled] = useState(false);
   const [sizePricingRows, setSizePricingRows] = useState<
-    Array<{ size: SizeKey; priceModifier: number; modifierType: "flat" | "percentage" }>
+    Array<{
+      size: SizeKey;
+      priceModifier: number;
+      modifierType: "flat" | "percentage";
+    }>
   >([
     { size: "small", priceModifier: 0, modifierType: "flat" },
     { size: "medium", priceModifier: 0, modifierType: "flat" },
@@ -198,9 +205,7 @@ export function AddOnsSettings() {
     const hasSizePricing = !!addon.sizePricing && addon.sizePricing.length > 0;
     setSizePricingEnabled(hasSizePricing);
     if (hasSizePricing && addon.sizePricing) {
-      setSizePricingRows(
-        addon.sizePricing.map((sp) => ({ ...sp })),
-      );
+      setSizePricingRows(addon.sizePricing.map((sp) => ({ ...sp })));
     } else {
       setSizePricingRows([
         { size: "small", priceModifier: 0, modifierType: "flat" },
@@ -233,7 +238,9 @@ export function AddOnsSettings() {
               ...form,
               image: form.image || undefined,
               unitLabel: form.unitLabel || undefined,
-              taskCategory: form.generatesTask ? form.taskCategory || undefined : undefined,
+              taskCategory: form.generatesTask
+                ? form.taskCategory || undefined
+                : undefined,
               sizePricing: sizePricingEnabled ? sizePricingRows : undefined,
               updatedAt: now,
             }
@@ -248,7 +255,9 @@ export function AddOnsSettings() {
         ...form,
         image: form.image || undefined,
         unitLabel: form.unitLabel || undefined,
-        taskCategory: form.generatesTask ? form.taskCategory || undefined : undefined,
+        taskCategory: form.generatesTask
+          ? form.taskCategory || undefined
+          : undefined,
         sizePricing: sizePricingEnabled ? sizePricingRows : undefined,
         sortOrder: addOns.length + 1,
         createdAt: now,
@@ -581,7 +590,7 @@ export function AddOnsSettings() {
                   {allCategories.map((cat) => (
                     <label
                       key={cat.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+                      className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
                     >
                       <Checkbox
                         checked={form.applicableServices.includes(cat.id)}
@@ -605,7 +614,7 @@ export function AddOnsSettings() {
 
                 {sizePricingEnabled && (
                   <div className="rounded-lg border">
-                    <div className="grid grid-cols-[1fr_100px_110px] gap-2 border-b px-3 py-2 text-xs font-medium text-muted-foreground">
+                    <div className="text-muted-foreground grid grid-cols-[1fr_100px_110px] gap-2 border-b px-3 py-2 text-xs font-medium">
                       <span>Size</span>
                       <span>Modifier</span>
                       <span>Type</span>
@@ -627,8 +636,7 @@ export function AddOnsSettings() {
                             const next = [...sizePricingRows];
                             next[idx] = {
                               ...next[idx],
-                              priceModifier:
-                                parseFloat(e.target.value) || 0,
+                              priceModifier: parseFloat(e.target.value) || 0,
                             };
                             setSizePricingRows(next);
                           }}

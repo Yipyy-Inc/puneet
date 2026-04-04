@@ -26,6 +26,7 @@ import { BookingStatusSettings } from "@/components/facility/BookingStatusSettin
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
 import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
+import { EvaluationSettings } from "@/components/facility/EvaluationSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
 import { TipSettings } from "@/components/facility/TipSettings";
@@ -4006,6 +4007,13 @@ export default function SettingsPage() {
           {activeSection === "departments" && (
             <div className="space-y-6">
               <DepartmentSettings />
+            </div>
+          )}
+
+          {/* Evaluations */}
+          {activeSection === "evaluations" && (
+            <div className="space-y-6">
+              <EvaluationSettings />
             </div>
           )}
 
