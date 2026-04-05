@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   PawPrint,
   CalendarDays,
@@ -16,6 +17,9 @@ import {
   ClipboardCheck,
   Info,
   Star,
+  FileSignature,
+  Pen,
+  CheckCircle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -57,6 +61,10 @@ import { TipSelector } from "@/components/bookings/TipSelector";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
+import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
+import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
+import type { SignatureResult } from "@/components/shared/SignaturePad";
+import { Button } from "@/components/ui/button";
 
 interface ConfirmStepProps {
   selectedClient: Client | undefined;
@@ -188,6 +196,26 @@ export function ConfirmStep({
   const isEvaluation = selectedService === "evaluation";
   const isDaycareOrBoarding =
     selectedService === "daycare" || selectedService === "boarding";
+
+  // Pending waivers for this service type
+  const [signingWaiver, setSigningWaiver] = useState<
+    (typeof digitalWaivers)[number] | null
+  >(null);
+  const [signedIds, setSignedIds] = useState<Set<string>>(
+    () => new Set(waiverSignatures.map((s) => s.waiverId)),
+  );
+  const pendingWaivers = digitalWaivers.filter(
+    (w) =>
+      w.isActive &&
+      w.requiresSignature &&
+      !signedIds.has(w.id) &&
+      (w.type === selectedService || w.type === "general"),
+  );
+  const handleWaiverSigned = (_result: SignatureResult) => {
+    if (!signingWaiver) return;
+    setSignedIds((prev) => new Set([...prev, signingWaiver.id]));
+    setSigningWaiver(null);
+  };
 
   // #1 — Missing data warnings
   const roomsIncomplete =
@@ -685,6 +713,71 @@ export function ConfirmStep({
             onTipChange={onTipChange}
           />
         </div>
+      )}
+
+      {/* ── Pending Waivers ───────────────────────────────────── */}
+      {pendingWaivers.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+          <SectionHeader icon={FileSignature} label="Agreements Required" />
+          <div className="space-y-2">
+            {pendingWaivers.map((waiver) => (
+              <div
+                key={waiver.id}
+                className="flex items-center justify-between rounded-xl border border-amber-200 bg-white px-4 py-2.5"
+              >
+                <div>
+                  <p className="text-sm font-medium">{waiver.name}</p>
+                  <p className="text-muted-foreground text-[11px] capitalize">
+                    {waiver.type} · v{waiver.version}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => setSigningWaiver(waiver)}
+                >
+                  <Pen className="size-3" />
+                  Sign
+                </Button>
+              </div>
+            ))}
+          </div>
+          <p className="text-muted-foreground mt-2 text-[11px]">
+            These agreements must be signed before the booking can be confirmed.
+          </p>
+        </div>
+      )}
+
+      {/* Signed waivers confirmation */}
+      {pendingWaivers.length === 0 &&
+        digitalWaivers.some(
+          (w) =>
+            w.isActive &&
+            w.requiresSignature &&
+            signedIds.has(w.id) &&
+            (w.type === selectedService || w.type === "general"),
+        ) && (
+          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5">
+            <CheckCircle className="size-4 text-green-600" />
+            <p className="text-xs font-medium text-green-800">
+              All required agreements are signed
+            </p>
+          </div>
+        )}
+
+      {/* Signing dialog */}
+      {signingWaiver && (
+        <AgreementSigningDialog
+          open={!!signingWaiver}
+          onOpenChange={() => setSigningWaiver(null)}
+          title={signingWaiver.name}
+          agreementContent={signingWaiver.content}
+          requiresWitness={signingWaiver.requiresWitness}
+          onSigned={handleWaiverSigned}
+          clientName={selectedClient?.name}
+          serviceName={serviceInfo?.name}
+        />
       )}
 
       {/* ── #3 — Price breakdown ────────────────────────────────── */}

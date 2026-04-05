@@ -2109,8 +2109,8 @@ export default function OrdersPage() {
                 </span>
               </div>
               <p className="text-muted-foreground -mt-2 text-xs">
-                Save the login credentials for this supplier's ordering website
-                for quick access.
+                Save the login credentials for this supplier&apos;s ordering
+                website for quick access.
               </p>
               <div className="bg-muted/40 space-y-4 rounded-lg border p-4">
                 <div className="grid gap-1.5">
