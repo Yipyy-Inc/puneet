@@ -29,18 +29,74 @@ import type { WeatherWarningRule } from "@/types/facility";
 
 // ── WMO weather code mapping ─────────────────────────────────────────
 
-function getWeatherIcon(code: number, size = "size-6") {
-  if (code === 0) return <Sun className={`${size} text-amber-500`} />;
-  if (code <= 3) return <CloudSun className={`${size} text-slate-500`} />;
-  if (code <= 48) return <CloudFog className={`${size} text-slate-400`} />;
-  if (code <= 57) return <CloudDrizzle className={`${size} text-blue-400`} />;
-  if (code <= 67) return <CloudRain className={`${size} text-blue-500`} />;
-  if (code <= 77) return <Snowflake className={`${size} text-sky-400`} />;
-  if (code <= 82) return <CloudRain className={`${size} text-blue-600`} />;
-  if (code <= 86) return <CloudSnow className={`${size} text-sky-500`} />;
+const WEATHER_ANIM = {
+  sun: "animate-[spin_20s_linear_infinite]",
+  pulse: "animate-[pulse_3s_ease-in-out_infinite]",
+  bounce: "animate-[bounce_4s_ease-in-out_infinite]",
+  float: "animate-[float_4s_ease-in-out_infinite]",
+  flash: "animate-[pulse_1.5s_ease-in-out_infinite]",
+  sway: "animate-[sway_3s_ease-in-out_infinite]",
+};
+
+function getWeatherIcon(code: number, size = "size-6", animated = false) {
+  const a = animated;
+  if (code === 0)
+    return (
+      <Sun className={`${size} text-amber-500 ${a ? WEATHER_ANIM.sun : ""}`} />
+    );
+  if (code <= 3)
+    return (
+      <CloudSun
+        className={`${size} text-slate-500 ${a ? WEATHER_ANIM.float : ""}`}
+      />
+    );
+  if (code <= 48)
+    return (
+      <CloudFog
+        className={`${size} text-slate-400 ${a ? WEATHER_ANIM.pulse : ""}`}
+      />
+    );
+  if (code <= 57)
+    return (
+      <CloudDrizzle
+        className={`${size} text-blue-400 ${a ? WEATHER_ANIM.sway : ""}`}
+      />
+    );
+  if (code <= 67)
+    return (
+      <CloudRain
+        className={`${size} text-blue-500 ${a ? WEATHER_ANIM.sway : ""}`}
+      />
+    );
+  if (code <= 77)
+    return (
+      <Snowflake
+        className={`${size} text-sky-400 ${a ? WEATHER_ANIM.bounce : ""}`}
+      />
+    );
+  if (code <= 82)
+    return (
+      <CloudRain
+        className={`${size} text-blue-600 ${a ? WEATHER_ANIM.sway : ""}`}
+      />
+    );
+  if (code <= 86)
+    return (
+      <CloudSnow
+        className={`${size} text-sky-500 ${a ? WEATHER_ANIM.bounce : ""}`}
+      />
+    );
   if (code <= 99)
-    return <CloudLightning className={`${size} text-purple-500`} />;
-  return <Cloud className={`${size} text-slate-400`} />;
+    return (
+      <CloudLightning
+        className={`${size} text-purple-500 ${a ? WEATHER_ANIM.flash : ""}`}
+      />
+    );
+  return (
+    <Cloud
+      className={`${size} text-slate-400 ${a ? WEATHER_ANIM.float : ""}`}
+    />
+  );
 }
 
 function getWeatherName(code: number): string {
@@ -213,6 +269,26 @@ interface WeatherData {
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // ── Component ────────────────────────────────────────────────────────
+
+const weatherKeyframes = `
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes sway {
+  0%, 100% { transform: translateX(0px) rotate(0deg); }
+  25% { transform: translateX(2px) rotate(2deg); }
+  75% { transform: translateX(-2px) rotate(-2deg); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+`;
 
 export function WeatherWidget() {
   const { profile, weatherRules } = useSettings();
@@ -416,12 +492,12 @@ export function WeatherWidget() {
   if (collapsed) {
     return (
       <Card
-        className={`cursor-pointer border-slate-200 transition-shadow hover:shadow-md ${getCardBg(data.current.weatherCode)}`}
+        className={`cursor-pointer border-slate-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${getCardBg(data.current.weatherCode)}`}
         onClick={toggleCollapsed}
       >
         <CardContent className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3">
-            {getWeatherIcon(data.current.weatherCode, "size-5")}
+            {getWeatherIcon(data.current.weatherCode, "size-5", true)}
             <span className="text-lg font-bold tabular-nums">
               {data.current.temperature}
               {unitSymbol}
@@ -453,15 +529,17 @@ export function WeatherWidget() {
   // Full view
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: weatherKeyframes }} />
       <Card
-        className={`overflow-hidden border-slate-200 ${getCardBg(data.current.weatherCode)}`}
+        className={`overflow-hidden border-slate-200 transition-all duration-500 ${getCardBg(data.current.weatherCode)}`}
+        style={{ animation: "slideIn 0.4s ease-out" }}
       >
         <CardContent className="p-0">
           {/* Main weather row */}
           <div className="flex items-center justify-between px-5 py-4">
             {/* Left: current weather */}
             <div className="flex items-center gap-4">
-              {getWeatherIcon(data.current.weatherCode, "size-10")}
+              {getWeatherIcon(data.current.weatherCode, "size-10", true)}
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold tabular-nums">
@@ -493,11 +571,14 @@ export function WeatherWidget() {
                 <div
                   key={i}
                   className="flex flex-col items-center gap-0.5 px-2"
+                  style={{
+                    animation: `fadeSlideUp 0.3s ease-out ${i * 0.08}s both`,
+                  }}
                 >
                   <span className="text-muted-foreground text-[10px]">
                     {formatTime(h.time)}
                   </span>
-                  {getWeatherIcon(h.weatherCode, "size-4")}
+                  {getWeatherIcon(h.weatherCode, "size-4", true)}
                   <span className="text-xs font-medium tabular-nums">
                     {Math.round(h.temperature)}°
                   </span>
@@ -527,6 +608,9 @@ export function WeatherWidget() {
               {warnings.map((w, i) => (
                 <div
                   key={`${w.id}-${i}`}
+                  style={{
+                    animation: `fadeSlideUp 0.3s ease-out ${i * 0.1}s both`,
+                  }}
                   className={`flex items-start gap-2.5 px-5 py-2.5 ${
                     w.severity === "critical"
                       ? "border-red-200 bg-red-50 text-red-900"
@@ -535,7 +619,7 @@ export function WeatherWidget() {
                         : "border-blue-200 bg-blue-50 text-blue-900"
                   }`}
                 >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 animate-pulse" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium">{w.message}</p>
                     {w.triggeredBy === "forecast" && w.forecastTime && (
