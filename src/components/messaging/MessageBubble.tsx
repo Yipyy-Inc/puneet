@@ -47,10 +47,12 @@ const AVATAR_COLORS = [
 export function MessageBubble({
   message,
   clientName,
+  clientImage,
   showAvatar = true,
 }: {
   message: Message;
   clientName?: string;
+  clientImage?: string;
   showAvatar?: boolean;
 }) {
   const out = message.direction === "outbound";
@@ -67,14 +69,22 @@ export function MessageBubble({
     >
       {/* Avatar — only for inbound */}
       {!out && showAvatar ? (
-        <div
-          className={cn(
-            "mt-auto flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm",
-            color,
-          )}
-        >
-          {clientName?.charAt(0).toUpperCase() ?? "?"}
-        </div>
+        clientImage ? (
+          <img
+            src={clientImage}
+            alt=""
+            className="mt-auto size-8 shrink-0 rounded-full object-cover shadow-sm"
+          />
+        ) : (
+          <div
+            className={cn(
+              "mt-auto flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white shadow-sm",
+              color,
+            )}
+          >
+            {clientName?.charAt(0).toUpperCase() ?? "?"}
+          </div>
+        )
       ) : !out ? (
         <div className="w-8 shrink-0" />
       ) : null}
