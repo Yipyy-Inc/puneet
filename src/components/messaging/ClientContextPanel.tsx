@@ -245,7 +245,7 @@ export function ClientContextPanel({
   };
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col border-l bg-white">
+    <div className="flex h-full w-72 shrink-0 flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h3 className="text-[13px] font-bold text-slate-800">Media & Files</h3>
