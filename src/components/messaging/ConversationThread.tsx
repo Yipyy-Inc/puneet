@@ -296,6 +296,11 @@ export function ConversationThread({
                   key={item.msg.id}
                   message={item.msg}
                   clientName={clientName}
+                  clientImage={
+                    (client as Record<string, unknown>)?.imageUrl as
+                      | string
+                      | undefined
+                  }
                 />
               ),
             )}
