@@ -504,21 +504,31 @@ export default function BoardingRatesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <h2 className="text-lg font-bold tracking-tight text-slate-800">
+          Boarding Rates & Pricing
+        </h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Configure nightly rates, discounts, surcharges, and fee rules
+        </p>
+      </div>
+
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm font-medium">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Active Rates
                 </p>
-                <p className="text-2xl font-bold">
+                <p className="mt-1 text-2xl font-bold">
                   {rates.filter((r) => r.isActive).length}
                 </p>
               </div>
-              <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
-                <DollarSign className="text-primary size-6" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-slate-100">
+                <DollarSign className="size-5 text-slate-600" />
               </div>
             </div>
           </CardContent>
@@ -527,15 +537,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm font-medium">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Active Discounts
                 </p>
-                <p className="text-2xl font-bold">
+                <p className="mt-1 text-2xl font-bold">
                   {discounts.filter((d) => d.isActive).length}
                 </p>
               </div>
-              <div className="bg-success/10 flex size-12 items-center justify-center rounded-full">
-                <Percent className="text-success size-6" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50">
+                <Percent className="size-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
@@ -544,15 +554,15 @@ export default function BoardingRatesPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-sm font-medium">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Peak Periods
                 </p>
-                <p className="text-2xl font-bold">
+                <p className="mt-1 text-2xl font-bold">
                   {surcharges.filter((s) => s.isActive).length}
                 </p>
               </div>
-              <div className="bg-warning/10 flex size-12 items-center justify-center rounded-full">
-                <TrendingUp className="text-warning size-6" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-amber-50">
+                <TrendingUp className="size-5 text-amber-600" />
               </div>
             </div>
           </CardContent>

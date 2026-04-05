@@ -112,19 +112,31 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* ── Section header ── */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <h3 className="text-sm font-bold tracking-tight text-slate-800">
+          Pricing Rules
+        </h3>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          Configure discounts, surcharges, and fees for {serviceType} bookings
+        </p>
+      </div>
+
       {/* ── Discount Stacking ── */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <Settings2 className="size-4" />
+              <div className="flex size-7 items-center justify-center rounded-lg bg-slate-100">
+                <Settings2 className="size-3.5 text-slate-600" />
+              </div>
               Discount Stacking
             </span>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1.5 text-xs"
               onClick={() => setPreviewOpen(!previewOpen)}
             >
               Preview
@@ -169,8 +181,8 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
 
           {/* Preview calculator */}
           {previewOpen && (
-            <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
-              <p className="text-xs font-semibold text-slate-700">
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
                 Discount Preview
               </p>
               <div className="grid grid-cols-3 gap-3">
@@ -286,13 +298,15 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <Users className="size-4" />
+              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-50">
+                <Users className="size-3.5 text-emerald-600" />
+              </div>
               Multi-Pet Discounts
             </span>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1.5 text-xs"
               onClick={() => {
                 setEditingMp(null);
                 setMpModal(true);
@@ -312,7 +326,7 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
             filteredMultiPet.map((rule) => (
               <div
                 key={rule.id}
-                className="flex items-center justify-between rounded-lg border p-3"
+                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -381,13 +395,15 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <Clock className="size-4" />
+              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-50">
+                <Clock className="size-3.5 text-amber-600" />
+              </div>
               Late Pickup / Early Drop-off Fees
             </span>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1.5 text-xs"
               onClick={() => {
                 setEditingTf(null);
                 setTfModal(true);
@@ -407,7 +423,7 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
             filteredTimeFees.map((fee) => (
               <div
                 key={fee.id}
-                className="flex items-center justify-between rounded-lg border p-3"
+                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -492,7 +508,9 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2">
-                <AlertTriangle className="size-4" />
+                <div className="flex size-7 items-center justify-center rounded-lg bg-rose-50">
+                  <AlertTriangle className="size-3.5 text-rose-600" />
+                </div>
                 Exceed 24-Hour Fee
               </span>
               <div className="flex items-center gap-2">
@@ -536,13 +554,15 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-2">
-              <DollarSign className="size-4" />
+              <div className="flex size-7 items-center justify-center rounded-lg bg-sky-50">
+                <DollarSign className="size-3.5 text-sky-600" />
+              </div>
               Custom Fees
             </span>
             <Button
               size="sm"
               variant="outline"
-              className="h-7 gap-1 text-xs"
+              className="h-7 gap-1.5 text-xs"
               onClick={() => {
                 setEditingCf(null);
                 setCfModal(true);
@@ -562,7 +582,7 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
             filteredCustomFees.map((fee) => (
               <div
                 key={fee.id}
-                className="flex items-center justify-between rounded-lg border p-3"
+                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -1238,7 +1258,7 @@ function TimeFeeModal({
               placeholder="Uses facility default"
             />
           </div>
-          <p className="text-muted-foreground rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed">
             By default, only the rule matching the latest time applies per
             checkout. Multiple rules do not stack unless enabled at the facility
             level.
@@ -1497,7 +1517,7 @@ function CustomFeeModal({
               </div>
             )}
           </div>
-          <p className="text-muted-foreground rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+          <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed">
             Each fee can only be added once per appointment. Fees are excluded
             from staff commission calculations but included when applying
             discounts.
