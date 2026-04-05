@@ -29,7 +29,16 @@ import {
   Smartphone,
   Printer,
   Link as LinkIcon,
+  Globe,
+  Phone,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Copy,
+  ExternalLink,
+  Hash,
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -159,16 +168,27 @@ export default function OrdersPage() {
   const [supplierForm, setSupplierForm] = useState({
     name: "",
     contactName: "",
+    contactTitle: "",
     email: "",
     phone: "",
+    secondaryPhone: "",
     address: "",
     city: "",
+    state: "",
+    postalCode: "",
     country: "",
     website: "",
+    portalUrl: "",
+    portalUsername: "",
+    portalPassword: "",
     paymentTerms: "Net 30",
+    preferredPaymentMethod: "" as string,
+    accountNumber: "",
     leadTimeDays: 7,
+    minimumOrderAmount: 0,
     notes: "",
   });
+  const [showPortalPassword, setShowPortalPassword] = useState(false);
 
   const activeSuppliers = getActiveSuppliers();
   const pendingOrders = getPendingOrders();
@@ -189,16 +209,27 @@ export default function OrdersPage() {
     setSupplierForm({
       name: "",
       contactName: "",
+      contactTitle: "",
       email: "",
       phone: "",
+      secondaryPhone: "",
       address: "",
       city: "",
+      state: "",
+      postalCode: "",
       country: "",
       website: "",
+      portalUrl: "",
+      portalUsername: "",
+      portalPassword: "",
       paymentTerms: "Net 30",
+      preferredPaymentMethod: "",
+      accountNumber: "",
       leadTimeDays: 7,
+      minimumOrderAmount: 0,
       notes: "",
     });
+    setShowPortalPassword(false);
     setIsSupplierModalOpen(true);
   };
 
@@ -207,16 +238,27 @@ export default function OrdersPage() {
     setSupplierForm({
       name: supplier.name,
       contactName: supplier.contactName,
+      contactTitle: supplier.contactTitle || "",
       email: supplier.email,
       phone: supplier.phone,
+      secondaryPhone: supplier.secondaryPhone || "",
       address: supplier.address,
       city: supplier.city,
+      state: supplier.state || "",
+      postalCode: supplier.postalCode || "",
       country: supplier.country,
       website: supplier.website || "",
+      portalUrl: supplier.orderingPortal?.url || "",
+      portalUsername: supplier.orderingPortal?.username || "",
+      portalPassword: supplier.orderingPortal?.password || "",
       paymentTerms: supplier.paymentTerms,
+      preferredPaymentMethod: supplier.preferredPaymentMethod || "",
+      accountNumber: supplier.accountNumber || "",
       leadTimeDays: supplier.leadTimeDays,
+      minimumOrderAmount: supplier.minimumOrderAmount || 0,
       notes: supplier.notes,
     });
+    setShowPortalPassword(false);
     setIsSupplierModalOpen(true);
   };
 
@@ -1794,186 +1836,582 @@ export default function OrdersPage() {
 
       {/* Add/Edit Supplier Modal */}
       <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="text-primary size-5" />
               {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
             </DialogTitle>
             <DialogDescription>
               {editingSupplier
                 ? "Update the supplier details below."
-                : "Enter the supplier information."}
+                : "Fill in the supplier details. Only company name is required to get started."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Company Name</Label>
-                <Input
-                  id="name"
-                  value={supplierForm.name}
-                  onChange={(e) =>
-                    setSupplierForm({ ...supplierForm, name: e.target.value })
-                  }
-                  placeholder="e.g., PetSupply Wholesale"
-                />
+          <div className="space-y-6 py-2">
+            {/* ── Company Info ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="text-muted-foreground size-4" />
+                <h4 className="text-sm font-semibold tracking-wide uppercase">
+                  Company
+                </h4>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="contactName">Contact Person</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-name" className="text-xs font-medium">
+                    Company Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="sup-name"
+                    value={supplierForm.name}
+                    onChange={(e) =>
+                      setSupplierForm({ ...supplierForm, name: e.target.value })
+                    }
+                    placeholder="e.g., PetSupply Wholesale"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-website" className="text-xs font-medium">
+                    Website
+                  </Label>
+                  <div className="relative">
+                    <Globe className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-website"
+                      value={supplierForm.website}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          website: e.target.value,
+                        })
+                      }
+                      placeholder="www.company.com"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* ── Contact Person ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="text-muted-foreground size-4" />
+                <h4 className="text-sm font-semibold tracking-wide uppercase">
+                  Contact Person
+                </h4>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-contact" className="text-xs font-medium">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="sup-contact"
+                    value={supplierForm.contactName}
+                    onChange={(e) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        contactName: e.target.value,
+                      })
+                    }
+                    placeholder="Robert Martinez"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-title" className="text-xs font-medium">
+                    Title / Role
+                  </Label>
+                  <Input
+                    id="sup-title"
+                    value={supplierForm.contactTitle}
+                    onChange={(e) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        contactTitle: e.target.value,
+                      })
+                    }
+                    placeholder="Account Manager"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-email" className="text-xs font-medium">
+                    Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-email"
+                      type="email"
+                      value={supplierForm.email}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          email: e.target.value,
+                        })
+                      }
+                      placeholder="orders@company.com"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-phone" className="text-xs font-medium">
+                    Phone
+                  </Label>
+                  <div className="relative">
+                    <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-phone"
+                      value={supplierForm.phone}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          phone: e.target.value,
+                        })
+                      }
+                      placeholder="(555) 123-4567"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-phone2" className="text-xs font-medium">
+                    Secondary Phone
+                  </Label>
+                  <div className="relative">
+                    <Phone className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-phone2"
+                      value={supplierForm.secondaryPhone}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          secondaryPhone: e.target.value,
+                        })
+                      }
+                      placeholder="(555) 123-4568"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* ── Address ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="text-muted-foreground size-4" />
+                <h4 className="text-sm font-semibold tracking-wide uppercase">
+                  Address
+                </h4>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="sup-address" className="text-xs font-medium">
+                  Street Address
+                </Label>
                 <Input
-                  id="contactName"
-                  value={supplierForm.contactName}
+                  id="sup-address"
+                  value={supplierForm.address}
                   onChange={(e) =>
                     setSupplierForm({
                       ...supplierForm,
-                      contactName: e.target.value,
+                      address: e.target.value,
                     })
                   }
-                  placeholder="Full name"
+                  placeholder="1234 Distribution Way"
                 />
+              </div>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-city" className="text-xs font-medium">
+                    City
+                  </Label>
+                  <Input
+                    id="sup-city"
+                    value={supplierForm.city}
+                    onChange={(e) =>
+                      setSupplierForm({ ...supplierForm, city: e.target.value })
+                    }
+                    placeholder="Chicago"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-state" className="text-xs font-medium">
+                    State / Province
+                  </Label>
+                  <Input
+                    id="sup-state"
+                    value={supplierForm.state}
+                    onChange={(e) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        state: e.target.value,
+                      })
+                    }
+                    placeholder="IL"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-postal" className="text-xs font-medium">
+                    Postal Code
+                  </Label>
+                  <Input
+                    id="sup-postal"
+                    value={supplierForm.postalCode}
+                    onChange={(e) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        postalCode: e.target.value,
+                      })
+                    }
+                    placeholder="60601"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-country" className="text-xs font-medium">
+                    Country
+                  </Label>
+                  <Input
+                    id="sup-country"
+                    value={supplierForm.country}
+                    onChange={(e) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        country: e.target.value,
+                      })
+                    }
+                    placeholder="USA"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={supplierForm.email}
-                  onChange={(e) =>
-                    setSupplierForm({ ...supplierForm, email: e.target.value })
-                  }
-                  placeholder="orders@company.com"
-                />
+            <Separator />
+
+            {/* ── Ordering Portal & Credentials ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <KeyRound className="text-muted-foreground size-4" />
+                <h4 className="text-sm font-semibold tracking-wide uppercase">
+                  Ordering Portal
+                </h4>
+                <span className="text-muted-foreground text-xs">
+                  (saved locally)
+                </span>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={supplierForm.phone}
-                  onChange={(e) =>
-                    setSupplierForm({ ...supplierForm, phone: e.target.value })
-                  }
-                  placeholder="(555) 123-4567"
-                />
+              <p className="text-muted-foreground -mt-2 text-xs">
+                Save the login credentials for this supplier's ordering website
+                for quick access.
+              </p>
+              <div className="bg-muted/40 space-y-4 rounded-lg border p-4">
+                <div className="grid gap-1.5">
+                  <Label
+                    htmlFor="sup-portal-url"
+                    className="text-xs font-medium"
+                  >
+                    Portal URL
+                  </Label>
+                  <div className="relative">
+                    <ExternalLink className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-portal-url"
+                      value={supplierForm.portalUrl}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          portalUrl: e.target.value,
+                        })
+                      }
+                      placeholder="https://portal.supplier.com"
+                      className="bg-background pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label
+                      htmlFor="sup-portal-user"
+                      className="text-xs font-medium"
+                    >
+                      Username
+                    </Label>
+                    <div className="relative">
+                      <User className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                      <Input
+                        id="sup-portal-user"
+                        value={supplierForm.portalUsername}
+                        onChange={(e) =>
+                          setSupplierForm({
+                            ...supplierForm,
+                            portalUsername: e.target.value,
+                          })
+                        }
+                        placeholder="your_username"
+                        className="bg-background pr-9 pl-9"
+                      />
+                      {supplierForm.portalUsername && (
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                          onClick={() =>
+                            navigator.clipboard.writeText(
+                              supplierForm.portalUsername,
+                            )
+                          }
+                        >
+                          <Copy className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label
+                      htmlFor="sup-portal-pass"
+                      className="text-xs font-medium"
+                    >
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                      <Input
+                        id="sup-portal-pass"
+                        type={showPortalPassword ? "text" : "password"}
+                        value={supplierForm.portalPassword}
+                        onChange={(e) =>
+                          setSupplierForm({
+                            ...supplierForm,
+                            portalPassword: e.target.value,
+                          })
+                        }
+                        placeholder="••••••••"
+                        className="bg-background pr-16 pl-9"
+                      />
+                      <div className="absolute top-1/2 right-3 flex -translate-y-1/2 gap-1">
+                        {supplierForm.portalPassword && (
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              navigator.clipboard.writeText(
+                                supplierForm.portalPassword,
+                              )
+                            }
+                          >
+                            <Copy className="size-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            setShowPortalPassword(!showPortalPassword)
+                          }
+                        >
+                          {showPortalPassword ? (
+                            <EyeOff className="size-3.5" />
+                          ) : (
+                            <Eye className="size-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {supplierForm.portalUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      const url = supplierForm.portalUrl.startsWith("http")
+                        ? supplierForm.portalUrl
+                        : `https://${supplierForm.portalUrl}`;
+                      window.open(url, "_blank");
+                    }}
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Open Portal
+                  </Button>
+                )}
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={supplierForm.address}
-                onChange={(e) =>
-                  setSupplierForm({ ...supplierForm, address: e.target.value })
-                }
-                placeholder="Street address"
-              />
+            <Separator />
+
+            {/* ── Payment & Ordering ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <DollarSign className="text-muted-foreground size-4" />
+                <h4 className="text-sm font-semibold tracking-wide uppercase">
+                  Payment & Ordering
+                </h4>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-terms" className="text-xs font-medium">
+                    Payment Terms
+                  </Label>
+                  <Select
+                    value={supplierForm.paymentTerms}
+                    onValueChange={(value) =>
+                      setSupplierForm({ ...supplierForm, paymentTerms: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Net 15">Net 15</SelectItem>
+                      <SelectItem value="Net 30">Net 30</SelectItem>
+                      <SelectItem value="Net 45">Net 45</SelectItem>
+                      <SelectItem value="Net 60">Net 60</SelectItem>
+                      <SelectItem value="Due on Receipt">
+                        Due on Receipt
+                      </SelectItem>
+                      <SelectItem value="Prepaid">Prepaid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label
+                    htmlFor="sup-payment-method"
+                    className="text-xs font-medium"
+                  >
+                    Preferred Payment Method
+                  </Label>
+                  <Select
+                    value={supplierForm.preferredPaymentMethod}
+                    onValueChange={(value) =>
+                      setSupplierForm({
+                        ...supplierForm,
+                        preferredPaymentMethod: value,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="credit_card">Credit Card</SelectItem>
+                      <SelectItem value="bank_transfer">
+                        Bank Transfer
+                      </SelectItem>
+                      <SelectItem value="check">Check</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-account" className="text-xs font-medium">
+                    Account Number
+                  </Label>
+                  <div className="relative">
+                    <Hash className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-account"
+                      value={supplierForm.accountNumber}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          accountNumber: e.target.value,
+                        })
+                      }
+                      placeholder="PSW-10482"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="sup-lead" className="text-xs font-medium">
+                    Lead Time (days)
+                  </Label>
+                  <div className="relative">
+                    <Clock className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-lead"
+                      type="number"
+                      min={1}
+                      value={supplierForm.leadTimeDays}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          leadTimeDays: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label
+                    htmlFor="sup-min-order"
+                    className="text-xs font-medium"
+                  >
+                    Min. Order ($)
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      id="sup-min-order"
+                      type="number"
+                      min={0}
+                      value={supplierForm.minimumOrderAmount || ""}
+                      onChange={(e) =>
+                        setSupplierForm({
+                          ...supplierForm,
+                          minimumOrderAmount: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="0"
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={supplierForm.city}
-                  onChange={(e) =>
-                    setSupplierForm({ ...supplierForm, city: e.target.value })
-                  }
-                  placeholder="e.g., Chicago, IL"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={supplierForm.country}
-                  onChange={(e) =>
-                    setSupplierForm({
-                      ...supplierForm,
-                      country: e.target.value,
-                    })
-                  }
-                  placeholder="e.g., USA"
-                />
-              </div>
-            </div>
+            <Separator />
 
-            <div className="grid gap-2">
-              <Label htmlFor="website">Website (optional)</Label>
-              <Input
-                id="website"
-                value={supplierForm.website}
-                onChange={(e) =>
-                  setSupplierForm({ ...supplierForm, website: e.target.value })
-                }
-                placeholder="www.company.com"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="paymentTerms">Payment Terms</Label>
-                <Select
-                  value={supplierForm.paymentTerms}
-                  onValueChange={(value) =>
-                    setSupplierForm({ ...supplierForm, paymentTerms: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Net 15">Net 15</SelectItem>
-                    <SelectItem value="Net 30">Net 30</SelectItem>
-                    <SelectItem value="Net 45">Net 45</SelectItem>
-                    <SelectItem value="Net 60">Net 60</SelectItem>
-                    <SelectItem value="Due on Receipt">
-                      Due on Receipt
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="leadTimeDays">Lead Time (days)</Label>
-                <Input
-                  id="leadTimeDays"
-                  type="number"
-                  min={1}
-                  value={supplierForm.leadTimeDays}
-                  onChange={(e) =>
-                    setSupplierForm({
-                      ...supplierForm,
-                      leadTimeDays: parseInt(e.target.value) || 1,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Notes</Label>
+            {/* ── Notes ── */}
+            <div className="grid gap-1.5">
+              <Label htmlFor="sup-notes" className="text-xs font-medium">
+                Notes
+              </Label>
               <Textarea
-                id="notes"
+                id="sup-notes"
                 value={supplierForm.notes}
                 onChange={(e) =>
                   setSupplierForm({ ...supplierForm, notes: e.target.value })
                 }
-                placeholder="Any additional notes about this supplier..."
+                placeholder="Shipping preferences, discount codes, special instructions..."
+                rows={3}
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 pt-2">
             <Button
               variant="outline"
               onClick={() => setIsSupplierModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveSupplier}>
+            <Button
+              onClick={handleSaveSupplier}
+              disabled={!supplierForm.name.trim()}
+            >
               {editingSupplier ? "Save Changes" : "Add Supplier"}
             </Button>
           </DialogFooter>
