@@ -159,26 +159,53 @@ export const peakSurchargeSchema = z
 export type PeakSurcharge = z.infer<typeof peakSurchargeSchema>;
 
 // ============================================================================
-// Late / Overflow / Custom Fees
+// Multi-Pet Discount Rules
+// ============================================================================
+
+export const multiPetDiscountTierSchema = z.object({
+  petCount: z.number(),
+  discountAmount: z.number(),
+});
+export type MultiPetDiscountTier = z.infer<typeof multiPetDiscountTierSchema>;
+
+export const multiPetDiscountRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  applicableServices: z.array(z.string()),
+  isActive: z.boolean(),
+  discountType: z.enum(["per_pet", "additional_pet"]),
+  sameLodging: z.boolean(),
+  tiers: z.array(multiPetDiscountTierSchema),
+});
+export type MultiPetDiscountRule = z.infer<typeof multiPetDiscountRuleSchema>;
+
+// ============================================================================
+// Late / Early / Overflow / Custom Fees
 // ============================================================================
 
 export const latePickupFeeSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   enabled: z.boolean(),
+  condition: z.enum(["late_pickup", "early_dropoff"]),
   graceMinutes: z.number(),
   feeType: z.enum(["flat", "per_hour", "per_30min"]),
   amount: z.number(),
   maxFee: z.number().optional(),
+  taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   basedOn: z.enum(["business_hours", "custom_time"]),
   customTime: z.string().optional(),
+  applicableServices: z.array(z.string()).optional(),
 });
 export type LatePickupFee = z.infer<typeof latePickupFeeSchema>;
 
 export const exceed24HourFeeSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   enabled: z.boolean(),
   amount: z.number(),
+  taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   description: z.string().optional(),
 });
@@ -190,12 +217,15 @@ export const customFeeSchema = z.object({
   description: z.string().optional(),
   amount: z.number(),
   feeType: z.enum(["flat", "percentage"]),
+  taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   autoApply: z.boolean(),
   applicableServices: z.array(z.string()),
   isActive: z.boolean(),
 });
 export type CustomFee = z.infer<typeof customFeeSchema>;
+
+export type DiscountStackingMode = "best_only" | "apply_all_sequence";
 
 // ============================================================================
 // Care Sheet Logs

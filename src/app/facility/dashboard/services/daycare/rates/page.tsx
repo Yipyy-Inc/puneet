@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { DollarSign, Clock, Edit, Trash2, Plus, Save, X } from "lucide-react";
+import { PricingRulesPanel } from "@/components/facility/PricingRulesPanel";
 import { daycareRates, DaycareRate } from "@/data/daycare";
 
 export default function DaycareRatesPage() {
@@ -492,6 +493,9 @@ export default function DaycareRatesPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Pricing Rules Panel — multi-pet, late/early fees, custom fees, stacking */}
+      <PricingRulesPanel serviceType="daycare" />
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

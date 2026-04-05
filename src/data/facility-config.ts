@@ -291,25 +291,67 @@ export const facilityConfig = {
     },
   },
 
-  // ── Fee rules (late pickup, overflow, custom) ──────────────────
-  feeRules: {
-    latePickup: {
-      id: "late-pickup-default",
-      enabled: true,
-      graceMinutes: 15,
-      feeType: "per_30min" as const,
-      amount: 10,
-      maxFee: 50,
-      scope: "per_pet" as const,
-      basedOn: "business_hours" as const,
-    },
+  // ── Pricing rules ──────────────────────────────────────────────
+  pricingRules: {
+    discountStacking: "best_only" as "best_only" | "apply_all_sequence",
+    multiPetDiscounts: [
+      {
+        id: "mpd-001",
+        name: "Multi-Pet Boarding Discount",
+        applicableServices: ["boarding"],
+        isActive: true,
+        discountType: "additional_pet" as const,
+        sameLodging: false,
+        tiers: [
+          { petCount: 2, discountAmount: 5 },
+          { petCount: 3, discountAmount: 10 },
+        ],
+      },
+      {
+        id: "mpd-002",
+        name: "Multi-Pet Daycare Discount",
+        applicableServices: ["daycare"],
+        isActive: true,
+        discountType: "per_pet" as const,
+        sameLodging: false,
+        tiers: [{ petCount: 2, discountAmount: 3 }],
+      },
+    ],
+    latePickupFees: [
+      {
+        id: "late-pickup-default",
+        name: "Late Pickup Fee",
+        enabled: true,
+        condition: "late_pickup" as const,
+        graceMinutes: 15,
+        feeType: "per_30min" as const,
+        amount: 10,
+        maxFee: 50,
+        scope: "per_pet" as const,
+        basedOn: "business_hours" as const,
+        applicableServices: ["boarding", "daycare"],
+      },
+      {
+        id: "early-dropoff-default",
+        name: "Early Drop-off Fee",
+        enabled: false,
+        condition: "early_dropoff" as const,
+        graceMinutes: 30,
+        feeType: "flat" as const,
+        amount: 15,
+        scope: "per_booking" as const,
+        basedOn: "business_hours" as const,
+        applicableServices: ["boarding", "daycare"],
+      },
+    ],
     exceed24Hour: {
       id: "exceed-24h-default",
+      name: "24-Hour Overflow",
       enabled: false,
       amount: 25,
       scope: "per_pet" as const,
       description:
-        "One-time fee when a boarding stay exceeds 24 hours per night",
+        "One-time fee per pet when a boarding stay exceeds the 24-hour period",
     },
     customFees: [
       {
@@ -331,6 +373,18 @@ export const facilityConfig = {
         amount: 20,
         feeType: "flat" as const,
         scope: "per_booking" as const,
+        autoApply: false,
+        applicableServices: ["boarding", "daycare"],
+        isActive: true,
+      },
+      {
+        id: "custom-fee-003",
+        name: "Medication Administration",
+        description:
+          "Fee for administering prescription medication during stay",
+        amount: 10,
+        feeType: "flat" as const,
+        scope: "per_pet" as const,
         autoApply: false,
         applicableServices: ["boarding", "daycare"],
         isActive: true,
