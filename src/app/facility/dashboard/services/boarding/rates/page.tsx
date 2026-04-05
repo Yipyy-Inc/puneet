@@ -602,7 +602,7 @@ export default function BoardingRatesPage() {
       {/* Nightly Rates */}
       <Card
         id="section-rates"
-        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+        className="scroll-mt-20 overflow-hidden transition-shadow hover:shadow-md"
       >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
@@ -629,7 +629,7 @@ export default function BoardingRatesPage() {
       {/* Multi-Night Discounts */}
       <Card
         id="section-discounts"
-        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+        className="scroll-mt-20 overflow-hidden transition-shadow hover:shadow-md"
       >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
@@ -661,7 +661,7 @@ export default function BoardingRatesPage() {
       {/* Peak Surcharges */}
       <Card
         id="section-peak"
-        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+        className="scroll-mt-20 overflow-hidden transition-shadow hover:shadow-md"
       >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
