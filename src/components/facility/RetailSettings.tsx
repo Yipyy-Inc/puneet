@@ -4,6 +4,16 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,11 +30,21 @@ import {
   Ruler,
   Shield,
   Sparkles,
+  Pencil,
+  Globe,
+  Mail,
+  Phone,
+  User,
+  Eye,
+  EyeOff,
+  Copy,
+  KeyRound,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useFacilityRole } from "@/hooks/use-facility-role";
-import { retailConfig } from "@/data/retail-config";
+import { retailConfig, type RetailSupplier } from "@/data/retail-config";
 
 const COLOR_OPTIONS = [
   { value: "red", label: "Red", dot: "bg-red-500" },
@@ -194,80 +214,11 @@ export function RetailSettings() {
       </Card>
 
       {/* Suppliers */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Truck className="size-4" />
-            Suppliers
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {suppliers.map((sup, idx) => (
-            <div
-              key={sup.id}
-              className="bg-background flex items-center gap-2 rounded-lg border px-3 py-2"
-            >
-              <Input
-                value={sup.name}
-                onChange={(e) => {
-                  const next = [...suppliers];
-                  next[idx] = { ...sup, name: e.target.value };
-                  setSuppliers(next);
-                }}
-                className="h-7 flex-1 border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
-              />
-              <span className="text-muted-foreground truncate text-xs">
-                {sup.email ?? ""}
-              </span>
-              <span className="text-muted-foreground text-[10px]">
-                {sup.paymentTerms ?? ""}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-destructive h-7 w-7 p-0"
-                onClick={() =>
-                  setSuppliers(suppliers.filter((_, i) => i !== idx))
-                }
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Input
-              value={newSup}
-              onChange={(e) => setNewSup(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && newSup.trim()) {
-                  setSuppliers([
-                    ...suppliers,
-                    { id: nextId("sup"), name: newSup.trim() },
-                  ]);
-                  setNewSup("");
-                }
-              }}
-              placeholder="Add supplier..."
-              className="h-8 text-sm"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 shrink-0"
-              disabled={!newSup.trim()}
-              onClick={() => {
-                setSuppliers([
-                  ...suppliers,
-                  { id: nextId("sup"), name: newSup.trim() },
-                ]);
-                setNewSup("");
-              }}
-            >
-              <Plus className="size-3.5" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <SupplierSection
+        suppliers={suppliers}
+        onUpdate={setSuppliers}
+        nextId={nextId}
+      />
 
       {/* Brands */}
       <Card>
@@ -480,5 +431,461 @@ export function RetailSettings() {
         </Button>
       </div>
     </div>
+  );
+}
+
+// ── Supplier Section ─────────────────────────────────────────────────
+
+function emptySupplier(id: string): RetailSupplier {
+  return { id, name: "", status: "active" };
+}
+
+function SupplierSection({
+  suppliers,
+  onUpdate,
+  nextId,
+}: {
+  suppliers: RetailSupplier[];
+  onUpdate: (s: RetailSupplier[]) => void;
+  nextId: (prefix: string) => string;
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<RetailSupplier | null>(null);
+  const [form, setForm] = useState<RetailSupplier>(emptySupplier(""));
+  const [showPassword, setShowPassword] = useState(false);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptySupplier(nextId("sup")));
+    setShowPassword(false);
+    setModalOpen(true);
+  };
+
+  const openEdit = (sup: RetailSupplier) => {
+    setEditing(sup);
+    setForm({ ...sup });
+    setShowPassword(false);
+    setModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.name.trim()) {
+      toast.error("Supplier name is required");
+      return;
+    }
+    if (editing) {
+      onUpdate(suppliers.map((s) => (s.id === editing.id ? form : s)));
+      toast.success(`"${form.name}" updated`);
+    } else {
+      onUpdate([...suppliers, form]);
+      toast.success(`"${form.name}" added`);
+    }
+    setModalOpen(false);
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
+
+  return (
+    <>
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50 pb-3">
+          <CardTitle className="flex items-center gap-2.5 text-sm">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-indigo-100">
+              <Truck className="size-4 text-indigo-700" />
+            </div>
+            Suppliers
+            <Badge variant="secondary" className="text-[10px]">
+              {suppliers.length}
+            </Badge>
+          </CardTitle>
+          <Button size="sm" className="gap-1.5" onClick={openCreate}>
+            <Plus className="size-3.5" />
+            Add Supplier
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {suppliers.length === 0 ? (
+            <div className="flex flex-col items-center py-10 text-center">
+              <Truck className="text-muted-foreground/30 size-10" />
+              <p className="text-muted-foreground mt-2 text-sm">
+                No suppliers yet
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {suppliers.map((sup) => (
+                <div
+                  key={sup.id}
+                  className="group flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-slate-50/50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold">{sup.name}</p>
+                      {sup.status === "inactive" && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Inactive
+                        </Badge>
+                      )}
+                      {sup.orderingPortalUrl && (
+                        <Badge variant="outline" className="gap-1 text-[10px]">
+                          <KeyRound className="size-2.5" />
+                          Portal
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-3 text-xs">
+                      {sup.contactPerson && (
+                        <span className="flex items-center gap-1">
+                          <User className="size-3" />
+                          {sup.contactPerson}
+                        </span>
+                      )}
+                      {sup.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="size-3" />
+                          {sup.email}
+                        </span>
+                      )}
+                      {sup.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="size-3" />
+                          {sup.phone}
+                        </span>
+                      )}
+                      {sup.paymentTerms && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {sup.paymentTerms}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => openEdit(sup)}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        onUpdate(suppliers.filter((s) => s.id !== sup.id));
+                        toast.success(`"${sup.name}" removed`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Supplier Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editing ? "Edit Supplier" : "Add Supplier"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[65vh] space-y-5 overflow-y-auto py-1 pr-1">
+            {/* Company */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                Company
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Supplier Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="e.g. PawNutrition Inc."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Website</Label>
+                  <div className="relative">
+                    <Globe className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                    <Input
+                      value={form.website ?? ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          website: e.target.value || undefined,
+                        })
+                      }
+                      placeholder="https://..."
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Address</Label>
+                <Input
+                  value={form.address ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, address: e.target.value || undefined })
+                  }
+                  placeholder="Street address, city, state, zip"
+                />
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                Contact Person
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Name</Label>
+                  <div className="relative">
+                    <User className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                    <Input
+                      value={form.contactPerson ?? ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          contactPerson: e.target.value || undefined,
+                        })
+                      }
+                      placeholder="Contact name"
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Phone</Label>
+                  <div className="relative">
+                    <Phone className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                    <Input
+                      value={form.phone ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, phone: e.target.value || undefined })
+                      }
+                      placeholder="(555) 000-0000"
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Email</Label>
+                  <div className="relative">
+                    <Mail className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                    <Input
+                      value={form.email ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, email: e.target.value || undefined })
+                      }
+                      placeholder="email@supplier.com"
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ordering Portal */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                Ordering Portal
+              </p>
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Portal URL</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <ExternalLink className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                      <Input
+                        value={form.orderingPortalUrl ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            orderingPortalUrl: e.target.value || undefined,
+                          })
+                        }
+                        placeholder="https://portal.supplier.com"
+                        className="pl-8"
+                      />
+                    </div>
+                    {form.orderingPortalUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() =>
+                          window.open(form.orderingPortalUrl, "_blank")
+                        }
+                      >
+                        <ExternalLink className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Username</Label>
+                    <div className="flex gap-1.5">
+                      <Input
+                        value={form.orderingPortalUsername ?? ""}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            orderingPortalUsername: e.target.value || undefined,
+                          })
+                        }
+                        placeholder="Username"
+                      />
+                      {form.orderingPortalUsername && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 shrink-0"
+                          onClick={() =>
+                            copyToClipboard(
+                              form.orderingPortalUsername!,
+                              "Username",
+                            )
+                          }
+                        >
+                          <Copy className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Password</Label>
+                    <div className="flex gap-1.5">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={form.orderingPortalPassword ?? ""}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              orderingPortalPassword:
+                                e.target.value || undefined,
+                            })
+                          }
+                          placeholder="Password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-muted-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-3.5" />
+                          ) : (
+                            <Eye className="size-3.5" />
+                          )}
+                        </button>
+                      </div>
+                      {form.orderingPortalPassword && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 shrink-0"
+                          onClick={() =>
+                            copyToClipboard(
+                              form.orderingPortalPassword!,
+                              "Password",
+                            )
+                          }
+                        >
+                          <Copy className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment & Notes */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                Payment & Notes
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Payment Terms</Label>
+                  <Select
+                    value={form.paymentTerms ?? ""}
+                    onValueChange={(v) =>
+                      setForm({ ...form, paymentTerms: v || undefined })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="COD">COD</SelectItem>
+                      <SelectItem value="Net 15">Net 15</SelectItem>
+                      <SelectItem value="Net 30">Net 30</SelectItem>
+                      <SelectItem value="Net 60">Net 60</SelectItem>
+                      <SelectItem value="Prepaid">Prepaid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Status</Label>
+                  <Select
+                    value={form.status ?? "active"}
+                    onValueChange={(v) =>
+                      setForm({
+                        ...form,
+                        status: v as "active" | "inactive",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Notes</Label>
+                <Textarea
+                  value={form.notes ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, notes: e.target.value || undefined })
+                  }
+                  placeholder="Special instructions, minimum orders, etc."
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              {editing ? "Save Changes" : "Add Supplier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
