@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Plus, User, Calendar, ShoppingBag, Zap } from "lucide-react";
+import { Plus, User, Calendar, ShoppingBag, Zap, FileText } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -181,6 +181,20 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
             >
               <ShoppingBag className="mr-2 size-4" />
               Retail Sale
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                localStorage.setItem("booking-modal-mode", "estimate");
+                openBookingModal({
+                  clients: clients.filter((c) => c.facility === facility.name),
+                  facilityId: facilityId,
+                  facilityName: facility.name,
+                  onCreateBooking: handleCreateBooking,
+                });
+              }}
+            >
+              <FileText className="mr-2 size-4" />
+              New Estimate
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
               <Zap className="mr-2 size-4" />
