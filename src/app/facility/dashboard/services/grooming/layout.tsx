@@ -13,6 +13,7 @@ import {
   LogIn,
   LogOut,
   FileText,
+  DollarSign,
 } from "lucide-react";
 
 const tabs = [
@@ -45,6 +46,11 @@ const tabs = [
     name: "Inventory",
     href: "/facility/dashboard/services/grooming/inventory",
     icon: BoxesIcon,
+  },
+  {
+    name: "Rates",
+    href: "/facility/dashboard/services/grooming/rates",
+    icon: DollarSign,
   },
   {
     name: "Report Cards",
