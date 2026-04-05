@@ -17,8 +17,12 @@ export interface RetailSupplier {
   phone?: string;
   address?: string;
   website?: string;
+  orderingPortalUrl?: string;
+  orderingPortalUsername?: string;
+  orderingPortalPassword?: string;
   notes?: string;
   paymentTerms?: string;
+  status?: "active" | "inactive";
 }
 
 export interface RetailBrand {
@@ -115,7 +119,12 @@ export const retailConfig: RetailConfig = {
       contactPerson: "Lisa Chen",
       email: "orders@pawnutrition.com",
       phone: "(555) 200-1000",
+      website: "https://pawnutrition.com",
+      orderingPortalUrl: "https://portal.pawnutrition.com",
+      orderingPortalUsername: "pawcare_facility",
+      orderingPortalPassword: "pn2024secure",
       paymentTerms: "Net 30",
+      status: "active" as const,
     },
     {
       id: "sup-2",
@@ -123,7 +132,9 @@ export const retailConfig: RetailConfig = {
       contactPerson: "Mark Davis",
       email: "sales@pettoyswholesale.com",
       phone: "(555) 200-2000",
+      website: "https://pettoyswholesale.com",
       paymentTerms: "Net 15",
+      status: "active" as const,
     },
     {
       id: "sup-3",
@@ -131,7 +142,13 @@ export const retailConfig: RetailConfig = {
       contactPerson: "Sarah Kim",
       email: "info@happypawsdist.com",
       phone: "(555) 200-3000",
+      address: "456 Distribution Way, Los Angeles, CA 90012",
+      website: "https://happypawsdist.com",
+      orderingPortalUrl: "https://order.happypawsdist.com",
+      orderingPortalUsername: "pawcare2024",
+      orderingPortalPassword: "hpd_access!",
       paymentTerms: "COD",
+      status: "active" as const,
     },
     {
       id: "sup-4",
@@ -139,7 +156,10 @@ export const retailConfig: RetailConfig = {
       contactPerson: "Tom Wright",
       email: "orders@greenpet.com",
       phone: "(555) 200-4000",
+      website: "https://greenpetsupply.com",
       paymentTerms: "Net 30",
+      notes: "Eco-friendly products only. Minimum order $200.",
+      status: "active" as const,
     },
   ],
   brands: [
