@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, X, Pill, Clock, ShieldAlert, PillBottle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { facilityConfig } from "@/data/facility-config";
 import type { MedicationItem, MedForm, MedFrequency } from "@/types/booking";
 
 interface PetOption {
@@ -44,12 +45,8 @@ const MED_FREQUENCIES: { value: MedFrequency; label: string }[] = [
   { value: "prn", label: "As needed" },
 ];
 
-const QUICK_TIMES = [
-  { label: "Morning", time: "08:00" },
-  { label: "Noon", time: "12:00" },
-  { label: "Evening", time: "18:00" },
-  { label: "Bedtime", time: "20:00" },
-];
+// Read from facility config (editable in Settings > Care Tasks)
+const QUICK_TIMES = facilityConfig.medicationOptions.quickTimes;
 
 const HIGH_RISK_KEYWORDS = [
   "insulin",
