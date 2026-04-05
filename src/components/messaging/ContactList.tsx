@@ -10,8 +10,16 @@ import {
   X,
   AlertCircle,
   Smartphone,
+  ChevronRight,
+  RefreshCw,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -19,11 +27,26 @@ import { facilities } from "@/data/facilities";
 // SMS credits
 const facility = facilities.find((f) => f.id === 11);
 const credits = (facility as Record<string, unknown>)?.smsCredits as
-  | { monthlyAllowance: number; used: number; purchased: number }
+  | {
+      monthlyAllowance: number;
+      used: number;
+      purchased: number;
+      autoReload: boolean;
+      autoReloadThreshold: number;
+      autoReloadAmount: number;
+    }
   | undefined;
-const smsRemaining = credits
-  ? credits.monthlyAllowance + (credits.purchased ?? 0) - credits.used
+const smsTotal = credits
+  ? credits.monthlyAllowance + (credits.purchased ?? 0)
   : 0;
+const smsRemaining = credits ? smsTotal - credits.used : 0;
+
+const SMS_PACKAGES = [
+  { amount: 100, price: 5 },
+  { amount: 500, price: 20 },
+  { amount: 1000, price: 35 },
+  { amount: 5000, price: 150 },
+];
 
 export interface Thread {
   threadId: string;
@@ -177,43 +200,138 @@ export function ContactList({
 
       {/* SMS credits strip */}
       {credits && !compose && (
-        <div className="mx-4 mb-1 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5">
-          <Smartphone className="size-3 text-slate-400" />
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-medium text-slate-500">
-                SMS Credits
-              </span>
-              <span
-                className={cn(
-                  "text-[10px] font-bold tabular-nums",
-                  smsRemaining > 500
-                    ? "text-emerald-600"
-                    : smsRemaining > 100
-                      ? "text-amber-600"
-                      : "text-red-600",
-                )}
-              >
-                {smsRemaining.toLocaleString()} left
-              </span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="mx-4 mb-1 flex w-[calc(100%-2rem)] items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-left transition-colors hover:bg-slate-100"
+            >
+              <Smartphone className="size-3.5 text-slate-400" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-slate-500">
+                    SMS Credits
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold tabular-nums",
+                      smsRemaining > 500
+                        ? "text-emerald-600"
+                        : smsRemaining > 100
+                          ? "text-amber-600"
+                          : "text-red-600",
+                    )}
+                  >
+                    {smsRemaining.toLocaleString()} left
+                  </span>
+                </div>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      smsRemaining > 500
+                        ? "bg-emerald-500"
+                        : smsRemaining > 100
+                          ? "bg-amber-500"
+                          : "bg-red-500",
+                    )}
+                    style={{
+                      width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <ChevronRight className="size-3 text-slate-300" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 p-0">
+            {/* Credit breakdown */}
+            <div className="border-b px-4 py-3">
+              <h4 className="text-sm font-bold text-slate-800">SMS Credits</h4>
+              <div className="mt-2 space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Monthly allowance</span>
+                  <span className="font-semibold tabular-nums">
+                    {credits.monthlyAllowance.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Purchased</span>
+                  <span className="font-semibold tabular-nums">
+                    {credits.purchased.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-1.5">
+                  <span className="text-slate-500">Total</span>
+                  <span className="font-bold tabular-nums">
+                    {smsTotal.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Used</span>
+                  <span className="font-semibold text-red-500 tabular-nums">
+                    -{credits.used.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-1.5">
+                  <span className="font-medium text-slate-700">Remaining</span>
+                  <span
+                    className={cn(
+                      "font-bold tabular-nums",
+                      smsRemaining > 500
+                        ? "text-emerald-600"
+                        : smsRemaining > 100
+                          ? "text-amber-600"
+                          : "text-red-600",
+                    )}
+                  >
+                    {smsRemaining.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              {credits.autoReload && (
+                <div className="mt-2 flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1">
+                  <RefreshCw className="size-3 text-emerald-600" />
+                  <span className="text-[10px] text-emerald-700">
+                    Auto-reload: {credits.autoReloadAmount} credits when below{" "}
+                    {credits.autoReloadThreshold}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  smsRemaining > 500
-                    ? "bg-emerald-500"
-                    : smsRemaining > 100
-                      ? "bg-amber-500"
-                      : "bg-red-500",
-                )}
-                style={{
-                  width: `${Math.min(100, (smsRemaining / (credits.monthlyAllowance + (credits.purchased ?? 0))) * 100)}%`,
-                }}
-              />
+
+            {/* Buy more */}
+            <div className="px-4 py-3">
+              <p className="mb-2 text-xs font-semibold text-slate-700">
+                Buy More Credits
+              </p>
+              <div className="space-y-1.5">
+                {SMS_PACKAGES.map((pkg) => (
+                  <button
+                    key={pkg.amount}
+                    type="button"
+                    onClick={() =>
+                      toast.success(
+                        `${pkg.amount} SMS credits purchased for $${pkg.price}`,
+                      )
+                    }
+                    className="flex w-full items-center justify-between rounded-lg border px-3 py-2 transition-colors hover:border-blue-200 hover:bg-blue-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="size-3.5 text-blue-500" />
+                      <span className="text-xs font-semibold text-slate-700">
+                        {pkg.amount.toLocaleString()} SMS
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600">
+                      ${pkg.price}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
+          </PopoverContent>
+        </Popover>
       )}
 
       {/* Search */}
