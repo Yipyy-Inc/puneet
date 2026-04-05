@@ -1160,3 +1160,53 @@ export interface FacilitySubscription {
   createdAt: string;
   updatedAt: string;
 }
+
+// ============================================================================
+// Weather Warning Rules
+// ============================================================================
+
+export const weatherConditionEnum = z.enum([
+  "temperature_below",
+  "temperature_above",
+  "feels_like_below",
+  "feels_like_above",
+  "wind_speed_above",
+  "weather_is",
+  "precipitation_probability_above",
+]);
+export type WeatherCondition = z.infer<typeof weatherConditionEnum>;
+
+export const weatherTypeEnum = z.enum([
+  "clear",
+  "cloudy",
+  "rain",
+  "drizzle",
+  "snow",
+  "thunderstorm",
+  "fog",
+  "sleet",
+]);
+export type WeatherType = z.infer<typeof weatherTypeEnum>;
+
+export const weatherWarningSeverityEnum = z.enum([
+  "info",
+  "warning",
+  "critical",
+]);
+export type WeatherWarningSeverity = z.infer<typeof weatherWarningSeverityEnum>;
+
+export const weatherWarningRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  condition: weatherConditionEnum,
+  value: z.union([z.number(), z.string()]),
+  severity: weatherWarningSeverityEnum,
+  message: z.string(),
+  autoAction: z.string().optional(),
+  isActive: z.boolean(),
+  appliesToAreas: z.array(
+    z.enum(["outdoor_park", "indoor_area", "covered_patio", "pool", "all"]),
+  ),
+  createdAt: z.string(),
+});
+export type WeatherWarningRule = z.infer<typeof weatherWarningRuleSchema>;

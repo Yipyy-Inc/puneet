@@ -9,6 +9,7 @@ import {
   evaluationConfig,
   evaluationFormTemplate as defaultEvalFormTemplate,
   evaluationReportCardConfig,
+  weatherWarningRules as defaultWeatherRules,
   businessHours,
   businessProfile,
   bookingRules,
@@ -29,6 +30,7 @@ import type {
   EvaluationConfig,
   EvaluationFormTemplate,
   EvaluationReportCardConfig,
+  WeatherWarningRule,
   BusinessHours,
   BusinessProfile,
   BookingRules,
@@ -65,6 +67,7 @@ interface SettingsContextValue {
   tipConfig: TipConfig;
   integrations: Integration[];
   addons: ModuleAddon[];
+  weatherRules: WeatherWarningRule[];
   holidays: Array<{ month: number; day: number; name: string }>;
   updateDaycare: (config: ModuleConfig) => void;
   updateBoarding: (config: ModuleConfig) => void;
@@ -86,6 +89,7 @@ interface SettingsContextValue {
   updateTipConfig: (config: TipConfig) => void;
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
+  updateWeatherRules: (rules: WeatherWarningRule[]) => void;
   resetModules: () => void;
 }
 
@@ -194,6 +198,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [addons, setAddons] = useState<ModuleAddon[]>(() =>
     loadStored("settings-addons", moduleAddons),
   );
+  const [weatherRulesData, setWeatherRulesData] = useState<
+    WeatherWarningRule[]
+  >(() => loadStored("settings-weather-rules", defaultWeatherRules));
 
   const updateDaycare = (config: ModuleConfig) => {
     setDaycare(config);
@@ -295,6 +302,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAddons(addons);
     localStorage.setItem("settings-addons", JSON.stringify(addons));
   };
+  const updateWeatherRules = (rules: WeatherWarningRule[]) => {
+    setWeatherRulesData(rules);
+    localStorage.setItem("settings-weather-rules", JSON.stringify(rules));
+  };
 
   const resetModules = () => {
     setDaycare(daycareConfig);
@@ -317,6 +328,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setTipConfigData(defaultTipConfig);
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
+    setWeatherRulesData(defaultWeatherRules);
     localStorage.removeItem("settings-daycare");
     localStorage.removeItem("settings-boarding");
     localStorage.removeItem("settings-grooming");
@@ -337,6 +349,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-tip-config");
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
+    localStorage.removeItem("settings-weather-rules");
   };
 
   return (
@@ -362,6 +375,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         tipConfig: tipConfigData,
         integrations: integrationsData,
         addons,
+        weatherRules: weatherRulesData,
         holidays: facilityHolidays,
         updateDaycare,
         updateBoarding,
@@ -383,6 +397,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateTipConfig,
         updateIntegrations,
         updateAddons,
+        updateWeatherRules,
         resetModules,
       }}
     >

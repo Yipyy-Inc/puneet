@@ -43,6 +43,13 @@ const AddOnsSettings = dynamic(
     ),
   { ssr: false },
 );
+const WeatherWarningSettings = dynamic(
+  () =>
+    import("@/components/facility/WeatherWarningSettings").then(
+      (mod) => mod.WeatherWarningSettings,
+    ),
+  { ssr: false },
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -3570,6 +3577,13 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* Weather Warnings */}
+          {activeSection === "weather" && (
+            <div className="space-y-6">
+              <WeatherWarningSettings />
             </div>
           )}
 
