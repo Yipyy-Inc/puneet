@@ -141,7 +141,7 @@ export function ContactList({
   }, [threads, filter, search]);
 
   return (
-    <div className="flex h-full w-[360px] shrink-0 flex-col border-r bg-white">
+    <div className="flex h-full w-80 shrink-0 flex-col border-r bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
         <h1 className="text-xl font-bold text-slate-900">Chats</h1>
