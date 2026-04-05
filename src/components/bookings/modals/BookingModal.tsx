@@ -120,13 +120,6 @@ export function BookingModal({
     }
   }
 
-  // Walk-in clients added during this session
-  const [walkInClients, setWalkInClients] = useState<Client[]>([]);
-  const allClients = useMemo(
-    () => [...clients, ...walkInClients],
-    [clients, walkInClients],
-  );
-
   // Staff options for assignment
   const staffOptions = [
     { value: "Mike Chen", label: "Mike Chen" },
@@ -344,19 +337,19 @@ export function BookingModal({
 
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return allClients;
+    if (!searchQuery.trim()) return clients;
     const query = searchQuery.toLowerCase();
-    return allClients.filter(
+    return clients.filter(
       (client) =>
         client.name.toLowerCase().includes(query) ||
         client.email.toLowerCase().includes(query) ||
         client.phone?.includes(query),
     );
-  }, [allClients, searchQuery]);
+  }, [clients, searchQuery]);
 
   const selectedClient = useMemo(() => {
-    return allClients.find((c) => c.id === selectedClientId);
-  }, [allClients, selectedClientId]);
+    return clients.find((c) => c.id === selectedClientId);
+  }, [clients, selectedClientId]);
 
   const petHasValidEvaluation = useCallback((pet: Pet) => {
     const evals: Evaluation[] = pet.evaluations ?? [];
@@ -730,7 +723,6 @@ export function BookingModal({
     setCurrentSubStep(0);
     setHighestStepReached(0);
     setSearchQuery("");
-    setWalkInClients([]);
     setSelectedClientId(null);
     setSelectedPetIds([]);
     setDaycareSelectedDates([]);
@@ -1726,9 +1718,6 @@ export function BookingModal({
                     preSelectedClientId={preSelectedClientId}
                     selectedService={selectedService}
                     configs={configs}
-                    onWalkInClient={(client) =>
-                      setWalkInClients((prev) => [...prev, client])
-                    }
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
