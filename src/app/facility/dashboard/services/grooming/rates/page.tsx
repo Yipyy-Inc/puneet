@@ -1,64 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { DollarSign, Scissors, Plus } from "lucide-react";
+import { DollarSign, Scissors } from "lucide-react";
+import { groomingPackages } from "@/data/grooming";
 import { PricingRulesPanel } from "@/components/facility/PricingRulesPanel";
-
-const GROOMING_RATES = [
-  {
-    id: "bath-brush",
-    name: "Bath & Brush",
-    price: 40,
-    duration: 45,
-    isActive: true,
-  },
-  {
-    id: "full-groom",
-    name: "Full Groom",
-    price: 65,
-    duration: 90,
-    isActive: true,
-  },
-  {
-    id: "puppy-groom",
-    name: "Puppy Groom",
-    price: 35,
-    duration: 30,
-    isActive: true,
-  },
-  {
-    id: "hand-stripping",
-    name: "Hand Stripping",
-    price: 95,
-    duration: 120,
-    isActive: true,
-  },
-  {
-    id: "deshedding",
-    name: "De-shedding Treatment",
-    price: 55,
-    duration: 60,
-    isActive: true,
-  },
-];
+import Link from "next/link";
 
 export default function GroomingRatesPage() {
-  const [rates, setRates] = useState(GROOMING_RATES);
+  const activeCount = groomingPackages.filter((p) => p.isActive).length;
+  const avgPrice = Math.round(
+    groomingPackages.reduce((s, p) => s + p.basePrice, 0) /
+      groomingPackages.length,
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
         <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          Grooming Rates & Pricing
+          Grooming Pricing & Rules
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Configure package rates, discounts, and fee rules for grooming
-          services
+          View package pricing and configure discounts and fee rules
         </p>
       </div>
 
@@ -72,10 +36,10 @@ export default function GroomingRatesPage() {
                   Active Packages
                 </p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">
-                  {rates.filter((r) => r.isActive).length}
+                  {activeCount}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  of {rates.length} total
+                  of {groomingPackages.length} total
                 </p>
               </div>
               <div className="flex size-12 items-center justify-center rounded-2xl bg-violet-50">
@@ -92,10 +56,7 @@ export default function GroomingRatesPage() {
                   Avg. Package Price
                 </p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">
-                  $
-                  {Math.round(
-                    rates.reduce((s, r) => s + r.price, 0) / rates.length,
-                  )}
+                  ${avgPrice}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   across all packages
@@ -109,57 +70,70 @@ export default function GroomingRatesPage() {
         </Card>
       </div>
 
-      {/* Package Rates */}
+      {/* Package prices overview (read-only, links to Packages tab for editing) */}
       <Card className="overflow-hidden transition-shadow hover:shadow-md">
-        <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
-          <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
+        <div className="flex items-center justify-between border-b bg-slate-50/50 px-5 py-3">
+          <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
               <Scissors className="size-4 text-violet-700" />
             </div>
-            Package Rates
-          </CardTitle>
-          <Button size="sm" className="gap-1.5">
-            <Plus className="size-3.5" />
-            Add Package
-          </Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {rates.map((rate) => (
-              <div
-                key={rate.id}
-                className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-slate-50/50"
-              >
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="text-sm font-medium">{rate.name}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {rate.duration} min
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="text-xs tabular-nums">
-                    ${rate.price}
-                  </Badge>
-                  <Switch
-                    checked={rate.isActive}
-                    onCheckedChange={(c) =>
-                      setRates((prev) =>
-                        prev.map((r) =>
-                          r.id === rate.id ? { ...r, isActive: c } : r,
-                        ),
-                      )
-                    }
-                  />
+            <div>
+              <p className="text-sm font-semibold">Package Prices</p>
+              <p className="text-muted-foreground text-[11px]">
+                Edit prices in the{" "}
+                <Link
+                  href="/facility/dashboard/services/grooming/packages"
+                  className="text-primary underline"
+                >
+                  Packages
+                </Link>{" "}
+                tab
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="divide-y">
+          {groomingPackages.map((pkg) => (
+            <div
+              key={pkg.id}
+              className="flex items-center justify-between px-5 py-3 transition-colors hover:bg-slate-50/50"
+            >
+              <div className="flex items-center gap-3">
+                <div>
+                  <p className="text-sm font-medium">{pkg.name}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {pkg.duration} min
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
+              <div className="flex items-center gap-3">
+                {pkg.sizePricing && (
+                  <div className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                    <span>S ${pkg.sizePricing.small}</span>
+                    <span>·</span>
+                    <span>M ${pkg.sizePricing.medium}</span>
+                    <span>·</span>
+                    <span>L ${pkg.sizePricing.large}</span>
+                    <span>·</span>
+                    <span>XL ${pkg.sizePricing.giant}</span>
+                  </div>
+                )}
+                <Badge variant="outline" className="text-xs tabular-nums">
+                  ${pkg.basePrice}
+                </Badge>
+                <Badge
+                  variant={pkg.isActive ? "default" : "secondary"}
+                  className="text-[10px]"
+                >
+                  {pkg.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
 
-      {/* Pricing Rules — multi-pet, peak dates, custom fees (no time fees or 24h for grooming) */}
+      {/* Pricing Rules */}
       <PricingRulesPanel
         serviceType="grooming"
         showSections={["stacking", "multi_pet", "custom_fees"]}
