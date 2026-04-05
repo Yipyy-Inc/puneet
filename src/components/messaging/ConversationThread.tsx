@@ -4,13 +4,11 @@ import { useRef, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Phone,
-  Mail,
   Video,
-  Star,
   MoreHorizontal,
   MessageSquare,
-  PanelRightOpen,
   PanelRightClose,
+  Info,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,24 +17,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ChannelBadge } from "./ChannelBadge";
 import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
 
-const AVATAR_COLORS = [
-  "bg-amber-100 text-amber-700",
-  "bg-blue-100 text-blue-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-violet-100 text-violet-700",
+const COLORS = [
+  "bg-rose-500",
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-violet-500",
 ];
 
-function getAvatarColor(name: string) {
-  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+function avatarColor(name: string) {
+  return COLORS[name.charCodeAt(0) % COLORS.length];
 }
 
-function getInitials(name: string) {
+function initials(name: string) {
   return name
     .split(" ")
     .map((n) => n[0])
@@ -71,7 +68,6 @@ export function ConversationThread({
   const clientId = threadMessages[0]?.clientId;
   const client = clientId ? clients.find((c) => c.id === clientId) : null;
   const clientName = client?.name ?? threadMessages[0]?.from ?? "Unknown";
-  const channels = [...new Set(threadMessages.map((m) => m.type))];
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -82,21 +78,19 @@ export function ConversationThread({
 
   if (!threadId) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-slate-50/30">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-slate-100">
-          <MessageSquare className="size-7 text-slate-400" />
+      <div className="flex flex-1 flex-col items-center justify-center bg-slate-50">
+        <div className="flex size-20 items-center justify-center rounded-full bg-slate-100">
+          <MessageSquare className="size-9 text-slate-300" />
         </div>
-        <h3 className="mt-4 text-lg font-semibold text-slate-700">
-          Select a conversation
-        </h3>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Choose a thread from the left or start a new message
+        <h3 className="mt-5 text-lg font-bold text-slate-700">Your Messages</h3>
+        <p className="mt-1 max-w-xs text-center text-sm text-slate-400">
+          Select a conversation from the left or start a new one
         </p>
       </div>
     );
   }
 
-  // Group messages by date
+  // Group by date
   const grouped: Array<
     { type: "date"; date: string } | { type: "msg"; msg: Message }
   > = [];
@@ -115,100 +109,90 @@ export function ConversationThread({
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-slate-50/20">
+    <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b bg-white px-5 py-3">
+      <div className="flex items-center justify-between border-b bg-white px-5 py-2.5">
         <div className="flex items-center gap-3">
           {(client as Record<string, unknown>)?.imageUrl ? (
             <img
               src={(client as Record<string, unknown>).imageUrl as string}
-              alt={clientName}
-              className="size-9 rounded-full object-cover"
+              alt=""
+              className="size-10 rounded-full object-cover"
             />
           ) : (
             <div
               className={cn(
-                "flex size-9 items-center justify-center rounded-full text-xs font-semibold",
-                getAvatarColor(clientName),
+                "flex size-10 items-center justify-center rounded-full text-sm font-bold text-white",
+                avatarColor(clientName),
               )}
             >
-              {getInitials(clientName)}
+              {initials(clientName)}
             </div>
           )}
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">{clientName}</h3>
-              {channels.map((ch) => (
-                <ChannelBadge key={ch} channel={ch} size="xs" />
-              ))}
-            </div>
-            {client?.phone && (
-              <a
-                href={`tel:${client.phone}`}
-                className="text-muted-foreground text-xs hover:underline"
-              >
-                {client.phone}
-              </a>
-            )}
+            <h3 className="text-sm font-bold text-slate-800">{clientName}</h3>
+            <p className="text-[11px] text-slate-400">
+              {client?.phone ?? client?.email ?? "Online"}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          {client?.phone && (
-            <Button variant="ghost" size="icon" className="size-8" asChild>
-              <a href={`tel:${client.phone}`}>
-                <Phone className="size-4" />
-              </a>
-            </Button>
-          )}
-          {client?.email && (
-            <Button variant="ghost" size="icon" className="size-8" asChild>
-              <a href={`mailto:${client.email}`}>
-                <Mail className="size-4" />
-              </a>
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" className="size-8">
-            <Video className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="size-8">
-            <Star className="size-4" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>View client profile</DropdownMenuItem>
-              <DropdownMenuItem>View booking history</DropdownMenuItem>
-              <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-              <DropdownMenuItem>Archive</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="border-border ml-1 h-6 border-l" />
+        <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
+            className="size-9 rounded-full text-slate-500 hover:text-slate-800"
+          >
+            <Phone className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full text-slate-500 hover:text-slate-800"
+          >
+            <Video className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full text-slate-500 hover:text-slate-800"
             onClick={onToggleDetail}
           >
             {detailOpen ? (
               <PanelRightClose className="size-4" />
             ) : (
-              <PanelRightOpen className="size-4" />
+              <Info className="size-4" />
             )}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-full text-slate-500"
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>View client profile</DropdownMenuItem>
+              <DropdownMenuItem>Booking history</DropdownMenuItem>
+              <DropdownMenuItem>Mark as unread</DropdownMenuItem>
+              <DropdownMenuItem>Archive</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
-        <div className="mx-auto max-w-2xl space-y-1">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto bg-slate-50 px-5 py-4"
+      >
+        <div className="mx-auto max-w-2xl space-y-0.5">
           {grouped.map((item, i) =>
             item.type === "date" ? (
-              <DateSeparator key={`date-${i}`} date={item.date} />
+              <DateSeparator key={`d-${i}`} date={item.date} />
             ) : (
               <MessageBubble
                 key={item.msg.id}
