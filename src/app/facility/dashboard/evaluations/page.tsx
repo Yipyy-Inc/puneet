@@ -27,6 +27,7 @@ interface EvalEntry {
   petName: string;
   petType: string;
   petBreed: string;
+  petImage?: string;
   clientId: number;
   clientName: string;
 }
@@ -44,6 +45,7 @@ function getAllEvaluations(): EvalEntry[] {
           petName: pet.name,
           petType: pet.type,
           petBreed: pet.breed,
+          petImage: pet.imageUrl,
           clientId: client.id,
           clientName: client.name,
         });
@@ -297,10 +299,25 @@ export default function EvaluationsPage() {
                     className="group flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-slate-50/50"
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className={`flex size-10 items-center justify-center rounded-xl ${s.bgColor}`}
-                      >
-                        <Icon className={`size-4.5 ${s.iconColor}`} />
+                      <div className="relative">
+                        {entry.petImage ? (
+                          <img
+                            src={entry.petImage}
+                            alt={entry.petName}
+                            className="size-11 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={`flex size-11 items-center justify-center rounded-xl ${s.bgColor}`}
+                          >
+                            <Icon className={`size-5 ${s.iconColor}`} />
+                          </div>
+                        )}
+                        <div
+                          className={`absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full ring-2 ring-white ${s.bgColor}`}
+                        >
+                          <Icon className={`size-3 ${s.iconColor}`} />
+                        </div>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
