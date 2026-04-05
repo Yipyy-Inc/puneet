@@ -29,73 +29,86 @@ import type { WeatherWarningRule } from "@/types/facility";
 
 // ── WMO weather code mapping ─────────────────────────────────────────
 
-const WEATHER_ANIM = {
-  sun: "animate-[spin_20s_linear_infinite]",
-  pulse: "animate-[pulse_3s_ease-in-out_infinite]",
-  bounce: "animate-[bounce_4s_ease-in-out_infinite]",
-  float: "animate-[float_4s_ease-in-out_infinite]",
-  flash: "animate-[pulse_1.5s_ease-in-out_infinite]",
-  sway: "animate-[sway_3s_ease-in-out_infinite]",
-};
+function getAnimStyle(code: number): React.CSSProperties | undefined {
+  if (code === 0) return { animation: "spin 20s linear infinite" };
+  if (code <= 3) return { animation: "float 4s ease-in-out infinite" };
+  if (code <= 48) return { animation: "pulse 3s ease-in-out infinite" };
+  if (code <= 57) return { animation: "sway 3s ease-in-out infinite" };
+  if (code <= 67) return { animation: "sway 3s ease-in-out infinite" };
+  if (code <= 77) return { animation: "bounce 4s ease-in-out infinite" };
+  if (code <= 82) return { animation: "sway 3s ease-in-out infinite" };
+  if (code <= 86) return { animation: "bounce 4s ease-in-out infinite" };
+  if (code <= 99) return { animation: "pulse 1.5s ease-in-out infinite" };
+  return { animation: "float 4s ease-in-out infinite" };
+}
 
 function getWeatherIcon(code: number, size = "size-6", animated = false) {
-  const a = animated;
+  const style = animated ? getAnimStyle(code) : undefined;
   if (code === 0)
     return (
-      <Sun className={`${size} text-amber-500 ${a ? WEATHER_ANIM.sun : ""}`} />
+      <Sun
+        className={`${size} text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]`}
+        style={style}
+      />
     );
   if (code <= 3)
     return (
       <CloudSun
-        className={`${size} text-slate-500 ${a ? WEATHER_ANIM.float : ""}`}
+        className={`${size} text-amber-300 drop-shadow-sm`}
+        style={style}
       />
     );
   if (code <= 48)
     return (
       <CloudFog
-        className={`${size} text-slate-400 ${a ? WEATHER_ANIM.pulse : ""}`}
+        className={`${size} text-slate-400 drop-shadow-sm`}
+        style={style}
       />
     );
   if (code <= 57)
     return (
       <CloudDrizzle
-        className={`${size} text-blue-400 ${a ? WEATHER_ANIM.sway : ""}`}
+        className={`${size} text-sky-400 drop-shadow-sm`}
+        style={style}
       />
     );
   if (code <= 67)
     return (
       <CloudRain
-        className={`${size} text-blue-500 ${a ? WEATHER_ANIM.sway : ""}`}
+        className={`${size} text-blue-400 drop-shadow-[0_0_4px_rgba(96,165,250,0.3)]`}
+        style={style}
       />
     );
   if (code <= 77)
     return (
       <Snowflake
-        className={`${size} text-sky-400 ${a ? WEATHER_ANIM.bounce : ""}`}
+        className={`${size} text-sky-300 drop-shadow-[0_0_4px_rgba(125,211,252,0.4)]`}
+        style={style}
       />
     );
   if (code <= 82)
     return (
       <CloudRain
-        className={`${size} text-blue-600 ${a ? WEATHER_ANIM.sway : ""}`}
+        className={`${size} text-blue-500 drop-shadow-[0_0_4px_rgba(59,130,246,0.3)]`}
+        style={style}
       />
     );
   if (code <= 86)
     return (
       <CloudSnow
-        className={`${size} text-sky-500 ${a ? WEATHER_ANIM.bounce : ""}`}
+        className={`${size} text-sky-400 drop-shadow-sm`}
+        style={style}
       />
     );
   if (code <= 99)
     return (
       <CloudLightning
-        className={`${size} text-purple-500 ${a ? WEATHER_ANIM.flash : ""}`}
+        className={`${size} text-violet-400 drop-shadow-[0_0_6px_rgba(167,139,250,0.4)]`}
+        style={style}
       />
     );
   return (
-    <Cloud
-      className={`${size} text-slate-400 ${a ? WEATHER_ANIM.float : ""}`}
-    />
+    <Cloud className={`${size} text-slate-400 drop-shadow-sm`} style={style} />
   );
 }
 
@@ -140,12 +153,12 @@ function codeToWeatherType(
 }
 
 function getCardBg(code: number): string {
-  if (code === 0) return "bg-amber-50/50";
-  if (code <= 3) return "bg-slate-50/50";
-  if (code <= 48) return "bg-slate-50/50";
-  if (code <= 67) return "bg-blue-50/50";
-  if (code <= 86) return "bg-sky-50/50";
-  if (code <= 99) return "bg-purple-50/50";
+  if (code === 0) return "bg-amber-50/60 border-l-amber-300 border-l-3";
+  if (code <= 3) return "bg-slate-50/60 border-l-slate-300 border-l-3";
+  if (code <= 48) return "bg-slate-50/50 border-l-slate-300 border-l-3";
+  if (code <= 67) return "bg-blue-50/60 border-l-blue-300 border-l-3";
+  if (code <= 86) return "bg-sky-50/60 border-l-sky-300 border-l-3";
+  if (code <= 99) return "bg-violet-50/60 border-l-violet-300 border-l-3";
   return "";
 }
 
@@ -269,26 +282,6 @@ interface WeatherData {
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // ── Component ────────────────────────────────────────────────────────
-
-const weatherKeyframes = `
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
-}
-@keyframes sway {
-  0%, 100% { transform: translateX(0px) rotate(0deg); }
-  25% { transform: translateX(2px) rotate(2deg); }
-  75% { transform: translateX(-2px) rotate(-2deg); }
-}
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-`;
 
 export function WeatherWidget() {
   const { profile, weatherRules } = useSettings();
@@ -529,7 +522,6 @@ export function WeatherWidget() {
   // Full view
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: weatherKeyframes }} />
       <Card
         className={`overflow-hidden border-slate-200 transition-all duration-500 ${getCardBg(data.current.weatherCode)}`}
         style={{ animation: "slideIn 0.4s ease-out" }}
@@ -542,18 +534,18 @@ export function WeatherWidget() {
               {getWeatherIcon(data.current.weatherCode, "size-10", true)}
               <div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tabular-nums">
+                  <span className="text-4xl font-bold tracking-tight text-slate-800 tabular-nums">
                     {data.current.temperature}
                   </span>
                   <button
                     type="button"
                     onClick={toggleUnit}
-                    className="text-muted-foreground text-sm font-medium hover:text-slate-700"
+                    className="text-lg font-medium text-slate-400 transition-colors hover:text-slate-600"
                   >
                     {unitSymbol}
                   </button>
                 </div>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-semibold text-slate-700">
                   {getWeatherName(data.current.weatherCode)}
                 </p>
                 <p className="text-muted-foreground text-xs">
@@ -575,11 +567,11 @@ export function WeatherWidget() {
                     animation: `fadeSlideUp 0.3s ease-out ${i * 0.08}s both`,
                   }}
                 >
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-[10px] font-medium text-slate-400">
                     {formatTime(h.time)}
                   </span>
-                  {getWeatherIcon(h.weatherCode, "size-4", true)}
-                  <span className="text-xs font-medium tabular-nums">
+                  {getWeatherIcon(h.weatherCode, "size-5", true)}
+                  <span className="text-sm font-semibold text-slate-700 tabular-nums">
                     {Math.round(h.temperature)}°
                   </span>
                 </div>
@@ -668,9 +660,4 @@ export function WeatherWidget() {
       {showLog && <WeatherAlertLog />}
     </>
   );
-
-  // Wrap full view in fragment since we now return multiple elements
 }
-
-// Re-export for direct use
-export { WeatherAlertLog } from "@/components/facility/WeatherAlertLog";

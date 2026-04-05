@@ -1,14 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { facilities } from "@/data/facilities";
-
-const WeatherWidget = dynamic(
-  () =>
-    import("@/components/facility/WeatherWidget").then((m) => m.WeatherWidget),
-  { ssr: false },
-);
-
+import { WeatherWidget } from "@/components/facility/WeatherWidget";
 import { CheckInOutSection } from "@/components/facility/CheckInOutSection";
 import { GroomingSection } from "@/components/facility/GroomingSection";
 import { TrainingSection } from "@/components/facility/TrainingSection";
