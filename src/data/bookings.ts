@@ -24,6 +24,8 @@ export const bookings: Booking[] = [
     paymentStatus: "pending",
     kennel: "Kennel 3",
     specialRequests: "Buddy needs his blanket from home. Feed twice daily.",
+    includesEvaluation: true,
+    evaluationStatus: "pending",
     notificationEmail: true,
     notificationSMS: true,
     invoice: {

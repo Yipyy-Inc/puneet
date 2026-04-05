@@ -28,6 +28,8 @@ import {
   Sun,
   Eye,
   Search,
+  ClipboardCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { daycareCheckIns, DaycareCheckIn } from "@/data/daycare";
 import { clients } from "@/data/clients";
@@ -355,12 +357,23 @@ export function DaycareCheckInOutSection() {
     };
   };
 
-  const getServiceBadge = () => {
+  const getServiceBadge = (item?: DaycareCheckIn) => {
     return (
-      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-        <Sun className="mr-1 size-3" />
-        Daycare
-      </Badge>
+      <div className="flex flex-wrap gap-1">
+        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <Sun className="mr-1 size-3" />
+          Daycare
+        </Badge>
+        {item?.includesEvaluation && (
+          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+            <ClipboardCheck className="mr-1 size-3" />
+            Evaluation
+            {item.evaluationStatus === "completed" && (
+              <CheckCircle2 className="ml-1 size-3 text-green-600" />
+            )}
+          </Badge>
+        )}
+      </div>
     );
   };
 

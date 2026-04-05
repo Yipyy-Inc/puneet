@@ -209,6 +209,8 @@ export const boardingGuests: BoardingGuest[] = [
     ],
     notes: "Very friendly, loves fetch. Needs extra blanket at night.",
     createdAt: "2024-03-01T10:00:00",
+    includesEvaluation: true,
+    evaluationStatus: "pending" as const,
   },
   {
     id: "bg-002",

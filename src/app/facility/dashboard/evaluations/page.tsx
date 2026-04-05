@@ -16,10 +16,11 @@ import {
   User,
 } from "lucide-react";
 import { clients } from "@/data/clients";
+import { bookings } from "@/data/bookings";
 import { StaffEvaluationFormModal } from "@/components/evaluations/StaffEvaluationFormModal";
 import type { Evaluation } from "@/types/pet";
 
-// ── Flatten all evaluations from all clients ─────────────────────────
+// ── Flatten all evaluations from all clients + bundled bookings ──────
 
 interface EvalEntry {
   evaluation: Evaluation;
@@ -30,6 +31,8 @@ interface EvalEntry {
   petImage?: string;
   clientId: number;
   clientName: string;
+  bundledWith?: string;
+  bundledDate?: string;
 }
 
 function getAllEvaluations(): EvalEntry[] {
@@ -50,6 +53,43 @@ function getAllEvaluations(): EvalEntry[] {
           clientName: client.name,
         });
       }
+    }
+  }
+
+  // Also scan bookings with includesEvaluation
+  for (const booking of bookings) {
+    if (!booking.includesEvaluation) continue;
+    if (booking.evaluationStatus === "completed") continue;
+    const client = clients.find((c) => c.id === booking.clientId);
+    if (!client) continue;
+    const petIds = Array.isArray(booking.petId)
+      ? booking.petId
+      : [booking.petId];
+    for (const pid of petIds) {
+      const pet = client.pets.find((p) => p.id === pid);
+      if (!pet) continue;
+      // Skip if there's already a matching pending eval from the pet
+      const alreadyHas = entries.some(
+        (e) => e.petId === pid && e.evaluation.status === "pending",
+      );
+      if (alreadyHas) continue;
+      entries.push({
+        evaluation: {
+          id: `eval-booking-${booking.id}-${pid}`,
+          petId: pid,
+          status: "pending",
+        },
+        petId: pid,
+        petName: pet.name,
+        petType: pet.type,
+        petBreed: pet.breed,
+        petImage: pet.imageUrl,
+        clientId: client.id,
+        clientName: client.name,
+        bundledWith:
+          booking.service.charAt(0).toUpperCase() + booking.service.slice(1),
+        bundledDate: booking.startDate,
+      });
     }
   }
   return entries;
@@ -348,6 +388,13 @@ export default function EvaluationsPage() {
                             </span>
                           )}
                         </div>
+                        {entry.bundledWith && (
+                          <p className="mt-1 text-xs font-medium text-amber-700">
+                            Bundled with {entry.bundledWith}
+                            {entry.bundledDate &&
+                              ` — check-in ${formatDate(entry.bundledDate)}`}
+                          </p>
+                        )}
                         {entry.evaluation.notes && (
                           <p className="text-muted-foreground mt-1 line-clamp-1 max-w-md text-xs">
                             {entry.evaluation.notes}

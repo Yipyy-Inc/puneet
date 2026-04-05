@@ -105,6 +105,10 @@ export const boardingGuestSchema = z
     medications: z.array(medicationScheduleSchema),
     notes: z.string(),
     createdAt: z.string(),
+    includesEvaluation: z.boolean().optional(),
+    evaluationStatus: z
+      .enum(["pending", "in_progress", "completed", "skipped"])
+      .optional(),
   })
   .catchall(z.unknown());
 

@@ -37,6 +37,8 @@ import {
   Filter,
   AlertTriangle,
   CheckCircle,
+  CheckCircle2,
+  ClipboardCheck,
   CreditCard,
   MapPin,
   Mail,
@@ -90,6 +92,8 @@ interface UnifiedCheckIn {
   rateType?: string;
   petSize?: "small" | "medium" | "large" | "giant";
   price?: number;
+  includesEvaluation?: boolean;
+  evaluationStatus?: "pending" | "in_progress" | "completed" | "skipped";
 }
 
 function calculateDaycarePrice(rateType: string, petSize: string): number {
@@ -119,6 +123,8 @@ function normalizeToUnifiedCheckIn(
     totalNights: guest.totalNights,
     petSize: guest.petSize,
     price: guest.totalPrice,
+    includesEvaluation: guest.includesEvaluation,
+    evaluationStatus: guest.evaluationStatus,
   }));
 
   const daycareItems: UnifiedCheckIn[] = daycare.map((checkIn) => ({
@@ -138,6 +144,8 @@ function normalizeToUnifiedCheckIn(
     rateType: checkIn.rateType,
     petSize: checkIn.petSize,
     price: calculateDaycarePrice(checkIn.rateType, checkIn.petSize),
+    includesEvaluation: checkIn.includesEvaluation,
+    evaluationStatus: checkIn.evaluationStatus,
   }));
 
   return [...boardingItems, ...daycareItems];
@@ -698,29 +706,41 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
     });
   };
 
-  const getServiceBadge = (serviceType: string, _item?: UnifiedCheckIn) => {
-    if (serviceType === "daycare") {
-      return (
+  const getServiceBadge = (serviceType: string, item?: UnifiedCheckIn) => {
+    const serviceBadge =
+      serviceType === "daycare" ? (
         <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
           <Sun className="mr-1 size-3" />
           Daycare
         </Badge>
-      );
-    }
-    if (serviceType === "boarding") {
-      return (
+      ) : serviceType === "boarding" ? (
         <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
           <Bed className="mr-1 size-3" />
           Boarding
         </Badge>
+      ) : (
+        <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+          <PawPrint className="mr-1 size-3" />
+          {serviceType.charAt(0).toUpperCase() +
+            serviceType.slice(1).replace(/-/g, " ")}
+        </Badge>
       );
-    }
-    return (
-      <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
-        <PawPrint className="mr-1 size-3" />
-        {serviceType.charAt(0).toUpperCase() +
-          serviceType.slice(1).replace(/-/g, " ")}
+
+    const evalBadge = item?.includesEvaluation ? (
+      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+        <ClipboardCheck className="mr-1 size-3" />
+        Evaluation
+        {item.evaluationStatus === "completed" && (
+          <CheckCircle2 className="ml-1 size-3 text-green-600" />
+        )}
       </Badge>
+    ) : null;
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {serviceBadge}
+        {evalBadge}
+      </div>
     );
   };
 

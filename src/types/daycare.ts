@@ -49,6 +49,10 @@ export const daycareCheckInSchema = z
     notes: z.string(),
     playGroup: z.string().nullable(),
     photoUrl: z.string().optional(),
+    includesEvaluation: z.boolean().optional(),
+    evaluationStatus: z
+      .enum(["pending", "in_progress", "completed", "skipped"])
+      .optional(),
   })
   .catchall(z.unknown());
 
