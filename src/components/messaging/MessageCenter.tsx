@@ -20,7 +20,13 @@ export function MessageCenter() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] overflow-hidden rounded-xl border border-slate-200">
+    <div
+      className="flex h-[calc(100vh-120px)] overflow-hidden rounded-xl border border-slate-200"
+      style={{
+        fontFamily: "var(--font-inter), system-ui, sans-serif",
+        letterSpacing: "-0.01em",
+      }}
+    >
       <ContactList
         messages={messages}
         selectedThreadId={selectedThreadId}
