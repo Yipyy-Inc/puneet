@@ -51,13 +51,33 @@ function makeId(prefix: string) {
 
 // ── Props ────────────────────────────────────────────────────────────
 
+type PricingSection =
+  | "stacking"
+  | "multi_pet"
+  | "time_fees"
+  | "exceed_24h"
+  | "custom_fees";
+
 interface PricingRulesPanelProps {
-  serviceType: "boarding" | "daycare";
+  serviceType: string;
+  showSections?: PricingSection[];
 }
 
 // ── Main component ───────────────────────────────────────────────────
 
-export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
+const ALL_SECTIONS: PricingSection[] = [
+  "stacking",
+  "multi_pet",
+  "time_fees",
+  "exceed_24h",
+  "custom_fees",
+];
+
+export function PricingRulesPanel({
+  serviceType,
+  showSections,
+}: PricingRulesPanelProps) {
+  const sections = showSections ?? ALL_SECTIONS;
   const rules = facilityConfig.pricingRules;
 
   // State for each rule type
@@ -124,386 +144,395 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       </div>
 
       {/* ── Discount Stacking ── */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
-        <CardHeader className="border-b bg-slate-50/50 pb-3">
-          <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
-                <Settings2 className="size-4 text-slate-700" />
-              </div>
-              Discount Stacking
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => setPreviewOpen(!previewOpen)}
-            >
-              Preview
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-muted-foreground text-xs">
-            When multiple discount rules apply to a booking, how should they
-            combine?
-          </p>
-          <div className="space-y-2">
-            {(
-              [
-                {
-                  value: "best_only" as const,
-                  label: "Only apply the best discount",
-                  desc: "Automatically selects the most beneficial discount",
-                },
-                {
-                  value: "apply_all_sequence" as const,
-                  label: "Apply all rules in sequence",
-                  desc: "Stack multiple discounts when conditions are met",
-                },
-              ] as const
-            ).map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setStacking(opt.value)}
-                className={`w-full rounded-lg border p-3 text-left transition-all ${
-                  stacking === opt.value
-                    ? "border-primary bg-primary/5 ring-primary/20 ring-1"
-                    : "hover:bg-muted"
-                }`}
+      {sections.includes("stacking") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
+                  <Settings2 className="size-4 text-slate-700" />
+                </div>
+                Discount Stacking
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => setPreviewOpen(!previewOpen)}
               >
-                <p className="text-sm font-medium">{opt.label}</p>
-                <p className="text-muted-foreground text-xs">{opt.desc}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Preview calculator */}
-          {previewOpen && (
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                Discount Preview
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-[10px]">Base rate ($)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={previewBase}
-                    onChange={(e) =>
-                      setPreviewBase(parseFloat(e.target.value) || 0)
-                    }
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px]">Pets</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={previewPets}
-                    onChange={(e) =>
-                      setPreviewPets(parseInt(e.target.value) || 1)
-                    }
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px]">Nights</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={previewNights}
-                    onChange={(e) =>
-                      setPreviewNights(parseInt(e.target.value) || 1)
-                    }
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-              {(() => {
-                const activeMultiPet = filteredMultiPet.filter(
-                  (r) => r.isActive,
-                );
-                const discounts: { name: string; amount: number }[] = [];
-                for (const rule of activeMultiPet) {
-                  const matchingTier = [...rule.tiers]
-                    .sort((a, b) => b.petCount - a.petCount)
-                    .find((t) => previewPets >= t.petCount);
-                  if (matchingTier) {
-                    const count =
-                      rule.discountType === "per_pet"
-                        ? previewPets
-                        : Math.max(0, previewPets - 1);
-                    discounts.push({
-                      name: rule.name,
-                      amount:
-                        matchingTier.discountAmount * count * previewNights,
-                    });
-                  }
-                }
-                const subtotal = previewBase * previewPets * previewNights;
-                let total: number;
-                let appliedDiscounts: typeof discounts;
-                if (stacking === "best_only" && discounts.length > 1) {
-                  const best = discounts.reduce((a, b) =>
-                    b.amount > a.amount ? b : a,
-                  );
-                  appliedDiscounts = [best];
-                  total = subtotal - best.amount;
-                } else {
-                  appliedDiscounts = discounts;
-                  total =
-                    subtotal - discounts.reduce((s, d) => s + d.amount, 0);
-                }
-                return (
-                  <div className="space-y-1 border-t pt-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
-                    </div>
-                    {appliedDiscounts.map((d, i) => (
-                      <div
-                        key={i}
-                        className="flex justify-between text-xs text-emerald-700"
-                      >
-                        <span>{d.name}</span>
-                        <span>-${d.amount.toFixed(2)}</span>
-                      </div>
-                    ))}
-                    {discounts.length > 0 &&
-                      stacking === "best_only" &&
-                      discounts.length > 1 && (
-                        <p className="text-[10px] text-amber-600">
-                          {discounts.length - 1} other discount
-                          {discounts.length > 2 ? "s" : ""} skipped (best only)
-                        </p>
-                      )}
-                    <div className="flex justify-between border-t pt-1 text-sm font-semibold">
-                      <span>Total</span>
-                      <span>${Math.max(0, total).toFixed(2)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
+                Preview
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-xs">
+              When multiple discount rules apply to a booking, how should they
+              combine?
+            </p>
+            <div className="space-y-2">
+              {(
+                [
+                  {
+                    value: "best_only" as const,
+                    label: "Only apply the best discount",
+                    desc: "Automatically selects the most beneficial discount",
+                  },
+                  {
+                    value: "apply_all_sequence" as const,
+                    label: "Apply all rules in sequence",
+                    desc: "Stack multiple discounts when conditions are met",
+                  },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setStacking(opt.value)}
+                  className={`w-full rounded-lg border p-3 text-left transition-all ${
+                    stacking === opt.value
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <p className="text-sm font-medium">{opt.label}</p>
+                  <p className="text-muted-foreground text-xs">{opt.desc}</p>
+                </button>
+              ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Preview calculator */}
+            {previewOpen && (
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
+                  Discount Preview
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Base rate ($)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={previewBase}
+                      onChange={(e) =>
+                        setPreviewBase(parseFloat(e.target.value) || 0)
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Pets</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={previewPets}
+                      onChange={(e) =>
+                        setPreviewPets(parseInt(e.target.value) || 1)
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px]">Nights</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={previewNights}
+                      onChange={(e) =>
+                        setPreviewNights(parseInt(e.target.value) || 1)
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+                {(() => {
+                  const activeMultiPet = filteredMultiPet.filter(
+                    (r) => r.isActive,
+                  );
+                  const discounts: { name: string; amount: number }[] = [];
+                  for (const rule of activeMultiPet) {
+                    const matchingTier = [...rule.tiers]
+                      .sort((a, b) => b.petCount - a.petCount)
+                      .find((t) => previewPets >= t.petCount);
+                    if (matchingTier) {
+                      const count =
+                        rule.discountType === "per_pet"
+                          ? previewPets
+                          : Math.max(0, previewPets - 1);
+                      discounts.push({
+                        name: rule.name,
+                        amount:
+                          matchingTier.discountAmount * count * previewNights,
+                      });
+                    }
+                  }
+                  const subtotal = previewBase * previewPets * previewNights;
+                  let total: number;
+                  let appliedDiscounts: typeof discounts;
+                  if (stacking === "best_only" && discounts.length > 1) {
+                    const best = discounts.reduce((a, b) =>
+                      b.amount > a.amount ? b : a,
+                    );
+                    appliedDiscounts = [best];
+                    total = subtotal - best.amount;
+                  } else {
+                    appliedDiscounts = discounts;
+                    total =
+                      subtotal - discounts.reduce((s, d) => s + d.amount, 0);
+                  }
+                  return (
+                    <div className="space-y-1 border-t pt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>${subtotal.toFixed(2)}</span>
+                      </div>
+                      {appliedDiscounts.map((d, i) => (
+                        <div
+                          key={i}
+                          className="flex justify-between text-xs text-emerald-700"
+                        >
+                          <span>{d.name}</span>
+                          <span>-${d.amount.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      {discounts.length > 0 &&
+                        stacking === "best_only" &&
+                        discounts.length > 1 && (
+                          <p className="text-[10px] text-amber-600">
+                            {discounts.length - 1} other discount
+                            {discounts.length > 2 ? "s" : ""} skipped (best
+                            only)
+                          </p>
+                        )}
+                      <div className="flex justify-between border-t pt-1 text-sm font-semibold">
+                        <span>Total</span>
+                        <span>${Math.max(0, total).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Multi-Pet Discounts ── */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
-        <CardHeader className="border-b bg-slate-50/50 pb-3">
-          <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
-                <Users className="size-4 text-emerald-700" />
-              </div>
-              Multi-Pet Discounts
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => {
-                setEditingMp(null);
-                setMpModal(true);
-              }}
-            >
-              <Plus className="size-3" />
-              Add Rule
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {filteredMultiPet.length === 0 ? (
-            <p className="text-muted-foreground text-xs">
-              No multi-pet discount rules for {serviceType}
-            </p>
-          ) : (
-            filteredMultiPet.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+      {sections.includes("multi_pet") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
+                  <Users className="size-4 text-emerald-700" />
+                </div>
+                Multi-Pet Discounts
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  setEditingMp(null);
+                  setMpModal(true);
+                }}
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{rule.name}</p>
-                    <Badge variant="outline" className="text-[10px]">
-                      {rule.discountType === "per_pet"
-                        ? "Per pet"
-                        : "Additional pet"}
-                    </Badge>
-                    {rule.sameLodging && (
+                <Plus className="size-3" />
+                Add Rule
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {filteredMultiPet.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No multi-pet discount rules for {serviceType}
+              </p>
+            ) : (
+              filteredMultiPet.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{rule.name}</p>
                       <Badge variant="outline" className="text-[10px]">
-                        Same lodging
+                        {rule.discountType === "per_pet"
+                          ? "Per pet"
+                          : "Additional pet"}
                       </Badge>
-                    )}
+                      {rule.sameLodging && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Same lodging
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {rule.tiers
+                        .map(
+                          (t) => `${t.petCount}+ pets: -$${t.discountAmount}`,
+                        )
+                        .join(" · ")}
+                    </p>
                   </div>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {rule.tiers
-                      .map((t) => `${t.petCount}+ pets: -$${t.discountAmount}`)
-                      .join(" · ")}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={rule.isActive}
+                      onCheckedChange={(c) =>
+                        setMultiPet((prev) =>
+                          prev.map((r) =>
+                            r.id === rule.id ? { ...r, isActive: c } : r,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => {
+                        setEditingMp(rule);
+                        setMpModal(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        setMultiPet((prev) =>
+                          prev.filter((r) => r.id !== rule.id),
+                        );
+                        toast.success(`"${rule.name}" deleted`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={rule.isActive}
-                    onCheckedChange={(c) =>
-                      setMultiPet((prev) =>
-                        prev.map((r) =>
-                          r.id === rule.id ? { ...r, isActive: c } : r,
-                        ),
-                      )
-                    }
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() => {
-                      setEditingMp(rule);
-                      setMpModal(true);
-                    }}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive size-7"
-                    onClick={() => {
-                      setMultiPet((prev) =>
-                        prev.filter((r) => r.id !== rule.id),
-                      );
-                      toast.success(`"${rule.name}" deleted`);
-                    }}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Late Pickup / Early Drop-off ── */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
-        <CardHeader className="border-b bg-slate-50/50 pb-3">
-          <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
-                <Clock className="size-4 text-amber-700" />
-              </div>
-              Late Pickup / Early Drop-off Fees
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => {
-                setEditingTf(null);
-                setTfModal(true);
-              }}
-            >
-              <Plus className="size-3" />
-              Add Fee
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {filteredTimeFees.length === 0 ? (
-            <p className="text-muted-foreground text-xs">
-              No time-based fees configured
-            </p>
-          ) : (
-            filteredTimeFees.map((fee) => (
-              <div
-                key={fee.id}
-                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+      {sections.includes("time_fees") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+                  <Clock className="size-4 text-amber-700" />
+                </div>
+                Late Pickup / Early Drop-off Fees
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  setEditingTf(null);
+                  setTfModal(true);
+                }}
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">
-                      {fee.name ||
-                        (fee.condition === "late_pickup"
-                          ? "Late Pickup"
-                          : "Early Drop-off")}
+                <Plus className="size-3" />
+                Add Fee
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {filteredTimeFees.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No time-based fees configured
+              </p>
+            ) : (
+              filteredTimeFees.map((fee) => (
+                <div
+                  key={fee.id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">
+                        {fee.name ||
+                          (fee.condition === "late_pickup"
+                            ? "Late Pickup"
+                            : "Early Drop-off")}
+                      </p>
+                      <Badge variant="outline" className="text-[10px]">
+                        {fee.condition === "late_pickup"
+                          ? "Late pickup"
+                          : "Early drop-off"}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        ${fee.amount}
+                        {fee.feeType === "per_minute"
+                          ? "/min"
+                          : fee.feeType === "per_30min"
+                            ? "/30 min"
+                            : fee.feeType === "per_hour"
+                              ? "/hr"
+                              : " flat"}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {fee.graceMinutes} min grace · Based on{" "}
+                      {fee.basedOn === "business_hours"
+                        ? "business hours"
+                        : `custom time (${fee.customTime})`}
+                      {fee.maxFee ? ` · Max $${fee.maxFee}` : ""}
                     </p>
-                    <Badge variant="outline" className="text-[10px]">
-                      {fee.condition === "late_pickup"
-                        ? "Late pickup"
-                        : "Early drop-off"}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      ${fee.amount}
-                      {fee.feeType === "per_minute"
-                        ? "/min"
-                        : fee.feeType === "per_30min"
-                          ? "/30 min"
-                          : fee.feeType === "per_hour"
-                            ? "/hr"
-                            : " flat"}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
-                    </Badge>
                   </div>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {fee.graceMinutes} min grace · Based on{" "}
-                    {fee.basedOn === "business_hours"
-                      ? "business hours"
-                      : `custom time (${fee.customTime})`}
-                    {fee.maxFee ? ` · Max $${fee.maxFee}` : ""}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={fee.enabled}
+                      onCheckedChange={(c) =>
+                        setTimeFees((prev) =>
+                          prev.map((f) =>
+                            f.id === fee.id ? { ...f, enabled: c } : f,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => {
+                        setEditingTf(fee);
+                        setTfModal(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        setTimeFees((prev) =>
+                          prev.filter((f) => f.id !== fee.id),
+                        );
+                        toast.success("Fee deleted");
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={fee.enabled}
-                    onCheckedChange={(c) =>
-                      setTimeFees((prev) =>
-                        prev.map((f) =>
-                          f.id === fee.id ? { ...f, enabled: c } : f,
-                        ),
-                      )
-                    }
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() => {
-                      setEditingTf(fee);
-                      setTfModal(true);
-                    }}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive size-7"
-                    onClick={() => {
-                      setTimeFees((prev) =>
-                        prev.filter((f) => f.id !== fee.id),
-                      );
-                      toast.success("Fee deleted");
-                    }}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Exceed 24-Hour Fee (boarding only) ── */}
-      {serviceType === "boarding" && (
+      {sections.includes("exceed_24h") && serviceType === "boarding" && (
         <Card className="overflow-hidden transition-shadow hover:shadow-md">
           <CardHeader className="border-b bg-slate-50/50 pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
@@ -550,106 +579,108 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       )}
 
       {/* ── Custom Fees ── */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
-        <CardHeader className="border-b bg-slate-50/50 pb-3">
-          <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-sky-100">
-                <DollarSign className="size-4 text-sky-700" />
-              </div>
-              Custom Fees
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
-              onClick={() => {
-                setEditingCf(null);
-                setCfModal(true);
-              }}
-            >
-              <Plus className="size-3" />
-              Add Fee
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {filteredCustomFees.length === 0 ? (
-            <p className="text-muted-foreground text-xs">
-              No custom fees configured
-            </p>
-          ) : (
-            filteredCustomFees.map((fee) => (
-              <div
-                key={fee.id}
-                className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+      {sections.includes("custom_fees") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-sky-100">
+                  <DollarSign className="size-4 text-sky-700" />
+                </div>
+                Custom Fees
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  setEditingCf(null);
+                  setCfModal(true);
+                }}
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{fee.name}</p>
-                    <Badge variant="outline" className="text-[10px]">
-                      {fee.feeType === "flat"
-                        ? `$${fee.amount}`
-                        : `${fee.amount}%`}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
-                    </Badge>
-                    {fee.autoApply !== "none" && (
-                      <Badge className="bg-blue-100 text-[10px] text-blue-700">
-                        {fee.autoApply === "at_checkout"
-                          ? "Auto at checkout"
-                          : "Auto by care type"}
+                <Plus className="size-3" />
+                Add Fee
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {filteredCustomFees.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No custom fees configured
+              </p>
+            ) : (
+              filteredCustomFees.map((fee) => (
+                <div
+                  key={fee.id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{fee.name}</p>
+                      <Badge variant="outline" className="text-[10px]">
+                        {fee.feeType === "flat"
+                          ? `$${fee.amount}`
+                          : `${fee.amount}%`}
                       </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
+                      </Badge>
+                      {fee.autoApply !== "none" && (
+                        <Badge className="bg-blue-100 text-[10px] text-blue-700">
+                          {fee.autoApply === "at_checkout"
+                            ? "Auto at checkout"
+                            : "Auto by care type"}
+                        </Badge>
+                      )}
+                    </div>
+                    {fee.description && (
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {fee.description}
+                      </p>
                     )}
                   </div>
-                  {fee.description && (
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {fee.description}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={fee.isActive}
+                      onCheckedChange={(c) =>
+                        setCustomFees((prev) =>
+                          prev.map((f) =>
+                            f.id === fee.id ? { ...f, isActive: c } : f,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => {
+                        setEditingCf(fee);
+                        setCfModal(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        setCustomFees((prev) =>
+                          prev.filter((f) => f.id !== fee.id),
+                        );
+                        toast.success(`"${fee.name}" deleted`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={fee.isActive}
-                    onCheckedChange={(c) =>
-                      setCustomFees((prev) =>
-                        prev.map((f) =>
-                          f.id === fee.id ? { ...f, isActive: c } : f,
-                        ),
-                      )
-                    }
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() => {
-                      setEditingCf(fee);
-                      setCfModal(true);
-                    }}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive size-7"
-                    onClick={() => {
-                      setCustomFees((prev) =>
-                        prev.filter((f) => f.id !== fee.id),
-                      );
-                      toast.success(`"${fee.name}" deleted`);
-                    }}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ═══ MODALS ═══ */}
 
