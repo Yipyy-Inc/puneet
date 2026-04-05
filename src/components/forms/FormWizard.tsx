@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { SignaturePad as SignaturePadComponent } from "@/components/shared/SignaturePad";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -392,28 +393,40 @@ function WizardQuestionInput({
             required={question.required}
             helpText={help}
           />
-          <div className="border-input space-y-3 rounded-lg border p-4">
-            <div className="bg-muted/30 text-muted-foreground flex h-24 items-center justify-center rounded-sm text-sm">
-              {value ? (
-                <p className="text-foreground text-lg font-medium italic">
-                  {String(value)}
-                </p>
-              ) : (
-                "Signature area"
-              )}
+          {value ? (
+            <div className="space-y-2 rounded-lg border p-4">
+              <img
+                src={
+                  typeof value === "object" &&
+                  (value as Record<string, unknown>).signatureData
+                    ? String((value as Record<string, unknown>).signatureData)
+                    : String(value)
+                }
+                alt="Signature"
+                className="h-20 w-full object-contain"
+              />
+              <p className="text-xs text-emerald-600">✓ Signature captured</p>
             </div>
-            <Input
-              placeholder="Type your full name as signature"
-              value={(value as string) ?? ""}
-              onChange={(e) => onChange(e.target.value)}
-              required={question.required}
-              className="min-h-12 text-base"
+          ) : (
+            <SignaturePadComponent
+              label={question.label}
+              agreementText={help}
+              compact
+              onSign={(result) =>
+                onChange({
+                  signatureData: result.signatureData,
+                  signatureMetadata: {
+                    signedAt: result.signedAt,
+                    ipAddress: result.ipAddress,
+                    userAgent: result.userAgent,
+                    deviceId: result.deviceId,
+                    timezone: result.timezone,
+                    agreementText: result.agreementText,
+                  },
+                })
+              }
             />
-            <p className="text-muted-foreground text-xs">
-              By typing your name above, you agree this serves as your
-              electronic signature.
-            </p>
-          </div>
+          )}
         </div>
       );
 
