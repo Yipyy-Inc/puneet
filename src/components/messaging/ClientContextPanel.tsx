@@ -185,19 +185,19 @@ function Section({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-2 hover:bg-slate-50"
+        className="flex w-full items-center justify-between px-5 py-2.5 hover:bg-slate-50"
       >
-        <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
-          <Icon className="size-3" />
+        <span className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-400 uppercase">
+          <Icon className="size-3.5" />
           {title}
         </span>
         {open ? (
-          <ChevronUp className="size-3 text-slate-300" />
+          <ChevronUp className="size-3.5 text-slate-300" />
         ) : (
-          <ChevronDown className="size-3 text-slate-300" />
+          <ChevronDown className="size-3.5 text-slate-300" />
         )}
       </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
+      {open && <div className="px-5 pb-3">{children}</div>}
     </div>
   );
 }
@@ -241,7 +241,7 @@ export function ClientContextPanel({
 
   if (!client) {
     return (
-      <div className="flex h-full w-72 shrink-0 flex-col items-center justify-center bg-white">
+      <div className="flex h-full w-80 shrink-0 flex-col items-center justify-center bg-white">
         <p className="text-sm text-slate-400">Select a conversation</p>
       </div>
     );
@@ -252,10 +252,10 @@ export function ClientContextPanel({
     | undefined;
 
   return (
-    <div className="flex h-full w-72 shrink-0 flex-col bg-white">
+    <div className="flex h-full w-80 shrink-0 flex-col bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-2.5">
-        <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+      <div className="flex items-center justify-between border-b px-5 py-3">
+        <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
           Client Info
         </span>
         <Button
@@ -270,44 +270,44 @@ export function ClientContextPanel({
 
       <div className="flex-1 overflow-y-auto">
         {/* ── Client profile ── */}
-        <div className="flex flex-col items-center border-b px-4 pt-5 pb-4">
+        <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
           {clientImage ? (
             <img
               src={clientImage}
               alt=""
-              className="size-16 rounded-full object-cover ring-4 ring-slate-100"
+              className="size-18 rounded-full object-cover ring-4 ring-slate-100"
             />
           ) : (
             <div
               className={cn(
-                "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white",
+                "flex size-18 items-center justify-center rounded-full text-2xl font-bold text-white",
                 avatarColor(client.name),
               )}
             >
               {initials(client.name)}
             </div>
           )}
-          <h3 className="mt-2 text-sm font-bold text-slate-800">
+          <h3 className="mt-3 text-base font-bold text-slate-800">
             {client.name}
           </h3>
 
           {/* Contact row */}
-          <div className="mt-2 flex items-center gap-4 text-[10px] text-slate-400">
+          <div className="mt-2 flex flex-col items-center gap-1 text-xs text-slate-400">
             {client.phone && (
               <a
                 href={`tel:${client.phone}`}
-                className="flex items-center gap-1 hover:text-slate-600"
+                className="flex items-center gap-1.5 hover:text-slate-600"
               >
-                <Phone className="size-3" />
+                <Phone className="size-3.5" />
                 {client.phone}
               </a>
             )}
             <a
               href={`mailto:${client.email}`}
-              className="flex items-center gap-1 hover:text-slate-600"
+              className="flex items-center gap-1.5 truncate hover:text-slate-600"
             >
-              <Mail className="size-3" />
-              Email
+              <Mail className="size-3.5" />
+              {client.email}
             </a>
           </div>
 
@@ -317,9 +317,9 @@ export function ClientContextPanel({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 gap-1 rounded-full text-[10px]"
+                className="h-8 gap-1.5 rounded-full text-xs"
               >
-                <ExternalLink className="size-3" />
+                <ExternalLink className="size-3.5" />
                 View Profile
               </Button>
             </Link>
@@ -327,7 +327,7 @@ export function ClientContextPanel({
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-3 border-b py-3">
+        <div className="grid grid-cols-3 border-b py-4">
           {[
             { n: upcoming.length, label: "Upcoming" },
             { n: completed.length, label: "Past" },
@@ -337,10 +337,10 @@ export function ClientContextPanel({
             },
           ].map((s) => (
             <div key={s.label} className="text-center">
-              <p className="text-base font-bold text-slate-800 tabular-nums">
+              <p className="text-xl font-bold text-slate-800 tabular-nums">
                 {s.n}
               </p>
-              <p className="text-[8px] font-semibold tracking-wider text-slate-400 uppercase">
+              <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
                 {s.label}
               </p>
             </div>
@@ -368,10 +368,10 @@ export function ClientContextPanel({
                   </div>
                 )}
                 <div>
-                  <p className="text-[11px] font-semibold text-slate-700">
+                  <p className="text-xs font-semibold text-slate-700">
                     {pet.name}
                   </p>
-                  <p className="text-[9px] text-slate-400">
+                  <p className="text-[11px] text-slate-400">
                     {pet.breed} · {pet.type}
                   </p>
                 </div>
@@ -385,20 +385,20 @@ export function ClientContextPanel({
           {upcoming[0] ? (
             <div className="rounded-xl bg-slate-50 p-2.5">
               <div className="flex items-center justify-between">
-                <Badge className="bg-blue-100 text-[9px] text-blue-700 capitalize">
+                <Badge className="bg-blue-100 text-[10px] text-blue-700 capitalize">
                   {upcoming[0].service}
                 </Badge>
-                <span className="text-[11px] font-bold text-slate-700 tabular-nums">
+                <span className="text-xs font-bold text-slate-700 tabular-nums">
                   ${upcoming[0].totalCost}
                 </span>
               </div>
-              <p className="mt-1 text-[10px] text-slate-500">
+              <p className="mt-1.5 text-xs text-slate-500">
                 {formatDate(upcoming[0].startDate)}
                 {upcoming[0].checkInTime && ` · ${upcoming[0].checkInTime}`}
               </p>
             </div>
           ) : (
-            <p className="text-[10px] text-slate-400 italic">
+            <p className="text-xs text-slate-400 italic">
               No upcoming bookings
             </p>
           )}
@@ -425,7 +425,7 @@ export function ClientContextPanel({
                 >
                   <link.icon className="size-3.5" />
                 </div>
-                <span className="flex-1 text-[10px] font-medium text-slate-600">
+                <span className="flex-1 text-xs font-medium text-slate-600">
                   {link.label}
                 </span>
                 <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
