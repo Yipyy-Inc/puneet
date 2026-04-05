@@ -8,16 +8,37 @@ import { messages } from "@/data/communications-hub";
 
 export function MessageCenter() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("messaging-detail-panel-open") !== "false";
+  });
+
+  const toggleDetail = () => {
+    const next = !detailOpen;
+    setDetailOpen(next);
+    localStorage.setItem("messaging-detail-panel-open", String(next));
+  };
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-[calc(100vh-64px)] bg-white">
       <ContactList
         messages={messages}
         selectedThreadId={selectedThreadId}
         onSelectThread={setSelectedThreadId}
       />
-      <ConversationThread threadId={selectedThreadId} messages={messages} />
-      <ClientContextPanel threadId={selectedThreadId} messages={messages} />
+      <ConversationThread
+        threadId={selectedThreadId}
+        messages={messages}
+        detailOpen={detailOpen}
+        onToggleDetail={toggleDetail}
+      />
+      {detailOpen && (
+        <ClientContextPanel
+          threadId={selectedThreadId}
+          messages={messages}
+          onClose={toggleDetail}
+        />
+      )}
     </div>
   );
 }
