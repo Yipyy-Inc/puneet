@@ -194,7 +194,7 @@ export function ClientContextPanel({
   };
 
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col border-l bg-white">
+    <div className="flex h-full w-[340px] shrink-0 flex-col border-l bg-white">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h3 className="text-sm font-bold text-slate-800">Shared Media</h3>

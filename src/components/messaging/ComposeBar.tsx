@@ -18,7 +18,7 @@ export function ComposeBar({
   };
 
   return (
-    <div className="border-t bg-white px-4 py-3">
+    <div className="border-t bg-white px-6 py-4">
       <div className="flex items-end gap-2">
         {/* Left actions */}
         <div className="flex shrink-0 items-center gap-0.5 pb-1">
@@ -39,7 +39,7 @@ export function ComposeBar({
         </div>
 
         {/* Input */}
-        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="flex min-w-0 flex-1 items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -76,7 +76,7 @@ export function ComposeBar({
           {text.trim() ? (
             <Button
               size="icon"
-              className="size-9 rounded-full bg-blue-500 text-white shadow-sm hover:bg-blue-600"
+              className="size-10 rounded-full bg-blue-500 text-white shadow-sm hover:bg-blue-600"
               onClick={handleSend}
             >
               <Send className="size-4" />

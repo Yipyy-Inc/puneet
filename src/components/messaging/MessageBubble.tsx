@@ -53,10 +53,10 @@ export function MessageBubble({
         </div>
       )}
 
-      <div className={cn("max-w-[60%]", out ? "items-end" : "items-start")}>
+      <div className={cn("max-w-[55%]", out ? "items-end" : "items-start")}>
         <div
           className={cn(
-            "relative px-3.5 py-2",
+            "relative px-4 py-2.5",
             out
               ? "rounded-2xl rounded-br-[4px] bg-blue-500 text-white"
               : "rounded-2xl rounded-bl-[4px] bg-white text-slate-800 shadow-sm",
