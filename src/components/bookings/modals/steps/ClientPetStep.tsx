@@ -26,6 +26,7 @@ import {
   ArrowLeft,
   Phone,
   Mail,
+  Plus,
 } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -247,13 +248,57 @@ export function ClientPetStep({
     name: "",
     phone: "",
     email: "",
-    petName: "",
-    petType: "Dog",
+    pets: [{ name: "", type: "Dog" }] as { name: string; type: string }[],
   });
 
+  const addWalkInPet = () => {
+    setWalkInForm((p) => ({
+      ...p,
+      pets: [...p.pets, { name: "", type: "Dog" }],
+    }));
+  };
+
+  const removeWalkInPet = (idx: number) => {
+    if (walkInForm.pets.length <= 1) return;
+    setWalkInForm((p) => ({
+      ...p,
+      pets: p.pets.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const updateWalkInPet = (
+    idx: number,
+    field: "name" | "type",
+    value: string,
+  ) => {
+    setWalkInForm((p) => ({
+      ...p,
+      pets: p.pets.map((pet, i) =>
+        i === idx ? { ...pet, [field]: value } : pet,
+      ),
+    }));
+  };
+
+  const canCreateWalkIn =
+    walkInForm.name.trim() !== "" &&
+    walkInForm.pets.length > 0 &&
+    walkInForm.pets.every((p) => p.name.trim() !== "");
+
   const handleCreateWalkIn = () => {
-    if (!walkInForm.name.trim() || !walkInForm.petName.trim()) return;
+    if (!canCreateWalkIn) return;
     const newId = Date.now();
+    const pets = walkInForm.pets.map((p, i) => ({
+      id: newId + i + 1,
+      name: p.name.trim(),
+      type: p.type,
+      breed: "",
+      age: 0,
+      weight: 0,
+      color: "",
+      microchip: "",
+      allergies: "",
+      specialNeeds: "",
+    }));
     const newClient: Client = {
       id: newId,
       name: walkInForm.name.trim(),
@@ -261,31 +306,17 @@ export function ClientPetStep({
       phone: walkInForm.phone.trim(),
       status: "active",
       facility: "",
-      pets: [
-        {
-          id: newId + 1,
-          name: walkInForm.petName.trim(),
-          type: walkInForm.petType,
-          breed: "",
-          age: 0,
-          weight: 0,
-          color: "",
-          microchip: "",
-          allergies: "",
-          specialNeeds: "",
-        },
-      ],
+      pets,
     };
     onWalkInClient?.(newClient);
     setSelectedClientId(newClient.id);
-    setSelectedPetIds([newClient.pets[0].id]);
+    setSelectedPetIds(pets.map((p) => p.id));
     setShowWalkIn(false);
     setWalkInForm({
       name: "",
       phone: "",
       email: "",
-      petName: "",
-      petType: "Dog",
+      pets: [{ name: "", type: "Dog" }],
     });
   };
 
@@ -443,52 +474,67 @@ export function ClientPetStep({
 
                   <Separator />
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold">
-                        Pet Name <span className="text-destructive">*</span>
+                        Pets <span className="text-destructive">*</span>
                       </Label>
-                      <div className="relative">
-                        <PawPrint className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-                        <Input
-                          value={walkInForm.petName}
-                          onChange={(e) =>
-                            setWalkInForm((p) => ({
-                              ...p,
-                              petName: e.target.value,
-                            }))
-                          }
-                          placeholder="Pet name"
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Pet Type</Label>
-                      <Select
-                        value={walkInForm.petType}
-                        onValueChange={(v) =>
-                          setWalkInForm((p) => ({ ...p, petType: v }))
-                        }
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 gap-1 text-[11px]"
+                        onClick={addWalkInPet}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Dog">Dog</SelectItem>
-                          <SelectItem value="Cat">Cat</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Plus className="size-3" />
+                        Add Pet
+                      </Button>
                     </div>
+                    {walkInForm.pets.map((pet, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <PawPrint className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                          <Input
+                            value={pet.name}
+                            onChange={(e) =>
+                              updateWalkInPet(idx, "name", e.target.value)
+                            }
+                            placeholder={`Pet ${idx + 1} name`}
+                            className="pl-8"
+                          />
+                        </div>
+                        <Select
+                          value={pet.type}
+                          onValueChange={(v) => updateWalkInPet(idx, "type", v)}
+                        >
+                          <SelectTrigger className="w-24 shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Dog">Dog</SelectItem>
+                            <SelectItem value="Cat">Cat</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {walkInForm.pets.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+                            onClick={() => removeWalkInPet(idx)}
+                          >
+                            <XCircle className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <Button
                   className="w-full gap-1.5"
-                  disabled={
-                    !walkInForm.name.trim() || !walkInForm.petName.trim()
-                  }
+                  disabled={!canCreateWalkIn}
                   onClick={handleCreateWalkIn}
                 >
                   <UserPlus className="size-4" />
