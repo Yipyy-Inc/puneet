@@ -343,11 +343,11 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-slate-100">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100">
                 <DollarSign className="size-5 text-slate-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Total Rates
                 </p>
                 <p className="mt-0.5 text-2xl font-bold">{rates.length}</p>
@@ -358,11 +358,11 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-50">
                 <Clock className="size-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Active Rates
                 </p>
                 <p className="mt-0.5 text-2xl font-bold">{activeRates}</p>
@@ -373,11 +373,11 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-xl bg-sky-50">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-sky-50">
                 <DollarSign className="size-5 text-sky-600" />
               </div>
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Avg. Base Price
                 </p>
                 <p className="mt-0.5 text-2xl font-bold">${avgPrice}</p>
