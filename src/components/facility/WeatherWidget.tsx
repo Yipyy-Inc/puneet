@@ -18,8 +18,13 @@ import {
   ChevronUp,
   RefreshCw,
   CloudSun,
+  History,
 } from "lucide-react";
 import { useSettings } from "@/hooks/use-settings";
+import {
+  addAlertToLog,
+  WeatherAlertLog,
+} from "@/components/facility/WeatherAlertLog";
 import type { WeatherWarningRule } from "@/types/facility";
 
 // ── WMO weather code mapping ─────────────────────────────────────────
@@ -327,6 +332,43 @@ export function WeatherWidget() {
       )
     : [];
 
+  // Log alerts + auto-create tasks when warnings trigger
+  const loggedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (warnings.length === 0) return;
+    for (const w of warnings) {
+      if (loggedRef.current.has(w.id)) continue;
+      loggedRef.current.add(w.id);
+
+      const autoTasks: string[] = [];
+      if (w.autoAction) autoTasks.push(w.autoAction);
+      if (w.severity === "critical") {
+        autoTasks.push("Check all outdoor areas for pets");
+        autoTasks.push("Notify on-duty staff immediately");
+      }
+      if (
+        w.condition === "weather_is" &&
+        (w.value === "rain" || w.value === "thunderstorm" || w.value === "snow")
+      ) {
+        autoTasks.push("Set up drying station at entrance");
+      }
+
+      addAlertToLog({
+        ruleId: w.id,
+        ruleName: w.name,
+        severity: w.severity,
+        message: w.message,
+        triggeredAt: new Date().toISOString(),
+        triggeredBy: w.triggeredBy,
+        acknowledged: false,
+        actionsTaken: [],
+        autoTasksCreated: autoTasks,
+      });
+    }
+  }, [warnings]);
+
+  const [showLog, setShowLog] = useState(false);
+
   const minutesAgo = data
     ? Math.round((Date.now() - data.fetchedAt) / 60000)
     : 0;
@@ -410,115 +452,141 @@ export function WeatherWidget() {
 
   // Full view
   return (
-    <Card
-      className={`overflow-hidden border-slate-200 ${getCardBg(data.current.weatherCode)}`}
-    >
-      <CardContent className="p-0">
-        {/* Main weather row */}
-        <div className="flex items-center justify-between px-5 py-4">
-          {/* Left: current weather */}
-          <div className="flex items-center gap-4">
-            {getWeatherIcon(data.current.weatherCode, "size-10")}
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold tabular-nums">
-                  {data.current.temperature}
-                </span>
-                <button
-                  type="button"
-                  onClick={toggleUnit}
-                  className="text-muted-foreground text-sm font-medium hover:text-slate-700"
-                >
-                  {unitSymbol}
-                </button>
-              </div>
-              <p className="text-sm font-medium">
-                {getWeatherName(data.current.weatherCode)}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Feels like {data.current.feelsLike}
-                {unitSymbol} · Wind {data.current.windSpeed} km/h · {city},{" "}
-                {state}
-              </p>
-            </div>
-          </div>
-
-          {/* Right: 6-hour forecast */}
-          <div className="flex items-center gap-1">
-            <div className="border-border mr-3 h-12 border-l" />
-            {data.hourly.slice(0, 6).map((h, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5 px-2">
-                <span className="text-muted-foreground text-[10px]">
-                  {formatTime(h.time)}
-                </span>
-                {getWeatherIcon(h.weatherCode, "size-4")}
-                <span className="text-xs font-medium tabular-nums">
-                  {Math.round(h.temperature)}°
-                </span>
-              </div>
-            ))}
-
-            {/* Collapse + refresh */}
-            <div className="ml-2 flex flex-col items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                onClick={toggleCollapsed}
-              >
-                <ChevronUp className="size-3.5" />
-              </Button>
-              <span className="text-muted-foreground text-[9px]">
-                {minutesAgo < 1 ? "now" : `${minutesAgo}m`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Warning strip */}
-        {warnings.length > 0 && (
-          <div className="space-y-0 border-t">
-            {warnings.map((w, i) => (
-              <div
-                key={`${w.id}-${i}`}
-                className={`flex items-start gap-2.5 px-5 py-2.5 ${
-                  w.severity === "critical"
-                    ? "border-red-200 bg-red-50 text-red-900"
-                    : w.severity === "warning"
-                      ? "border-amber-200 bg-amber-50 text-amber-900"
-                      : "border-blue-200 bg-blue-50 text-blue-900"
-                }`}
-              >
-                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium">{w.message}</p>
-                  {w.triggeredBy === "forecast" && w.forecastTime && (
-                    <p className="mt-0.5 text-[10px] opacity-70">
-                      Expected at {formatTime(w.forecastTime)}
-                    </p>
-                  )}
-                  {w.autoAction && (
-                    <p className="mt-0.5 text-[10px] font-semibold opacity-80">
-                      Action: {w.autoAction}
-                    </p>
-                  )}
+    <>
+      <Card
+        className={`overflow-hidden border-slate-200 ${getCardBg(data.current.weatherCode)}`}
+      >
+        <CardContent className="p-0">
+          {/* Main weather row */}
+          <div className="flex items-center justify-between px-5 py-4">
+            {/* Left: current weather */}
+            <div className="flex items-center gap-4">
+              {getWeatherIcon(data.current.weatherCode, "size-10")}
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold tabular-nums">
+                    {data.current.temperature}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleUnit}
+                    className="text-muted-foreground text-sm font-medium hover:text-slate-700"
+                  >
+                    {unitSymbol}
+                  </button>
                 </div>
-                <Badge
-                  className={`shrink-0 text-[9px] ${
+                <p className="text-sm font-medium">
+                  {getWeatherName(data.current.weatherCode)}
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Feels like {data.current.feelsLike}
+                  {unitSymbol} · Wind {data.current.windSpeed} km/h · {city},{" "}
+                  {state}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: 6-hour forecast */}
+            <div className="flex items-center gap-1">
+              <div className="border-border mr-3 h-12 border-l" />
+              {data.hourly.slice(0, 6).map((h, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col items-center gap-0.5 px-2"
+                >
+                  <span className="text-muted-foreground text-[10px]">
+                    {formatTime(h.time)}
+                  </span>
+                  {getWeatherIcon(h.weatherCode, "size-4")}
+                  <span className="text-xs font-medium tabular-nums">
+                    {Math.round(h.temperature)}°
+                  </span>
+                </div>
+              ))}
+
+              {/* Collapse + refresh */}
+              <div className="ml-2 flex flex-col items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6"
+                  onClick={toggleCollapsed}
+                >
+                  <ChevronUp className="size-3.5" />
+                </Button>
+                <span className="text-muted-foreground text-[9px]">
+                  {minutesAgo < 1 ? "now" : `${minutesAgo}m`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning strip */}
+          {warnings.length > 0 && (
+            <div className="space-y-0 border-t">
+              {warnings.map((w, i) => (
+                <div
+                  key={`${w.id}-${i}`}
+                  className={`flex items-start gap-2.5 px-5 py-2.5 ${
                     w.severity === "critical"
-                      ? "bg-red-200 text-red-800"
+                      ? "border-red-200 bg-red-50 text-red-900"
                       : w.severity === "warning"
-                        ? "bg-amber-200 text-amber-800"
-                        : "bg-blue-200 text-blue-800"
+                        ? "border-amber-200 bg-amber-50 text-amber-900"
+                        : "border-blue-200 bg-blue-50 text-blue-900"
                   }`}
                 >
-                  {w.severity}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium">{w.message}</p>
+                    {w.triggeredBy === "forecast" && w.forecastTime && (
+                      <p className="mt-0.5 text-[10px] opacity-70">
+                        Expected at {formatTime(w.forecastTime)}
+                      </p>
+                    )}
+                    {w.autoAction && (
+                      <p className="mt-0.5 text-[10px] font-semibold opacity-80">
+                        Action: {w.autoAction}
+                      </p>
+                    )}
+                  </div>
+                  <Badge
+                    className={`shrink-0 text-[9px] ${
+                      w.severity === "critical"
+                        ? "bg-red-200 text-red-800"
+                        : w.severity === "warning"
+                          ? "bg-amber-200 text-amber-800"
+                          : "bg-blue-200 text-blue-800"
+                    }`}
+                  >
+                    {w.severity}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Alert history toggle + log */}
+      {warnings.length > 0 && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => setShowLog(!showLog)}
+          >
+            <History className="size-3.5" />
+            {showLog ? "Hide" : "View"} Alert History
+          </Button>
+        </div>
+      )}
+      {showLog && <WeatherAlertLog />}
+    </>
   );
+
+  // Wrap full view in fragment since we now return multiple elements
 }
+
+// Re-export for direct use
+export { WeatherAlertLog } from "@/components/facility/WeatherAlertLog";
