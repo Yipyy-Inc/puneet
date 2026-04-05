@@ -1,8 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Check, CheckCheck, AlertCircle, Zap } from "lucide-react";
-import { ChannelBadge } from "./ChannelBadge";
+import { Check, CheckCheck, AlertCircle } from "lucide-react";
 import type { Message } from "@/types/communications";
 
 function formatTime(iso: string): string {
@@ -13,26 +12,21 @@ function formatTime(iso: string): string {
   });
 }
 
-function DeliveryIcon({ status }: { status: Message["status"] }) {
-  switch (status) {
-    case "sent":
-      return <Check className="text-muted-foreground size-3" />;
-    case "delivered":
-      return <CheckCheck className="text-muted-foreground size-3" />;
-    case "read":
-      return <CheckCheck className="size-3 text-blue-500" />;
-    case "failed":
-      return <AlertCircle className="text-destructive size-3" />;
-    default:
-      return null;
-  }
+function StatusIcon({ status }: { status: Message["status"] }) {
+  if (status === "sent") return <Check className="size-3 text-white/50" />;
+  if (status === "delivered")
+    return <CheckCheck className="size-3 text-white/50" />;
+  if (status === "read") return <CheckCheck className="size-3 text-sky-200" />;
+  if (status === "failed")
+    return <AlertCircle className="size-3 text-red-300" />;
+  return null;
 }
 
-const AVATAR_COLORS = [
-  "bg-amber-100 text-amber-700",
-  "bg-blue-100 text-blue-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-violet-100 text-violet-700",
+const COLORS = [
+  "bg-rose-500",
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-violet-500",
 ];
 
 export function MessageBubble({
@@ -42,85 +36,62 @@ export function MessageBubble({
   message: Message;
   clientName?: string;
 }) {
-  const isOutbound = message.direction === "outbound";
-  const isFailed = message.status === "failed";
+  const out = message.direction === "outbound";
+  const failed = message.status === "failed";
 
   return (
-    <div
-      className={cn(
-        "flex gap-2 py-1",
-        isOutbound ? "justify-end" : "justify-start",
-      )}
-    >
+    <div className={cn("flex py-0.5", out ? "justify-end" : "justify-start")}>
       {/* Inbound avatar */}
-      {!isOutbound && clientName && (
+      {!out && clientName && (
         <div
           className={cn(
-            "mt-auto flex size-6 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold",
-            AVATAR_COLORS[
-              (clientName.charCodeAt(0) ?? 0) % AVATAR_COLORS.length
-            ],
+            "mt-auto mr-2 flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
+            COLORS[(clientName.charCodeAt(0) ?? 0) % COLORS.length],
           )}
         >
-          {clientName.charAt(0).toUpperCase()}
+          {clientName.charAt(0)}
         </div>
       )}
 
-      <div className="max-w-[65%]">
-        {/* Sender label for inbound */}
-        {!isOutbound && clientName && (
-          <p className="mb-0.5 text-[10px] font-medium text-slate-500">
-            {clientName}
+      <div className={cn("max-w-[60%]", out ? "items-end" : "items-start")}>
+        <div
+          className={cn(
+            "relative px-3.5 py-2",
+            out
+              ? "rounded-2xl rounded-br-[4px] bg-blue-500 text-white"
+              : "rounded-2xl rounded-bl-[4px] bg-white text-slate-800 shadow-sm",
+            failed && "ring-2 ring-red-400/50",
+          )}
+        >
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
+            {message.body}
+          </p>
+          <div
+            className={cn(
+              "mt-1 flex items-center gap-1",
+              out ? "justify-end" : "justify-start",
+            )}
+          >
+            <span
+              className={cn(
+                "text-[10px]",
+                out ? "text-white/60" : "text-slate-400",
+              )}
+            >
+              {formatTime(message.timestamp)}
+            </span>
+            {out && <StatusIcon status={message.status} />}
+          </div>
+        </div>
+
+        {failed && (
+          <p className="mt-0.5 px-1 text-[10px] text-red-500">
+            Not sent ·{" "}
+            <button type="button" className="font-semibold underline">
+              Retry
+            </button>
           </p>
         )}
-
-        <div
-          className={cn(
-            "space-y-1 rounded-2xl px-4 py-2.5",
-            isOutbound
-              ? "bg-primary text-primary-foreground rounded-br-sm"
-              : "rounded-bl-sm bg-white shadow-sm ring-1 ring-slate-100",
-            isFailed && "ring-2 ring-red-300",
-          )}
-        >
-          <p className="text-[13px] leading-relaxed">{message.body}</p>
-
-          {/* Failed retry */}
-          {isFailed && (
-            <p className="flex items-center gap-1 text-[10px] text-red-400">
-              <AlertCircle className="size-3" />
-              Failed to send ·{" "}
-              <button type="button" className="font-medium underline">
-                Retry
-              </button>
-            </p>
-          )}
-        </div>
-
-        {/* Meta below bubble */}
-        <div
-          className={cn(
-            "mt-0.5 flex items-center gap-1.5 px-1",
-            isOutbound ? "justify-end" : "justify-start",
-          )}
-        >
-          <span className="text-[10px] text-slate-400">
-            {formatTime(message.timestamp)}
-          </span>
-          <ChannelBadge channel={message.type} size="micro" />
-          {isOutbound && <DeliveryIcon status={message.status} />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function SystemMessage({ text }: { text: string }) {
-  return (
-    <div className="flex justify-center py-2">
-      <div className="flex items-center gap-1.5 rounded-lg border border-slate-100 bg-white px-3 py-1.5 shadow-sm">
-        <Zap className="size-3 text-amber-500" />
-        <span className="text-[11px] text-slate-500">{text}</span>
       </div>
     </div>
   );
@@ -128,12 +99,20 @@ export function SystemMessage({ text }: { text: string }) {
 
 export function DateSeparator({ date }: { date: string }) {
   return (
-    <div className="flex items-center gap-3 py-3">
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="rounded-full bg-white px-3 py-1 text-[10px] font-medium tracking-wider text-slate-400 uppercase shadow-sm ring-1 ring-slate-100">
+    <div className="flex justify-center py-3">
+      <span className="rounded-full bg-slate-200/80 px-3 py-1 text-[10px] font-semibold text-slate-500">
         {date}
       </span>
-      <div className="h-px flex-1 bg-slate-200" />
+    </div>
+  );
+}
+
+export function SystemMessage({ text }: { text: string }) {
+  return (
+    <div className="flex justify-center py-2">
+      <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-400">
+        {text}
+      </span>
     </div>
   );
 }
