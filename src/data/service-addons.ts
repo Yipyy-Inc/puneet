@@ -218,8 +218,7 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
   {
     id: "addon-010",
     name: "Mini Training Session",
-    description:
-      "Quick 15-minute basic obedience training during their stay",
+    description: "Quick 15-minute basic obedience training during their stay",
     image:
       "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=400&h=300&fit=crop",
     category: "Training",

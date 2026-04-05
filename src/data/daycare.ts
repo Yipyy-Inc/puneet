@@ -51,6 +51,8 @@ export const daycareCheckIns: DaycareCheckIn[] = [
     notes: "Needs medication at noon. Pill in bag.",
     playGroup: "Large Dogs",
     photoUrl: "/pets/max.jpg",
+    includesEvaluation: true,
+    evaluationStatus: "pending" as const,
   },
   {
     id: "dc-003",

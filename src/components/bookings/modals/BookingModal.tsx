@@ -30,8 +30,10 @@ import {
   Pill,
   Utensils,
   Scissors,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
@@ -253,6 +255,7 @@ export function BookingModal({
   );
   const [notificationSMS, setNotificationSMS] = useState(initDefaults.sms);
   const [tipAmount, setTipAmount] = useState(0);
+  const [includesEvaluation, setIncludesEvaluation] = useState(false);
 
   // Get current sub-steps based on selected service (estimate mode skips feeding/medication)
   const currentSubSteps = useMemo(() => {
@@ -705,6 +708,8 @@ export function BookingModal({
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
+      includesEvaluation: includesEvaluation || undefined,
+      evaluationStatus: includesEvaluation ? "pending" : undefined,
     };
 
     if (isEstimateMode) {
@@ -747,6 +752,7 @@ export function BookingModal({
     setNotificationEmail(true);
     setNotificationSMS(false);
     setTipAmount(0);
+    setIncludesEvaluation(false);
   };
 
   const isViewMode = !!booking;
@@ -1758,6 +1764,33 @@ export function BookingModal({
                     selectedPets={selectedPets}
                   />
                 )}
+
+                {/* Include Evaluation toggle — shown on confirm step for non-evaluation services */}
+                {displayedSteps[currentStep]?.id === "confirm" &&
+                  selectedService !== "evaluation" &&
+                  !(isEstimateMode && estimateCreated) && (
+                    <div className="mx-1 mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+                          <ClipboardCheck className="size-4 text-amber-700" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-amber-900">
+                            Include Evaluation
+                          </p>
+                          <p className="text-[11px] text-amber-700">
+                            Schedule a pet evaluation on the first day of this
+                            booking
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={includesEvaluation}
+                        onCheckedChange={setIncludesEvaluation}
+                      />
+                    </div>
+                  )}
+
                 {/* Estimate success state */}
                 {displayedSteps[currentStep]?.id === "confirm" &&
                   isEstimateMode &&

@@ -192,6 +192,10 @@ export const newBookingSchema = z.object({
   isEmergency: z.boolean().optional(),
   evaluationEvaluator: z.string().optional(),
   evaluationSpace: z.string().optional(),
+  includesEvaluation: z.boolean().optional(),
+  evaluationStatus: z
+    .enum(["pending", "in_progress", "completed", "skipped"])
+    .optional(),
   kennel: z.string().optional(),
   feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
   walkSchedule: z.string().optional(),
