@@ -124,12 +124,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       </div>
 
       {/* ── Discount Stacking ── */}
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-slate-100">
-                <Settings2 className="size-3.5 text-slate-600" />
+            <span className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
+                <Settings2 className="size-4 text-slate-700" />
               </div>
               Discount Stacking
             </span>
@@ -294,12 +294,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       </Card>
 
       {/* ── Multi-Pet Discounts ── */}
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-50">
-                <Users className="size-3.5 text-emerald-600" />
+            <span className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
+                <Users className="size-4 text-emerald-700" />
               </div>
               Multi-Pet Discounts
             </span>
@@ -391,12 +391,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       </Card>
 
       {/* ── Late Pickup / Early Drop-off ── */}
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-50">
-                <Clock className="size-3.5 text-amber-600" />
+            <span className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+                <Clock className="size-4 text-amber-700" />
               </div>
               Late Pickup / Early Drop-off Fees
             </span>
@@ -504,12 +504,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
 
       {/* ── Exceed 24-Hour Fee (boarding only) ── */}
       {serviceType === "boarding" && (
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-rose-50">
-                  <AlertTriangle className="size-3.5 text-rose-600" />
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-rose-100">
+                  <AlertTriangle className="size-4 text-rose-700" />
                 </div>
                 Exceed 24-Hour Fee
               </span>
@@ -550,12 +550,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       )}
 
       {/* ── Custom Fees ── */}
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="border-b bg-slate-50/50 pb-3">
           <CardTitle className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-sky-50">
-                <DollarSign className="size-3.5 text-sky-600" />
+            <span className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-sky-100">
+                <DollarSign className="size-4 text-sky-700" />
               </div>
               Custom Fees
             </span>

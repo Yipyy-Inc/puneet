@@ -516,52 +516,61 @@ export default function BoardingRatesPage() {
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Active Rates
                 </p>
-                <p className="mt-1 text-2xl font-bold">
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
                   {rates.filter((r) => r.isActive).length}
                 </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {rates.length} total
+                </p>
               </div>
-              <div className="flex size-11 items-center justify-center rounded-xl bg-slate-100">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-slate-100">
                 <DollarSign className="size-5 text-slate-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Active Discounts
                 </p>
-                <p className="mt-1 text-2xl font-bold">
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
                   {discounts.filter((d) => d.isActive).length}
                 </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {discounts.length} total
+                </p>
               </div>
-              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-emerald-50">
                 <Percent className="size-5 text-emerald-600" />
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Peak Periods
                 </p>
-                <p className="mt-1 text-2xl font-bold">
+                <p className="mt-1.5 text-3xl font-bold tabular-nums">
                   {surcharges.filter((s) => s.isActive).length}
                 </p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  of {surcharges.length} total
+                </p>
               </div>
-              <div className="flex size-11 items-center justify-center rounded-xl bg-amber-50">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-amber-50">
                 <TrendingUp className="size-5 text-amber-600" />
               </div>
             </div>
@@ -570,14 +579,16 @@ export default function BoardingRatesPage() {
       </div>
 
       {/* Nightly Rates */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <DollarSign className="size-5" />
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
+          <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
+              <DollarSign className="size-4 text-slate-700" />
+            </div>
             Nightly Rates
           </CardTitle>
-          <Button onClick={handleAddRate}>
-            <Plus className="mr-2 size-4" />
+          <Button onClick={handleAddRate} size="sm" className="gap-1.5">
+            <Plus className="size-3.5" />
             Add Rate
           </Button>
         </CardHeader>
@@ -592,14 +603,21 @@ export default function BoardingRatesPage() {
       </Card>
 
       {/* Multi-Night Discounts */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Percent className="size-5" />
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
+          <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
+              <Percent className="size-4 text-emerald-700" />
+            </div>
             Multi-Night Discounts
           </CardTitle>
-          <Button onClick={handleAddDiscount}>
-            <Plus className="mr-2 size-4" />
+          <Button
+            onClick={handleAddDiscount}
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+          >
+            <Plus className="size-3.5" />
             Add Discount
           </Button>
         </CardHeader>
@@ -614,14 +632,21 @@ export default function BoardingRatesPage() {
       </Card>
 
       {/* Peak Surcharges */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Calendar className="size-5" />
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
+          <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+              <Calendar className="size-4 text-amber-700" />
+            </div>
             Peak Period Surcharges
           </CardTitle>
-          <Button onClick={handleAddSurcharge}>
-            <Plus className="mr-2 size-4" />
+          <Button
+            onClick={handleAddSurcharge}
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+          >
+            <Plus className="size-3.5" />
             Add Peak Period
           </Button>
         </CardHeader>
