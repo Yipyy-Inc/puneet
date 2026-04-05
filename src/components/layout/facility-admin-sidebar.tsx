@@ -127,7 +127,7 @@ export function FacilitySidebar() {
       {
         items: [
           {
-            title: "Messaging",
+            title: "Messages",
             url: "/facility/dashboard/messaging",
             icon: MessageSquare,
             disabled: false,
