@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Phone,
-  Video,
   MoreHorizontal,
   MessageSquare,
   PanelRightClose,
@@ -176,13 +175,6 @@ export function ConversationThread({
             className="size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
           >
             <Phone className="size-[18px]" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9 rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600"
-          >
-            <Video className="size-[18px]" />
           </Button>
           <Button
             variant="ghost"
