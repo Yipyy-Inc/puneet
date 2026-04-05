@@ -1023,6 +1023,7 @@ function TimeFeeModal({
     scope: "per_pet" as "per_booking" | "per_pet",
     basedOn: "business_hours" as "business_hours" | "custom_time",
     customTime: "",
+    taxRate: undefined as number | undefined,
   });
 
   const [prevEditing, setPrevEditing] = useState(editing);
@@ -1039,6 +1040,7 @@ function TimeFeeModal({
         scope: editing.scope,
         basedOn: editing.basedOn,
         customTime: editing.customTime ?? "",
+        taxRate: editing.taxRate,
       });
     } else {
       setForm({
@@ -1051,6 +1053,7 @@ function TimeFeeModal({
         scope: "per_pet",
         basedOn: "business_hours",
         customTime: "",
+        taxRate: undefined,
       });
     }
   }
@@ -1217,6 +1220,29 @@ function TimeFeeModal({
               />
             </div>
           )}
+          <div className="space-y-2">
+            <Label>Tax Rate (%)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.taxRate ?? ""}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  taxRate: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                }))
+              }
+              placeholder="Uses facility default"
+            />
+          </div>
+          <p className="text-muted-foreground rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+            By default, only the rule matching the latest time applies per
+            checkout. Multiple rules do not stack unless enabled at the facility
+            level.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1237,6 +1263,7 @@ function TimeFeeModal({
                 basedOn: form.basedOn,
                 customTime:
                   form.basedOn === "custom_time" ? form.customTime : undefined,
+                taxRate: form.taxRate,
                 applicableServices: [serviceType],
               })
             }
