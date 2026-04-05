@@ -3,10 +3,27 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, MessageSquare, X, AlertCircle } from "lucide-react";
+import {
+  Search,
+  Plus,
+  MessageSquare,
+  X,
+  AlertCircle,
+  Smartphone,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+
+// SMS credits
+const facility = facilities.find((f) => f.id === 11);
+const credits = (facility as Record<string, unknown>)?.smsCredits as
+  | { monthlyAllowance: number; used: number; purchased: number }
+  | undefined;
+const smsRemaining = credits
+  ? credits.monthlyAllowance + (credits.purchased ?? 0) - credits.used
+  : 0;
 
 export interface Thread {
   threadId: string;
@@ -157,6 +174,47 @@ export function ContactList({
           {compose ? <X className="size-4" /> : <Plus className="size-4" />}
         </Button>
       </div>
+
+      {/* SMS credits strip */}
+      {credits && !compose && (
+        <div className="mx-4 mb-1 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5">
+          <Smartphone className="size-3 text-slate-400" />
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium text-slate-500">
+                SMS Credits
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-bold tabular-nums",
+                  smsRemaining > 500
+                    ? "text-emerald-600"
+                    : smsRemaining > 100
+                      ? "text-amber-600"
+                      : "text-red-600",
+                )}
+              >
+                {smsRemaining.toLocaleString()} left
+              </span>
+            </div>
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  smsRemaining > 500
+                    ? "bg-emerald-500"
+                    : smsRemaining > 100
+                      ? "bg-amber-500"
+                      : "bg-red-500",
+                )}
+                style={{
+                  width: `${Math.min(100, (smsRemaining / (credits.monthlyAllowance + (credits.purchased ?? 0))) * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="px-4 py-2">
