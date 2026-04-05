@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { clientDocuments } from "@/data/documents";
 import { getFormsByFacility } from "@/data/forms";
+import { digitalWaivers, waiverSignatures } from "@/data/additional-features";
 import Link from "next/link";
 import {
   Card,
@@ -26,7 +27,12 @@ import {
   AlertCircle,
   ClipboardList,
   ExternalLink,
+  Pen,
+  CheckCircle,
 } from "lucide-react";
+import { AgreementSigningDialog } from "@/components/shared/AgreementSigningDialog";
+import type { SignatureResult } from "@/components/shared/SignaturePad";
+import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -37,6 +43,12 @@ export default function CustomerDocumentsPage() {
   const [activeTab, setActiveTab] = useState<
     "agreements" | "documents" | "forms"
   >("agreements");
+  const [signingWaiver, setSigningWaiver] = useState<
+    (typeof digitalWaivers)[number] | null
+  >(null);
+  const [signedWaiverIds, setSignedWaiverIds] = useState<Set<string>>(
+    () => new Set(waiverSignatures.map((s) => s.waiverId)),
+  );
 
   const customerDocs = useMemo(() => {
     let filtered = clientDocuments.filter(
@@ -68,6 +80,15 @@ export default function CustomerDocumentsPage() {
     [customerDocs],
   );
 
+  // Pending waivers: active waivers that require signature and haven't been signed
+  const pendingWaivers = useMemo(
+    () =>
+      digitalWaivers.filter(
+        (w) => w.isActive && w.requiresSignature && !signedWaiverIds.has(w.id),
+      ),
+    [signedWaiverIds],
+  );
+
   const formatDateTime = (iso: string) => {
     try {
       return new Date(iso).toLocaleString("en-US", {
@@ -90,6 +111,13 @@ export default function CustomerDocumentsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleSign = (_result: SignatureResult) => {
+    if (!signingWaiver) return;
+    setSignedWaiverIds((prev) => new Set([...prev, signingWaiver.id]));
+    setSigningWaiver(null);
+    toast.success("Agreement signed successfully");
   };
 
   return (
@@ -123,7 +151,14 @@ export default function CustomerDocumentsPage() {
             onValueChange={(val) => setActiveTab(val as typeof activeTab)}
           >
             <TabsList>
-              <TabsTrigger value="agreements">Agreements & Waivers</TabsTrigger>
+              <TabsTrigger value="agreements">
+                Agreements & Waivers
+                {pendingWaivers.length > 0 && (
+                  <Badge className="ml-1.5 size-5 justify-center rounded-full bg-red-500 p-0 text-[10px] text-white">
+                    {pendingWaivers.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="documents">Documents Vault</TabsTrigger>
               <TabsTrigger value="forms">Forms</TabsTrigger>
             </TabsList>
@@ -137,6 +172,56 @@ export default function CustomerDocumentsPage() {
         >
           {/* Agreements & Waivers */}
           <TabsContent value="agreements" className="space-y-4">
+            {/* Pending waivers requiring signature */}
+            {pendingWaivers.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Pen className="size-4 text-amber-600" />
+                    Pending Signatures
+                  </CardTitle>
+                  <CardDescription>
+                    These agreements require your signature before you can book
+                    services.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {pendingWaivers.map((waiver) => (
+                    <div
+                      key={waiver.id}
+                      className="flex items-center justify-between rounded-lg border border-amber-200 bg-white p-4"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="flex items-center gap-2 font-medium">
+                          <FileSignature className="size-4 text-amber-600" />
+                          {waiver.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          <Badge
+                            variant="outline"
+                            className="mr-1.5 text-[10px] capitalize"
+                          >
+                            {waiver.type}
+                          </Badge>
+                          v{waiver.version}
+                          {waiver.expiryDays &&
+                            ` · Valid for ${waiver.expiryDays} days`}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => setSigningWaiver(waiver)}
+                      >
+                        <Pen className="mr-1.5 size-3.5" />
+                        Sign Now
+                      </Button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Signed agreements */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -145,12 +230,12 @@ export default function CustomerDocumentsPage() {
                 </CardTitle>
                 <CardDescription>
                   These agreements are required by your facility for services
-                  like daycare and boarding. You can review what you’ve signed
-                  at any time.
+                  like daycare and boarding. You can review what you&apos;ve
+                  signed at any time.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {agreementDocs.length === 0 ? (
+                {agreementDocs.length === 0 && pendingWaivers.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <AlertCircle className="text-muted-foreground mb-2 size-10" />
                     <p className="font-semibold">No agreements on file yet</p>
@@ -184,7 +269,8 @@ export default function CustomerDocumentsPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            <CheckCircle className="size-3 text-green-500" />
                             {doc.signatureType === "digital"
                               ? "Signed Online"
                               : "On File"}
@@ -212,8 +298,8 @@ export default function CustomerDocumentsPage() {
             <Card className="border-primary/20 bg-primary/5">
               <CardContent className="text-muted-foreground py-4 text-sm">
                 Facilities can require certain agreements to be signed before
-                new bookings are approved. If you’re blocked from booking, check
-                here to see if any agreements are missing or contact the
+                new bookings are approved. If you&apos;re blocked from booking,
+                check here to see if any agreements are missing or contact the
                 facility for help.
               </CardContent>
             </Card>
@@ -366,6 +452,19 @@ export default function CustomerDocumentsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Signing Dialog */}
+      {signingWaiver && (
+        <AgreementSigningDialog
+          open={!!signingWaiver}
+          onOpenChange={() => setSigningWaiver(null)}
+          title={signingWaiver.name}
+          agreementContent={signingWaiver.content}
+          requiresWitness={signingWaiver.requiresWitness}
+          onSigned={handleSign}
+          serviceName={signingWaiver.type}
+        />
+      )}
     </div>
   );
 }

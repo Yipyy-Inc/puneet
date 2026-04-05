@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { useFacilityRole } from "@/hooks/use-facility-role";
 
 // SMS credits
 const facility = facilities.find((f) => f.id === 11);
@@ -108,6 +109,8 @@ export function ContactList({
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
 }) {
+  const { role } = useFacilityRole();
+  const canPurchase = role === "owner" || role === "manager";
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
@@ -216,21 +219,21 @@ export function ContactList({
                     className={cn(
                       "text-[10px] font-bold tabular-nums",
                       smsRemaining > 500
-                        ? "text-emerald-600"
+                        ? "text-blue-600"
                         : smsRemaining > 100
                           ? "text-amber-600"
-                          : "text-red-600",
+                          : "text-red-500",
                     )}
                   >
                     {smsRemaining.toLocaleString()} left
                   </span>
                 </div>
-                <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-200">
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-blue-100">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
                       smsRemaining > 500
-                        ? "bg-emerald-500"
+                        ? "bg-blue-500"
                         : smsRemaining > 100
                           ? "bg-amber-500"
                           : "bg-red-500",
@@ -244,92 +247,101 @@ export function ContactList({
               <ChevronRight className="size-3 text-slate-300" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-72 p-0">
-            {/* Credit breakdown */}
-            <div className="border-b px-4 py-3">
-              <h4 className="text-sm font-bold text-slate-800">SMS Credits</h4>
-              <div className="mt-2 space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Monthly allowance</span>
-                  <span className="font-semibold tabular-nums">
-                    {credits.monthlyAllowance.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Purchased</span>
-                  <span className="font-semibold tabular-nums">
-                    {credits.purchased.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t pt-1.5">
-                  <span className="text-slate-500">Total</span>
-                  <span className="font-bold tabular-nums">
-                    {smsTotal.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Used</span>
-                  <span className="font-semibold text-red-500 tabular-nums">
-                    -{credits.used.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t pt-1.5">
-                  <span className="font-medium text-slate-700">Remaining</span>
-                  <span
-                    className={cn(
-                      "font-bold tabular-nums",
-                      smsRemaining > 500
-                        ? "text-emerald-600"
-                        : smsRemaining > 100
-                          ? "text-amber-600"
-                          : "text-red-600",
-                    )}
-                  >
-                    {smsRemaining.toLocaleString()}
-                  </span>
-                </div>
+          <PopoverContent
+            align="start"
+            className="w-64 rounded-xl border-slate-200 p-0 shadow-lg"
+          >
+            {/* Balance */}
+            <div className="px-4 pt-3.5 pb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500">
+                  SMS Balance
+                </span>
+                <span
+                  className={cn(
+                    "text-lg leading-none font-bold tabular-nums",
+                    smsRemaining > 500
+                      ? "text-blue-600"
+                      : smsRemaining > 100
+                        ? "text-amber-600"
+                        : "text-red-500",
+                  )}
+                >
+                  {smsRemaining.toLocaleString()}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    smsRemaining > 500
+                      ? "bg-blue-500"
+                      : smsRemaining > 100
+                        ? "bg-amber-500"
+                        : "bg-red-500",
+                  )}
+                  style={{
+                    width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
+                <span>{credits.monthlyAllowance.toLocaleString()} plan</span>
+                <span className="text-slate-300">·</span>
+                <span>{credits.purchased.toLocaleString()} extra</span>
+                <span className="text-slate-300">·</span>
+                <span>{credits.used.toLocaleString()} used</span>
               </div>
               {credits.autoReload && (
-                <div className="mt-2 flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1">
-                  <RefreshCw className="size-3 text-emerald-600" />
-                  <span className="text-[10px] text-emerald-700">
-                    Auto-reload: {credits.autoReloadAmount} credits when below{" "}
-                    {credits.autoReloadThreshold}
+                <div className="mt-2 flex items-center gap-1.5">
+                  <RefreshCw className="size-2.5 text-blue-400" />
+                  <span className="text-[10px] text-blue-500">
+                    Auto-reload on
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Buy more */}
-            <div className="px-4 py-3">
-              <p className="mb-2 text-xs font-semibold text-slate-700">
-                Buy More Credits
-              </p>
-              <div className="space-y-1.5">
-                {SMS_PACKAGES.map((pkg) => (
-                  <button
-                    key={pkg.amount}
-                    type="button"
-                    onClick={() =>
-                      toast.success(
-                        `${pkg.amount} SMS credits purchased for $${pkg.price}`,
-                      )
-                    }
-                    className="flex w-full items-center justify-between rounded-lg border px-3 py-2 transition-colors hover:border-blue-200 hover:bg-blue-50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="size-3.5 text-blue-500" />
-                      <span className="text-xs font-semibold text-slate-700">
-                        {pkg.amount.toLocaleString()} SMS
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold text-blue-600">
-                      ${pkg.price}
-                    </span>
-                  </button>
-                ))}
+            {/* Packages — owner/manager only */}
+            {canPurchase && (
+              <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
+                <p className="mb-2 text-[11px] font-semibold text-slate-500">
+                  Buy More Credits
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {SMS_PACKAGES.map((pkg) => {
+                    const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
+                    return (
+                      <button
+                        key={pkg.amount}
+                        type="button"
+                        onClick={() =>
+                          toast.success(
+                            `${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`,
+                          )
+                        }
+                        className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
+                      >
+                        <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
+                          {pkg.amount >= 1000
+                            ? `${pkg.amount / 1000}K`
+                            : pkg.amount}
+                        </span>
+                        <span className="text-[9px] text-slate-400">
+                          credits
+                        </span>
+                        <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
+                          ${pkg.price}
+                        </span>
+                        <span className="mt-0.5 text-[9px] text-slate-400">
+                          {perSms}¢/sms
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </PopoverContent>
         </Popover>
       )}

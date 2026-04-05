@@ -209,6 +209,8 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
   // Filter by service type
   const filteredByService = useMemo(() => {
     if (serviceFilter === "all") return unifiedData;
+    if (serviceFilter === "evaluation")
+      return unifiedData.filter((item) => item.includesEvaluation);
     return unifiedData.filter((item) => item.serviceType === serviceFilter);
   }, [unifiedData, serviceFilter]);
 
@@ -779,6 +781,9 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="boarding">
                     Boarding
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="evaluation">
+                    Evaluation
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
 

@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Bell,
+  ClipboardList,
   AlertTriangle,
   Clock,
   CheckCircle2,
@@ -41,7 +41,7 @@ const priorityStyles: Record<
     text: "text-amber-700",
   },
   medium: {
-    icon: Bell,
+    icon: ClipboardList,
     border: "border-blue-200",
     bg: "bg-blue-50",
     text: "text-blue-700",
@@ -82,7 +82,7 @@ export function TaskNotificationsPanel() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
-          <Bell className="size-4" />
+          <ClipboardList className="size-4" />
           {unreadCount > 0 && (
             <span
               className={cn(

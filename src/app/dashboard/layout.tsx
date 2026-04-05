@@ -43,7 +43,7 @@ export default async function DashboardLayout({
 
           <div className="flex items-center">
             {/* User Profile & Notifications */}
-            <TopBarIconsNext inboxHref="/dashboard/communication/live-support" />
+            <TopBarIconsNext messagesHref="/dashboard/communication/live-support" />
             <UserProfileSheet showNotifications={false} />
           </div>
         </header>

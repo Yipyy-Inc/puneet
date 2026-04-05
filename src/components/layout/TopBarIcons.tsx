@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Inbox, Plus } from "lucide-react";
+import { MessageSquare, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export interface TopBarIconsProps {
   /** Router-agnostic navigation (React Router's navigate or Next router.push). */
   navigate?: (to: string) => void;
 
-  inboxHref?: string;
+  messagesHref?: string;
 
   /** Optional quick-create icon. */
   onQuickCreate?: () => void;
@@ -157,7 +157,7 @@ function IconButton({
 
 export function TopBarIcons({
   navigate,
-  inboxHref = "/facility/dashboard/communications",
+  messagesHref = "/facility/dashboard/communications",
   onQuickCreate,
   quickCreateClickTargetId,
   pollIntervalMs = 45_000,
@@ -191,11 +191,11 @@ export function TopBarIcons({
     <TooltipProvider delayDuration={150}>
       <div className={cn("flex items-center gap-1", className)}>
         <IconButton
-          label="Inbox"
+          label="Messages"
           badge={msgBadge}
-          onClick={() => nav(inboxHref)}
+          onClick={() => nav(messagesHref)}
         >
-          <Inbox className="text-muted-foreground size-4 md:size-5" />
+          <MessageSquare className="text-muted-foreground size-4 md:size-5" />
         </IconButton>
 
         {showQuickCreate && (

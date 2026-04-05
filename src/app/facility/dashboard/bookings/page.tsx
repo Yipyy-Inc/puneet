@@ -503,6 +503,7 @@ export default function FacilityBookingsPage() {
         { value: "daycare", label: "Daycare" },
         { value: "boarding", label: "Boarding" },
         { value: "grooming", label: "Grooming" },
+        { value: "evaluation", label: "Evaluation" },
         { value: "vet", label: "Vet" },
       ],
     },

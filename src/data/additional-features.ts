@@ -334,6 +334,9 @@ export interface DigitalWaiver {
   version: string;
   isActive: boolean;
   requiresSignature: boolean;
+  /** When true, customers must draw/type a signature (SignaturePad).
+   *  When false, a checkbox agreement is sufficient. */
+  requireDigitalSignature: boolean;
   requiresWitness: boolean;
   expiryDays?: number;
   createdAt: string;
@@ -378,6 +381,7 @@ Full payment is due at pick-up. A 50% deposit is required for bookings over 7 da
     version: "2.1",
     isActive: true,
     requiresSignature: true,
+    requireDigitalSignature: true,
     requiresWitness: false,
     expiryDays: 365,
     createdAt: "2024-01-15T10:00:00Z",
@@ -402,6 +406,7 @@ If my pet displays aggressive behavior, I understand they may be removed from gr
     version: "1.5",
     isActive: true,
     requiresSignature: true,
+    requireDigitalSignature: true,
     requiresWitness: false,
     expiryDays: 180,
     createdAt: "2024-01-10T09:00:00Z",
@@ -429,6 +434,7 @@ If my pet experiences a medical emergency during grooming, I authorize immediate
     version: "1.3",
     isActive: true,
     requiresSignature: true,
+    requireDigitalSignature: true,
     requiresWitness: false,
     createdAt: "2024-02-01T10:00:00Z",
     updatedAt: "2024-02-15T09:00:00Z",
@@ -465,6 +471,7 @@ By using our services, you agree to these terms.`,
     version: "3.0",
     isActive: true,
     requiresSignature: true,
+    requireDigitalSignature: false,
     requiresWitness: false,
     expiryDays: 730,
     createdAt: "2023-12-01T10:00:00Z",
