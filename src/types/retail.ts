@@ -152,19 +152,36 @@ export const productSchema = z
   .passthrough();
 export type Product = z.infer<typeof productSchema>;
 
+export const supplierPortalSchema = z.object({
+  url: z.string(),
+  username: z.string(),
+  password: z.string(),
+});
+export type SupplierPortal = z.infer<typeof supplierPortalSchema>;
+
 export const supplierSchema = z
   .object({
     id: z.string(),
     name: z.string(),
     contactName: z.string(),
+    contactTitle: z.string().optional(),
     email: z.string(),
     phone: z.string(),
+    secondaryPhone: z.string().optional(),
     address: z.string(),
     city: z.string(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
     country: z.string(),
     website: z.string().optional(),
+    orderingPortal: supplierPortalSchema.optional(),
     paymentTerms: z.string(),
+    preferredPaymentMethod: z
+      .enum(["credit_card", "bank_transfer", "check", "paypal", "other"])
+      .optional(),
+    accountNumber: z.string().optional(),
     leadTimeDays: z.number(),
+    minimumOrderAmount: z.number().optional(),
     status: z.enum(["active", "inactive"]),
     notes: z.string(),
     totalOrders: z.number(),

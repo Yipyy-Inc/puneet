@@ -213,4 +213,52 @@ export const defaultServiceAddOns: ServiceAddOn[] = [
     createdAt: "2025-01-15T10:00:00.000Z",
     updatedAt: "2025-01-15T10:00:00.000Z",
   },
+
+  // ── Training ──────────────────────────────────────────────────────
+  {
+    id: "addon-010",
+    name: "Mini Training Session",
+    description:
+      "Quick 15-minute basic obedience training during their stay",
+    image:
+      "https://images.unsplash.com/photo-1558788353-f76d92427f16?w=400&h=300&fit=crop",
+    category: "Training",
+    colorCode: "#ec4899",
+    pricingType: "flat",
+    price: 25,
+    duration: 15,
+    applicableServices: ["daycare"],
+    requiresStaff: true,
+    requiresScheduling: true,
+    generatesTask: true,
+    taskCategory: "training",
+    isActive: true,
+    sortOrder: 10,
+    createdAt: "2025-01-15T10:00:00.000Z",
+    updatedAt: "2025-01-15T10:00:00.000Z",
+  },
+
+  // ── Spa & Wellness ────────────────────────────────────────────────
+  {
+    id: "addon-011",
+    name: "Quick Spa Treatment",
+    description:
+      "Relaxing paw massage and aromatherapy session to help your pet unwind",
+    image:
+      "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=400&h=300&fit=crop",
+    category: "Spa & Wellness",
+    colorCode: "#a855f7",
+    pricingType: "flat",
+    price: 18,
+    duration: 20,
+    applicableServices: ["daycare", "boarding"],
+    requiresStaff: true,
+    requiresScheduling: true,
+    generatesTask: true,
+    taskCategory: "care",
+    isActive: true,
+    sortOrder: 11,
+    createdAt: "2025-01-15T10:00:00.000Z",
+    updatedAt: "2025-01-15T10:00:00.000Z",
+  },
 ];
