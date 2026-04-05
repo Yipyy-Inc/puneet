@@ -31,6 +31,7 @@ import {
   FileText,
   GraduationCap,
   ClipboardList,
+  ClipboardCheck,
   LayoutTemplate,
   Plus,
 } from "lucide-react";
@@ -200,6 +201,12 @@ export function FacilitySidebar() {
             title: "Booking Requests",
             url: "/facility/dashboard/online-booking",
             icon: CalendarClock,
+            disabled: false,
+          },
+          {
+            title: "Evaluations",
+            url: "/facility/dashboard/evaluations",
+            icon: ClipboardCheck,
             disabled: false,
           },
           {
