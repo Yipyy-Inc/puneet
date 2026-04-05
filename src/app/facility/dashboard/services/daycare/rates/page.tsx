@@ -224,6 +224,16 @@ export default function DaycareRatesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+        <h2 className="text-lg font-bold tracking-tight text-slate-800">
+          Daycare Rates & Pricing
+        </h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Configure rates, packages, and pricing rules for daycare services
+        </p>
+      </div>
+
       {/* Pricing Configuration */}
       <Card>
         <CardHeader>
@@ -333,12 +343,14 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-primary/10 rounded-lg p-2">
-                <DollarSign className="text-primary size-5" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-slate-100">
+                <DollarSign className="size-5 text-slate-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{rates.length}</p>
-                <p className="text-muted-foreground text-sm">Total Rates</p>
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Total Rates
+                </p>
+                <p className="mt-0.5 text-2xl font-bold">{rates.length}</p>
               </div>
             </div>
           </CardContent>
@@ -346,12 +358,14 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-success/10 rounded-lg p-2">
-                <Clock className="text-success size-5" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50">
+                <Clock className="size-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeRates}</p>
-                <p className="text-muted-foreground text-sm">Active Rates</p>
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Active Rates
+                </p>
+                <p className="mt-0.5 text-2xl font-bold">{activeRates}</p>
               </div>
             </div>
           </CardContent>
@@ -359,12 +373,14 @@ export default function DaycareRatesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="bg-info/10 rounded-lg p-2">
-                <DollarSign className="text-info size-5" />
+              <div className="flex size-11 items-center justify-center rounded-xl bg-sky-50">
+                <DollarSign className="size-5 text-sky-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">${avgPrice}</p>
-                <p className="text-muted-foreground text-sm">Avg. Base Price</p>
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Avg. Base Price
+                </p>
+                <p className="mt-0.5 text-2xl font-bold">${avgPrice}</p>
               </div>
             </div>
           </CardContent>
