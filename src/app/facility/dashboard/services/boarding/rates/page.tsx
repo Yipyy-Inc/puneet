@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import {
   DollarSign,
@@ -75,6 +83,12 @@ export default function BoardingRatesPage() {
     endDate: "",
     surchargePercent: 15,
     isActive: true,
+    dateMode: "specific" as "specific" | "repeat",
+    surchargeType: "flat" as "percentage" | "flat",
+    surchargeAmount: 10,
+    scope: "per_each_pet" as "per_each_pet" | "first_pet_only",
+    chargePerLodging: false,
+    applicableServices: ["boarding"] as string[],
   });
 
   // Delete modal state
@@ -190,6 +204,12 @@ export default function BoardingRatesPage() {
       endDate: "",
       surchargePercent: 15,
       isActive: true,
+      dateMode: "specific",
+      surchargeType: "flat",
+      surchargeAmount: 10,
+      scope: "per_each_pet",
+      chargePerLodging: false,
+      applicableServices: ["boarding"],
     });
     setIsSurchargeModalOpen(true);
   };
@@ -202,6 +222,12 @@ export default function BoardingRatesPage() {
       endDate: surcharge.endDate,
       surchargePercent: surcharge.surchargePercent,
       isActive: surcharge.isActive,
+      dateMode: surcharge.dateMode ?? "specific",
+      surchargeType: surcharge.surchargeType ?? "percentage",
+      surchargeAmount: surcharge.surchargeAmount ?? 0,
+      scope: surcharge.scope ?? "per_each_pet",
+      chargePerLodging: surcharge.chargePerLodging ?? false,
+      applicableServices: surcharge.applicableServices ?? ["boarding"],
     });
     setIsSurchargeModalOpen(true);
   };
@@ -838,7 +864,7 @@ export default function BoardingRatesPage() {
         open={isSurchargeModalOpen}
         onOpenChange={setIsSurchargeModalOpen}
       >
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
               {editingSurcharge ? "Edit Peak Period" : "Add New Peak Period"}
@@ -846,9 +872,8 @@ export default function BoardingRatesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="surchargeName">Period Name</Label>
+              <Label>Period Name</Label>
               <Input
-                id="surchargeName"
                 value={surchargeForm.name}
                 onChange={(e) =>
                   setSurchargeForm({ ...surchargeForm, name: e.target.value })
@@ -856,11 +881,44 @@ export default function BoardingRatesPage() {
                 placeholder="e.g., Christmas Holiday"
               />
             </div>
+
+            {/* Date mode */}
+            <div className="space-y-2">
+              <Label>Date Selection</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["specific", "repeat"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() =>
+                      setSurchargeForm({ ...surchargeForm, dateMode: mode })
+                    }
+                    className={`rounded-lg border p-2.5 text-left text-xs transition-all ${
+                      surchargeForm.dateMode === mode
+                        ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                        : "hover:bg-muted"
+                    }`}
+                  >
+                    <p className="font-medium">
+                      {mode === "specific"
+                        ? "Specific dates"
+                        : "Repeat pattern"}
+                    </p>
+                    <p className="text-muted-foreground text-[10px]">
+                      {mode === "specific"
+                        ? "One or more date ranges"
+                        : "Recurring days of the week"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date range */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
+                <Label>Start Date</Label>
                 <Input
-                  id="startDate"
                   type="date"
                   value={surchargeForm.startDate}
                   onChange={(e) =>
@@ -872,9 +930,8 @@ export default function BoardingRatesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="endDate">End Date</Label>
+                <Label>End Date</Label>
                 <Input
-                  id="endDate"
                   type="date"
                   value={surchargeForm.endDate}
                   onChange={(e) =>
@@ -886,26 +943,125 @@ export default function BoardingRatesPage() {
                 />
               </div>
             </div>
+
+            {/* Surcharge type + amount */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Surcharge Type</Label>
+                <Select
+                  value={surchargeForm.surchargeType}
+                  onValueChange={(v) =>
+                    setSurchargeForm({
+                      ...surchargeForm,
+                      surchargeType: v as "percentage" | "flat",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">Flat amount ($)</SelectItem>
+                    <SelectItem value="percentage">Percentage (%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  {surchargeForm.surchargeType === "flat"
+                    ? "Amount ($)"
+                    : "Percentage (%)"}
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={
+                    surchargeForm.surchargeType === "flat"
+                      ? surchargeForm.surchargeAmount
+                      : surchargeForm.surchargePercent
+                  }
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    if (surchargeForm.surchargeType === "flat") {
+                      setSurchargeForm({
+                        ...surchargeForm,
+                        surchargeAmount: val,
+                      });
+                    } else {
+                      setSurchargeForm({
+                        ...surchargeForm,
+                        surchargePercent: val,
+                      });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Scope */}
             <div className="space-y-2">
-              <Label htmlFor="surchargePercent">Surcharge Percentage</Label>
-              <Input
-                id="surchargePercent"
-                type="number"
-                min={0}
-                max={100}
-                value={surchargeForm.surchargePercent}
-                onChange={(e) =>
+              <Label>Applies to</Label>
+              <Select
+                value={surchargeForm.scope}
+                onValueChange={(v) =>
                   setSurchargeForm({
                     ...surchargeForm,
-                    surchargePercent: parseInt(e.target.value) || 0,
+                    scope: v as "per_each_pet" | "first_pet_only",
                   })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per_each_pet">Per each pet</SelectItem>
+                  <SelectItem value="first_pet_only">First pet only</SelectItem>
+                </SelectContent>
+              </Select>
+              {surchargeForm.scope === "first_pet_only" && (
+                <label className="mt-2 flex items-center gap-2">
+                  <Switch
+                    checked={surchargeForm.chargePerLodging}
+                    onCheckedChange={(c) =>
+                      setSurchargeForm({
+                        ...surchargeForm,
+                        chargePerLodging: c,
+                      })
+                    }
+                  />
+                  <span className="text-xs">Charge per lodging</span>
+                </label>
+              )}
             </div>
+
+            {/* Applicable services */}
+            <div className="space-y-2">
+              <Label>Applicable Services</Label>
+              <div className="flex gap-3">
+                {["boarding", "daycare"].map((svc) => (
+                  <label key={svc} className="flex items-center gap-1.5">
+                    <Checkbox
+                      checked={surchargeForm.applicableServices.includes(svc)}
+                      onCheckedChange={(c) =>
+                        setSurchargeForm({
+                          ...surchargeForm,
+                          applicableServices: c
+                            ? [...surchargeForm.applicableServices, svc]
+                            : surchargeForm.applicableServices.filter(
+                                (s) => s !== svc,
+                              ),
+                        })
+                      }
+                    />
+                    <span className="text-sm capitalize">{svc}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <Label htmlFor="surchargeActive">Active</Label>
+              <Label>Active</Label>
               <Switch
-                id="surchargeActive"
                 checked={surchargeForm.isActive}
                 onCheckedChange={(checked) =>
                   setSurchargeForm({ ...surchargeForm, isActive: checked })
