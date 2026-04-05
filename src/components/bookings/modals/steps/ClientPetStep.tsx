@@ -212,18 +212,30 @@ export function ClientPetStep({
     return null;
   };
 
-  // Frequent clients — sorted by booking count
-  const frequentClients = React.useMemo(() => {
+  // Booking counts per client
+  const bookingCounts = React.useMemo(() => {
     const counts: Record<number, number> = {};
     for (const b of bookings) {
       counts[b.clientId] = (counts[b.clientId] ?? 0) + 1;
     }
+    return counts;
+  }, []);
+
+  // Frequent clients — top 4 for the quick-select row
+  const frequentClients = React.useMemo(() => {
     return filteredClients
-      .map((c) => ({ client: c, bookingCount: counts[c.id] ?? 0 }))
+      .map((c) => ({ client: c, bookingCount: bookingCounts[c.id] ?? 0 }))
       .filter((c) => c.bookingCount > 0)
       .sort((a, b) => b.bookingCount - a.bookingCount)
       .slice(0, 4);
-  }, [filteredClients]);
+  }, [filteredClients, bookingCounts]);
+
+  // Client list sorted by frequency (most bookings first)
+  const sortedClients = React.useMemo(() => {
+    return [...filteredClients].sort(
+      (a, b) => (bookingCounts[b.id] ?? 0) - (bookingCounts[a.id] ?? 0),
+    );
+  }, [filteredClients, bookingCounts]);
 
   const handlePetToggle = (petId: number) => {
     setSelectedPetIds((prev) =>
@@ -334,7 +346,7 @@ export function ClientPetStep({
               />
             </div>
 
-            {/* Client list — #3: cn() instead of template literals */}
+            {/* Client list — sorted by booking frequency */}
             <div>
               <div className="p-2">
                 {filteredClients.length === 0 ? (
@@ -343,7 +355,7 @@ export function ClientPetStep({
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
-                    {filteredClients.map((client) => {
+                    {sortedClients.map((client) => {
                       const isSelected = selectedClientId === client.id;
                       return (
                         <div
