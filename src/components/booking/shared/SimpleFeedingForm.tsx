@@ -20,6 +20,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem } from "@/types/booking";
 
 interface PetOption {
@@ -34,22 +35,16 @@ interface SimpleFeedingFormProps {
   selectedPets: PetOption[];
 }
 
-const MEAL_PRESETS = [
-  { label: "Breakfast", time: "07:00" },
-  { label: "Lunch", time: "12:00" },
-  { label: "Dinner", time: "17:00" },
-  { label: "Snack", time: "15:00" },
-];
-
-const FOOD_TYPES = ["Kibble", "Wet food", "Raw", "Prescription"];
-const FEEDING_UNITS = ["Scoop", "Cup", "Oz", "Tbsp", "Grams"];
-const FEEDING_INSTRUCTIONS = [
-  "Feed alone",
-  "Free feed",
-  "Hand feed",
-  "Slow feeder",
-];
-const ALLERGY_PRESETS = ["Chicken", "Beef", "Grain-free", "Sensitive stomach"];
+// Read from facility config (editable in Settings > Care Tasks)
+const opts = facilityConfig.feedingOptions;
+const MEAL_PRESETS = opts.schedules.map((s) => ({
+  label: s.label,
+  time: s.time,
+}));
+const FOOD_TYPES = opts.foodTypes;
+const FEEDING_UNITS = opts.units;
+const FEEDING_INSTRUCTIONS = opts.instructions;
+const ALLERGY_PRESETS = opts.allergyPresets;
 
 function makeId() {
   return `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;

@@ -21,6 +21,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { facilityConfig } from "@/data/facility-config";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,38 +68,15 @@ function nextId(prefix: string) {
   return `${prefix}-${_id}`;
 }
 
-const MEAL_LABELS = ["Breakfast", "Lunch", "Dinner", "Snack", "Treats"];
-const FEEDING_UNITS = ["Scoop", "Cup", "Oz", "Tbsp", "Grams"];
-const FEEDING_INSTRUCTIONS_OPTIONS = [
-  "Feed alone",
-  "Free feed",
-  "Hand feed",
-  "Slow feeder",
-];
-const FOOD_TYPES = [
-  "Dry Kibble",
-  "Wet Food",
-  "Raw",
-  "Homemade",
-  "Prescription Diet",
-  "Other",
-];
-const MED_METHODS = [
-  "Oral",
-  "Topical",
-  "Injection",
-  "Mixed with food",
-  "Eye drops",
-  "Ear drops",
-  "Other",
-];
-const FREQUENCIES = [
-  "Once daily",
-  "Twice daily",
-  "Three times daily",
-  "Every 8 hours",
-  "As needed",
-];
+// Read from facility config (editable in Settings > Care Tasks)
+const fOpts = facilityConfig.feedingOptions;
+const mOpts = facilityConfig.medicationOptions;
+const MEAL_LABELS = fOpts.schedules.map((s) => s.label);
+const FEEDING_UNITS = fOpts.units;
+const FEEDING_INSTRUCTIONS_OPTIONS = fOpts.instructions;
+const FOOD_TYPES = fOpts.foodTypes;
+const MED_METHODS = mOpts.methods;
+const FREQUENCIES = mOpts.frequencies;
 
 // ── Component ────────────────────────────────────────────────────────────────
 

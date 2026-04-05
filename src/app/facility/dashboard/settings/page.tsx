@@ -21,6 +21,7 @@ import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
+import { FeedingMedicationConfig } from "@/components/facility/FeedingMedicationConfig";
 import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
@@ -4047,6 +4048,7 @@ export default function SettingsPage() {
           {/* Care Tasks */}
           {activeSection === "care-tasks" && (
             <div className="space-y-6">
+              <FeedingMedicationConfig />
               <CareTaskSettings />
             </div>
           )}

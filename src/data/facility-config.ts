@@ -392,6 +392,49 @@ export const facilityConfig = {
     ],
   },
 
+  // ── Feeding & Medication field options (configurable per facility) ──
+  feedingOptions: {
+    schedules: [
+      { id: "s1", label: "AM", time: "09:00" },
+      { id: "s2", label: "Noon", time: "12:00" },
+      { id: "s3", label: "PM", time: "18:00" },
+    ],
+    units: ["Scoop", "Cup", "Oz", "Tbsp", "Grams"],
+    foodTypes: ["Kibble", "Wet food", "Raw", "Prescription", "Homemade"],
+    sources: ["House provide", "Owner provide"],
+    instructions: ["Feed alone", "Free feed", "Hand feed", "Slow feeder"],
+    allergyPresets: [
+      "Chicken",
+      "Beef",
+      "Grain-free",
+      "Sensitive stomach",
+      "Dairy",
+    ],
+  },
+  medicationOptions: {
+    methods: [
+      "Oral",
+      "Topical",
+      "Injection",
+      "Mixed with food",
+      "Eye drops",
+      "Ear drops",
+    ],
+    frequencies: [
+      "Once daily",
+      "Twice daily",
+      "Three times daily",
+      "Every 8 hours",
+      "As needed",
+    ],
+    quickTimes: [
+      { label: "Morning", time: "08:00" },
+      { label: "Noon", time: "12:00" },
+      { label: "Evening", time: "18:00" },
+      { label: "Bedtime", time: "20:00" },
+    ],
+  },
+
   // ── Care task feedback options (configurable per facility) ──────
   careTaskFeedback: {
     feeding: [
