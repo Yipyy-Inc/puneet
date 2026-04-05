@@ -102,6 +102,8 @@ export function BookingModal({
 
   // Estimate mode detection
   const [isEstimateMode, setIsEstimateMode] = useState(false);
+  const [estimateCreated, setEstimateCreated] = useState(false);
+  const [estimateSent, setEstimateSent] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -109,8 +111,12 @@ export function BookingModal({
       const mode = localStorage.getItem("booking-modal-mode");
       setIsEstimateMode(mode === "estimate");
       localStorage.removeItem("booking-modal-mode");
+      setEstimateCreated(false);
+      setEstimateSent(false);
     } else {
       setIsEstimateMode(false);
+      setEstimateCreated(false);
+      setEstimateSent(false);
     }
   }
 
@@ -700,6 +706,12 @@ export function BookingModal({
       notificationSMS: notificationSMS,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
     };
+
+    if (isEstimateMode) {
+      // In estimate mode, show success state instead of creating a booking
+      setEstimateCreated(true);
+      return;
+    }
 
     onCreateBooking(booking);
     resetForm();
@@ -1746,7 +1758,105 @@ export function BookingModal({
                     selectedPets={selectedPets}
                   />
                 )}
-                {displayedSteps[currentStep]?.id === "confirm" && (
+                {/* Estimate success state */}
+                {displayedSteps[currentStep]?.id === "confirm" &&
+                  isEstimateMode &&
+                  estimateCreated && (
+                    <div className="flex flex-col items-center px-6 py-12 text-center">
+                      {estimateSent ? (
+                        <>
+                          <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
+                            <Check className="size-7 text-emerald-600" />
+                          </div>
+                          <h3 className="mt-4 text-lg font-bold text-slate-800">
+                            Estimate Sent!
+                          </h3>
+                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                            The estimate has been sent to{" "}
+                            <span className="font-medium text-slate-700">
+                              {selectedClient?.name}
+                            </span>
+                            . It will appear in their customer file under
+                            Estimates.
+                          </p>
+                          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
+                            <p className="text-xl font-bold tabular-nums text-emerald-800">
+                              ${calculatePrice.total.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-emerald-600">
+                              Estimated total
+                            </p>
+                          </div>
+                          <Button
+                            className="mt-6"
+                            onClick={() => {
+                              resetForm();
+                              onOpenChange(false);
+                            }}
+                          >
+                            Done
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex size-16 items-center justify-center rounded-full bg-blue-100">
+                            <Check className="size-7 text-blue-600" />
+                          </div>
+                          <h3 className="mt-4 text-lg font-bold text-slate-800">
+                            Estimate Created
+                          </h3>
+                          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
+                            Estimate for{" "}
+                            <span className="font-medium text-slate-700">
+                              {selectedClient?.name}
+                            </span>{" "}
+                            — {selectedPets.map((p) => p.name).join(", ")}
+                          </p>
+                          <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
+                            <p className="text-xl font-bold tabular-nums">
+                              ${calculatePrice.total.toFixed(2)}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {selectedService} · {serviceType || "Standard"}
+                            </p>
+                          </div>
+                          <div className="mt-6 flex gap-3">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                resetForm();
+                                onOpenChange(false);
+                              }}
+                            >
+                              Save as Draft
+                            </Button>
+                            <Button
+                              className="gap-1.5"
+                              onClick={() => setEstimateSent(true)}
+                            >
+                              <svg
+                                className="size-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
+                                />
+                              </svg>
+                              Send to Customer
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                {displayedSteps[currentStep]?.id === "confirm" &&
+                  !(isEstimateMode && estimateCreated) && (
                   <ConfirmStep
                     selectedClient={selectedClient}
                     selectedPets={selectedPets}
@@ -1782,6 +1892,7 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Navigation Buttons */}
+            {!(isEstimateMode && estimateCreated) && (
             <div className="bg-background flex justify-between border-t p-4">
               <Button
                 type="button"
@@ -1825,6 +1936,7 @@ export function BookingModal({
                 )}
               </div>
             </div>
+            )}
           </div>
         </div>
       </DialogContent>
