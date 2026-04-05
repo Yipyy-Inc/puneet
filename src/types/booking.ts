@@ -262,6 +262,60 @@ export const invoiceSchema = z.object({
 });
 export type Invoice = z.infer<typeof invoiceSchema>;
 
+// ============================================================================
+// Estimates
+// ============================================================================
+
+export const estimateStatusEnum = z.enum([
+  "draft",
+  "sent",
+  "accepted",
+  "declined",
+  "expired",
+  "converted",
+]);
+export type EstimateStatus = z.infer<typeof estimateStatusEnum>;
+
+export const estimateLineItemSchema = z.object({
+  label: z.string(),
+  description: z.string().optional(),
+  amount: z.number(),
+  quantity: z.number(),
+  total: z.number(),
+});
+export type EstimateLineItem = z.infer<typeof estimateLineItemSchema>;
+
+export const estimateSchema = z.object({
+  id: z.string(),
+  clientId: z.number(),
+  clientName: z.string(),
+  clientEmail: z.string(),
+  clientPhone: z.string().optional(),
+  petIds: z.array(z.number()),
+  petNames: z.array(z.string()),
+  service: z.string(),
+  serviceType: z.string().optional(),
+  startDate: z.string(),
+  endDate: z.string(),
+  notes: z.string().optional(),
+  lineItems: z.array(estimateLineItemSchema),
+  subtotal: z.number(),
+  discount: z.number(),
+  discountReason: z.string().optional(),
+  taxRate: z.number(),
+  taxAmount: z.number(),
+  total: z.number(),
+  depositRequired: z.number().optional(),
+  status: estimateStatusEnum,
+  sentAt: z.string().optional(),
+  sentVia: z.enum(["email", "sms", "both"]).optional(),
+  expiresAt: z.string().optional(),
+  createdAt: z.string(),
+  createdBy: z.string(),
+  convertedBookingId: z.number().optional(),
+});
+export type Estimate = z.infer<typeof estimateSchema>;
+
 export const qbSyncActionEnum = z.enum([
   "invoice_created",
   "payment_synced",

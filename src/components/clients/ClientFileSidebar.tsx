@@ -147,6 +147,7 @@ export function ClientFileSidebar({
     },
     { href: `${base}/vaccinations`, label: "Vaccinations", icon: Syringe },
     { href: `${base}/forms`, label: "Forms & Waivers", icon: FileText },
+    { href: `${base}/estimates`, label: "Estimates", icon: FileText },
   ];
 
   const communicationNav = [
