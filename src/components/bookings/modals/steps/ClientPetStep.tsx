@@ -349,12 +349,22 @@ export function ClientPetStep({
                                 </p>
                               )}
                             </div>
-                            <Badge
-                              variant={isSelected ? "secondary" : "outline"}
-                            >
-                              {client.pets.length} pet
-                              {client.pets.length !== 1 ? "s" : ""}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              {(bookingCounts[client.id] ?? 0) > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+                                >
+                                  {bookingCounts[client.id]} visits
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={isSelected ? "secondary" : "outline"}
+                              >
+                                {client.pets.length} pet
+                                {client.pets.length !== 1 ? "s" : ""}
+                              </Badge>
+                            </div>
                           </div>
                           {isSelected && (
                             <div className="border-border mt-3 border-t pt-3">
