@@ -1,211 +1,208 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   X,
   Image as ImageIcon,
   Link2,
   FileText,
-  File,
-  Download,
-  Search,
-  ChevronRight,
   Eye,
+  PawPrint,
+  Calendar,
+  Phone,
+  Mail,
+  ExternalLink,
+  Send,
+  ChevronDown,
+  ChevronUp,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { clients } from "@/data/clients";
+import { bookings } from "@/data/bookings";
 import type { Message } from "@/types/communications";
 
-// ── Shared media types ───────────────────────────────────────────────
+// ── Quick-send links (staff can send these into chat) ────────────────
+
+const QUICK_LINKS = [
+  {
+    id: "ql-1",
+    label: "Boarding Agreement",
+    url: "https://pawcare.com/forms/boarding-agreement",
+    icon: FileText,
+    color: "bg-blue-50 text-blue-600",
+  },
+  {
+    id: "ql-2",
+    label: "Vaccination Form",
+    url: "https://pawcare.com/forms/vaccination-upload",
+    icon: FileText,
+    color: "bg-emerald-50 text-emerald-600",
+  },
+  {
+    id: "ql-3",
+    label: "Intake Form",
+    url: "https://pawcare.com/forms/intake",
+    icon: FileText,
+    color: "bg-violet-50 text-violet-600",
+  },
+  {
+    id: "ql-4",
+    label: "Pricing & Packages",
+    url: "https://pawcare.com/pricing",
+    icon: Link2,
+    color: "bg-amber-50 text-amber-600",
+  },
+  {
+    id: "ql-5",
+    label: "Facility Policies",
+    url: "https://pawcare.com/policies",
+    icon: Link2,
+    color: "bg-slate-100 text-slate-600",
+  },
+];
+
+// ── Demo shared media ────────────────────────────────────────────────
 
 interface SharedMedia {
   id: string;
   type: "image" | "link" | "document";
   url: string;
   name: string;
-  size?: string;
   date: string;
   sender: string;
   thumbnail?: string;
+  size?: string;
 }
 
-function extractSharedMedia(
-  messages: Message[],
-  threadId: string,
-): SharedMedia[] {
-  const threadMsgs = messages.filter((m) => (m.threadId ?? m.id) === threadId);
-  const media: SharedMedia[] = [];
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-
-  for (const msg of threadMsgs) {
-    const urls = msg.body.match(urlRegex);
-    if (urls) {
-      for (const url of urls) {
-        const isImage = /\.(jpg|jpeg|png|gif|webp)/i.test(url);
-        media.push({
-          id: `${msg.id}-${url}`,
-          type: isImage ? "image" : "link",
-          url,
-          name: isImage
-            ? (url.split("/").pop() ?? "image")
-            : (() => {
-                try {
-                  return new URL(url).hostname;
-                } catch {
-                  return url;
-                }
-              })(),
-          date: msg.timestamp,
-          sender: msg.direction === "outbound" ? "You" : msg.from,
-          thumbnail: isImage ? url : undefined,
-        });
-      }
-    }
-
-    if (msg.attachments) {
-      for (const att of msg.attachments) {
-        const isImage = /\.(jpg|jpeg|png|gif|webp)/i.test(
-          att.name ?? att.url ?? "",
-        );
-        media.push({
-          id: `${msg.id}-att-${att.name}`,
-          type: isImage ? "image" : "document",
-          url: att.url ?? "#",
-          name: att.name ?? "Attachment",
-          size: att.size ? `${Math.round(att.size / 1024)}KB` : undefined,
-          date: msg.timestamp,
-          sender: msg.direction === "outbound" ? "You" : msg.from,
-        });
-      }
-    }
-  }
-
-  return media.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
-}
-
-// Demo data
 const DEMO_MEDIA: SharedMedia[] = [
   {
-    id: "demo-1",
+    id: "d1",
     type: "image",
     url: "/dogs/dog-1.jpg",
-    name: "buddy-playtime.jpg",
+    name: "buddy.jpg",
     date: "2026-04-03T14:30:00Z",
     sender: "You",
     thumbnail: "/dogs/dog-1.jpg",
   },
   {
-    id: "demo-2",
+    id: "d2",
     type: "image",
     url: "/dogs/dog-2.jpg",
-    name: "max-afternoon.jpg",
+    name: "max.jpg",
     date: "2026-04-02T11:00:00Z",
     sender: "Client",
     thumbnail: "/dogs/dog-2.jpg",
   },
   {
-    id: "demo-3",
+    id: "d3",
     type: "image",
     url: "/dogs/dog-3.jpg",
-    name: "evaluation-report.jpg",
+    name: "eval.jpg",
     date: "2026-04-01T09:30:00Z",
     sender: "You",
     thumbnail: "/dogs/dog-3.jpg",
   },
   {
-    id: "demo-4",
+    id: "d4",
     type: "image",
     url: "/dogs/dog-4.jpg",
-    name: "daycare-fun.jpg",
+    name: "daycare.jpg",
     date: "2026-03-30T15:00:00Z",
     sender: "You",
     thumbnail: "/dogs/dog-4.jpg",
   },
   {
-    id: "demo-5",
+    id: "d5",
     type: "image",
     url: "/cats/cat-1.jpg",
-    name: "whiskers-nap.jpg",
+    name: "whiskers.jpg",
     date: "2026-03-28T10:00:00Z",
     sender: "Client",
     thumbnail: "/cats/cat-1.jpg",
   },
   {
-    id: "demo-6",
+    id: "d6",
     type: "image",
     url: "/cats/cat-2.jpg",
-    name: "luna-playing.jpg",
+    name: "luna.jpg",
     date: "2026-03-25T16:00:00Z",
     sender: "You",
     thumbnail: "/cats/cat-2.jpg",
   },
-  {
-    id: "demo-10",
-    type: "link",
-    url: "https://pawcare.com/booking/confirm/12345",
-    name: "Booking Confirmation #12345",
-    date: "2026-04-03T16:00:00Z",
-    sender: "You",
-  },
-  {
-    id: "demo-11",
-    type: "link",
-    url: "https://pawcare.com/policies/boarding",
-    name: "Boarding Policy & Guidelines",
-    date: "2026-04-01T10:00:00Z",
-    sender: "You",
-  },
-  {
-    id: "demo-12",
-    type: "link",
-    url: "https://pawcare.com/vaccination-schedule",
-    name: "Vaccination Schedule 2026",
-    date: "2026-03-28T14:00:00Z",
-    sender: "Client",
-  },
-  {
-    id: "demo-20",
-    type: "document",
-    url: "#",
-    name: "vaccination-records.pdf",
-    size: "245 KB",
-    date: "2026-04-02T15:00:00Z",
-    sender: "Client",
-  },
-  {
-    id: "demo-21",
-    type: "document",
-    url: "#",
-    name: "boarding-agreement-2026.pdf",
-    size: "120 KB",
-    date: "2026-04-01T12:00:00Z",
-    sender: "You",
-  },
-  {
-    id: "demo-22",
-    type: "document",
-    url: "#",
-    name: "pet-insurance-claim.pdf",
-    size: "380 KB",
-    date: "2026-03-29T09:00:00Z",
-    sender: "Client",
-  },
 ];
 
-function formatMediaDate(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const AVATAR_COLORS = [
+  "bg-rose-500",
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-violet-500",
+  "bg-amber-500",
+  "bg-sky-500",
+];
+
+function avatarColor(name: string) {
+  return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
 }
 
-// ── Component ────────────────────────────────────────────────────────
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ── Collapsible section ──────────────────────────────────────────────
+
+function Section({
+  title,
+  icon: Icon,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  icon: typeof PawPrint;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between px-4 py-2 hover:bg-slate-50"
+      >
+        <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+          <Icon className="size-3" />
+          {title}
+        </span>
+        {open ? (
+          <ChevronUp className="size-3 text-slate-300" />
+        ) : (
+          <ChevronDown className="size-3 text-slate-300" />
+        )}
+      </button>
+      {open && <div className="px-4 pb-3">{children}</div>}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────
 
 export function ClientContextPanel({
   threadId,
@@ -216,144 +213,231 @@ export function ClientContextPanel({
   messages: Message[];
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<"media" | "links" | "docs">("media");
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const sharedMedia = useMemo(() => {
-    if (!threadId) return [];
-    const extracted = extractSharedMedia(messages, threadId);
-    return extracted.length > 0 ? extracted : DEMO_MEDIA;
+  const clientId = useMemo(() => {
+    if (!threadId) return null;
+    const msg = messages.find((m) => (m.threadId ?? m.id) === threadId);
+    return msg?.clientId ?? null;
   }, [threadId, messages]);
 
-  const filteredMedia = useMemo(() => {
-    let items = sharedMedia;
-    if (tab === "media") items = items.filter((m) => m.type === "image");
-    if (tab === "links") items = items.filter((m) => m.type === "link");
-    if (tab === "docs") items = items.filter((m) => m.type === "document");
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      items = items.filter((m) => m.name.toLowerCase().includes(q));
-    }
-    return items;
-  }, [sharedMedia, tab, searchQuery]);
+  const client = clientId ? clients.find((c) => c.id === clientId) : null;
 
-  const counts = {
-    media: sharedMedia.filter((m) => m.type === "image").length,
-    links: sharedMedia.filter((m) => m.type === "link").length,
-    docs: sharedMedia.filter((m) => m.type === "document").length,
-  };
+  const clientBookings = useMemo(() => {
+    if (!clientId) return [];
+    return bookings
+      .filter((b) => b.clientId === clientId)
+      .sort(
+        (a, b) =>
+          new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+      );
+  }, [clientId]);
+
+  const upcoming = clientBookings.filter(
+    (b) => new Date(b.startDate) > new Date() && b.status !== "cancelled",
+  );
+  const completed = clientBookings.filter((b) => b.status === "completed");
+  const totalSpend = clientBookings.reduce((s, b) => s + b.totalCost, 0);
+
+  if (!client) {
+    return (
+      <div className="flex h-full w-72 shrink-0 flex-col items-center justify-center bg-white">
+        <p className="text-sm text-slate-400">Select a conversation</p>
+      </div>
+    );
+  }
+
+  const clientImage = (client as Record<string, unknown>)?.imageUrl as
+    | string
+    | undefined;
 
   return (
     <div className="flex h-full w-72 shrink-0 flex-col bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className="text-[13px] font-bold text-slate-800">Media & Files</h3>
+      <div className="flex items-center justify-between border-b px-4 py-2.5">
+        <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+          Client Info
+        </span>
         <Button
           variant="ghost"
           size="icon"
-          className="size-7 rounded-full text-slate-400 hover:text-slate-600"
+          className="size-7 rounded-full text-slate-400"
           onClick={onClose}
         >
           <X className="size-4" />
         </Button>
       </div>
 
-      {/* Tabs */}
-      <div className="px-3 pt-3 pb-2">
-        <div className="flex rounded-xl bg-slate-100 p-1">
-          {(
-            [
-              {
-                key: "media" as const,
-                label: "Photos",
-                icon: ImageIcon,
-                count: counts.media,
-              },
-              {
-                key: "links" as const,
-                label: "Links",
-                icon: Link2,
-                count: counts.links,
-              },
-              {
-                key: "docs" as const,
-                label: "Files",
-                icon: FileText,
-                count: counts.docs,
-              },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+      <div className="flex-1 overflow-y-auto">
+        {/* ── Client profile ── */}
+        <div className="flex flex-col items-center border-b px-4 pt-5 pb-4">
+          {clientImage ? (
+            <img
+              src={clientImage}
+              alt=""
+              className="size-16 rounded-full object-cover ring-4 ring-slate-100"
+            />
+          ) : (
+            <div
               className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 rounded-lg py-2 transition-all",
-                tab === t.key
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-400 hover:text-slate-600",
+                "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white",
+                avatarColor(client.name),
               )}
             >
-              <t.icon className="size-4" />
-              <span className="text-[9px] font-semibold">
-                {t.label}
-                <span className="ml-0.5 opacity-50">{t.count}</span>
-              </span>
-            </button>
+              {initials(client.name)}
+            </div>
+          )}
+          <h3 className="mt-2 text-sm font-bold text-slate-800">
+            {client.name}
+          </h3>
+
+          {/* Contact row */}
+          <div className="mt-2 flex items-center gap-4 text-[10px] text-slate-400">
+            {client.phone && (
+              <a
+                href={`tel:${client.phone}`}
+                className="flex items-center gap-1 hover:text-slate-600"
+              >
+                <Phone className="size-3" />
+                {client.phone}
+              </a>
+            )}
+            <a
+              href={`mailto:${client.email}`}
+              className="flex items-center gap-1 hover:text-slate-600"
+            >
+              <Mail className="size-3" />
+              Email
+            </a>
+          </div>
+
+          {/* Quick actions */}
+          <div className="mt-3 flex gap-2">
+            <Link href={`/facility/dashboard/clients/${client.id}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 rounded-full text-[10px]"
+              >
+                <ExternalLink className="size-3" />
+                View Profile
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-3 border-b py-3">
+          {[
+            { n: upcoming.length, label: "Upcoming" },
+            { n: completed.length, label: "Past" },
+            {
+              n: `$${totalSpend > 999 ? `${(totalSpend / 1000).toFixed(1)}k` : totalSpend}`,
+              label: "Spent",
+            },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="text-base font-bold text-slate-800 tabular-nums">
+                {s.n}
+              </p>
+              <p className="text-[8px] font-semibold tracking-wider text-slate-400 uppercase">
+                {s.label}
+              </p>
+            </div>
           ))}
         </div>
-      </div>
 
-      {/* Search */}
-      {(tab === "links" || tab === "docs") && (
-        <div className="px-3 pb-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-slate-300" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                tab === "links" ? "Search links..." : "Search files..."
-              }
-              className="h-8 w-full rounded-lg bg-slate-50 pr-3 pl-8 text-[11px] text-slate-700 outline-none placeholder:text-slate-400"
-            />
+        {/* ── Pets ── */}
+        <Section title="Pets" icon={PawPrint}>
+          <div className="space-y-1">
+            {client.pets.map((pet) => (
+              <Link
+                key={pet.id}
+                href={`/facility/dashboard/clients/${client.id}/pets/${pet.id}`}
+                className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-50"
+              >
+                {pet.imageUrl ? (
+                  <img
+                    src={pet.imageUrl}
+                    alt=""
+                    className="size-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-8 items-center justify-center rounded-full bg-slate-100">
+                    <PawPrint className="size-3.5 text-slate-400" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-700">
+                    {pet.name}
+                  </p>
+                  <p className="text-[9px] text-slate-400">
+                    {pet.breed} · {pet.type}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
-      )}
+        </Section>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredMedia.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            {tab === "media" && (
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-blue-50">
-                <ImageIcon className="size-6 text-blue-300" />
+        {/* ── Next Appointment ── */}
+        <Section title="Next Appointment" icon={Calendar}>
+          {upcoming[0] ? (
+            <div className="rounded-xl bg-slate-50 p-2.5">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-blue-100 text-[9px] text-blue-700 capitalize">
+                  {upcoming[0].service}
+                </Badge>
+                <span className="text-[11px] font-bold text-slate-700 tabular-nums">
+                  ${upcoming[0].totalCost}
+                </span>
               </div>
-            )}
-            {tab === "links" && (
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-violet-50">
-                <Link2 className="size-6 text-violet-300" />
-              </div>
-            )}
-            {tab === "docs" && (
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-amber-50">
-                <FileText className="size-6 text-amber-300" />
-              </div>
-            )}
-            <p className="mt-3 text-xs font-medium text-slate-400">
-              No{" "}
-              {tab === "media" ? "photos" : tab === "links" ? "links" : "files"}{" "}
-              shared
+              <p className="mt-1 text-[10px] text-slate-500">
+                {formatDate(upcoming[0].startDate)}
+                {upcoming[0].checkInTime && ` · ${upcoming[0].checkInTime}`}
+              </p>
+            </div>
+          ) : (
+            <p className="text-[10px] text-slate-400 italic">
+              No upcoming bookings
             </p>
-            <p className="mt-0.5 text-[10px] text-slate-300">
-              Shared media will appear here
-            </p>
+          )}
+        </Section>
+
+        {/* ── Quick Send Links ── */}
+        <Section title="Quick Send" icon={Send} defaultOpen>
+          <div className="space-y-1">
+            {QUICK_LINKS.map((link) => (
+              <button
+                key={link.id}
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(link.url);
+                  toast.success(`"${link.label}" link copied — paste in chat`);
+                }}
+                className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
+              >
+                <div
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                    link.color,
+                  )}
+                >
+                  <link.icon className="size-3.5" />
+                </div>
+                <span className="flex-1 text-[10px] font-medium text-slate-600">
+                  {link.label}
+                </span>
+                <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+              </button>
+            ))}
           </div>
-        ) : tab === "media" ? (
-          /* ── Photo grid ── */
-          <div className="grid grid-cols-3 gap-[2px] p-[2px]">
-            {filteredMedia.map((item) => (
+        </Section>
+
+        {/* ── Shared Photos ── */}
+        <Section title="Shared Photos" icon={ImageIcon} defaultOpen={false}>
+          <div className="grid grid-cols-3 gap-[2px] overflow-hidden rounded-lg">
+            {DEMO_MEDIA.map((item) => (
               <button
                 key={item.id}
                 className="group relative aspect-square overflow-hidden bg-slate-100"
@@ -361,113 +445,19 @@ export function ClientContextPanel({
               >
                 <img
                   src={item.thumbnail ?? item.url}
-                  alt={item.name}
-                  className="size-full object-cover transition-all duration-200 group-hover:scale-110"
+                  alt=""
+                  className="size-full object-cover transition-transform group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-black/0 transition-all group-hover:bg-black/30" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all group-hover:opacity-100">
-                  <div className="flex size-8 items-center justify-center rounded-full bg-white/90 shadow-sm">
-                    <Eye className="size-4 text-slate-700" />
-                  </div>
-                </div>
-                <div className="absolute right-1 bottom-1 left-1 opacity-0 transition-all group-hover:opacity-100">
-                  <p className="truncate rounded bg-black/50 px-1 py-0.5 text-[8px] text-white">
-                    {formatMediaDate(item.date)}
-                  </p>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                  <Eye className="size-4 text-white opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
               </button>
             ))}
           </div>
-        ) : tab === "links" ? (
-          /* ── Links ── */
-          <div className="px-3 py-1">
-            {filteredMedia.map((item) => (
-              <a
-                key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-2.5 rounded-xl p-2.5 transition-colors hover:bg-slate-50"
-              >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 transition-colors group-hover:bg-violet-100">
-                  <Link2 className="size-4 text-violet-500" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold text-slate-700">
-                    {item.name}
-                  </p>
-                  <p className="truncate text-[9px] text-slate-400">
-                    {item.sender} · {formatMediaDate(item.date)}
-                  </p>
-                </div>
-                <ChevronRight className="size-3.5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
-              </a>
-            ))}
-          </div>
-        ) : (
-          /* ── Documents ── */
-          <div className="px-3 py-1">
-            {filteredMedia.map((item) => {
-              const isPdf = item.name.endsWith(".pdf");
-              return (
-                <div
-                  key={item.id}
-                  className="group flex items-center gap-2.5 rounded-xl p-2.5 transition-colors hover:bg-slate-50"
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors",
-                      isPdf
-                        ? "bg-red-50 group-hover:bg-red-100"
-                        : "bg-amber-50 group-hover:bg-amber-100",
-                    )}
-                  >
-                    <File
-                      className={cn(
-                        "size-4",
-                        isPdf ? "text-red-500" : "text-amber-500",
-                      )}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold text-slate-700">
-                      {item.name}
-                    </p>
-                    <p className="text-[9px] text-slate-400">
-                      {item.size ?? "—"} · {item.sender} ·{" "}
-                      {formatMediaDate(item.date)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 shrink-0 rounded-full text-slate-300 opacity-0 transition-all group-hover:opacity-100 hover:text-blue-500"
-                  >
-                    <Download className="size-3.5" />
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        </Section>
       </div>
 
-      {/* Footer stats */}
-      <div className="border-t px-3 py-2.5">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-slate-400">
-            {counts.media + counts.links + counts.docs} items shared
-          </p>
-          <button
-            type="button"
-            className="text-[10px] font-medium text-blue-500 hover:text-blue-600"
-          >
-            See all
-          </button>
-        </div>
-      </div>
-
-      {/* Image lightbox */}
+      {/* Lightbox */}
       {selectedImage && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
