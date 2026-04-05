@@ -1,21 +1,48 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Mail, MessageSquare, Smartphone } from "lucide-react";
+import {
+  Mail,
+  MessageSquare,
+  Smartphone,
+  Phone,
+  StickyNote,
+} from "lucide-react";
 
 const CHANNEL_CONFIG: Record<
   string,
-  { icon: typeof Mail; label: string; class: string }
+  { icon: typeof Mail; label: string; class: string; dot: string }
 > = {
-  email: { icon: Mail, label: "Email", class: "text-info" },
-  sms: { icon: Smartphone, label: "SMS", class: "text-success" },
+  email: {
+    icon: Mail,
+    label: "Email",
+    class: "text-blue-600",
+    dot: "bg-blue-500",
+  },
+  sms: {
+    icon: Smartphone,
+    label: "SMS",
+    class: "text-emerald-600",
+    dot: "bg-emerald-500",
+  },
   "in-app": {
     icon: MessageSquare,
     label: "Chat",
-    class: "text-secondary-foreground",
+    class: "text-violet-600",
+    dot: "bg-violet-500",
   },
-  call: { icon: Smartphone, label: "Call", class: "text-warning" },
-  note: { icon: MessageSquare, label: "Note", class: "text-muted-foreground" },
+  call: {
+    icon: Phone,
+    label: "Call",
+    class: "text-amber-600",
+    dot: "bg-amber-500",
+  },
+  note: {
+    icon: StickyNote,
+    label: "Note",
+    class: "text-slate-500",
+    dot: "bg-slate-400",
+  },
 };
 
 export function ChannelBadge({
@@ -23,10 +50,15 @@ export function ChannelBadge({
   size = "sm",
 }: {
   channel: string;
-  size?: "xs" | "sm";
+  size?: "xs" | "sm" | "micro";
 }) {
   const config = CHANNEL_CONFIG[channel] ?? CHANNEL_CONFIG["in-app"];
   const Icon = config.icon;
+
+  if (size === "micro") {
+    return <Icon className={cn("size-3", config.class)} />;
+  }
+
   return (
     <span
       className={cn(
