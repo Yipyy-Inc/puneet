@@ -1296,6 +1296,7 @@ function CustomFeeModal({
     description: "",
     amount: 0,
     feeType: "flat" as "flat" | "percentage",
+    taxRate: undefined as number | undefined,
     scope: "per_pet" as "per_booking" | "per_pet",
     autoApply: "none" as "none" | "at_checkout" | "by_care_type",
     autoApplyCareTypes: [] as string[],
@@ -1310,6 +1311,7 @@ function CustomFeeModal({
         description: editing.description ?? "",
         amount: editing.amount,
         feeType: editing.feeType,
+        taxRate: editing.taxRate,
         scope: editing.scope,
         autoApply: editing.autoApply,
         autoApplyCareTypes: editing.autoApplyCareTypes ?? [],
@@ -1320,6 +1322,7 @@ function CustomFeeModal({
         description: "",
         amount: 0,
         feeType: "flat",
+        taxRate: undefined,
         scope: "per_pet",
         autoApply: "none",
         autoApplyCareTypes: [],
@@ -1412,6 +1415,24 @@ function CustomFeeModal({
             </div>
           </div>
           <div className="space-y-2">
+            <Label>Tax Rate (%)</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.taxRate ?? ""}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  taxRate: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                }))
+              }
+              placeholder="Uses facility default"
+            />
+          </div>
+          <div className="space-y-2">
             <Label>Auto-Apply</Label>
             <div className="space-y-1.5">
               {(
@@ -1476,6 +1497,11 @@ function CustomFeeModal({
               </div>
             )}
           </div>
+          <p className="text-muted-foreground rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px]">
+            Each fee can only be added once per appointment. Fees are excluded
+            from staff commission calculations but included when applying
+            discounts.
+          </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1493,6 +1519,7 @@ function CustomFeeModal({
                 description: form.description || undefined,
                 amount: form.amount,
                 feeType: form.feeType,
+                taxRate: form.taxRate,
                 scope: form.scope,
                 autoApply: form.autoApply,
                 autoApplyCareTypes:
