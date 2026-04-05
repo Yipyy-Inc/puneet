@@ -22,6 +22,7 @@ import {
   Puzzle,
   Package,
   ChevronDown,
+  CloudSun,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -47,6 +48,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
     sections: [
       { id: "business", label: "Business", icon: Building2 },
       { id: "notifications", label: "Notifications", icon: Bell },
+      { id: "weather", label: "Weather Warnings", icon: CloudSun },
       { id: "integrations", label: "Integrations", icon: Plug },
       { id: "mobile-app", label: "Mobile App", icon: Smartphone },
     ],

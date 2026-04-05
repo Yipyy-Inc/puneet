@@ -6,6 +6,7 @@ import type {
   EvaluationConfig,
   EvaluationFormTemplate,
   EvaluationReportCardConfig,
+  WeatherWarningRule,
   BusinessProfile,
   BusinessHours,
   Location,
@@ -1227,3 +1228,108 @@ export const trainingConfig: ModuleConfig = {
     reason: undefined,
   },
 };
+
+// ========================================
+// WEATHER WARNING RULES
+// ========================================
+
+export const weatherWarningRules: WeatherWarningRule[] = [
+  {
+    id: "rule-cold-extreme",
+    name: "Extreme Cold",
+    condition: "temperature_below",
+    value: -10,
+    severity: "critical",
+    message:
+      "Extreme cold — all dogs must stay indoors. No outdoor activities.",
+    autoAction: "Move all dogs to indoor areas immediately",
+    isActive: true,
+    appliesToAreas: ["outdoor_park", "covered_patio", "pool"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-cold-moderate",
+    name: "Cold Weather",
+    condition: "temperature_below",
+    value: 0,
+    severity: "warning",
+    message:
+      "Cold weather — limit outdoor time to 15 minutes. Monitor small breeds closely.",
+    isActive: true,
+    appliesToAreas: ["outdoor_park"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-heat-extreme",
+    name: "Extreme Heat",
+    condition: "feels_like_above",
+    value: 35,
+    severity: "critical",
+    message:
+      "Extreme heat — keep all dogs indoors with AC. Provide extra water bowls.",
+    autoAction: "Cancel all outdoor play sessions",
+    isActive: true,
+    appliesToAreas: ["outdoor_park", "covered_patio"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-heat-moderate",
+    name: "Hot Weather",
+    condition: "feels_like_above",
+    value: 30,
+    severity: "warning",
+    message:
+      "Hot weather — move dogs to shaded or indoor areas. Ensure fresh water available.",
+    isActive: true,
+    appliesToAreas: ["outdoor_park"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-rain",
+    name: "Rain Alert",
+    condition: "weather_is",
+    value: "rain",
+    severity: "warning",
+    message:
+      "Rain expected — bring dogs inside from outdoor park. Dry towels at entrance.",
+    isActive: true,
+    appliesToAreas: ["outdoor_park"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-thunderstorm",
+    name: "Thunderstorm Alert",
+    condition: "weather_is",
+    value: "thunderstorm",
+    severity: "critical",
+    message:
+      "Thunderstorm — ALL dogs indoors immediately. Monitor anxious dogs for stress.",
+    autoAction: "Activate calming protocol for noise-sensitive dogs",
+    isActive: true,
+    appliesToAreas: ["all"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-high-wind",
+    name: "High Wind",
+    condition: "wind_speed_above",
+    value: 50,
+    severity: "warning",
+    message: "High winds — secure outdoor equipment. Small dogs stay indoors.",
+    isActive: true,
+    appliesToAreas: ["outdoor_park"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: "rule-snow",
+    name: "Snow Alert",
+    condition: "weather_is",
+    value: "snow",
+    severity: "warning",
+    message:
+      "Snowfall — outdoor park closed. All activities moved indoors. Check paws for ice.",
+    isActive: true,
+    appliesToAreas: ["outdoor_park", "covered_patio"],
+    createdAt: "2024-01-01T00:00:00Z",
+  },
+];
