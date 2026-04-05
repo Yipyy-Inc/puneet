@@ -20,7 +20,7 @@ export function MessageCenter() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-48px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-120px)] overflow-hidden rounded-xl border border-slate-200">
       <ContactList
         messages={messages}
         selectedThreadId={selectedThreadId}
