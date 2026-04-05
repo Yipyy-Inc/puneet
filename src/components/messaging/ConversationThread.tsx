@@ -78,13 +78,14 @@ export function ConversationThread({
 
   if (!threadId) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-slate-50">
-        <div className="flex size-20 items-center justify-center rounded-full bg-slate-100">
-          <MessageSquare className="size-9 text-slate-300" />
+      <div className="flex flex-1 flex-col items-center justify-center bg-slate-50/50">
+        <div className="flex size-24 items-center justify-center rounded-full bg-slate-100">
+          <MessageSquare className="size-10 text-slate-300" />
         </div>
-        <h3 className="mt-5 text-lg font-bold text-slate-700">Your Messages</h3>
-        <p className="mt-1 max-w-xs text-center text-sm text-slate-400">
-          Select a conversation from the left or start a new one
+        <h3 className="mt-6 text-xl font-bold text-slate-700">Your Messages</h3>
+        <p className="mt-2 max-w-sm text-center text-sm leading-relaxed text-slate-400">
+          Select a conversation from the left to view messages, or start a new
+          one by clicking the + button
         </p>
       </div>
     );
@@ -111,7 +112,7 @@ export function ConversationThread({
   return (
     <div className="flex flex-1 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b bg-white px-5 py-2.5">
+      <div className="flex items-center justify-between border-b bg-white px-6 py-3.5">
         <div className="flex items-center gap-3">
           {(client as Record<string, unknown>)?.imageUrl ? (
             <img
@@ -187,9 +188,9 @@ export function ConversationThread({
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-slate-50 px-5 py-4"
+        className="flex-1 overflow-y-auto bg-slate-50/50 px-6 py-5"
       >
-        <div className="mx-auto max-w-2xl space-y-0.5">
+        <div className="mx-auto max-w-3xl space-y-1">
           {grouped.map((item, i) =>
             item.type === "date" ? (
               <DateSeparator key={`d-${i}`} date={item.date} />
