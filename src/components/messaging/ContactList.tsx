@@ -144,7 +144,7 @@ export function ContactList({
     <div className="flex h-full w-80 shrink-0 flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <h1 className="text-xl font-bold text-slate-900">Chats</h1>
+        <h1 className="text-xl font-bold text-slate-900">Messages</h1>
         <Button
           size="icon"
           variant={compose ? "secondary" : "default"}
@@ -182,10 +182,10 @@ export function ContactList({
           {(
             [
               { key: "all" as Filter, label: "All" },
-              { key: "unread" as Filter, label: "Unread" },
-              { key: "sms" as Filter, label: "SMS" },
-              { key: "email" as Filter, label: "Email" },
               { key: "chat" as Filter, label: "Chat" },
+              { key: "email" as Filter, label: "Email" },
+              { key: "sms" as Filter, label: "SMS" },
+              { key: "unread" as Filter, label: "Unread" },
             ] as const
           ).map((f) => (
             <button
