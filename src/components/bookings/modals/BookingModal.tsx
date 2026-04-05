@@ -100,6 +100,20 @@ export function BookingModal({
   );
   const { getModuleBySlug } = useCustomServices();
 
+  // Estimate mode detection
+  const [isEstimateMode, setIsEstimateMode] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      const mode = localStorage.getItem("booking-modal-mode");
+      setIsEstimateMode(mode === "estimate");
+      localStorage.removeItem("booking-modal-mode");
+    } else {
+      setIsEstimateMode(false);
+    }
+  }
+
   // Staff options for assignment
   const staffOptions = [
     { value: "Mike Chen", label: "Mike Chen" },
@@ -234,16 +248,24 @@ export function BookingModal({
   const [notificationSMS, setNotificationSMS] = useState(initDefaults.sms);
   const [tipAmount, setTipAmount] = useState(0);
 
-  // Get current sub-steps based on selected service
+  // Get current sub-steps based on selected service (estimate mode skips feeding/medication)
   const currentSubSteps = useMemo(() => {
-    if (selectedService === "daycare") return DAYCARE_SUB_STEPS;
-    if (selectedService === "boarding") return BOARDING_SUB_STEPS;
+    if (selectedService === "daycare") {
+      return isEstimateMode
+        ? DAYCARE_SUB_STEPS.filter((s) => s.id <= 2)
+        : DAYCARE_SUB_STEPS;
+    }
+    if (selectedService === "boarding") {
+      return isEstimateMode
+        ? BOARDING_SUB_STEPS.filter((s) => s.id <= 2)
+        : BOARDING_SUB_STEPS;
+    }
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
     if (selectedService) {
       return CUSTOM_SERVICE_SUB_STEPS;
     }
     return [];
-  }, [selectedService]);
+  }, [selectedService, isEstimateMode]);
 
   // Check if current sub-step is complete
   const isSubStepComplete = useCallback(
@@ -1293,7 +1315,9 @@ export function BookingModal({
       }}
     >
       <DialogContent className="flex h-[90vh] w-[95vw] min-w-7xl flex-col overflow-hidden p-0 [&>button]:hidden">
-        <DialogTitle className="sr-only">New Booking</DialogTitle>
+        <DialogTitle className="sr-only">
+          {isEstimateMode ? "New Estimate" : "New Booking"}
+        </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
           <div className="bg-muted/30 flex w-80 flex-col border-r">
@@ -1317,7 +1341,7 @@ export function BookingModal({
                   } else if (selectedService === "boarding") {
                     return boarding.clientFacingName;
                   } else {
-                    return "New Booking";
+                    return isEstimateMode ? "New Estimate" : "New Booking";
                   }
                 })()}
               </h2>
@@ -1435,7 +1459,10 @@ export function BookingModal({
                     if (step.id === "details" && detailsDesc)
                       return detailsDesc;
                     // #3 — Confirm shows action text, not price (price is in footer)
-                    if (step.id === "confirm") return "Review & create";
+                    if (step.id === "confirm")
+                      return isEstimateMode
+                        ? "Review & send"
+                        : "Review & create";
                     return step.description;
                   })();
 
@@ -1618,8 +1645,15 @@ export function BookingModal({
             <div className="bg-background border-t p-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-semibold">
-                  <span>Total Price</span>
-                  <span>${(calculatePrice.total + tipAmount).toFixed(2)}</span>
+                  <span>
+                    {isEstimateMode ? "Estimated Total" : "Total Price"}
+                  </span>
+                  <span>
+                    $
+                    {(
+                      calculatePrice.total + (isEstimateMode ? 0 : tipAmount)
+                    ).toFixed(2)}
+                  </span>
                 </div>
                 {tipAmount > 0 && (
                   <div className="text-muted-foreground flex justify-between text-xs">
@@ -1786,7 +1820,7 @@ export function BookingModal({
                     onClick={handleComplete}
                     disabled={!canProceed}
                   >
-                    Create Booking
+                    {isEstimateMode ? "Create Estimate" : "Create Booking"}
                   </Button>
                 )}
               </div>
@@ -1799,7 +1833,9 @@ export function BookingModal({
       <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard this booking?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Discard this {isEstimateMode ? "estimate" : "booking"}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               All information you&apos;ve entered will be lost. This action
               cannot be undone.
@@ -1814,7 +1850,7 @@ export function BookingModal({
                 onOpenChange(false);
               }}
             >
-              Discard booking
+              Discard {isEstimateMode ? "estimate" : "booking"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
