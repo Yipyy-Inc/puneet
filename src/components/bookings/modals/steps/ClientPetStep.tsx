@@ -14,7 +14,6 @@ import {
   Info,
   CheckCheck,
   XCircle,
-  Star,
 } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -221,15 +220,6 @@ export function ClientPetStep({
     return counts;
   }, []);
 
-  // Frequent clients — top 4 for the quick-select row
-  const frequentClients = React.useMemo(() => {
-    return filteredClients
-      .map((c) => ({ client: c, bookingCount: bookingCounts[c.id] ?? 0 }))
-      .filter((c) => c.bookingCount > 0)
-      .sort((a, b) => b.bookingCount - a.bookingCount)
-      .slice(0, 4);
-  }, [filteredClients, bookingCounts]);
-
   // Client list sorted by frequency (most bookings first)
   const sortedClients = React.useMemo(() => {
     return [...filteredClients].sort(
@@ -284,56 +274,6 @@ export function ClientPetStep({
         <>
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Select Client</h3>
-
-            {/* Frequent clients */}
-            {!searchQuery &&
-              frequentClients.length > 0 &&
-              !selectedClientId && (
-                <div className="space-y-2">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-slate-500 uppercase">
-                    <Star className="size-3 text-amber-500" />
-                    Frequent Customers
-                  </p>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {frequentClients.map(({ client, bookingCount }) => (
-                      <button
-                        key={client.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedClientId(client.id);
-                          if (client.pets.length === 1) {
-                            setSelectedPetIds([client.pets[0].id]);
-                          } else {
-                            setSelectedPetIds([]);
-                          }
-                        }}
-                        className="flex shrink-0 items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <Avatar className="size-8">
-                          <AvatarImage src={undefined} />
-                          <AvatarFallback className="bg-amber-100 text-xs font-semibold text-amber-700">
-                            {client.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="text-left">
-                          <p className="text-xs font-semibold text-slate-800">
-                            {client.name}
-                          </p>
-                          <p className="text-[10px] text-amber-700">
-                            {bookingCount} booking
-                            {bookingCount !== 1 ? "s" : ""} ·{" "}
-                            {client.pets.length} pet
-                            {client.pets.length !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
             {/* Search */}
             <div className="relative">
