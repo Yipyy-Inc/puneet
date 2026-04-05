@@ -516,7 +516,14 @@ export default function BoardingRatesPage() {
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <Card
+          className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+          onClick={() =>
+            document
+              .getElementById("section-rates")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -536,7 +543,14 @@ export default function BoardingRatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <Card
+          className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+          onClick={() =>
+            document
+              .getElementById("section-discounts")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -556,7 +570,14 @@ export default function BoardingRatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
+        <Card
+          className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+          onClick={() =>
+            document
+              .getElementById("section-peak")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }
+        >
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -579,7 +600,10 @@ export default function BoardingRatesPage() {
       </div>
 
       {/* Nightly Rates */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card
+        id="section-rates"
+        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+      >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
             <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
@@ -603,7 +627,10 @@ export default function BoardingRatesPage() {
       </Card>
 
       {/* Multi-Night Discounts */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card
+        id="section-discounts"
+        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+      >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
             <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-100">
@@ -632,7 +659,10 @@ export default function BoardingRatesPage() {
       </Card>
 
       {/* Peak Surcharges */}
-      <Card className="overflow-hidden transition-shadow hover:shadow-md">
+      <Card
+        id="section-peak"
+        className="scroll-mt-6 overflow-hidden transition-shadow hover:shadow-md"
+      >
         <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
           <CardTitle className="flex items-center gap-2.5 text-sm font-semibold">
             <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
