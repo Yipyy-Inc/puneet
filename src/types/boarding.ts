@@ -145,6 +145,20 @@ export const multiNightDiscountSchema = z
 
 export type MultiNightDiscount = z.infer<typeof multiNightDiscountSchema>;
 
+export const peakDateRangeSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+});
+export type PeakDateRange = z.infer<typeof peakDateRangeSchema>;
+
+export const peakRepeatPatternSchema = z.object({
+  daysOfWeek: z.array(z.number()),
+  everyXWeeks: z.number(),
+  windowStart: z.string(),
+  windowEnd: z.string(),
+});
+export type PeakRepeatPattern = z.infer<typeof peakRepeatPatternSchema>;
+
 export const peakSurchargeSchema = z
   .object({
     id: z.string(),
@@ -153,6 +167,15 @@ export const peakSurchargeSchema = z
     endDate: z.string(),
     surchargePercent: z.number(),
     isActive: z.boolean(),
+    // MoéGo parity fields
+    dateMode: z.enum(["specific", "repeat"]).optional(),
+    dateRanges: z.array(peakDateRangeSchema).optional(),
+    repeatPattern: peakRepeatPatternSchema.optional(),
+    surchargeType: z.enum(["percentage", "flat"]).optional(),
+    surchargeAmount: z.number().optional(),
+    scope: z.enum(["per_each_pet", "first_pet_only"]).optional(),
+    chargePerLodging: z.boolean().optional(),
+    applicableServices: z.array(z.string()).optional(),
   })
   .catchall(z.unknown());
 
