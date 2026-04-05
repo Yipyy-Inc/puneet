@@ -21,29 +21,40 @@ export function MessageCenter() {
 
   return (
     <div
-      className="flex h-[calc(100vh-120px)] overflow-hidden rounded-xl border border-slate-200"
+      className="flex h-[calc(100vh-120px)] gap-3"
       style={{
         fontFamily: "var(--font-inter), system-ui, sans-serif",
         letterSpacing: "-0.01em",
       }}
     >
-      <ContactList
-        messages={messages}
-        selectedThreadId={selectedThreadId}
-        onSelectThread={setSelectedThreadId}
-      />
-      <ConversationThread
-        threadId={selectedThreadId}
-        messages={messages}
-        detailOpen={detailOpen}
-        onToggleDetail={toggleDetail}
-      />
-      {detailOpen && (
-        <ClientContextPanel
+      {/* Contacts */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <ContactList
+          messages={messages}
+          selectedThreadId={selectedThreadId}
+          onSelectThread={setSelectedThreadId}
+        />
+      </div>
+
+      {/* Conversation */}
+      <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <ConversationThread
           threadId={selectedThreadId}
           messages={messages}
-          onClose={toggleDetail}
+          detailOpen={detailOpen}
+          onToggleDetail={toggleDetail}
         />
+      </div>
+
+      {/* Media panel */}
+      {detailOpen && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <ClientContextPanel
+            threadId={selectedThreadId}
+            messages={messages}
+            onClose={toggleDetail}
+          />
+        </div>
       )}
     </div>
   );
