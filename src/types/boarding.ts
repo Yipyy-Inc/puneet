@@ -189,7 +189,7 @@ export const latePickupFeeSchema = z.object({
   enabled: z.boolean(),
   condition: z.enum(["late_pickup", "early_dropoff"]),
   graceMinutes: z.number(),
-  feeType: z.enum(["flat", "per_hour", "per_30min"]),
+  feeType: z.enum(["flat", "per_hour", "per_30min", "per_minute"]),
   amount: z.number(),
   maxFee: z.number().optional(),
   taxRate: z.number().optional(),
@@ -219,7 +219,8 @@ export const customFeeSchema = z.object({
   feeType: z.enum(["flat", "percentage"]),
   taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
-  autoApply: z.boolean(),
+  autoApply: z.enum(["none", "at_checkout", "by_care_type"]),
+  autoApplyCareTypes: z.array(z.string()).optional(),
   applicableServices: z.array(z.string()),
   isActive: z.boolean(),
 });

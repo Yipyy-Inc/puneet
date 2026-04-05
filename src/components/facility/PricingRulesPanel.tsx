@@ -296,11 +296,13 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
                     </Badge>
                     <Badge variant="outline" className="text-[10px]">
                       ${fee.amount}
-                      {fee.feeType === "per_30min"
-                        ? "/30 min"
-                        : fee.feeType === "per_hour"
-                          ? "/hr"
-                          : " flat"}
+                      {fee.feeType === "per_minute"
+                        ? "/min"
+                        : fee.feeType === "per_30min"
+                          ? "/30 min"
+                          : fee.feeType === "per_hour"
+                            ? "/hr"
+                            : " flat"}
                     </Badge>
                     <Badge variant="outline" className="text-[10px]">
                       {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
@@ -445,9 +447,11 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
                     <Badge variant="outline" className="text-[10px]">
                       {fee.scope === "per_pet" ? "Per pet" : "Per booking"}
                     </Badge>
-                    {fee.autoApply && (
+                    {fee.autoApply !== "none" && (
                       <Badge className="bg-blue-100 text-[10px] text-blue-700">
-                        Auto-apply
+                        {fee.autoApply === "at_checkout"
+                          ? "Auto at checkout"
+                          : "Auto by care type"}
                       </Badge>
                     )}
                   </div>
@@ -591,6 +595,24 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tax Rate (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={exceed24h.taxRate ?? ""}
+                onChange={(e) =>
+                  setExceed24h((prev) => ({
+                    ...prev,
+                    taxRate: e.target.value
+                      ? parseFloat(e.target.value)
+                      : undefined,
+                  }))
+                }
+                placeholder="Uses facility default"
+              />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
@@ -867,7 +889,7 @@ function TimeFeeModal({
     name: "",
     condition: "late_pickup" as "late_pickup" | "early_dropoff",
     graceMinutes: 15,
-    feeType: "per_30min" as "flat" | "per_hour" | "per_30min",
+    feeType: "per_30min" as "flat" | "per_hour" | "per_30min" | "per_minute",
     amount: 10,
     maxFee: undefined as number | undefined,
     scope: "per_pet" as "per_booking" | "per_pet",
@@ -1009,6 +1031,7 @@ function TimeFeeModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="flat">Flat</SelectItem>
+                  <SelectItem value="per_minute">Per minute</SelectItem>
                   <SelectItem value="per_30min">Per 30 min</SelectItem>
                   <SelectItem value="per_hour">Per hour</SelectItem>
                 </SelectContent>
@@ -1119,7 +1142,8 @@ function CustomFeeModal({
     amount: 0,
     feeType: "flat" as "flat" | "percentage",
     scope: "per_pet" as "per_booking" | "per_pet",
-    autoApply: false,
+    autoApply: "none" as "none" | "at_checkout" | "by_care_type",
+    autoApplyCareTypes: [] as string[],
   });
 
   const [prevEditing, setPrevEditing] = useState(editing);
@@ -1133,6 +1157,7 @@ function CustomFeeModal({
         feeType: editing.feeType,
         scope: editing.scope,
         autoApply: editing.autoApply,
+        autoApplyCareTypes: editing.autoApplyCareTypes ?? [],
       });
     } else {
       setForm({
@@ -1141,7 +1166,8 @@ function CustomFeeModal({
         amount: 0,
         feeType: "flat",
         scope: "per_pet",
-        autoApply: false,
+        autoApply: "none",
+        autoApplyCareTypes: [],
       });
     }
   }
@@ -1230,17 +1256,70 @@ function CustomFeeModal({
               </Select>
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">Auto-apply at checkout</p>
-              <p className="text-muted-foreground text-xs">
-                Automatically add this fee during payment
-              </p>
+          <div className="space-y-2">
+            <Label>Auto-Apply</Label>
+            <div className="space-y-1.5">
+              {(
+                [
+                  {
+                    value: "none",
+                    label: "Manual only",
+                    desc: "Staff adds fee manually at checkout",
+                  },
+                  {
+                    value: "at_checkout",
+                    label: "Auto-apply at checkout",
+                    desc: "Fee added automatically when appointment is checked out",
+                  },
+                  {
+                    value: "by_care_type",
+                    label: "Auto-apply by care type",
+                    desc: "Auto-apply when booking matches specific service types",
+                  },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() =>
+                    setForm((p) => ({ ...p, autoApply: opt.value }))
+                  }
+                  className={`w-full rounded-lg border p-2.5 text-left transition-all ${
+                    form.autoApply === opt.value
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <p className="text-xs font-medium">{opt.label}</p>
+                  <p className="text-muted-foreground text-[10px]">
+                    {opt.desc}
+                  </p>
+                </button>
+              ))}
             </div>
-            <Switch
-              checked={form.autoApply}
-              onCheckedChange={(c) => setForm((p) => ({ ...p, autoApply: c }))}
-            />
+            {form.autoApply === "by_care_type" && (
+              <div className="space-y-1.5 rounded-lg border p-3">
+                <Label className="text-xs">Apply to care types</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["boarding", "daycare", "grooming"].map((ct) => (
+                    <label key={ct} className="flex items-center gap-1.5">
+                      <Checkbox
+                        checked={form.autoApplyCareTypes.includes(ct)}
+                        onCheckedChange={(c) =>
+                          setForm((p) => ({
+                            ...p,
+                            autoApplyCareTypes: c
+                              ? [...p.autoApplyCareTypes, ct]
+                              : p.autoApplyCareTypes.filter((t) => t !== ct),
+                          }))
+                        }
+                      />
+                      <span className="text-xs capitalize">{ct}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
@@ -1261,6 +1340,10 @@ function CustomFeeModal({
                 feeType: form.feeType,
                 scope: form.scope,
                 autoApply: form.autoApply,
+                autoApplyCareTypes:
+                  form.autoApply === "by_care_type"
+                    ? form.autoApplyCareTypes
+                    : undefined,
                 applicableServices: editing?.applicableServices ?? [
                   serviceType,
                 ],
