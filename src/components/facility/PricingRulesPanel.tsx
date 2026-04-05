@@ -83,6 +83,12 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
     (rules?.discountStacking as DiscountStackingMode) ?? "best_only",
   );
 
+  // Preview state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewBase, setPreviewBase] = useState(50);
+  const [previewPets, setPreviewPets] = useState(2);
+  const [previewNights, setPreviewNights] = useState(3);
+
   // Modal state
   const [mpModal, setMpModal] = useState(false);
   const [editingMp, setEditingMp] = useState<MultiPetDiscountRule | null>(null);
@@ -110,9 +116,19 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
       {/* ── Discount Stacking ── */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Settings2 className="size-4" />
-            Discount Stacking
+          <CardTitle className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-2">
+              <Settings2 className="size-4" />
+              Discount Stacking
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setPreviewOpen(!previewOpen)}
+            >
+              Preview
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -150,6 +166,118 @@ export function PricingRulesPanel({ serviceType }: PricingRulesPanelProps) {
               </button>
             ))}
           </div>
+
+          {/* Preview calculator */}
+          {previewOpen && (
+            <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
+              <p className="text-xs font-semibold text-slate-700">
+                Discount Preview
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Base rate ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={previewBase}
+                    onChange={(e) =>
+                      setPreviewBase(parseFloat(e.target.value) || 0)
+                    }
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Pets</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={previewPets}
+                    onChange={(e) =>
+                      setPreviewPets(parseInt(e.target.value) || 1)
+                    }
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Nights</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={previewNights}
+                    onChange={(e) =>
+                      setPreviewNights(parseInt(e.target.value) || 1)
+                    }
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+              {(() => {
+                const activeMultiPet = filteredMultiPet.filter(
+                  (r) => r.isActive,
+                );
+                const discounts: { name: string; amount: number }[] = [];
+                for (const rule of activeMultiPet) {
+                  const matchingTier = [...rule.tiers]
+                    .sort((a, b) => b.petCount - a.petCount)
+                    .find((t) => previewPets >= t.petCount);
+                  if (matchingTier) {
+                    const count =
+                      rule.discountType === "per_pet"
+                        ? previewPets
+                        : Math.max(0, previewPets - 1);
+                    discounts.push({
+                      name: rule.name,
+                      amount:
+                        matchingTier.discountAmount * count * previewNights,
+                    });
+                  }
+                }
+                const subtotal = previewBase * previewPets * previewNights;
+                let total: number;
+                let appliedDiscounts: typeof discounts;
+                if (stacking === "best_only" && discounts.length > 1) {
+                  const best = discounts.reduce((a, b) =>
+                    b.amount > a.amount ? b : a,
+                  );
+                  appliedDiscounts = [best];
+                  total = subtotal - best.amount;
+                } else {
+                  appliedDiscounts = discounts;
+                  total =
+                    subtotal - discounts.reduce((s, d) => s + d.amount, 0);
+                }
+                return (
+                  <div className="space-y-1 border-t pt-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                    {appliedDiscounts.map((d, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between text-xs text-emerald-700"
+                      >
+                        <span>{d.name}</span>
+                        <span>-${d.amount.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {discounts.length > 0 &&
+                      stacking === "best_only" &&
+                      discounts.length > 1 && (
+                        <p className="text-[10px] text-amber-600">
+                          {discounts.length - 1} other discount
+                          {discounts.length > 2 ? "s" : ""} skipped (best only)
+                        </p>
+                      )}
+                    <div className="flex justify-between border-t pt-1 text-sm font-semibold">
+                      <span>Total</span>
+                      <span>${Math.max(0, total).toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </CardContent>
       </Card>
 
