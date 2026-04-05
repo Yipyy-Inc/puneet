@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Search,
   PawPrint,
@@ -14,6 +22,10 @@ import {
   Info,
   CheckCheck,
   XCircle,
+  UserPlus,
+  ArrowLeft,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -39,6 +51,7 @@ interface ClientPetStepProps {
   preSelectedClientId?: number;
   selectedService: string;
   configs: { daycare: ModuleConfig; boarding: ModuleConfig };
+  onWalkInClient?: (client: Client) => void;
 }
 
 export function ClientPetStep({
@@ -53,6 +66,7 @@ export function ClientPetStep({
   preSelectedClientId,
   selectedService,
   configs,
+  onWalkInClient,
 }: ClientPetStepProps) {
   // Check if service requires evaluation
   const serviceRequiresEvaluation = React.useMemo(() => {
@@ -227,6 +241,54 @@ export function ClientPetStep({
     );
   }, [filteredClients, bookingCounts]);
 
+  // Walk-in client form
+  const [showWalkIn, setShowWalkIn] = React.useState(false);
+  const [walkInForm, setWalkInForm] = React.useState({
+    name: "",
+    phone: "",
+    email: "",
+    petName: "",
+    petType: "Dog",
+  });
+
+  const handleCreateWalkIn = () => {
+    if (!walkInForm.name.trim() || !walkInForm.petName.trim()) return;
+    const newId = Date.now();
+    const newClient: Client = {
+      id: newId,
+      name: walkInForm.name.trim(),
+      email: walkInForm.email.trim() || `walkin-${newId}@temp.local`,
+      phone: walkInForm.phone.trim(),
+      status: "active",
+      facility: "",
+      pets: [
+        {
+          id: newId + 1,
+          name: walkInForm.petName.trim(),
+          type: walkInForm.petType,
+          breed: "",
+          age: 0,
+          weight: 0,
+          color: "",
+          microchip: "",
+          allergies: "",
+          specialNeeds: "",
+        },
+      ],
+    };
+    onWalkInClient?.(newClient);
+    setSelectedClientId(newClient.id);
+    setSelectedPetIds([newClient.pets[0].id]);
+    setShowWalkIn(false);
+    setWalkInForm({
+      name: "",
+      phone: "",
+      email: "",
+      petName: "",
+      petType: "Dog",
+    });
+  };
+
   const handlePetToggle = (petId: number) => {
     setSelectedPetIds((prev) =>
       prev.includes(petId)
@@ -275,114 +337,267 @@ export function ClientPetStep({
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Select Client</h3>
 
-            {/* Search */}
-            <div className="relative">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-              <Input
-                placeholder="Search by name, email, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            {/* Search + Walk-in toggle */}
+            {!showWalkIn ? (
+              <>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                    <Input
+                      placeholder="Search by name, email, or phone..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {onWalkInClient && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 gap-1.5"
+                      onClick={() => setShowWalkIn(true)}
+                    >
+                      <UserPlus className="size-3.5" />
+                      Walk-in
+                    </Button>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Walk-in client form */
+              <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-blue-100">
+                      <UserPlus className="size-4 text-blue-700" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">
+                        New Walk-in Client
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        Quick-add a client and pet to proceed
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => setShowWalkIn(false)}
+                  >
+                    <ArrowLeft className="size-3" />
+                    Back to search
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">
+                      Client Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      value={walkInForm.name}
+                      onChange={(e) =>
+                        setWalkInForm((p) => ({ ...p, name: e.target.value }))
+                      }
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Phone</Label>
+                      <div className="relative">
+                        <Phone className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                        <Input
+                          value={walkInForm.phone}
+                          onChange={(e) =>
+                            setWalkInForm((p) => ({
+                              ...p,
+                              phone: e.target.value,
+                            }))
+                          }
+                          placeholder="(555) 000-0000"
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Email</Label>
+                      <div className="relative">
+                        <Mail className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                        <Input
+                          value={walkInForm.email}
+                          onChange={(e) =>
+                            setWalkInForm((p) => ({
+                              ...p,
+                              email: e.target.value,
+                            }))
+                          }
+                          placeholder="email@example.com"
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">
+                        Pet Name <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="relative">
+                        <PawPrint className="text-muted-foreground absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+                        <Input
+                          value={walkInForm.petName}
+                          onChange={(e) =>
+                            setWalkInForm((p) => ({
+                              ...p,
+                              petName: e.target.value,
+                            }))
+                          }
+                          placeholder="Pet name"
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Pet Type</Label>
+                      <Select
+                        value={walkInForm.petType}
+                        onValueChange={(v) =>
+                          setWalkInForm((p) => ({ ...p, petType: v }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Dog">Dog</SelectItem>
+                          <SelectItem value="Cat">Cat</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full gap-1.5"
+                  disabled={
+                    !walkInForm.name.trim() || !walkInForm.petName.trim()
+                  }
+                  onClick={handleCreateWalkIn}
+                >
+                  <UserPlus className="size-4" />
+                  Add & Select Client
+                </Button>
+              </div>
+            )}
 
             {/* Client list — sorted by booking frequency */}
-            <div>
-              <div className="p-2">
-                {filteredClients.length === 0 ? (
-                  <p className="text-muted-foreground py-4 text-center text-sm">
-                    No clients found
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {sortedClients.map((client) => {
-                      const isSelected = selectedClientId === client.id;
-                      return (
-                        <div
-                          key={client.id}
-                          className={cn(
-                            "cursor-pointer rounded-lg p-3 transition-all",
-                            isSelected
-                              ? "border-primary bg-primary/10 row-span-2 border-2"
-                              : "hover:bg-muted border-2 border-transparent",
-                          )}
-                          onClick={() => {
-                            setSelectedClientId(client.id);
-                            if (client.pets.length === 1) {
-                              setSelectedPetIds([client.pets[0].id]);
-                            } else {
-                              setSelectedPetIds([]);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Avatar
-                              className={cn(
-                                "transition-all",
-                                isSelected ? "size-12" : "size-10",
-                              )}
-                            >
-                              <AvatarImage
-                                src={client.imageUrl}
-                                alt={client.name}
-                              />
-                              <AvatarFallback>
-                                {client.name
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium">
-                                {client.name}
-                              </p>
-                              {/* #4 — removed dead ternary */}
-                              <p className="text-muted-foreground truncate text-sm">
-                                {client.email}
-                              </p>
-                              {isSelected && client.phone && (
-                                <p className="text-muted-foreground text-sm">
-                                  {client.phone}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {(bookingCounts[client.id] ?? 0) > 0 && (
-                                <Badge
-                                  variant="outline"
-                                  className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
-                                >
-                                  {bookingCounts[client.id]} visits
-                                </Badge>
-                              )}
-                              <Badge
-                                variant={isSelected ? "secondary" : "outline"}
+            {!showWalkIn && (
+              <div>
+                <div className="p-2">
+                  {filteredClients.length === 0 ? (
+                    <p className="text-muted-foreground py-4 text-center text-sm">
+                      No clients found
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {sortedClients.map((client) => {
+                        const isSelected = selectedClientId === client.id;
+                        return (
+                          <div
+                            key={client.id}
+                            className={cn(
+                              "cursor-pointer rounded-lg p-3 transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/10 row-span-2 border-2"
+                                : "hover:bg-muted border-2 border-transparent",
+                            )}
+                            onClick={() => {
+                              setSelectedClientId(client.id);
+                              if (client.pets.length === 1) {
+                                setSelectedPetIds([client.pets[0].id]);
+                              } else {
+                                setSelectedPetIds([]);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar
+                                className={cn(
+                                  "transition-all",
+                                  isSelected ? "size-12" : "size-10",
+                                )}
                               >
-                                {client.pets.length} pet
-                                {client.pets.length !== 1 ? "s" : ""}
-                              </Badge>
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className="border-border mt-3 border-t pt-3">
-                              <div className="text-sm">
-                                <p className="text-muted-foreground">Status</p>
-                                <p className="font-medium capitalize">
-                                  {client.status}
+                                <AvatarImage
+                                  src={client.imageUrl}
+                                  alt={client.name}
+                                />
+                                <AvatarFallback>
+                                  {client.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()
+                                    .slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium">
+                                  {client.name}
                                 </p>
+                                {/* #4 — removed dead ternary */}
+                                <p className="text-muted-foreground truncate text-sm">
+                                  {client.email}
+                                </p>
+                                {isSelected && client.phone && (
+                                  <p className="text-muted-foreground text-sm">
+                                    {client.phone}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {(bookingCounts[client.id] ?? 0) > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+                                  >
+                                    {bookingCounts[client.id]} visits
+                                  </Badge>
+                                )}
+                                <Badge
+                                  variant={isSelected ? "secondary" : "outline"}
+                                >
+                                  {client.pets.length} pet
+                                  {client.pets.length !== 1 ? "s" : ""}
+                                </Badge>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                            {isSelected && (
+                              <div className="border-border mt-3 border-t pt-3">
+                                <div className="text-sm">
+                                  <p className="text-muted-foreground">
+                                    Status
+                                  </p>
+                                  <p className="font-medium capitalize">
+                                    {client.status}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <Separator />

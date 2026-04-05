@@ -120,6 +120,13 @@ export function BookingModal({
     }
   }
 
+  // Walk-in clients added during this session
+  const [walkInClients, setWalkInClients] = useState<Client[]>([]);
+  const allClients = useMemo(
+    () => [...clients, ...walkInClients],
+    [clients, walkInClients],
+  );
+
   // Staff options for assignment
   const staffOptions = [
     { value: "Mike Chen", label: "Mike Chen" },
@@ -337,19 +344,19 @@ export function BookingModal({
 
   // Filtered clients based on search
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) return clients;
+    if (!searchQuery.trim()) return allClients;
     const query = searchQuery.toLowerCase();
-    return clients.filter(
+    return allClients.filter(
       (client) =>
         client.name.toLowerCase().includes(query) ||
         client.email.toLowerCase().includes(query) ||
         client.phone?.includes(query),
     );
-  }, [clients, searchQuery]);
+  }, [allClients, searchQuery]);
 
   const selectedClient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId);
-  }, [clients, selectedClientId]);
+    return allClients.find((c) => c.id === selectedClientId);
+  }, [allClients, selectedClientId]);
 
   const petHasValidEvaluation = useCallback((pet: Pet) => {
     const evals: Evaluation[] = pet.evaluations ?? [];
@@ -723,6 +730,7 @@ export function BookingModal({
     setCurrentSubStep(0);
     setHighestStepReached(0);
     setSearchQuery("");
+    setWalkInClients([]);
     setSelectedClientId(null);
     setSelectedPetIds([]);
     setDaycareSelectedDates([]);
@@ -1718,6 +1726,9 @@ export function BookingModal({
                     preSelectedClientId={preSelectedClientId}
                     selectedService={selectedService}
                     configs={configs}
+                    onWalkInClient={(client) =>
+                      setWalkInClients((prev) => [...prev, client])
+                    }
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
@@ -1780,7 +1791,7 @@ export function BookingModal({
                             Estimates.
                           </p>
                           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
-                            <p className="text-xl font-bold tabular-nums text-emerald-800">
+                            <p className="text-xl font-bold text-emerald-800 tabular-nums">
                               ${calculatePrice.total.toFixed(2)}
                             </p>
                             <p className="text-xs text-emerald-600">
@@ -1857,85 +1868,85 @@ export function BookingModal({
 
                 {displayedSteps[currentStep]?.id === "confirm" &&
                   !(isEstimateMode && estimateCreated) && (
-                  <ConfirmStep
-                    selectedClient={selectedClient}
-                    selectedPets={selectedPets}
-                    selectedService={selectedService}
-                    serviceType={serviceType}
-                    startDate={startDate}
-                    endDate={endDate}
-                    checkInTime={checkInTime}
-                    checkOutTime={checkOutTime}
-                    daycareSelectedDates={daycareSelectedDates}
-                    boardingRangeStart={boardingRangeStart}
-                    boardingRangeEnd={boardingRangeEnd}
-                    boardingDateTimes={boardingDateTimes}
-                    roomAssignments={roomAssignments}
-                    feedingSchedule={feedingSchedule}
-                    medications={medications}
-                    extraServices={extraServices}
-                    calculatePrice={calculatePrice}
-                    notificationEmail={notificationEmail}
-                    setNotificationEmail={setNotificationEmail}
-                    notificationSMS={notificationSMS}
-                    setNotificationSMS={setNotificationSMS}
-                    tipConfig={tipConfig}
-                    tipAmount={tipAmount}
-                    onTipChange={setTipAmount}
-                    onEditStep={(stepIdx, subStep) => {
-                      setCurrentStep(stepIdx);
-                      setCurrentSubStep(subStep ?? 0);
-                    }}
-                  />
-                )}
+                    <ConfirmStep
+                      selectedClient={selectedClient}
+                      selectedPets={selectedPets}
+                      selectedService={selectedService}
+                      serviceType={serviceType}
+                      startDate={startDate}
+                      endDate={endDate}
+                      checkInTime={checkInTime}
+                      checkOutTime={checkOutTime}
+                      daycareSelectedDates={daycareSelectedDates}
+                      boardingRangeStart={boardingRangeStart}
+                      boardingRangeEnd={boardingRangeEnd}
+                      boardingDateTimes={boardingDateTimes}
+                      roomAssignments={roomAssignments}
+                      feedingSchedule={feedingSchedule}
+                      medications={medications}
+                      extraServices={extraServices}
+                      calculatePrice={calculatePrice}
+                      notificationEmail={notificationEmail}
+                      setNotificationEmail={setNotificationEmail}
+                      notificationSMS={notificationSMS}
+                      setNotificationSMS={setNotificationSMS}
+                      tipConfig={tipConfig}
+                      tipAmount={tipAmount}
+                      onTipChange={setTipAmount}
+                      onEditStep={(stepIdx, subStep) => {
+                        setCurrentStep(stepIdx);
+                        setCurrentSubStep(subStep ?? 0);
+                      }}
+                    />
+                  )}
               </div>
             </ScrollArea>
 
             {/* Navigation Buttons */}
             {!(isEstimateMode && estimateCreated) && (
-            <div className="bg-background flex justify-between border-t p-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-              >
-                Previous
-              </Button>
-              <div className="flex gap-2">
+              <div className="bg-background flex justify-between border-t p-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    // If user has made progress, confirm before discarding
-                    if (currentStep > 0 || selectedService) {
-                      setShowCancelConfirm(true);
-                    } else {
-                      onOpenChange(false);
-                    }
-                  }}
+                  onClick={handlePrevious}
+                  disabled={currentStep === 0}
                 >
-                  Cancel
+                  Previous
                 </Button>
-                {currentStep < displayedSteps.length - 1 ? (
+                <div className="flex gap-2">
                   <Button
                     type="button"
-                    onClick={handleNext}
-                    disabled={!canProceed}
+                    variant="outline"
+                    onClick={() => {
+                      // If user has made progress, confirm before discarding
+                      if (currentStep > 0 || selectedService) {
+                        setShowCancelConfirm(true);
+                      } else {
+                        onOpenChange(false);
+                      }
+                    }}
                   >
-                    Next
+                    Cancel
                   </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleComplete}
-                    disabled={!canProceed}
-                  >
-                    {isEstimateMode ? "Create Estimate" : "Create Booking"}
-                  </Button>
-                )}
+                  {currentStep < displayedSteps.length - 1 ? (
+                    <Button
+                      type="button"
+                      onClick={handleNext}
+                      disabled={!canProceed}
+                    >
+                      Next
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleComplete}
+                      disabled={!canProceed}
+                    >
+                      {isEstimateMode ? "Create Estimate" : "Create Booking"}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </div>
         </div>
