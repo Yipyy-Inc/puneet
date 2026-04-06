@@ -438,8 +438,175 @@ export const BOARDING_SUB_STEPS = [
 
 export const EVALUATION_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time slot" },
+  { id: 1, title: "Add-ons", description: "Optional extras" },
 ];
 
 export const CUSTOM_SERVICE_SUB_STEPS = [
   { id: 0, title: "Schedule", description: "Select date and time" },
 ];
+
+// ── Per-service accent colors ────────────────────────────────────────────────
+// Used throughout the booking flow for consistent service-branded styling.
+export const SERVICE_ACCENTS: Record<
+  string,
+  {
+    bg: string;
+    icon: string;
+    price: string;
+    ring: string;
+    border: string;
+    progressBar: string;
+    stepBg: string;
+    stepText: string;
+    badgeBg: string;
+    badgeText: string;
+    btnBg: string;
+    btnHover: string;
+    subStepBg: string;
+    subStepText: string;
+    subStepBorder: string;
+  }
+> = {
+  daycare: {
+    bg: "bg-amber-50",
+    icon: "text-amber-500",
+    price: "text-amber-600",
+    ring: "ring-amber-400",
+    border: "border-amber-400",
+    progressBar: "bg-amber-500",
+    stepBg: "bg-amber-500",
+    stepText: "text-amber-600",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+    btnBg: "bg-amber-500 hover:bg-amber-600",
+    btnHover: "hover:bg-amber-50",
+    subStepBg: "bg-amber-500/15",
+    subStepText: "text-amber-700",
+    subStepBorder: "border-amber-400/30",
+  },
+  boarding: {
+    bg: "bg-indigo-50",
+    icon: "text-indigo-500",
+    price: "text-indigo-600",
+    ring: "ring-indigo-400",
+    border: "border-indigo-400",
+    progressBar: "bg-indigo-500",
+    stepBg: "bg-indigo-500",
+    stepText: "text-indigo-600",
+    badgeBg: "bg-indigo-100",
+    badgeText: "text-indigo-700",
+    btnBg: "bg-indigo-500 hover:bg-indigo-600",
+    btnHover: "hover:bg-indigo-50",
+    subStepBg: "bg-indigo-500/15",
+    subStepText: "text-indigo-700",
+    subStepBorder: "border-indigo-400/30",
+  },
+  grooming: {
+    bg: "bg-pink-50",
+    icon: "text-pink-500",
+    price: "text-pink-600",
+    ring: "ring-pink-400",
+    border: "border-pink-400",
+    progressBar: "bg-pink-500",
+    stepBg: "bg-pink-500",
+    stepText: "text-pink-600",
+    badgeBg: "bg-pink-100",
+    badgeText: "text-pink-700",
+    btnBg: "bg-pink-500 hover:bg-pink-600",
+    btnHover: "hover:bg-pink-50",
+    subStepBg: "bg-pink-500/15",
+    subStepText: "text-pink-700",
+    subStepBorder: "border-pink-400/30",
+  },
+  training: {
+    bg: "bg-sky-50",
+    icon: "text-sky-500",
+    price: "text-sky-600",
+    ring: "ring-sky-400",
+    border: "border-sky-400",
+    progressBar: "bg-sky-500",
+    stepBg: "bg-sky-500",
+    stepText: "text-sky-600",
+    badgeBg: "bg-sky-100",
+    badgeText: "text-sky-700",
+    btnBg: "bg-sky-500 hover:bg-sky-600",
+    btnHover: "hover:bg-sky-50",
+    subStepBg: "bg-sky-500/15",
+    subStepText: "text-sky-700",
+    subStepBorder: "border-sky-400/30",
+  },
+  retail: {
+    bg: "bg-emerald-50",
+    icon: "text-emerald-500",
+    price: "text-emerald-600",
+    ring: "ring-emerald-400",
+    border: "border-emerald-400",
+    progressBar: "bg-emerald-500",
+    stepBg: "bg-emerald-500",
+    stepText: "text-emerald-600",
+    badgeBg: "bg-emerald-100",
+    badgeText: "text-emerald-700",
+    btnBg: "bg-emerald-500 hover:bg-emerald-600",
+    btnHover: "hover:bg-emerald-50",
+    subStepBg: "bg-emerald-500/15",
+    subStepText: "text-emerald-700",
+    subStepBorder: "border-emerald-400/30",
+  },
+  evaluation: {
+    bg: "bg-violet-50",
+    icon: "text-violet-500",
+    price: "text-violet-600",
+    ring: "ring-violet-400",
+    border: "border-violet-400",
+    progressBar: "bg-violet-500",
+    stepBg: "bg-violet-500",
+    stepText: "text-violet-600",
+    badgeBg: "bg-violet-100",
+    badgeText: "text-violet-700",
+    btnBg: "bg-violet-500 hover:bg-violet-600",
+    btnHover: "hover:bg-violet-50",
+    subStepBg: "bg-violet-500/15",
+    subStepText: "text-violet-700",
+    subStepBorder: "border-violet-400/30",
+  },
+  vet: {
+    bg: "bg-rose-50",
+    icon: "text-rose-500",
+    price: "text-rose-600",
+    ring: "ring-rose-400",
+    border: "border-rose-400",
+    progressBar: "bg-rose-500",
+    stepBg: "bg-rose-500",
+    stepText: "text-rose-600",
+    badgeBg: "bg-rose-100",
+    badgeText: "text-rose-700",
+    btnBg: "bg-rose-500 hover:bg-rose-600",
+    btnHover: "hover:bg-rose-50",
+    subStepBg: "bg-rose-500/15",
+    subStepText: "text-rose-700",
+    subStepBorder: "border-rose-400/30",
+  },
+  store: {
+    bg: "bg-teal-50",
+    icon: "text-teal-500",
+    price: "text-teal-600",
+    ring: "ring-teal-400",
+    border: "border-teal-400",
+    progressBar: "bg-teal-500",
+    stepBg: "bg-teal-500",
+    stepText: "text-teal-600",
+    badgeBg: "bg-teal-100",
+    badgeText: "text-teal-700",
+    btnBg: "bg-teal-500 hover:bg-teal-600",
+    btnHover: "hover:bg-teal-50",
+    subStepBg: "bg-teal-500/15",
+    subStepText: "text-teal-700",
+    subStepBorder: "border-teal-400/30",
+  },
+};
+
+const DEFAULT_ACCENT = SERVICE_ACCENTS.daycare;
+
+export function getServiceAccent(serviceId: string) {
+  return SERVICE_ACCENTS[serviceId] ?? DEFAULT_ACCENT;
+}

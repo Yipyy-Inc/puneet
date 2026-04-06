@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Lock, Ban, Check, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { SERVICE_CATEGORIES } from "../constants";
+import { SERVICE_CATEGORIES, SERVICE_ACCENTS } from "../constants";
 import { evaluationConfig } from "@/data/settings";
 import type { FacilityBookingFlowConfig } from "@/types/booking";
 import type { ModuleConfig } from "@/types/facility";
@@ -20,69 +20,6 @@ interface ServiceStepProps {
   bookingFlow: FacilityBookingFlowConfig;
   selectedPets?: Pet[];
 }
-
-// Per-service accent palette — pastel bg, icon, price, ring AND border
-const SERVICE_ACCENTS: Record<
-  string,
-  { bg: string; icon: string; price: string; ring: string; border: string }
-> = {
-  daycare: {
-    bg: "bg-amber-50",
-    icon: "text-amber-500",
-    price: "text-amber-600",
-    ring: "ring-amber-400",
-    border: "border-amber-400",
-  },
-  boarding: {
-    bg: "bg-indigo-50",
-    icon: "text-indigo-500",
-    price: "text-indigo-600",
-    ring: "ring-indigo-400",
-    border: "border-indigo-400",
-  },
-  grooming: {
-    bg: "bg-pink-50",
-    icon: "text-pink-500",
-    price: "text-pink-600",
-    ring: "ring-pink-400",
-    border: "border-pink-400",
-  },
-  training: {
-    bg: "bg-sky-50",
-    icon: "text-sky-500",
-    price: "text-sky-600",
-    ring: "ring-sky-400",
-    border: "border-sky-400",
-  },
-  retail: {
-    bg: "bg-emerald-50",
-    icon: "text-emerald-500",
-    price: "text-emerald-600",
-    ring: "ring-emerald-400",
-    border: "border-emerald-400",
-  },
-  evaluation: {
-    bg: "bg-violet-50",
-    icon: "text-violet-500",
-    price: "text-violet-600",
-    ring: "ring-violet-400",
-    border: "border-violet-400",
-  },
-  vet: {
-    bg: "bg-rose-50",
-    icon: "text-rose-500",
-    price: "text-rose-600",
-    ring: "ring-rose-400",
-    border: "border-rose-400",
-  },
-  store: {
-    bg: "bg-teal-50",
-    icon: "text-teal-500",
-    price: "text-teal-600",
-    ring: "ring-teal-400",
-    border: "border-teal-400",
-  },
-};
 
 const DEFAULT_ACCENT = {
   bg: "bg-primary/5",

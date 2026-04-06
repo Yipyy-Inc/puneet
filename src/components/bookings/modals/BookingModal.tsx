@@ -43,6 +43,7 @@ import {
   BOARDING_SUB_STEPS,
   EVALUATION_SUB_STEPS,
   CUSTOM_SERVICE_SUB_STEPS,
+  getServiceAccent,
 } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
@@ -181,6 +182,7 @@ export function BookingModal({
   const [selectedService, setSelectedService] = useState<string>(
     preSelectedService ?? "",
   );
+  const accent = getServiceAccent(selectedService);
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
@@ -315,6 +317,8 @@ export function BookingModal({
         switch (stepIndex) {
           case 0:
             return !!startDate && !!checkInTime && !!checkOutTime;
+          case 1: // Add-ons — always complete (optional)
+            return true;
           default:
             return false;
         }
@@ -1402,7 +1406,10 @@ export function BookingModal({
               </div>
               <div className="bg-muted mt-1.5 h-1 w-full overflow-hidden rounded-full">
                 <div
-                  className="bg-primary h-full rounded-full transition-all duration-300"
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    selectedService ? accent.progressBar : "bg-primary",
+                  )}
                   style={{
                     width: `${((currentStep + (canProceed ? 1 : 0)) / displayedSteps.length) * 100}%`,
                   }}
@@ -1509,12 +1516,16 @@ export function BookingModal({
                         className={cn(
                           "w-full rounded-lg border p-3 text-left transition-all",
                           isActive
-                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            ? selectedService
+                              ? `${accent.border} ${accent.stepBg} text-white shadow-sm`
+                              : "border-primary bg-primary text-primary-foreground shadow-sm"
                             : isCompleted
                               ? "border-border bg-background"
                               : "border-muted-foreground/30 bg-muted/50 border-dashed opacity-60",
                           canClickStep &&
-                            "hover:border-primary/50 hover:bg-primary/5 cursor-pointer",
+                            (selectedService
+                              ? `cursor-pointer ${accent.btnHover}`
+                              : "hover:border-primary/50 hover:bg-primary/5 cursor-pointer"),
                         )}
                       >
                         <div className="flex items-start gap-3">
@@ -1522,9 +1533,11 @@ export function BookingModal({
                             className={cn(
                               "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                               isActive
-                                ? "bg-primary-foreground text-primary"
+                                ? "bg-white/90 text-slate-800"
                                 : isCompleted
-                                  ? "bg-primary text-primary-foreground"
+                                  ? selectedService
+                                    ? `${accent.stepBg} text-white`
+                                    : "bg-primary text-primary-foreground"
                                   : "bg-muted-foreground/20 text-muted-foreground",
                             )}
                           >
@@ -1561,7 +1574,14 @@ export function BookingModal({
 
                       {/* Sub-steps */}
                       {showSubSteps && (
-                        <div className="border-primary/30 mt-2 ml-6 space-y-1 border-l-2 pl-4">
+                        <div
+                          className={cn(
+                            "mt-2 ml-6 space-y-1 border-l-2 pl-4",
+                            selectedService
+                              ? accent.subStepBorder
+                              : "border-primary/30",
+                          )}
+                        >
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
                             const isSubCompleted = isSubStepComplete(subIdx);
@@ -1618,7 +1638,9 @@ export function BookingModal({
                                 className={cn(
                                   "w-full rounded-md px-3 py-2 text-left text-sm transition-all",
                                   isSubActive
-                                    ? "bg-primary/20 text-primary font-medium"
+                                    ? selectedService
+                                      ? `${accent.subStepBg} ${accent.subStepText} font-medium`
+                                      : "bg-primary/20 text-primary font-medium"
                                     : isVisitedAndCompleted
                                       ? "text-foreground"
                                       : "text-muted-foreground",
@@ -1629,7 +1651,9 @@ export function BookingModal({
                                     className={cn(
                                       "flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
                                       isSubActive || isVisitedAndCompleted
-                                        ? "bg-primary text-primary-foreground"
+                                        ? selectedService
+                                          ? `${accent.stepBg} text-white`
+                                          : "bg-primary text-primary-foreground"
                                         : "bg-muted-foreground/20 text-muted-foreground",
                                     )}
                                   >
@@ -1955,6 +1979,11 @@ export function BookingModal({
                       type="button"
                       onClick={handleNext}
                       disabled={!canProceed}
+                      className={
+                        selectedService && canProceed
+                          ? `${accent.btnBg} text-white`
+                          : ""
+                      }
                     >
                       Next
                     </Button>
@@ -1963,6 +1992,11 @@ export function BookingModal({
                       type="button"
                       onClick={handleComplete}
                       disabled={!canProceed}
+                      className={
+                        selectedService && canProceed
+                          ? `${accent.btnBg} text-white`
+                          : ""
+                      }
                     >
                       {isEstimateMode ? "Create Estimate" : "Create Booking"}
                     </Button>

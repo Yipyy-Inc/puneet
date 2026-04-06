@@ -150,12 +150,16 @@ export function DetailsStep({
       {selectedService === "evaluation" && (
         <EvaluationDetails
           currentSubStep={currentSubStep}
+          isSubStepComplete={isSubStepComplete}
           startDate={startDate}
           setStartDate={setStartDate}
           checkInTime={checkInTime}
           setCheckInTime={setCheckInTime}
           checkOutTime={checkOutTime}
           setCheckOutTime={setCheckOutTime}
+          extraServices={extraServices}
+          setExtraServices={setExtraServices}
+          selectedPets={selectedPets}
         />
       )}
 
