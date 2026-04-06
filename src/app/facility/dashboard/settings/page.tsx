@@ -3879,7 +3879,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Weather Warnings */}
+          {/* Yipyy Forecast */}
           {activeSection === "weather" && (
             <div className="space-y-6">
               <WeatherWarningSettings />

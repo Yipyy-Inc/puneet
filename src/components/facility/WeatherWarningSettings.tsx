@@ -86,13 +86,29 @@ const SEVERITY_CONFIG = {
   critical: { label: "Critical", color: "bg-red-100 text-red-800" },
 };
 
-const AREA_OPTIONS = [
+const DEFAULT_AREAS = [
+  { value: "indoor_park", label: "Indoor Park" },
   { value: "outdoor_park", label: "Outdoor Park" },
   { value: "indoor_area", label: "Indoor Area" },
   { value: "covered_patio", label: "Covered Patio" },
   { value: "pool", label: "Pool / Splash Pad" },
   { value: "all", label: "All Areas" },
-] as const;
+];
+
+function getStoredCustomAreas(): Array<{ value: string; label: string }> {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem("yipyy-forecast-custom-areas");
+    if (stored) return JSON.parse(stored);
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function saveCustomAreas(areas: Array<{ value: string; label: string }>) {
+  localStorage.setItem("yipyy-forecast-custom-areas", JSON.stringify(areas));
+}
 
 function makeId() {
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -133,6 +149,26 @@ export function WeatherWarningSettings() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WeatherWarningRule | null>(null);
   const [form, setForm] = useState<RuleForm>(emptyForm);
+  const [customAreas, setCustomAreas] = useState(getStoredCustomAreas);
+  const [newAreaName, setNewAreaName] = useState("");
+  const AREA_OPTIONS = [...DEFAULT_AREAS, ...customAreas];
+
+  const addCustomArea = () => {
+    const name = newAreaName.trim();
+    if (!name) return;
+    const value = name.toLowerCase().replace(/\s+/g, "_");
+    if (AREA_OPTIONS.some((a) => a.value === value)) return;
+    const updated = [...customAreas, { value, label: name }];
+    setCustomAreas(updated);
+    saveCustomAreas(updated);
+    setNewAreaName("");
+  };
+
+  const removeCustomArea = (value: string) => {
+    const updated = customAreas.filter((a) => a.value !== value);
+    setCustomAreas(updated);
+    saveCustomAreas(updated);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -210,7 +246,7 @@ export function WeatherWarningSettings() {
             <CloudSun className="size-4 text-sky-700" />
           </div>
           <div>
-            <h3 className="text-sm font-bold">Weather Warnings</h3>
+            <h3 className="text-sm font-bold">Yipyy Forecast</h3>
             <p className="text-muted-foreground text-xs">
               Set up automatic weather alerts to protect pets in your facility
             </p>
@@ -229,7 +265,7 @@ export function WeatherWarningSettings() {
             <CardContent className="flex flex-col items-center py-10 text-center">
               <CloudSun className="text-muted-foreground/30 size-10" />
               <p className="text-muted-foreground mt-3 text-sm">
-                No weather warning rules configured
+                No forecast rules configured
               </p>
             </CardContent>
           </Card>
@@ -461,24 +497,65 @@ export function WeatherWarningSettings() {
             <div className="space-y-2">
               <Label>Affected Areas</Label>
               <div className="flex flex-wrap gap-2">
-                {AREA_OPTIONS.map((area) => (
-                  <label key={area.value} className="flex items-center gap-1.5">
-                    <Checkbox
-                      checked={form.appliesToAreas.includes(area.value)}
-                      onCheckedChange={(c) =>
-                        setForm({
-                          ...form,
-                          appliesToAreas: c
-                            ? [...form.appliesToAreas, area.value]
-                            : form.appliesToAreas.filter(
-                                (a) => a !== area.value,
-                              ),
-                        })
-                      }
-                    />
-                    <span className="text-xs">{area.label}</span>
-                  </label>
-                ))}
+                {AREA_OPTIONS.map((area) => {
+                  const isCustom = customAreas.some(
+                    (c) => c.value === area.value,
+                  );
+                  return (
+                    <label
+                      key={area.value}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Checkbox
+                        checked={form.appliesToAreas.includes(area.value)}
+                        onCheckedChange={(c) =>
+                          setForm({
+                            ...form,
+                            appliesToAreas: c
+                              ? [...form.appliesToAreas, area.value]
+                              : form.appliesToAreas.filter(
+                                  (a) => a !== area.value,
+                                ),
+                          })
+                        }
+                      />
+                      <span className="text-xs">{area.label}</span>
+                      {isCustom && (
+                        <button
+                          type="button"
+                          onClick={() => removeCustomArea(area.value)}
+                          className="text-muted-foreground text-[10px] hover:text-red-500"
+                        >
+                          x
+                        </button>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newAreaName}
+                  onChange={(e) => setNewAreaName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomArea();
+                    }
+                  }}
+                  placeholder="Add custom area..."
+                  className="h-7 flex-1 text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addCustomArea}
+                  disabled={!newAreaName.trim()}
+                >
+                  Add
+                </Button>
               </div>
             </div>
           </div>

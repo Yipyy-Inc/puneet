@@ -48,7 +48,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
     sections: [
       { id: "business", label: "Business", icon: Building2 },
       { id: "notifications", label: "Notifications", icon: Bell },
-      { id: "weather", label: "Weather Warnings", icon: CloudSun },
+      { id: "weather", label: "Yipyy Forecast", icon: CloudSun },
       { id: "integrations", label: "Integrations", icon: Plug },
       { id: "mobile-app", label: "Mobile App", icon: Smartphone },
     ],
