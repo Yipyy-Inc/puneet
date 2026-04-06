@@ -19,10 +19,20 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Evaluation } from "@/types/pet";
 import type { EvalQuestion, EvalSection } from "@/types/facility";
-import { X, Send, Info } from "lucide-react";
+import {
+  X,
+  Send,
+  Info,
+  Sparkles,
+  AlertTriangle,
+  RefreshCw,
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { SendEvaluationResultModal } from "@/components/evaluations/SendEvaluationResultModal";
 import type { EvaluationResultCardData } from "@/components/evaluations/EvaluationResultCard";
 import { useSettings } from "@/hooks/use-settings";
+import { useAiSummary } from "@/hooks/use-ai-summary";
+import { businessProfile } from "@/data/settings";
 
 // ── Dynamic form state ───────────────────────────────────────────────
 
@@ -388,6 +398,11 @@ export function StaffEvaluationFormModal({
   const [resultError, setResultError] = useState("");
   const [saved, setSaved] = useState(false);
   const [sendModalOpen, setSendModalOpen] = useState(false);
+  const ai = useAiSummary();
+  const [useAi, setUseAi] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("eval-use-ai-summary") !== "false";
+  });
 
   if (open !== prevOpen || key !== prevKey) {
     setPrevOpen(open);
@@ -720,6 +735,127 @@ export function StaffEvaluationFormModal({
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Summary Panel — shown after saving, before sending */}
+        {saved && evaluationReportCard.enabled && (
+          <Card className="border-blue-200 bg-blue-50/30">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Sparkles className="size-4 text-blue-500" />
+                  AI Report Summary
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="use-ai-toggle" className="text-xs">
+                    Use AI
+                  </Label>
+                  <Switch
+                    id="use-ai-toggle"
+                    checked={useAi}
+                    onCheckedChange={(v) => {
+                      setUseAi(v);
+                      localStorage.setItem("eval-use-ai-summary", String(v));
+                      if (!v) ai.reset();
+                    }}
+                  />
+                </div>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {useAi
+                  ? "Generate a polished summary from your evaluation notes. You can edit before sending."
+                  : "AI summary is off. Raw staff notes will be used on the result card."}
+              </p>
+            </CardHeader>
+            {useAi && (
+              <CardContent className="space-y-3 pt-2">
+                {!ai.summary && !ai.isGenerating && (
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => {
+                      const cardData = buildCardData();
+                      ai.generate("/api/ai/evaluation-summary", {
+                        petName,
+                        petBreed: "Mixed",
+                        facilityName: businessProfile.businessName,
+                        evaluatorName,
+                        evaluationDate: new Date().toISOString(),
+                        result: form.evaluationResult,
+                        temperament: {
+                          dogFriendly: form.answers.dog_friendly === "yes",
+                          humanFriendly: form.answers.human_friendly === "yes",
+                          energy:
+                            (form.answers.energy_level as string) || "medium",
+                          anxiety:
+                            (form.answers.anxiety_level as string) || "low",
+                          reactivity:
+                            (form.answers.reactivity as string) || "low",
+                        },
+                        playStyle: cardData.playStyle || "",
+                        playGroup: cardData.playGroup || "",
+                        behaviorTags: form.behaviorCodes,
+                        staffNotes:
+                          (form.answers.temperament_notes as string) || "",
+                        approvedServices: [
+                          ...(form.approvedServices.daycare ? ["Daycare"] : []),
+                          ...(form.approvedServices.boarding
+                            ? ["Boarding"]
+                            : []),
+                          ...form.approvedServices.customApproved,
+                        ],
+                        answers: form.answers,
+                      });
+                    }}
+                  >
+                    <Sparkles className="size-4" />
+                    Generate with AI
+                  </Button>
+                )}
+
+                {ai.isGenerating && (
+                  <div className="space-y-2">
+                    <div className="h-4 w-3/4 animate-pulse rounded bg-blue-200" />
+                    <div className="h-4 w-full animate-pulse rounded bg-blue-200" />
+                    <div className="h-4 w-5/6 animate-pulse rounded bg-blue-200" />
+                    <div className="h-4 w-2/3 animate-pulse rounded bg-blue-200" />
+                  </div>
+                )}
+
+                {ai.summary && !ai.isGenerating && (
+                  <>
+                    <Textarea
+                      value={ai.summary}
+                      onChange={(e) => ai.setSummary(e.target.value)}
+                      rows={8}
+                      className="border-blue-200 bg-white font-serif text-sm"
+                    />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-amber-600">
+                        <AlertTriangle className="size-3" />
+                        <span className="text-[11px]">
+                          AI-generated — review before sending
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => {
+                          ai.reset();
+                        }}
+                      >
+                        <RefreshCw className="size-3" />
+                        Regenerate
+                      </Button>
+                    </div>
+                  </>
+                )}
+
+                {ai.error && <p className="text-xs text-red-500">{ai.error}</p>}
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

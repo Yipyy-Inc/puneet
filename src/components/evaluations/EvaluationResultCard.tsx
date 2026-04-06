@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { EvaluationReportCardConfig } from "@/types/facility";
+import type {
+  EvaluationReportCardConfig,
+  ReportCardBrandConfig,
+} from "@/types/facility";
+import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
+import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
+import { businessProfile } from "@/data/settings";
 
 export interface EvaluationResultCardData {
   petName: string;
@@ -78,15 +84,18 @@ function LevelIndicator({
 interface EvaluationResultCardProps {
   data: EvaluationResultCardData;
   config: EvaluationReportCardConfig;
+  brandConfig?: ReportCardBrandConfig;
   className?: string;
 }
 
 export function EvaluationResultCard({
   data,
   config,
+  brandConfig,
   className,
 }: EvaluationResultCardProps) {
   const passed = data.result === "pass";
+  const hasBranding = !!brandConfig;
 
   const approvedList = [
     ...(data.approvedServices?.daycare ? ["Daycare"] : []),
@@ -104,52 +113,89 @@ export function EvaluationResultCard({
       {/* Header band */}
       <div
         className={cn(
-          "px-6 py-5",
           passed
             ? "border-b border-emerald-100 bg-emerald-50"
             : "border-b border-rose-100 bg-rose-50",
         )}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
+        {hasBranding ? (
+          <div>
+            <ReportCardBrandedHeader
+              brandConfig={brandConfig}
+              profile={businessProfile}
+              title={`${data.petName}'s Evaluation`}
+              subtitle={
+                data.evaluationDate
+                  ? new Date(data.evaluationDate).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : undefined
+              }
+              accentColor={passed ? "#059669" : "#e11d48"}
+            />
+            <div className="flex justify-center pb-3">
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold",
+                  passed
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-rose-100 text-rose-700",
+                )}
+              >
+                {passed ? (
+                  <CheckCircle2 className="size-4" />
+                ) : (
+                  <XCircle className="size-4" />
+                )}
+                {passed ? "Passed" : "Not Approved"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-4 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "flex size-11 shrink-0 items-center justify-center rounded-full",
+                  passed ? "bg-emerald-100" : "bg-rose-100",
+                )}
+              >
+                <PawPrint
+                  className={cn(
+                    "size-5",
+                    passed ? "text-emerald-600" : "text-rose-600",
+                  )}
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                  {data.facilityName}
+                </p>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {data.petName}&apos;s Evaluation
+                </h2>
+              </div>
+            </div>
             <div
               className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-full",
-                passed ? "bg-emerald-100" : "bg-rose-100",
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold",
+                passed
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-rose-100 text-rose-700",
               )}
             >
-              <PawPrint
-                className={cn(
-                  "size-5",
-                  passed ? "text-emerald-600" : "text-rose-600",
-                )}
-              />
-            </div>
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
-                {data.facilityName}
-              </p>
-              <h2 className="text-lg font-bold text-gray-900">
-                {data.petName}&apos;s Evaluation
-              </h2>
+              {passed ? (
+                <CheckCircle2 className="size-4" />
+              ) : (
+                <XCircle className="size-4" />
+              )}
+              {passed ? "Passed" : "Not Approved"}
             </div>
           </div>
-          <div
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold",
-              passed
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-rose-100 text-rose-700",
-            )}
-          >
-            {passed ? (
-              <CheckCircle2 className="size-4" />
-            ) : (
-              <XCircle className="size-4" />
-            )}
-            {passed ? "Passed" : "Not Approved"}
-          </div>
-        </div>
+        )}
 
         {config.headerMessage && (
           <p className="mt-3 text-sm text-gray-600">{config.headerMessage}</p>
@@ -337,6 +383,17 @@ export function EvaluationResultCard({
           </div>
         )}
       </div>
+
+      {/* Branded footer */}
+      {hasBranding && (
+        <div className="border-t">
+          <ReportCardBrandedFooter
+            brandConfig={brandConfig}
+            profile={businessProfile}
+            accentColor={passed ? "#059669" : "#e11d48"}
+          />
+        </div>
+      )}
     </div>
   );
 }

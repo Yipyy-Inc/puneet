@@ -686,6 +686,20 @@ export const reportCardBrandConfigSchema = z.object({
   reportTitle: z.string(),
   accentColor: z.string(),
   showFacilityLogo: z.boolean(),
+  logoPosition: z.enum(["top_center", "top_left", "top_right"]).optional(),
+  headerStyle: z.enum(["minimal", "banner", "centered"]).optional(),
+  showFacilityName: z.boolean().optional(),
+  showFacilityPhone: z.boolean().optional(),
+  showFacilityEmail: z.boolean().optional(),
+  showFacilityWebsite: z.boolean().optional(),
+  showSocialLinks: z.boolean().optional(),
+  socialLinksStyle: z.enum(["icons", "buttons", "text_links"]).optional(),
+  showBookingCta: z.boolean().optional(),
+  bookingCtaText: z.string().optional(),
+  bookingCtaUrl: z.string().optional(),
+  footerText: z.string().optional(),
+  showPoweredBy: z.boolean().optional(),
+  aiTone: z.enum(["warm", "professional", "playful"]).optional(),
 });
 export type ReportCardBrandConfig = z.infer<typeof reportCardBrandConfigSchema>;
 

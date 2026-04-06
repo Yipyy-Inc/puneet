@@ -11,6 +11,9 @@ import type {
   DropOffPickUpOverride,
 } from "@/types/facility";
 import { SettingsBlock } from "@/components/ui/settings-block";
+import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
+import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
+import { businessProfile } from "@/data/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileAppSettings } from "@/components/additional-features/MobileAppSettings";
@@ -2121,7 +2124,25 @@ function ReportCardSettingsCard() {
           reportTitle: "Daily Report Card",
           accentColor: "#6366f1",
           showFacilityLogo: true,
+          logoPosition: "top_center" as const,
+          headerStyle: "centered" as const,
+          showFacilityName: true,
+          showFacilityPhone: true,
+          showFacilityEmail: true,
+          showFacilityWebsite: true,
+          showSocialLinks: true,
+          socialLinksStyle: "icons" as const,
+          showBookingCta: true,
+          bookingCtaText: "Book Your Next Visit",
+          bookingCtaUrl: "",
+          footerText: "Thank you for trusting us with your fur baby!",
+          showPoweredBy: true,
         };
+        const updateBrand = (patch: Partial<typeof brand>) =>
+          setLocalConfig({
+            ...localConfig,
+            brand: { ...brand, ...patch },
+          });
         const overallFeedback = localConfig.overallFeedback ?? {
           title: "Overall Experience",
           responseOptions: ["Excellent", "Good", "Fair", "Needs Attention"],
@@ -2146,8 +2167,10 @@ function ReportCardSettingsCard() {
 
             {/* ── General Tab ─────────────────────────────── */}
             <TabsContent value="general" className="space-y-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <Label className="text-base font-semibold">Brand Styling</Label>
+
+                {/* Title + Color */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Report Title</Label>
@@ -2155,10 +2178,7 @@ function ReportCardSettingsCard() {
                       value={brand.reportTitle}
                       readOnly={!isEditing}
                       onChange={(e) =>
-                        setLocalConfig({
-                          ...localConfig,
-                          brand: { ...brand, reportTitle: e.target.value },
-                        })
+                        updateBrand({ reportTitle: e.target.value })
                       }
                     />
                   </div>
@@ -2171,10 +2191,7 @@ function ReportCardSettingsCard() {
                         disabled={!isEditing}
                         className="h-9 w-12 cursor-pointer rounded-sm border disabled:cursor-not-allowed"
                         onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            brand: { ...brand, accentColor: e.target.value },
-                          })
+                          updateBrand({ accentColor: e.target.value })
                         }
                       />
                       <Input
@@ -2182,30 +2199,312 @@ function ReportCardSettingsCard() {
                         readOnly={!isEditing}
                         className="flex-1"
                         onChange={(e) =>
-                          setLocalConfig({
-                            ...localConfig,
-                            brand: { ...brand, accentColor: e.target.value },
-                          })
+                          updateBrand({ accentColor: e.target.value })
                         }
                       />
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="rc-show-logo"
-                    checked={brand.showFacilityLogo}
-                    disabled={!isEditing}
-                    onCheckedChange={(checked) =>
-                      setLocalConfig({
-                        ...localConfig,
-                        brand: { ...brand, showFacilityLogo: checked },
-                      })
-                    }
-                  />
-                  <Label htmlFor="rc-show-logo">
-                    Show Facility Logo on Report Cards
+
+                {/* Header Style */}
+                <div className="space-y-2">
+                  <Label>Header Style</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["minimal", "banner", "centered"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={!isEditing}
+                        onClick={() => updateBrand({ headerStyle: s })}
+                        className={`rounded-lg border-2 p-3 text-center text-sm font-medium capitalize transition-all ${
+                          brand.headerStyle === s
+                            ? "border-primary bg-primary/5"
+                            : "border-muted hover:border-primary/30"
+                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Logo */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="rc-show-logo"
+                      checked={brand.showFacilityLogo}
+                      disabled={!isEditing}
+                      onCheckedChange={(checked) =>
+                        updateBrand({ showFacilityLogo: checked })
+                      }
+                    />
+                    <Label htmlFor="rc-show-logo">Show Facility Logo</Label>
+                  </div>
+                  {brand.showFacilityLogo && (
+                    <div className="space-y-2">
+                      <Label>Logo Position</Label>
+                      <Select
+                        value={brand.logoPosition ?? "top_center"}
+                        disabled={!isEditing}
+                        onValueChange={(v) =>
+                          updateBrand({
+                            logoPosition: v as
+                              | "top_center"
+                              | "top_left"
+                              | "top_right",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="top_center">Top Center</SelectItem>
+                          <SelectItem value="top_left">Top Left</SelectItem>
+                          <SelectItem value="top_right">Top Right</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Contact Info</Label>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="rc-name"
+                        checked={brand.showFacilityName !== false}
+                        disabled={!isEditing}
+                        onCheckedChange={(c) =>
+                          updateBrand({ showFacilityName: c })
+                        }
+                      />
+                      <Label htmlFor="rc-name">Show Facility Name</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="rc-phone"
+                        checked={brand.showFacilityPhone !== false}
+                        disabled={!isEditing}
+                        onCheckedChange={(c) =>
+                          updateBrand({ showFacilityPhone: c })
+                        }
+                      />
+                      <Label htmlFor="rc-phone">Show Phone</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="rc-email"
+                        checked={brand.showFacilityEmail !== false}
+                        disabled={!isEditing}
+                        onCheckedChange={(c) =>
+                          updateBrand({ showFacilityEmail: c })
+                        }
+                      />
+                      <Label htmlFor="rc-email">Show Email</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="rc-website"
+                        checked={brand.showFacilityWebsite !== false}
+                        disabled={!isEditing}
+                        onCheckedChange={(c) =>
+                          updateBrand({ showFacilityWebsite: c })
+                        }
+                      />
+                      <Label htmlFor="rc-website">Show Website</Label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="rc-social"
+                      checked={brand.showSocialLinks !== false}
+                      disabled={!isEditing}
+                      onCheckedChange={(c) =>
+                        updateBrand({ showSocialLinks: c })
+                      }
+                    />
+                    <Label
+                      htmlFor="rc-social"
+                      className="text-sm font-semibold"
+                    >
+                      Show Social Links
+                    </Label>
+                  </div>
+                  {brand.showSocialLinks && (
+                    <div className="space-y-2">
+                      <Label>Social Links Style</Label>
+                      <Select
+                        value={brand.socialLinksStyle ?? "icons"}
+                        disabled={!isEditing}
+                        onValueChange={(v) =>
+                          updateBrand({
+                            socialLinksStyle: v as
+                              | "icons"
+                              | "buttons"
+                              | "text_links",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="icons">Icons</SelectItem>
+                          <SelectItem value="buttons">Buttons</SelectItem>
+                          <SelectItem value="text_links">Text Links</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Booking CTA */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="rc-cta"
+                      checked={brand.showBookingCta !== false}
+                      disabled={!isEditing}
+                      onCheckedChange={(c) =>
+                        updateBrand({ showBookingCta: c })
+                      }
+                    />
+                    <Label htmlFor="rc-cta" className="text-sm font-semibold">
+                      Booking Call-to-Action
+                    </Label>
+                  </div>
+                  {brand.showBookingCta && (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Button Text</Label>
+                        <Input
+                          value={brand.bookingCtaText ?? "Book Your Next Visit"}
+                          readOnly={!isEditing}
+                          onChange={(e) =>
+                            updateBrand({ bookingCtaText: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Button URL</Label>
+                        <Input
+                          value={brand.bookingCtaUrl ?? ""}
+                          readOnly={!isEditing}
+                          placeholder="https://..."
+                          onChange={(e) =>
+                            updateBrand({ bookingCtaUrl: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Footer</Label>
+                  <div className="space-y-2">
+                    <Label>Custom Footer Text</Label>
+                    <Textarea
+                      value={brand.footerText ?? ""}
+                      readOnly={!isEditing}
+                      rows={2}
+                      placeholder="Thank you for trusting us with your fur baby!"
+                      onChange={(e) =>
+                        updateBrand({ footerText: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="rc-powered"
+                      checked={brand.showPoweredBy !== false}
+                      disabled={!isEditing}
+                      onCheckedChange={(c) => updateBrand({ showPoweredBy: c })}
+                    />
+                    <Label htmlFor="rc-powered">
+                      Show &quot;Powered by Yipyy&quot;
+                    </Label>
+                  </div>
+                </div>
+
+                {/* AI Tone */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">
+                    AI Summary Tone
                   </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Choose how AI-generated summaries sound on report cards and
+                    evaluations.
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      {
+                        value: "warm" as const,
+                        label: "Warm",
+                        desc: "Friendly, caring, reassuring",
+                      },
+                      {
+                        value: "professional" as const,
+                        label: "Professional",
+                        desc: "Formal, concise, factual",
+                      },
+                      {
+                        value: "playful" as const,
+                        label: "Playful",
+                        desc: "Fun, lighthearted, upbeat",
+                      },
+                    ].map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        disabled={!isEditing}
+                        onClick={() => updateBrand({ aiTone: t.value })}
+                        className={`rounded-lg border-2 p-3 text-left transition-all ${
+                          (brand.aiTone ?? "warm") === t.value
+                            ? "border-primary bg-primary/5"
+                            : "border-muted hover:border-primary/30"
+                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                      >
+                        <p className="text-sm font-medium">{t.label}</p>
+                        <p className="text-muted-foreground text-[11px]">
+                          {t.desc}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Live Preview */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Live Preview</Label>
+                  <div className="overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white">
+                    <ReportCardBrandedHeader
+                      brandConfig={brand}
+                      profile={businessProfile}
+                      title="Buddy's Daily Report"
+                      subtitle="Daycare · Mon, April 5, 2026"
+                    />
+                    <div className="px-6 py-4">
+                      <p className="text-muted-foreground text-center text-xs italic">
+                        — report card content would appear here —
+                      </p>
+                    </div>
+                    <div className="border-t">
+                      <ReportCardBrandedFooter
+                        brandConfig={brand}
+                        profile={businessProfile}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
