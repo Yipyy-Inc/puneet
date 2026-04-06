@@ -23,6 +23,7 @@ import {
   Package,
   ChevronDown,
   CloudSun,
+  Receipt,
 } from "lucide-react";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -95,6 +96,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
   {
     label: "Financial",
     sections: [
+      { id: "pricing-rules", label: "Pricing Rules", icon: Receipt },
       { id: "financial", label: "Payments & Billing", icon: DollarSign },
       { id: "taxes", label: "Taxes", icon: DollarSign },
       { id: "subscription", label: "Subscription", icon: CreditCard },

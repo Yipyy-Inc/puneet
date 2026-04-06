@@ -34,7 +34,6 @@ import {
   Moon,
   TrendingUp,
 } from "lucide-react";
-import { PricingRulesPanel } from "@/components/facility/PricingRulesPanel";
 import {
   boardingRates,
   multiNightDiscounts,
@@ -690,8 +689,24 @@ export default function BoardingRatesPage() {
         </CardContent>
       </Card>
 
-      {/* Pricing Rules Panel — multi-pet, late/early fees, 24h overflow, custom fees, stacking */}
-      <PricingRulesPanel serviceType="boarding" />
+      {/* Pricing rules moved to Settings → Pricing Rules */}
+      <Card>
+        <CardContent className="flex items-center justify-between py-4">
+          <div>
+            <p className="text-sm font-semibold">Pricing Rules</p>
+            <p className="text-muted-foreground text-xs">
+              Multi-pet discounts, late fees, surcharges, and custom fees are
+              now managed in Settings.
+            </p>
+          </div>
+          <a
+            href="/facility/dashboard/settings?section=pricing-rules"
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            Go to Pricing Rules →
+          </a>
+        </CardContent>
+      </Card>
 
       {/* Rate Modal */}
       <Dialog open={isRateModalOpen} onOpenChange={setIsRateModalOpen}>
