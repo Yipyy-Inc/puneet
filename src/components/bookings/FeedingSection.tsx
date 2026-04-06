@@ -317,7 +317,7 @@ export function FeedingSection({ entries, required }: FeedingSectionProps) {
                   )}
                 </div>
                 {entry.notes && (
-                  <p className="text-muted-foreground bg-muted/30 mt-1 ml-6 rounded px-2 py-1 text-[11px]">
+                  <p className="text-muted-foreground bg-muted/30 mt-1 ml-6 rounded-sm px-2 py-1 text-[11px]">
                     {entry.notes}
                   </p>
                 )}

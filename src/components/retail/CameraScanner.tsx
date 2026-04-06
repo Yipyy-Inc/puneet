@@ -284,7 +284,7 @@ export function CameraScanner({ onScan }: CameraScannerProps) {
   return (
     <div className="space-y-3">
       {/* Viewfinder */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-black">
+      <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-black">
         <video
           ref={videoRef}
           className="size-full object-cover"

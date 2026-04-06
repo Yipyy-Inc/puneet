@@ -341,9 +341,7 @@ export default function BookingDetailPage({
                       Special Requests
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed">
-                    {booking.specialRequests}
-                  </p>
+                  <p className="text-sm/relaxed">{booking.specialRequests}</p>
                 </div>
               )}
             </div>

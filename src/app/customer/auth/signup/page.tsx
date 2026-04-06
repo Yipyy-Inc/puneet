@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -21,12 +21,17 @@ import { getErrorMessage } from "@/lib/errors";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromEstimate = searchParams.get("from") === "estimate";
+  const estimateToken = searchParams.get("token");
+  const prefilledEmail = searchParams.get("email") ?? "";
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    email: "",
+    email: prefilledEmail,
     password: "",
     confirmPassword: "",
   });
@@ -75,16 +80,19 @@ export default function SignUpPage() {
       // Check if customer exists with same email
       const existingCustomer = await checkExistingCustomer(formData.email);
 
+      const redirectTo =
+        fromEstimate && estimateToken
+          ? `/customer/estimates/${estimateToken}`
+          : "/customer/dashboard";
+
       if (existingCustomer) {
-        // Account linking: connect the account instead of creating duplicate
         await linkAccount(formData.email, formData.password);
         toast.success("Account connected successfully!");
-        router.push("/customer/dashboard");
+        router.push(redirectTo);
       } else {
-        // Create new account
         await createAccount(formData);
         toast.success("Account created successfully!");
-        router.push("/customer/dashboard");
+        router.push(redirectTo);
       }
     } catch (error: unknown) {
       toast.error(
@@ -169,10 +177,12 @@ export default function SignUpPage() {
             />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Create your account
+            {fromEstimate ? "Complete your account" : "Create your account"}
           </CardTitle>
           <CardDescription>
-            Sign up to manage your pets and book services
+            {fromEstimate
+              ? "Set up your account to view your estimate and book your pet's stay"
+              : "Sign up to manage your pets and book services"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

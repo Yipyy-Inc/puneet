@@ -30,6 +30,15 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { products } from "@/data/retail";
+import dynamic from "next/dynamic";
+
+const CameraScanner = dynamic(
+  () =>
+    import("@/components/retail/CameraScanner").then((m) => ({
+      default: m.CameraScanner,
+    })),
+  { ssr: false },
+);
 
 interface AddRetailItemModalProps {
   open: boolean;
@@ -45,8 +54,7 @@ export function AddRetailItemModal({
   onAddItems,
 }: AddRetailItemModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [scanMode, setScanMode] = useState(false);
-  const [barcodeInput, setBarcodeInput] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [cart, setCart] = useState<
     Map<string, { name: string; price: number; quantity: number }>
@@ -77,23 +85,23 @@ export function AddRetailItemModal({
     });
   }, [searchQuery, activeCategory]);
 
-  const handleScan = () => {
-    if (!barcodeInput.trim()) return;
+  const handleScan = (code: string) => {
+    setCameraOpen(false);
+    const trimmed = code.trim();
+    if (!trimmed) return;
     const found = products.find(
       (p) =>
-        p.barcode === barcodeInput ||
-        p.variants?.some((v) => v.barcode === barcodeInput),
+        p.barcode === trimmed || p.variants?.some((v) => v.barcode === trimmed),
     );
     if (found) {
-      const variant = found.variants?.find((v) => v.barcode === barcodeInput);
+      const variant = found.variants?.find((v) => v.barcode === trimmed);
       const name = variant ? `${found.name} — ${variant.name}` : found.name;
       const price = variant ? variant.price : found.basePrice;
       addToCart(found.id + (variant?.id ?? ""), name, price);
       toast.success(`Scanned: ${name}`);
     } else {
-      toast.error("Product not found");
+      toast.error(`No product found for barcode: ${trimmed}`);
     }
-    setBarcodeInput("");
   };
 
   const addToCart = (id: string, name: string, price: number) => {
@@ -155,19 +163,21 @@ export function AddRetailItemModal({
 
   const handleClose = () => {
     setSearchQuery("");
-    setScanMode(false);
+    setCameraOpen(false);
     setActiveCategory("all");
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex max-w-2xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex max-h-[70vh] max-w-2xl flex-col gap-0 overflow-hidden rounded-2xl p-0">
         {/* ── Fixed header ── */}
         <div className="shrink-0 space-y-3 border-b p-5 pb-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingBag className="size-5" />
+              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-50">
+                <ShoppingBag className="size-4 text-emerald-600" />
+              </div>
               Add Products to Invoice
             </DialogTitle>
           </DialogHeader>
@@ -185,39 +195,14 @@ export function AddRetailItemModal({
               />
             </div>
             <Button
-              variant={scanMode ? "default" : "outline"}
+              variant="outline"
               className="h-10 gap-1.5"
-              onClick={() => setScanMode(!scanMode)}
+              onClick={() => setCameraOpen(true)}
             >
               <Barcode className="size-4" />
               Scan
             </Button>
           </div>
-
-          {/* Scanner input */}
-          {scanMode && (
-            <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
-              <Barcode className="size-4 shrink-0 text-blue-600" />
-              <Input
-                value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleScan();
-                }}
-                placeholder="Scan or enter barcode..."
-                className="h-8 flex-1 border-blue-200 bg-white text-sm"
-                autoFocus={scanMode}
-              />
-              <Button
-                size="sm"
-                className="h-8"
-                onClick={handleScan}
-                disabled={!barcodeInput.trim()}
-              >
-                Add
-              </Button>
-            </div>
-          )}
 
           {/* Category filter + result count */}
           <div className="flex items-center gap-2">
@@ -266,17 +251,31 @@ export function AddRetailItemModal({
                   <div
                     key={product.id}
                     className={cn(
-                      "group relative flex items-start gap-3 rounded-xl border p-3 transition-all",
+                      "group relative flex items-start gap-3 rounded-xl border p-3 transition-all duration-200",
                       inCart
-                        ? "border-primary/40 bg-primary/5"
-                        : "hover:border-primary/20 hover:shadow-sm",
+                        ? "border-emerald-300 bg-emerald-50/60 shadow-sm"
+                        : "border-slate-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md",
                     )}
                   >
-                    <div className="bg-muted flex size-11 shrink-0 items-center justify-center rounded-lg">
-                      <ShoppingBag className="text-muted-foreground/60 size-5" />
+                    <div
+                      className={cn(
+                        "flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors",
+                        inCart
+                          ? "bg-emerald-100"
+                          : "bg-slate-100 group-hover:bg-emerald-50",
+                      )}
+                    >
+                      <ShoppingBag
+                        className={cn(
+                          "size-5 transition-colors",
+                          inCart
+                            ? "text-emerald-600"
+                            : "text-slate-400 group-hover:text-emerald-500",
+                        )}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-tight font-medium">
+                      <p className="text-sm/tight font-medium">
                         {product.name}
                       </p>
                       <p className="text-muted-foreground mt-0.5 text-xs">
@@ -307,18 +306,18 @@ export function AddRetailItemModal({
                           onClick={() =>
                             updateQuantity(product.id, cartQty - 1)
                           }
-                          className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md border transition-colors"
+                          className="flex size-7 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition-all hover:bg-emerald-50"
                         >
                           <Minus className="size-3" />
                         </button>
-                        <span className="w-6 text-center text-sm font-semibold">
+                        <span className="w-6 text-center text-sm font-bold text-emerald-700 tabular-nums">
                           {cartQty}
                         </span>
                         <button
                           onClick={() =>
                             updateQuantity(product.id, cartQty + 1)
                           }
-                          className="text-muted-foreground hover:bg-muted flex size-7 items-center justify-center rounded-md border transition-colors"
+                          className="flex size-7 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-600 transition-all hover:bg-emerald-50"
                         >
                           <Plus className="size-3" />
                         </button>
@@ -328,7 +327,7 @@ export function AddRetailItemModal({
                         onClick={() =>
                           addToCart(product.id, product.name, product.basePrice)
                         }
-                        className="text-muted-foreground/40 hover:text-primary hover:bg-primary/10 flex size-8 items-center justify-center rounded-lg transition-all"
+                        className="flex size-8 items-center justify-center rounded-lg text-slate-300 transition-all hover:scale-110 hover:bg-emerald-50 hover:text-emerald-500"
                       >
                         <Plus className="size-5" />
                       </button>
@@ -341,7 +340,7 @@ export function AddRetailItemModal({
         </div>
 
         {/* ── Fixed footer — cart summary + actions ── */}
-        <div className="bg-muted/20 shrink-0 border-t p-5 pt-4">
+        <div className="shrink-0 border-t bg-slate-50/80 p-5 pt-4">
           {cartItems.length > 0 && (
             <div className="mb-3 space-y-1.5">
               <div className="flex items-center justify-between">
@@ -359,7 +358,7 @@ export function AddRetailItemModal({
                 {cartItems.map(([id, item]) => (
                   <div
                     key={id}
-                    className="bg-background flex items-center gap-2 rounded-lg px-3 py-1.5"
+                    className="flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 shadow-sm"
                   >
                     <span className="min-w-0 flex-1 truncate text-xs font-medium">
                       {item.name}
@@ -387,7 +386,7 @@ export function AddRetailItemModal({
               Cancel
             </Button>
             <Button
-              className="flex-1 gap-1.5"
+              className="flex-1 gap-1.5 bg-emerald-500 hover:bg-emerald-600"
               onClick={handleConfirm}
               disabled={cartItems.length === 0}
             >
@@ -402,6 +401,28 @@ export function AddRetailItemModal({
           </div>
         </div>
       </DialogContent>
+
+      {/* Camera scanner dialog — same as retail module */}
+      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
+        <DialogContent className="flex flex-col gap-0 p-0 max-sm:inset-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-sm">
+          <DialogHeader className="px-5 pt-5 pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Barcode className="size-5" />
+              Scan Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto px-5 pb-5">
+            {cameraOpen && <CameraScanner onScan={handleScan} />}
+            <Button
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => setCameraOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

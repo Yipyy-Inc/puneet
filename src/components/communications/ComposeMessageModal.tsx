@@ -239,7 +239,7 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
             onFocus={() => setActiveField("body")}
             placeholder="Enter your message..."
             rows={8}
-            className="min-h-[180px] resize-y text-sm leading-7"
+            className="min-h-[180px] resize-y text-sm/7"
           />
           {formData.type === "sms" && (
             <div className="text-muted-foreground space-y-0.5 text-xs">

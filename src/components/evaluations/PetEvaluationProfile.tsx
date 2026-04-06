@@ -227,7 +227,7 @@ function TimelineEntry({
         )}
 
         {evaluation.notes && (
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-muted-foreground text-sm/relaxed">
             {evaluation.notes}
           </p>
         )}

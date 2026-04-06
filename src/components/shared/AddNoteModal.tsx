@@ -136,7 +136,7 @@ export function AddNoteModal({
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write your note here..."
             rows={5}
-            className="min-h-[140px] resize-y text-sm leading-7"
+            className="min-h-[140px] resize-y text-sm/7"
           />
         </div>
 

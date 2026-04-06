@@ -435,7 +435,7 @@ function FeedingCard({
             onChange={(e) =>
               onChange({ ...entry, saveToProfile: e.target.checked })
             }
-            className="size-4 rounded accent-blue-600"
+            className="size-4 rounded-sm accent-blue-600"
           />
           <div>
             <p className="text-xs font-medium text-blue-800">
@@ -717,7 +717,7 @@ function MedicationCard({
             onChange={(e) =>
               onChange({ ...entry, saveToProfile: e.target.checked })
             }
-            className="size-4 rounded accent-blue-600"
+            className="size-4 rounded-sm accent-blue-600"
           />
           <div>
             <p className="text-xs font-medium text-blue-800">

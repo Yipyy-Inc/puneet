@@ -752,7 +752,7 @@ export default function TaskManagementPage() {
                           </div>
                         )}
                         {task.completionNotes && (
-                          <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
+                          <p className="mt-1 rounded-sm bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
                             ⚠ {task.completionNotes}
                           </p>
                         )}

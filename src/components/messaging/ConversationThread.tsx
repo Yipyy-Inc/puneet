@@ -95,7 +95,7 @@ export function ConversationThread({
           </div>
         </div>
         <h3 className="mt-6 text-xl font-bold text-slate-700">Your Messages</h3>
-        <p className="mt-2 max-w-xs text-center text-sm leading-relaxed text-slate-400">
+        <p className="mt-2 max-w-xs text-center text-sm/relaxed text-slate-400">
           Select a client from the left panel or create a new message
         </p>
       </div>

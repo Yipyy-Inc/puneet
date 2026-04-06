@@ -876,7 +876,7 @@ export function StaffEvaluationFormModal({
                       <textarea
                         value={ai.summary}
                         onChange={(e) => ai.setSummary(e.target.value)}
-                        className="min-h-[280px] w-full resize-y border-0 bg-transparent text-sm leading-7 text-slate-700 outline-none"
+                        className="min-h-[280px] w-full resize-y border-0 bg-transparent text-sm/7 text-slate-700 outline-none"
                       />
                     </div>
                     <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">

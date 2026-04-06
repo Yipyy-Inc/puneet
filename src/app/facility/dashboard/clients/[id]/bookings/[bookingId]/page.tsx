@@ -460,7 +460,7 @@ export default function ClientBookingDetailPage({
         )}
 
         {/* ── Hero Header ── */}
-        <div className="from-card to-muted/20 rounded-xl border bg-gradient-to-r p-6">
+        <div className="from-card to-muted/20 rounded-xl border bg-linear-to-r p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">

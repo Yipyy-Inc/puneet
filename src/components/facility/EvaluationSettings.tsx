@@ -443,7 +443,7 @@ export function EvaluationSettings() {
                       type="color"
                       value={colorCode}
                       onChange={(e) => setColorCode(e.target.value)}
-                      className="size-9 cursor-pointer rounded border-0"
+                      className="size-9 cursor-pointer rounded-sm border-0"
                     />
                     <span className="font-mono text-xs">{colorCode}</span>
                   </div>
@@ -584,7 +584,7 @@ export function EvaluationSettings() {
                     <input
                       type="checkbox"
                       defaultChecked
-                      className="accent-primary size-4 rounded"
+                      className="accent-primary size-4 rounded-sm"
                     />
                     <span className="text-sm">{lodging.label}</span>
                   </div>
@@ -983,7 +983,7 @@ export function EvaluationSettings() {
                 />
                 <h3 className="text-lg font-semibold">{customerName}</h3>
               </div>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+              <p className="text-muted-foreground mt-2 text-sm/relaxed">
                 {description}
               </p>
               <Separator className="my-4" />

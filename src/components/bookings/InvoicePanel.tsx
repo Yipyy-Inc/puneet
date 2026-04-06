@@ -208,7 +208,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                       {invoice.status !== "closed" && (
                         <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
-                            className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded"
+                            className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded-sm"
                             onClick={() => {
                               setEditingIndex(i);
                               setEditName(item.name);
@@ -220,7 +220,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
                             <Pencil className="size-3" />
                           </button>
                           <button
-                            className="text-muted-foreground hover:text-destructive flex size-5 items-center justify-center rounded"
+                            className="text-muted-foreground hover:text-destructive flex size-5 items-center justify-center rounded-sm"
                             onClick={() =>
                               toast.success(
                                 `"${item.name}" removed from invoice`,

@@ -663,7 +663,7 @@ function EvaluationAddOnsSubStep({
                     </div>
                   )}
                   {isAdded && (
-                    <div className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-emerald-500 shadow">
+                    <div className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-emerald-500 shadow-sm">
                       <Check className="size-3.5 text-white" />
                     </div>
                   )}
@@ -672,7 +672,7 @@ function EvaluationAddOnsSubStep({
                 {/* Content */}
                 <div className="flex flex-1 flex-col p-3">
                   <div className="flex items-start justify-between gap-1">
-                    <p className="text-sm leading-tight font-semibold">
+                    <p className="text-sm/tight font-semibold">
                       {service.name}
                     </p>
                     <span className="text-primary shrink-0 text-xs font-bold">

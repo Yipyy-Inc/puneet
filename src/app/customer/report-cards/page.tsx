@@ -577,7 +577,7 @@ export default function CustomerReportCardsPage() {
                           <div className="relative space-y-4 p-4">
                             {/* AI daily summary */}
                             <div className="rounded-lg bg-slate-50 px-4 py-3">
-                              <p className="text-sm leading-relaxed text-slate-600">
+                              <p className="text-sm/relaxed text-slate-600">
                                 {buildDailySummary(item)}
                               </p>
                             </div>

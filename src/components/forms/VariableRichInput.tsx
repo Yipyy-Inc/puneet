@@ -261,7 +261,7 @@ export function VariableRichInput({
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-6 shrink-0 items-center justify-center rounded transition-colors"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-6 shrink-0 items-center justify-center rounded-sm transition-colors"
               title="Insert variable"
             >
               <Braces className="size-3.5" />
@@ -292,7 +292,7 @@ export function VariableRichInput({
                     >
                       <span
                         className={cn(
-                          "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          "rounded-sm px-1.5 py-0.5 text-[10px] font-medium",
                           v.chipBg,
                           v.color,
                         )}

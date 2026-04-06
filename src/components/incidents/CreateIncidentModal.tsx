@@ -450,7 +450,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
             }
             placeholder="Detailed description of what happened..."
             rows={6}
-            className="min-h-[160px] resize-y text-sm leading-7"
+            className="min-h-[160px] resize-y text-sm/7"
           />
         </div>
 
@@ -521,7 +521,7 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 }
                 placeholder="What to communicate to the pet owner..."
                 rows={5}
-                className="min-h-[140px] resize-y text-sm leading-7"
+                className="min-h-[140px] resize-y text-sm/7"
               />
               <p className="text-muted-foreground text-xs">
                 This version will be shared with clients if you choose to notify
