@@ -24,91 +24,18 @@ interface EvaluationInput {
   answers: Record<string, unknown>;
 }
 
-function buildMockSummary(input: EvaluationInput): string {
-  const {
-    petName,
-    result,
-    temperament,
-    behaviorTags,
-    staffNotes,
-    approvedServices,
-    playStyle,
-    playGroup,
-  } = input;
-  const passed = result === "pass";
-
-  const energyDesc =
-    temperament.energy === "high"
-      ? "brought wonderful high energy to every interaction"
-      : temperament.energy === "low"
-        ? "was calm and relaxed throughout the session"
-        : "showed a nicely balanced energy level";
-  const dogDesc = temperament.dogFriendly
-    ? "showed excellent social skills with other dogs"
-    : "was a bit cautious around other dogs, which is completely normal for a first visit";
-  const humanDesc = temperament.humanFriendly
-    ? "warmed up to our staff quickly and enjoyed lots of attention"
-    : "took some time to warm up to new people, which we completely understand";
-  const anxietyDesc =
-    temperament.anxiety === "high"
-      ? `${petName} did show some signs of anxiety, which is understandable in a new environment.`
-      : temperament.anxiety === "medium"
-        ? `${petName} showed mild nervousness at first but settled in nicely.`
-        : "";
-
-  const tagsText =
-    behaviorTags.length > 0
-      ? ` Our team noted the following traits: ${behaviorTags.join(", ")}.`
-      : "";
-  const notesText = staffNotes ? ` ${staffNotes}` : "";
-  const playText = playStyle
-    ? `${petName} displayed a ${playStyle.toLowerCase()} play style`
-    : `${petName} engaged well during play time`;
-  const groupText = playGroup
-    ? `, and we think the ${playGroup} group would be a great fit`
-    : "";
-
-  if (passed) {
-    return `Opening
-We had the absolute pleasure of meeting ${petName} today, and we are excited to share how the evaluation went!
-
-Temperament Summary
-${petName} ${dogDesc} and ${energyDesc}. ${petName} ${humanDesc}. ${anxietyDesc}
-
-Play and Social Profile
-${playText}${groupText}. We look forward to seeing more of that personality during regular visits.
-
-Key Observations
-Overall, ${petName} made a fantastic impression on our team.${tagsText}${notesText}
-
-Next Steps
-Great news -- ${petName} has been approved for ${approvedServices.length > 0 ? approvedServices.join(" and ") : "services"} at our facility! You can now book sessions through your account.`;
-  }
-
-  return `Opening
-Thank you for bringing ${petName} in for an evaluation today. We genuinely enjoyed getting to know your pup.
-
-Temperament Summary
-${petName} ${dogDesc} and ${energyDesc}. ${petName} ${humanDesc}. ${anxietyDesc}
-
-Play and Social Profile
-${playText}${groupText}. With some additional socialization, we believe ${petName} will become even more confident.
-
-Key Observations
-While ${petName} showed many wonderful qualities, we noticed a few areas where some additional preparation would help ensure the best experience.${tagsText}${notesText}
-
-Next Steps
-We recommend some additional socialization or training sessions before re-evaluating. Many dogs pass on their second visit once they are more familiar with the environment. Please do not hesitate to reach out if you would like guidance on next steps.`;
-}
+const FALLBACK_SUMMARY =
+  "Unable to generate summary at this time. Please try again or write the summary manually.";
 
 export async function POST(req: NextRequest) {
   const input: EvaluationInput = await req.json();
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ summary: buildMockSummary(input) });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || apiKey === "your-api-key-here") {
+    return NextResponse.json({ summary: FALLBACK_SUMMARY });
   }
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
 
   const prompt = `You are a professional pet care facility staff writer. Based on the following evaluation data for a pet, write a warm, professional summary that will be sent to the pet's owner (the "pet parent").
 
@@ -147,7 +74,7 @@ Keep the total under 200 words. Be warm, professional, and reassuring. Avoid cli
 
   try {
     const message = await client.messages.create({
-      model: "claude-sonnet-4-5-20250514",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 500,
       messages: [{ role: "user", content: prompt }],
     });
@@ -155,9 +82,20 @@ Keep the total under 200 words. Be warm, professional, and reassuring. Avoid cli
     const text =
       message.content[0].type === "text" ? message.content[0].text : "";
 
-    return NextResponse.json({ summary: text });
+    const usage = message.usage;
+    console.log(
+      `[AI Usage] type=evaluation_summary input=${usage?.input_tokens ?? 0} output=${usage?.output_tokens ?? 0}`,
+    );
+
+    return NextResponse.json({
+      summary: text,
+      usage: {
+        inputTokens: usage?.input_tokens ?? 0,
+        outputTokens: usage?.output_tokens ?? 0,
+      },
+    });
   } catch (error) {
     console.error("AI summary error:", error);
-    return NextResponse.json({ summary: buildMockSummary(input) });
+    return NextResponse.json({ summary: FALLBACK_SUMMARY });
   }
 }

@@ -1351,12 +1351,12 @@ export function ReportCardsModule({
                   {has("closingNote") && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Closing Comment (1-2 sentences)</Label>
+                        <Label>Closing Comment</Label>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="gap-1.5 text-xs"
+                          className="gap-1.5 text-xs text-violet-600 hover:bg-violet-50 hover:text-violet-700"
                           disabled={rcAi.isGenerating}
                           onClick={() => {
                             rcAi.generate("/api/ai/report-card-summary", {
@@ -1385,39 +1385,56 @@ export function ReportCardsModule({
                             : "Generate with AI"}
                         </Button>
                       </div>
-                      <Textarea
-                        value={rcAi.summary || input.closingComment}
-                        onChange={(e) => {
-                          if (rcAi.summary) rcAi.setSummary(e.target.value);
-                          setInput({
-                            ...input,
-                            closingComment: e.target.value,
-                          });
-                        }}
-                        placeholder="Add a personal note for the owner..."
-                      />
-                      {rcAi.summary && (
-                        <div className="flex items-center gap-1.5">
-                          <Badge
-                            variant="outline"
-                            className="gap-1 text-[10px]"
-                          >
-                            <Sparkles className="size-2.5" />
-                            AI-Generated
-                          </Badge>
-                          <button
-                            type="button"
-                            className="text-muted-foreground text-[10px] underline"
-                            onClick={() => {
+
+                      {/* Loading */}
+                      {rcAi.isGenerating && (
+                        <div className="space-y-2 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                          <div className="h-3.5 w-2/3 animate-pulse rounded-full bg-slate-200" />
+                          <div className="h-3.5 w-full animate-pulse rounded-full bg-slate-200" />
+                          <div className="h-3.5 w-5/6 animate-pulse rounded-full bg-slate-200" />
+                          <div className="h-3.5 w-3/4 animate-pulse rounded-full bg-slate-200" />
+                        </div>
+                      )}
+
+                      {/* AI result or manual input */}
+                      {!rcAi.isGenerating && (
+                        <div className="overflow-hidden rounded-xl border border-slate-200">
+                          {rcAi.summary && (
+                            <div className="flex items-center justify-between border-b bg-violet-50 px-3 py-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <Sparkles className="size-3 text-violet-500" />
+                                <span className="text-[10px] font-medium text-violet-600">
+                                  AI-Generated — edit below
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                className="text-[10px] font-medium text-violet-500 hover:text-violet-700"
+                                onClick={() => {
+                                  setInput({
+                                    ...input,
+                                    closingComment: rcAi.summary,
+                                  });
+                                  rcAi.reset();
+                                }}
+                              >
+                                Accept & close
+                              </button>
+                            </div>
+                          )}
+                          <Textarea
+                            value={rcAi.summary || input.closingComment}
+                            onChange={(e) => {
+                              if (rcAi.summary) rcAi.setSummary(e.target.value);
                               setInput({
                                 ...input,
-                                closingComment: rcAi.summary,
+                                closingComment: e.target.value,
                               });
-                              rcAi.reset();
                             }}
-                          >
-                            Accept and clear AI
-                          </button>
+                            rows={5}
+                            placeholder="Add a personal note for the owner..."
+                            className="resize-y rounded-none border-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
+                          />
                         </div>
                       )}
                     </div>
