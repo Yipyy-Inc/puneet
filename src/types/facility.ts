@@ -1176,7 +1176,7 @@ export interface FacilitySubscription {
 }
 
 // ============================================================================
-// Weather Warning Rules
+// Yipyy Forecast Rules
 // ============================================================================
 
 export const weatherConditionEnum = z.enum([
@@ -1218,9 +1218,7 @@ export const weatherWarningRuleSchema = z.object({
   message: z.string(),
   autoAction: z.string().optional(),
   isActive: z.boolean(),
-  appliesToAreas: z.array(
-    z.enum(["outdoor_park", "indoor_area", "covered_patio", "pool", "all"]),
-  ),
+  appliesToAreas: z.array(z.string()),
   createdAt: z.string(),
 });
 export type WeatherWarningRule = z.infer<typeof weatherWarningRuleSchema>;
