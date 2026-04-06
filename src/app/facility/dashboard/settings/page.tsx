@@ -53,6 +53,13 @@ const WeatherWarningSettings = dynamic(
     ),
   { ssr: false },
 );
+const PricingRulesSettings = dynamic(
+  () =>
+    import("@/components/facility/PricingRulesSettings").then(
+      (mod) => mod.PricingRulesSettings,
+    ),
+  { ssr: false },
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -3669,6 +3676,13 @@ export default function SettingsPage() {
               </Card>
 
               <ReportCardSettingsCard />
+            </div>
+          )}
+
+          {/* Pricing Rules */}
+          {activeSection === "pricing-rules" && (
+            <div className="space-y-6">
+              <PricingRulesSettings />
             </div>
           )}
 

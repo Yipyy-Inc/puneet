@@ -32,6 +32,8 @@ import {
   Pencil,
   Trash2,
   Settings2,
+  Moon,
+  CalendarRange,
 } from "lucide-react";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
@@ -41,6 +43,8 @@ import type {
   Exceed24HourFee,
   CustomFee,
   DiscountStackingMode,
+  MultiNightDiscount,
+  PeakSurcharge,
 } from "@/types/boarding";
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -54,6 +58,8 @@ function makeId(prefix: string) {
 type PricingSection =
   | "stacking"
   | "multi_pet"
+  | "multi_night"
+  | "peak"
   | "time_fees"
   | "exceed_24h"
   | "custom_fees";
@@ -68,6 +74,8 @@ interface PricingRulesPanelProps {
 const ALL_SECTIONS: PricingSection[] = [
   "stacking",
   "multi_pet",
+  "multi_night",
+  "peak",
   "time_fees",
   "exceed_24h",
   "custom_fees",
@@ -102,6 +110,12 @@ export function PricingRulesPanel({
   const [stacking, setStacking] = useState<DiscountStackingMode>(
     (rules?.discountStacking as DiscountStackingMode) ?? "best_only",
   );
+  const [multiNight, setMultiNight] = useState<MultiNightDiscount[]>(
+    (rules?.multiNightDiscounts ?? []) as MultiNightDiscount[],
+  );
+  const [peakSurcharges, setPeakSurcharges] = useState<PeakSurcharge[]>(
+    (rules?.peakDateSurcharges ?? []) as PeakSurcharge[],
+  );
 
   // Preview state
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -117,6 +131,10 @@ export function PricingRulesPanel({
   const [cfModal, setCfModal] = useState(false);
   const [editingCf, setEditingCf] = useState<CustomFee | null>(null);
   const [e24Modal, setE24Modal] = useState(false);
+  const [mnModal, setMnModal] = useState(false);
+  const [editingMn, setEditingMn] = useState<MultiNightDiscount | null>(null);
+  const [pdModal, setPdModal] = useState(false);
+  const [editingPd, setEditingPd] = useState<PeakSurcharge | null>(null);
 
   // Filter rules by service
   const filteredMultiPet = multiPet.filter((r) =>
@@ -402,6 +420,193 @@ export function PricingRulesPanel({
                       className="text-destructive size-7"
                       onClick={() => {
                         setMultiPet((prev) =>
+                          prev.filter((r) => r.id !== rule.id),
+                        );
+                        toast.success(`"${rule.name}" deleted`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Multi-Night Discounts ── */}
+      {sections.includes("multi_night") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-blue-100">
+                  <Moon className="size-4 text-blue-700" />
+                </div>
+                Multi-Night Discounts
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  setEditingMn(null);
+                  setMnModal(true);
+                }}
+              >
+                <Plus className="size-3" />
+                Add Rule
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {multiNight.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No multi-night discount rules configured
+              </p>
+            ) : (
+              multiNight.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{rule.name}</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {rule.minNights}
+                      {rule.maxNights ? `–${rule.maxNights}` : "+"} nights ·{" "}
+                      {rule.discountPercent}% off
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={rule.isActive}
+                      onCheckedChange={(c) =>
+                        setMultiNight((prev) =>
+                          prev.map((r) =>
+                            r.id === rule.id ? { ...r, isActive: c } : r,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => {
+                        setEditingMn(rule);
+                        setMnModal(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        setMultiNight((prev) =>
+                          prev.filter((r) => r.id !== rule.id),
+                        );
+                        toast.success(`"${rule.name}" deleted`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Peak Date Surcharges ── */}
+      {sections.includes("peak") && (
+        <Card className="overflow-hidden transition-shadow hover:shadow-md">
+          <CardHeader className="border-b bg-slate-50/50 pb-3">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
+                  <CalendarRange className="size-4 text-amber-700" />
+                </div>
+                Peak Date Surcharges
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => {
+                  setEditingPd(null);
+                  setPdModal(true);
+                }}
+              >
+                <Plus className="size-3" />
+                Add Surcharge
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {peakSurcharges.length === 0 ? (
+              <p className="text-muted-foreground text-xs">
+                No peak date surcharges configured
+              </p>
+            ) : (
+              peakSurcharges.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{rule.name}</p>
+                      <Badge variant="outline" className="text-[10px]">
+                        {rule.surchargeType === "flat"
+                          ? `+$${rule.surchargeAmount ?? rule.surchargePercent}`
+                          : `+${rule.surchargePercent}%`}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {rule.scope === "first_pet_only"
+                          ? "First pet"
+                          : "Per pet"}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {rule.startDate} → {rule.endDate}
+                      {rule.applicableServices?.length
+                        ? ` · ${rule.applicableServices.join(", ")}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={rule.isActive}
+                      onCheckedChange={(c) =>
+                        setPeakSurcharges((prev) =>
+                          prev.map((r) =>
+                            r.id === rule.id ? { ...r, isActive: c } : r,
+                          ),
+                        )
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => {
+                        setEditingPd(rule);
+                        setPdModal(true);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive size-7"
+                      onClick={() => {
+                        setPeakSurcharges((prev) =>
                           prev.filter((r) => r.id !== rule.id),
                         );
                         toast.success(`"${rule.name}" deleted`);
@@ -839,6 +1044,42 @@ export function PricingRulesPanel({
           }
           setCfModal(false);
           toast.success(editingCf ? "Fee updated" : "Fee created");
+        }}
+      />
+
+      {/* Multi-Night Discount Modal */}
+      <MultiNightModal
+        open={mnModal}
+        onOpenChange={setMnModal}
+        editing={editingMn}
+        onSave={(rule) => {
+          if (editingMn) {
+            setMultiNight((prev) =>
+              prev.map((r) => (r.id === editingMn.id ? rule : r)),
+            );
+          } else {
+            setMultiNight((prev) => [...prev, rule]);
+          }
+          setMnModal(false);
+          toast.success(editingMn ? "Rule updated" : "Rule created");
+        }}
+      />
+
+      {/* Peak Surcharge Modal */}
+      <PeakSurchargeModal
+        open={pdModal}
+        onOpenChange={setPdModal}
+        editing={editingPd}
+        onSave={(rule) => {
+          if (editingPd) {
+            setPeakSurcharges((prev) =>
+              prev.map((r) => (r.id === editingPd.id ? rule : r)),
+            );
+          } else {
+            setPeakSurcharges((prev) => [...prev, rule]);
+          }
+          setPdModal(false);
+          toast.success(editingPd ? "Surcharge updated" : "Surcharge created");
         }}
       />
     </div>
@@ -1318,6 +1559,368 @@ function TimeFeeModal({
                 applicableServices: [serviceType],
               })
             }
+          >
+            {editing ? "Save" : "Create"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Multi-Night Discount Modal ───────────────────────────────────────
+
+function MultiNightModal({
+  open,
+  onOpenChange,
+  editing,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editing: MultiNightDiscount | null;
+  onSave: (rule: MultiNightDiscount) => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    minNights: 3,
+    maxNights: null as number | null,
+    discountPercent: 10,
+    isActive: true,
+  });
+
+  const [prevEditing, setPrevEditing] = useState(editing);
+  if (editing !== prevEditing) {
+    setPrevEditing(editing);
+    if (editing) {
+      setForm({
+        name: editing.name,
+        minNights: editing.minNights,
+        maxNights: editing.maxNights,
+        discountPercent: editing.discountPercent,
+        isActive: editing.isActive,
+      });
+    } else {
+      setForm({
+        name: "",
+        minNights: 3,
+        maxNights: null,
+        discountPercent: 10,
+        isActive: true,
+      });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? "Edit Multi-Night Discount" : "Add Multi-Night Discount"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Rule Name</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. Extended Stay Discount"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label>Min nights</Label>
+              <Input
+                type="number"
+                min={2}
+                value={form.minNights}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    minNights: parseInt(e.target.value) || 2,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Max nights</Label>
+              <Input
+                type="number"
+                min={form.minNights + 1}
+                value={form.maxNights ?? ""}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    maxNights: e.target.value ? parseInt(e.target.value) : null,
+                  }))
+                }
+                placeholder="No limit"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Discount (%)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={form.discountPercent}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    discountPercent: parseFloat(e.target.value) || 0,
+                  }))
+                }
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!form.name.trim()) {
+                toast.error("Name is required");
+                return;
+              }
+              onSave({
+                id: editing?.id ?? makeId("mnd"),
+                name: form.name,
+                minNights: form.minNights,
+                maxNights: form.maxNights,
+                discountPercent: form.discountPercent,
+                isActive: form.isActive,
+              });
+            }}
+          >
+            {editing ? "Save" : "Create"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Peak Surcharge Modal ─────────────────────────────────────────────
+
+function PeakSurchargeModal({
+  open,
+  onOpenChange,
+  editing,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  editing: PeakSurcharge | null;
+  onSave: (rule: PeakSurcharge) => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    startDate: "",
+    endDate: "",
+    surchargeType: "percentage" as "percentage" | "flat",
+    surchargePercent: 15,
+    surchargeAmount: 0,
+    scope: "per_each_pet" as "per_each_pet" | "first_pet_only",
+    applicableServices: [] as string[],
+    isActive: true,
+  });
+
+  const [prevEditing, setPrevEditing] = useState(editing);
+  if (editing !== prevEditing) {
+    setPrevEditing(editing);
+    if (editing) {
+      setForm({
+        name: editing.name,
+        startDate: editing.startDate,
+        endDate: editing.endDate,
+        surchargeType: editing.surchargeType ?? "percentage",
+        surchargePercent: editing.surchargePercent,
+        surchargeAmount: editing.surchargeAmount ?? 0,
+        scope: editing.scope ?? "per_each_pet",
+        applicableServices: editing.applicableServices ?? [],
+        isActive: editing.isActive,
+      });
+    } else {
+      setForm({
+        name: "",
+        startDate: "",
+        endDate: "",
+        surchargeType: "percentage",
+        surchargePercent: 15,
+        surchargeAmount: 0,
+        scope: "per_each_pet",
+        applicableServices: [],
+        isActive: true,
+      });
+    }
+  }
+
+  const allServices = ["boarding", "daycare", "grooming", "training"];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? "Edit Peak Surcharge" : "Add Peak Surcharge"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Surcharge Name</Label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="e.g. Summer Peak"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <Input
+                type="date"
+                value={form.startDate}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, startDate: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={form.endDate}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, endDate: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Surcharge Type</Label>
+              <Select
+                value={form.surchargeType}
+                onValueChange={(v) =>
+                  setForm((p) => ({
+                    ...p,
+                    surchargeType: v as "percentage" | "flat",
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Percentage (%)</SelectItem>
+                  <SelectItem value="flat">Flat ($)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                {form.surchargeType === "percentage"
+                  ? "Percent (%)"
+                  : "Amount ($)"}
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                value={
+                  form.surchargeType === "percentage"
+                    ? form.surchargePercent
+                    : form.surchargeAmount
+                }
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setForm((p) =>
+                    p.surchargeType === "percentage"
+                      ? { ...p, surchargePercent: val }
+                      : { ...p, surchargeAmount: val },
+                  );
+                }}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Scope</Label>
+            <Select
+              value={form.scope}
+              onValueChange={(v) =>
+                setForm((p) => ({
+                  ...p,
+                  scope: v as "per_each_pet" | "first_pet_only",
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="per_each_pet">Per each pet</SelectItem>
+                <SelectItem value="first_pet_only">First pet only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Applicable Services</Label>
+            <div className="flex flex-wrap gap-3">
+              {allServices.map((svc) => (
+                <label key={svc} className="flex items-center gap-1.5">
+                  <Checkbox
+                    checked={form.applicableServices.includes(svc)}
+                    onCheckedChange={(c) =>
+                      setForm((p) => ({
+                        ...p,
+                        applicableServices: c
+                          ? [...p.applicableServices, svc]
+                          : p.applicableServices.filter((s) => s !== svc),
+                      }))
+                    }
+                  />
+                  <span className="text-sm capitalize">{svc}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (!form.name.trim()) {
+                toast.error("Name is required");
+                return;
+              }
+              if (!form.startDate || !form.endDate) {
+                toast.error("Start and end dates are required");
+                return;
+              }
+              onSave({
+                id: editing?.id ?? makeId("pds"),
+                name: form.name,
+                startDate: form.startDate,
+                endDate: form.endDate,
+                surchargePercent: form.surchargePercent,
+                isActive: form.isActive,
+                dateMode: "specific",
+                surchargeType: form.surchargeType,
+                surchargeAmount:
+                  form.surchargeType === "flat"
+                    ? form.surchargeAmount
+                    : undefined,
+                scope: form.scope,
+                applicableServices:
+                  form.applicableServices.length > 0
+                    ? form.applicableServices
+                    : undefined,
+              });
+            }}
           >
             {editing ? "Save" : "Create"}
           </Button>

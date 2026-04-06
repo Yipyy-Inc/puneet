@@ -18,7 +18,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { DollarSign, Clock, Edit, Trash2, Plus, Save, X } from "lucide-react";
-import { PricingRulesPanel } from "@/components/facility/PricingRulesPanel";
 import { daycareRates, DaycareRate } from "@/data/daycare";
 
 export default function DaycareRatesPage() {
@@ -510,8 +509,24 @@ export default function DaycareRatesPage() {
         </CardContent>
       </Card>
 
-      {/* Pricing Rules Panel — multi-pet, late/early fees, custom fees, stacking */}
-      <PricingRulesPanel serviceType="daycare" />
+      {/* Pricing rules moved to Settings → Pricing Rules */}
+      <Card>
+        <CardContent className="flex items-center justify-between py-4">
+          <div>
+            <p className="text-sm font-semibold">Pricing Rules</p>
+            <p className="text-muted-foreground text-xs">
+              Multi-pet discounts, late fees, surcharges, and custom fees are
+              now managed in Settings.
+            </p>
+          </div>
+          <a
+            href="/facility/dashboard/settings?section=pricing-rules"
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            Go to Pricing Rules →
+          </a>
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

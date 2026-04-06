@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Scissors } from "lucide-react";
 import { groomingPackages } from "@/data/grooming";
-import { PricingRulesPanel } from "@/components/facility/PricingRulesPanel";
 import Link from "next/link";
 
 export default function GroomingRatesPage() {
@@ -133,11 +132,18 @@ export default function GroomingRatesPage() {
         </div>
       </Card>
 
-      {/* Pricing Rules */}
-      <PricingRulesPanel
-        serviceType="grooming"
-        showSections={["stacking", "multi_pet", "custom_fees"]}
-      />
+      {/* Pricing rules moved to Settings */}
+      <div className="flex items-center justify-between rounded-xl border px-5 py-3">
+        <p className="text-muted-foreground text-sm">
+          Pricing rules are now in Settings → Pricing Rules
+        </p>
+        <a
+          href="/facility/dashboard/settings?section=pricing-rules"
+          className="text-primary text-sm font-medium hover:underline"
+        >
+          Go to Pricing Rules →
+        </a>
+      </div>
     </div>
   );
 }
