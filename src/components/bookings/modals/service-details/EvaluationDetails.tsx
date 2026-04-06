@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +16,18 @@ import {
   CalendarDays,
   CheckCircle2,
   ArrowLeft,
+  Clock,
+  Sparkles,
+  PawPrint,
+  Plus,
+  Minus,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import type { ServiceAddOn } from "@/types/facility";
+import type { Pet } from "@/types/pet";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,8 +55,8 @@ const fmtTime = (t: string) => {
 const fmtDate = (dateStr: string) => {
   const [y, mo, d] = dateStr.split("-").map(Number);
   return new Date(y, mo - 1, d).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
+    weekday: "short",
+    month: "short",
     day: "numeric",
   });
 };
@@ -62,26 +72,61 @@ const minutesToTime = (minutes: number) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
+function getStoredAddOns(): ServiceAddOn[] {
+  if (typeof window === "undefined") return defaultServiceAddOns;
+  try {
+    const stored = localStorage.getItem("settings-service-addons");
+    if (stored) return JSON.parse(stored) as ServiceAddOn[];
+  } catch {
+    /* ignore */
+  }
+  return defaultServiceAddOns;
+}
+
+function getAddonPriceLabel(addon: ServiceAddOn): string {
+  const base = `$${addon.price.toFixed(2)}`;
+  switch (addon.pricingType) {
+    case "per_day":
+      return `${base}/${addon.unitLabel || "day"}`;
+    case "per_session":
+      return `${base}/${addon.unitLabel || "session"}`;
+    case "per_hour":
+      return `${base}/${addon.unitLabel || "hr"}`;
+    default:
+      return base;
+  }
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface EvaluationDetailsProps {
   currentSubStep: number;
+  isSubStepComplete?: (stepIndex: number) => boolean;
   startDate: string;
   setStartDate: (date: string) => void;
   checkInTime: string;
   setCheckInTime: (time: string) => void;
   checkOutTime: string;
   setCheckOutTime: (time: string) => void;
+  extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
+  setExtraServices: (
+    services: Array<{ serviceId: string; quantity: number; petId: number }>,
+  ) => void;
+  selectedPets: Pet[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function EvaluationDetails({
   currentSubStep,
+  isSubStepComplete,
   startDate,
   setStartDate,
   setCheckInTime,
   setCheckOutTime,
+  extraServices,
+  setExtraServices,
+  selectedPets,
 }: EvaluationDetailsProps) {
   const {
     hours,
@@ -94,6 +139,7 @@ export function EvaluationDetails({
   } = useSettings();
 
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
+  const [showCalendar, setShowCalendar] = React.useState(!startDate);
 
   const scheduleTimeOverridesForEvaluation = React.useMemo(
     () =>
@@ -174,7 +220,6 @@ export function EvaluationDetails({
     [evaluation.schedule.timeWindows],
   );
 
-  // All slots for the selected duration
   const slots = React.useMemo(() => {
     const duration = selectedDuration || defaultDuration;
     if (evaluation.schedule.slotMode === "fixed") {
@@ -218,16 +263,13 @@ export function EvaluationDetails({
     return generated;
   }, [evaluation.schedule, selectedDuration, defaultDuration, timeWindows]);
 
-  // #3 — mark slots that are in the past when today is selected
   const isToday = startDate === todayString();
   const currentMinutes = isToday ? nowInMinutes() : -1;
   const slotsWithPast = slots.map((slot) => ({
     ...slot,
     isPast: isToday && timeToMinutes(slot.startTime) <= currentMinutes,
   }));
-
-  // #2 — available (non-past) slot count for the header badge
-  const availableCount = slotsWithPast.filter((s) => !s.isPast).length;
+  const availableSlots = slotsWithPast.filter((s) => !s.isPast);
 
   const handleSelectionChange = (dates: Date[]) => {
     if (dates.length > 0) {
@@ -235,6 +277,7 @@ export function EvaluationDetails({
       setSelectedSlot(null);
       setCheckInTime("");
       setCheckOutTime("");
+      setShowCalendar(false);
     } else {
       setStartDate("");
       setCheckInTime("");
@@ -251,18 +294,14 @@ export function EvaluationDetails({
     setCheckOutTime(slot.endTime);
   };
 
-  // #4 — clear date selection to let user pick another
-  const handleClearDate = () => {
-    handleSelectionChange([]);
-  };
-
   const selectedSlotData = slots.find((s) => s.startTime === selectedSlot);
 
   return (
     <div className="space-y-5">
+      {/* ── Step 0: Schedule ──────────────────────────────────────────── */}
       {currentSubStep === 0 && (
         <>
-          {/* ── Header ────────────────────────────────────────────────────── */}
+          {/* Header */}
           <div className="flex items-start gap-3">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
               <ClipboardCheck className="size-5 text-violet-600" />
@@ -276,19 +315,11 @@ export function EvaluationDetails({
             </div>
           </div>
 
-          {/* ── Two-column layout ─────────────────────────────────────────── */}
-          <div className="flex gap-5">
-            {/* Left — Calendar (#6: min-w guard) */}
-            <div className="min-w-[280px] flex-1">
-              <div className="mb-2 flex items-center gap-1.5">
-                <CalendarDays className="text-muted-foreground size-3.5" />
-                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  Pick a date
-                </p>
-              </div>
-
-              {/* #10 — no forced bg-white; let calendar own its background */}
-              <div className="overflow-hidden rounded-xl border shadow-sm">
+          {/* Compact date/time flow */}
+          <div className="space-y-3">
+            {/* Date selection */}
+            {showCalendar || !startDate ? (
+              <div className="mx-auto max-w-md overflow-hidden rounded-xl border shadow-sm">
                 <DateSelectionCalendar
                   mode="single"
                   selectedDates={selectedDates}
@@ -309,175 +340,401 @@ export function EvaluationDetails({
                   holidays={holidays}
                 />
               </div>
-            </div>
-
-            {/* Right — Time slot panel */}
-            <div className="flex w-56 shrink-0 flex-col">
-              {/* Panel header */}
-              <div className="mb-2 flex items-baseline justify-between">
-                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  Available times
-                </p>
-                {startDate && availableCount > 0 && (
-                  <span className="text-muted-foreground text-[10px] font-medium">
-                    {availableCount} slot{availableCount !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-
-              {!startDate ? (
-                /* Empty state — minimal, no icons */
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed">
-                  <p className="text-muted-foreground px-6 py-12 text-center text-xs/relaxed">
-                    Select a date to view times
-                  </p>
+            ) : (
+              /* Selected date chip — click to change */
+              <button
+                type="button"
+                onClick={() => setShowCalendar(true)}
+                className="group flex w-full items-center justify-between rounded-xl border bg-violet-50 px-4 py-3 transition-colors hover:bg-violet-100"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-violet-100">
+                    <CalendarDays className="size-4 text-violet-600" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-violet-800">
+                      {fmtDate(startDate)}
+                    </p>
+                    <p className="text-[11px] text-violet-500">
+                      {availableSlots.length} time slot
+                      {availableSlots.length !== 1 ? "s" : ""} available
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {/* Duration selector */}
-                  {durationOptions.length > 1 && (
-                    <Select
-                      value={String(selectedDuration)}
-                      onValueChange={(v) => {
-                        setSelectedDuration(Number(v));
-                        setSelectedSlot(null);
-                        setCheckInTime("");
-                        setCheckOutTime("");
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-full text-xs">
-                        <SelectValue placeholder="Session length" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {durationOptions.map((opt) => (
-                          <SelectItem key={opt} value={String(opt)}>
-                            {opt >= 60
-                              ? `${opt / 60}h session`
-                              : `${opt} min session`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                <span className="text-xs font-medium text-violet-400 group-hover:text-violet-600">
+                  Change
+                </span>
+              </button>
+            )}
 
-                  {/* No-slots state */}
-                  {availableCount === 0 ? (
-                    <div className="space-y-3 rounded-lg border px-4 py-8 text-center">
-                      <p className="text-sm font-medium">No availability</p>
-                      <p className="text-muted-foreground text-xs">
-                        {isToday
-                          ? "All times have passed for today."
-                          : "This date has no open slots."}
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs"
-                        onClick={handleClearDate}
-                      >
-                        <ArrowLeft className="size-3" />
-                        Choose another date
-                      </Button>
-                    </div>
-                  ) : (
-                    /* Clean vertical schedule list */
-                    <div
-                      role="radiogroup"
-                      aria-label="Available time slots"
-                      className="max-h-[360px] overflow-hidden overflow-y-auto rounded-lg border"
+            {/* Duration selector */}
+            {startDate && !showCalendar && durationOptions.length > 1 && (
+              <div className="flex items-center gap-3 rounded-xl border px-4 py-3">
+                <Clock className="text-muted-foreground size-4" />
+                <span className="text-muted-foreground text-sm">Duration</span>
+                <Select
+                  value={String(selectedDuration)}
+                  onValueChange={(v) => {
+                    setSelectedDuration(Number(v));
+                    setSelectedSlot(null);
+                    setCheckInTime("");
+                    setCheckOutTime("");
+                  }}
+                >
+                  <SelectTrigger className="ml-auto h-8 w-36 text-xs">
+                    <SelectValue placeholder="Session length" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {durationOptions.map((opt) => (
+                      <SelectItem key={opt} value={String(opt)}>
+                        {opt >= 60
+                          ? `${opt / 60}h session`
+                          : `${opt} min session`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Time slots — compact grid */}
+            {startDate && !showCalendar && (
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between px-1">
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                    Available times
+                  </p>
+                  {availableSlots.length > 0 && (
+                    <span className="text-muted-foreground text-[10px]">
+                      {availableSlots.length} slot
+                      {availableSlots.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+
+                {availableSlots.length === 0 ? (
+                  <div className="space-y-3 rounded-xl border border-dashed px-4 py-8 text-center">
+                    <p className="text-sm font-medium">No availability</p>
+                    <p className="text-muted-foreground text-xs">
+                      {isToday
+                        ? "All times have passed for today."
+                        : "This date has no open slots."}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={() => setShowCalendar(true)}
                     >
-                      {slotsWithPast.map((slot, i) => {
-                        const isSelected =
-                          selectedSlot === slot.startTime && !slot.isPast;
+                      <ArrowLeft className="size-3" />
+                      Choose another date
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {slotsWithPast
+                      .filter((s) => !s.isPast)
+                      .map((slot) => {
+                        const isSelected = selectedSlot === slot.startTime;
                         return (
                           <button
                             key={slot.startTime}
                             type="button"
-                            role="radio"
-                            aria-checked={isSelected}
-                            aria-label={`${fmtTime(slot.startTime)} to ${fmtTime(slot.endTime)}${slot.isPast ? ", unavailable" : ""}`}
-                            disabled={slot.isPast}
-                            onClick={() =>
-                              !slot.isPast && handleSlotSelect(slot.startTime)
-                            }
+                            onClick={() => handleSlotSelect(slot.startTime)}
                             className={cn(
-                              "flex w-full items-center justify-between px-3.5 py-2.5 text-left transition-colors",
-                              i < slotsWithPast.length - 1 && "border-b",
-                              slot.isPast
-                                ? "cursor-not-allowed opacity-20"
-                                : isSelected
-                                  ? "bg-foreground text-background"
-                                  : "hover:bg-accent",
+                              "flex flex-col items-center rounded-xl border-2 px-3 py-2.5 transition-all",
+                              isSelected
+                                ? "border-violet-500 bg-violet-50 shadow-sm"
+                                : "border-transparent bg-slate-50 hover:border-violet-200 hover:bg-violet-50/50",
                             )}
                           >
                             <span
                               className={cn(
-                                "font-[tabular-nums] text-sm",
-                                isSelected ? "font-semibold" : "font-medium",
+                                "text-sm font-semibold tabular-nums",
+                                isSelected
+                                  ? "text-violet-700"
+                                  : "text-slate-700",
                               )}
                             >
                               {fmtTime(slot.startTime)}
                             </span>
                             <span
                               className={cn(
-                                "text-[11px]",
+                                "text-[10px]",
                                 isSelected
-                                  ? "opacity-50"
-                                  : "text-muted-foreground",
+                                  ? "text-violet-500"
+                                  : "text-slate-400",
                               )}
                             >
-                              {slot.isPast
-                                ? "Unavailable"
-                                : fmtTime(slot.endTime)}
+                              {fmtTime(slot.endTime)}
                             </span>
                           </button>
                         );
                       })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Summary strip */}
+            {startDate && selectedSlot && selectedSlotData && (
+              <div className="flex items-center gap-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
+                <CheckCircle2 className="size-5 shrink-0 text-violet-600" />
+                <div className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-0.5">
+                  <div>
+                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                      Date
+                    </p>
+                    <p className="text-sm font-semibold text-violet-800">
+                      {fmtDate(startDate)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                      Time
+                    </p>
+                    <p className="text-sm font-semibold text-violet-800">
+                      {fmtTime(selectedSlotData.startTime)} –{" "}
+                      {fmtTime(selectedSlotData.endTime)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                      Duration
+                    </p>
+                    <p className="text-sm font-semibold text-violet-800">
+                      {selectedSlotData.duration} min
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Step 1: Add-ons ──────────────────────────────────────────── */}
+      {currentSubStep === 1 && (
+        <EvaluationAddOnsSubStep
+          isStepAccessible={isSubStepComplete}
+          extraServices={extraServices}
+          setExtraServices={setExtraServices}
+          selectedPets={selectedPets}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Add-ons sub-step ────────────────────────────────────────────────────────
+
+function EvaluationAddOnsSubStep({
+  isStepAccessible,
+  extraServices,
+  setExtraServices,
+  selectedPets,
+}: {
+  isStepAccessible?: (step: number) => boolean;
+  extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
+  setExtraServices: (
+    services: Array<{ serviceId: string; quantity: number; petId: number }>,
+  ) => void;
+  selectedPets: Pet[];
+}) {
+  // Show add-ons applicable to evaluation OR daycare (since eval is a daycare trial)
+  const addOns = getStoredAddOns().filter((a) => {
+    if (!a.isActive) return false;
+    if (
+      !a.applicableServices.includes("evaluation") &&
+      !a.applicableServices.includes("daycare")
+    )
+      return false;
+    if (a.petTypeFilter && selectedPets.length > 0) {
+      const pf = a.petTypeFilter;
+      const allMatch = selectedPets.every((pet) => {
+        if (pf.types?.length && !pf.types.includes(pet.type)) return false;
+        if (pf.weightMin != null && pet.weight < pf.weightMin) return false;
+        if (pf.weightMax != null && pet.weight > pf.weightMax) return false;
+        return true;
+      });
+      if (!allMatch) return false;
+    }
+    return true;
+  });
+
+  const accessible = isStepAccessible ? isStepAccessible(0) : true;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
+          <Sparkles className="size-5 text-amber-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold">Add-ons</h3>
+          <p className="text-muted-foreground text-sm">
+            Optional extras for your pet&apos;s evaluation visit. Treats,
+            grooming, playtime, and more.
+          </p>
+        </div>
+      </div>
+
+      {!accessible && (
+        <div className="bg-muted/50 rounded-xl border border-dashed p-8 text-center">
+          <p className="text-muted-foreground text-sm">
+            Please complete the schedule step first
+          </p>
+        </div>
+      )}
+
+      {accessible && addOns.length === 0 && (
+        <div className="rounded-xl border border-dashed p-8 text-center">
+          <p className="text-muted-foreground text-sm">
+            No add-ons available for evaluations yet
+          </p>
+        </div>
+      )}
+
+      {accessible && addOns.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {addOns.map((service) => {
+            const totalQty = extraServices
+              .filter((es) => es.serviceId === service.id)
+              .reduce((sum, es) => sum + es.quantity, 0);
+            const isAdded = totalQty > 0;
+            const priceLabel = getAddonPriceLabel(service);
+            const hasUnits = service.pricingType !== "flat";
+            const petId = selectedPets[0]?.id ?? 0;
+
+            const toggle = () => {
+              if (isAdded) {
+                setExtraServices(
+                  extraServices.filter((es) => es.serviceId !== service.id),
+                );
+              } else {
+                setExtraServices([
+                  ...extraServices,
+                  { serviceId: service.id, quantity: 1, petId },
+                ]);
+              }
+            };
+
+            const setQty = (q: number) => {
+              if (q <= 0) {
+                setExtraServices(
+                  extraServices.filter((es) => es.serviceId !== service.id),
+                );
+              } else {
+                const max = service.maxQuantity ?? 10;
+                const clamped = Math.min(q, max);
+                const without = extraServices.filter(
+                  (es) => es.serviceId !== service.id,
+                );
+                setExtraServices([
+                  ...without,
+                  { serviceId: service.id, quantity: clamped, petId },
+                ]);
+              }
+            };
+
+            return (
+              <div
+                key={service.id}
+                className={cn(
+                  "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200",
+                  isAdded
+                    ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
+                    : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
+                )}
+              >
+                {/* Image */}
+                <div className="relative h-28 w-full overflow-hidden">
+                  {service.image ? (
+                    <Image
+                      src={service.image}
+                      alt={service.name}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="bg-muted flex size-full items-center justify-center">
+                      <PawPrint className="text-muted-foreground/30 size-10" />
+                    </div>
+                  )}
+                  {isAdded && (
+                    <div className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-emerald-500 shadow">
+                      <Check className="size-3.5 text-white" />
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* ── Summary strip ─────────────────────────────────────────────── */}
-          {startDate && selectedSlot && selectedSlotData && (
-            <div className="flex items-center gap-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
-              <CheckCircle2 className="size-5 shrink-0 text-violet-600" />
-              <div className="flex min-w-0 flex-1 flex-wrap gap-x-6 gap-y-0.5">
-                <div>
-                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                    Date
-                  </p>
-                  <p className="text-sm font-semibold text-violet-800">
-                    {fmtDate(startDate)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                    Time
-                  </p>
-                  <p className="text-sm font-semibold text-violet-800">
-                    {fmtTime(selectedSlotData.startTime)} –{" "}
-                    {fmtTime(selectedSlotData.endTime)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-[10px] tracking-wide uppercase">
-                    Duration
-                  </p>
-                  <p className="text-sm font-semibold text-violet-800">
-                    {selectedSlotData.duration} min
-                  </p>
+                {/* Content */}
+                <div className="flex flex-1 flex-col p-3">
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-sm leading-tight font-semibold">
+                      {service.name}
+                    </p>
+                    <span className="text-primary shrink-0 text-xs font-bold">
+                      {priceLabel}
+                    </span>
+                  </div>
+                  {service.description && (
+                    <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px]">
+                      {service.description}
+                    </p>
+                  )}
+
+                  <div className="mt-auto pt-2">
+                    {hasUnits ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-7 p-0"
+                          disabled={!isAdded}
+                          onClick={() => setQty(totalQty - 1)}
+                        >
+                          <Minus className="size-3" />
+                        </Button>
+                        <span className="w-6 text-center text-sm font-semibold tabular-nums">
+                          {totalQty}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-7 p-0"
+                          onClick={() => setQty(totalQty + 1)}
+                        >
+                          <Plus className="size-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant={isAdded ? "default" : "outline"}
+                        size="sm"
+                        className="h-8 w-full gap-1.5 text-xs"
+                        onClick={toggle}
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check className="size-3" />
+                            Added
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="size-3" />
+                            Add
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
-              {/* #8 — continue affordance hint */}
-              <p className="text-muted-foreground hidden shrink-0 text-xs sm:block">
-                Click <span className="font-semibold">Next</span> to continue →
-              </p>
-            </div>
-          )}
-        </>
+            );
+          })}
+        </div>
       )}
     </div>
   );
