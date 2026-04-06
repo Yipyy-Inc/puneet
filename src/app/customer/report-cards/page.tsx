@@ -40,6 +40,44 @@ import {
 } from "lucide-react";
 import { ReportCardPhotoGallery } from "@/components/customer/ReportCardPhotoGallery";
 import { ReportCardQuickReply } from "@/components/customer/ReportCardQuickReply";
+import { ReportCardBrandedHeader } from "@/components/shared/ReportCardBrandedHeader";
+import { ReportCardBrandedFooter } from "@/components/shared/ReportCardBrandedFooter";
+import { businessProfile, reportCardConfig } from "@/data/settings";
+
+/* ── Daily summary builder ────────────────────────────────────────── */
+function buildDailySummary(item: {
+  petName: string;
+  mood: string;
+  activities: string[];
+  meals: Array<{ consumed: string }>;
+  staffNotes?: string;
+  serviceType: string;
+}): string {
+  const { petName, mood, activities, meals, staffNotes } = item;
+  const moodMap: Record<string, string> = {
+    happy: "in wonderful spirits",
+    excited: "full of excitement",
+    calm: "calm and relaxed",
+    anxious: "a little nervous at first but settled in well",
+    tired: "on the mellow side",
+    playful: "super playful all day",
+    energetic: "full of energy",
+  };
+  const moodText = moodMap[mood] || "in good spirits";
+  const actText =
+    activities.length > 0
+      ? ` Highlights included ${activities.slice(0, 3).join(", ")}.`
+      : "";
+  const mealCount = meals.filter(
+    (m) => m.consumed === "all" || m.consumed === "most",
+  ).length;
+  const mealText =
+    mealCount > 0
+      ? ` ${petName} had a healthy appetite and enjoyed ${mealCount === 1 ? "a meal" : `${mealCount} meals`}.`
+      : "";
+  const noteText = staffNotes ? ` ${staffNotes}` : "";
+  return `${petName} was ${moodText} today!${actText}${mealText}${noteText}`;
+}
 
 /* ── Report-card theme visuals ────────────────────────────────────── */
 const themeStyles: Record<
@@ -483,6 +521,16 @@ export default function CustomerReportCardsPage() {
                             className={`absolute h-20 w-20 text-gray-900 opacity-[0.06] ${ts.iconPos} `}
                           />
 
+                          {/* Branded header */}
+                          {reportCardConfig.brand && (
+                            <ReportCardBrandedHeader
+                              brandConfig={reportCardConfig.brand}
+                              profile={businessProfile}
+                              title={`${item.petName}'s ${item.serviceType} Report`}
+                              subtitle={`${formatDate(item.date)} · ${item.facilityName}`}
+                            />
+                          )}
+
                           {/* Themed accent header */}
                           <div
                             className={`relative px-5 py-3 ${ts.accentBg} ${ts.accentText} flex items-start justify-between gap-4`}
@@ -527,6 +575,13 @@ export default function CustomerReportCardsPage() {
 
                           {/* Card body */}
                           <div className="relative space-y-4 p-4">
+                            {/* AI daily summary */}
+                            <div className="rounded-lg bg-slate-50 px-4 py-3">
+                              <p className="text-sm leading-relaxed text-slate-600">
+                                {buildDailySummary(item)}
+                              </p>
+                            </div>
+
                             {item.photos.length > 0 && (
                               <ReportCardPhotoGallery
                                 photos={item.photos}
@@ -664,6 +719,16 @@ export default function CustomerReportCardsPage() {
                                 {ts.emoji} {ts.label} Theme
                               </span>
                             </div>
+
+                            {/* Branded footer */}
+                            {reportCardConfig.brand && (
+                              <div className="mt-3 border-t pt-2">
+                                <ReportCardBrandedFooter
+                                  brandConfig={reportCardConfig.brand}
+                                  profile={businessProfile}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

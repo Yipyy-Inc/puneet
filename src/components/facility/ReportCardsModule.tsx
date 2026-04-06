@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useAiSummary } from "@/hooks/use-ai-summary";
+import { businessProfile } from "@/data/settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,6 +361,7 @@ export function ReportCardsModule({
   );
   const [input, setInput] = useState<ReportCardInput>(emptyInput);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const rcAi = useAiSummary();
 
   const daycareOptions = useMemo(
     () =>
@@ -1347,14 +1350,76 @@ export function ReportCardsModule({
                   {/* Closing Comment — closingNote */}
                   {has("closingNote") && (
                     <div className="space-y-2">
-                      <Label>Closing Comment (1-2 sentences)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Closing Comment (1-2 sentences)</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          disabled={rcAi.isGenerating}
+                          onClick={() => {
+                            rcAi.generate("/api/ai/report-card-summary", {
+                              petName: selectedVisit?.petName ?? "Pet",
+                              facilityName: businessProfile.businessName,
+                              serviceType: "daycare",
+                              date: new Date().toISOString(),
+                              mood: input.mood,
+                              energy: input.energy,
+                              socialization: input.socialization,
+                              activities: input.favoriteActivities,
+                              meals: input.appetite,
+                              pottyStatus: input.potty,
+                              conditions: Object.values(
+                                input.petConditions ?? {},
+                              ),
+                              staffNotes: input.closingComment,
+                              playNotes: input.playNotes,
+                              bestFriends: input.bestFriends,
+                            });
+                          }}
+                        >
+                          <Sparkles className="size-3" />
+                          {rcAi.isGenerating
+                            ? "Generating..."
+                            : "Generate with AI"}
+                        </Button>
+                      </div>
                       <Textarea
-                        value={input.closingComment}
-                        onChange={(e) =>
-                          setInput({ ...input, closingComment: e.target.value })
-                        }
+                        value={rcAi.summary || input.closingComment}
+                        onChange={(e) => {
+                          if (rcAi.summary) rcAi.setSummary(e.target.value);
+                          setInput({
+                            ...input,
+                            closingComment: e.target.value,
+                          });
+                        }}
                         placeholder="Add a personal note for the owner..."
                       />
+                      {rcAi.summary && (
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className="gap-1 text-[10px]"
+                          >
+                            <Sparkles className="size-2.5" />
+                            AI-Generated
+                          </Badge>
+                          <button
+                            type="button"
+                            className="text-muted-foreground text-[10px] underline"
+                            onClick={() => {
+                              setInput({
+                                ...input,
+                                closingComment: rcAi.summary,
+                              });
+                              rcAi.reset();
+                            }}
+                          >
+                            Accept and clear AI
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
