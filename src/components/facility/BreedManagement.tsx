@@ -220,14 +220,14 @@ export function BreedManagement() {
                         <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                           <button
                             onClick={() => openEditDialog(breed)}
-                            className="text-muted-foreground hover:text-foreground rounded p-1 transition-colors"
+                            className="text-muted-foreground hover:text-foreground rounded-sm p-1 transition-colors"
                             title="Edit"
                           >
                             <Pencil className="size-3" />
                           </button>
                           <button
                             onClick={() => handleRemove(breed)}
-                            className="text-muted-foreground hover:text-destructive rounded p-1 transition-colors"
+                            className="text-muted-foreground hover:text-destructive rounded-sm p-1 transition-colors"
                             title="Remove"
                           >
                             <Trash2 className="size-3" />

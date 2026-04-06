@@ -422,7 +422,7 @@ export function DigitalWaiversManager() {
             )}
           </div>
           <ScrollArea className="max-h-[400px] rounded-lg border bg-slate-50 p-5">
-            <div className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-600">
+            <div className="prose prose-sm max-w-none text-sm/relaxed text-slate-600">
               {previewWaiver?.content.split("\n").map((line, i) => (
                 <p key={i} className={line.trim() === "" ? "h-2" : ""}>
                   {line}

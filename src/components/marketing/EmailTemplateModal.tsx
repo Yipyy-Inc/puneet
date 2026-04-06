@@ -216,7 +216,7 @@ export function EmailTemplateModal({
                   onFocus={() => setActiveField("body")}
                   placeholder="Enter your email content here..."
                   rows={10}
-                  className="min-h-[200px] resize-y text-sm leading-7"
+                  className="min-h-[200px] resize-y text-sm/7"
                 />
               </div>
 

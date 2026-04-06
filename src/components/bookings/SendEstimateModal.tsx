@@ -86,16 +86,19 @@ export function SendEstimateModal({
   };
 
   const handleSendEmail = () => {
+    // In production: sends email with estimate link + account setup link
+    // Email includes: estimate details, pricing, "View Estimate" button linking to
+    // /customer/estimates/{token}, and "Set Up Account" button linking to
+    // /customer/auth/signup?email={email}&from=estimate&token={token}
+    // System auto-creates prospect client account with just email + name
     toast.success(
-      `Estimate sent to ${clientEmail} — booking saved as estimate`,
+      `Estimate sent to ${clientEmail} with estimate link and account setup instructions`,
     );
     onOpenChange(false);
   };
 
   const handleSendSMS = () => {
-    toast.success(
-      `Estimate sent via SMS to ${clientPhone} — booking saved as estimate`,
-    );
+    toast.success(`Estimate sent via SMS to ${clientPhone} with estimate link`);
     onOpenChange(false);
   };
 
@@ -214,6 +217,24 @@ export function SendEstimateModal({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Email contents info */}
+          <div className="rounded-lg bg-blue-50 px-3 py-2.5">
+            <p className="text-[11px] font-medium text-blue-700">
+              The email will include:
+            </p>
+            <ul className="mt-1 space-y-0.5 text-[10px] text-blue-600">
+              <li>Estimate details and pricing breakdown</li>
+              <li>Link to view the full estimate online</li>
+              <li>
+                &quot;Book Now&quot; button to convert the estimate into a
+                booking
+              </li>
+              <li>
+                Account setup link (a new customer account will be auto-created)
+              </li>
+            </ul>
           </div>
 
           {/* Apply Discount */}

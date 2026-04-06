@@ -521,7 +521,7 @@ export function SimpleMedicationForm({
                     onChange={(e) =>
                       updateMed(index, { parentConfirmed: e.target.checked })
                     }
-                    className="size-4 rounded accent-blue-600"
+                    className="size-4 rounded-sm accent-blue-600"
                   />
                   <div>
                     <p className="text-xs font-medium text-blue-800">

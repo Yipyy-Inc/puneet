@@ -313,9 +313,7 @@ export function ConfirmStep({
                   {pet.name[0]}
                 </span>
                 <div>
-                  <p className="text-sm leading-tight font-semibold">
-                    {pet.name}
-                  </p>
+                  <p className="text-sm/tight font-semibold">{pet.name}</p>
                   <p className="text-muted-foreground text-[10px]">
                     {pet.type} · {pet.breed}
                   </p>
@@ -610,7 +608,7 @@ export function ConfirmStep({
                         {med.name || `Medication ${idx + 1}`}
                       </p>
                       {med.isHighRisk && (
-                        <span className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
+                        <span className="rounded-sm bg-amber-100 px-1 py-0.5 text-[9px] font-bold text-amber-700">
                           HIGH RISK
                         </span>
                       )}

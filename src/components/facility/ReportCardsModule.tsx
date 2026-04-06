@@ -1433,7 +1433,7 @@ export function ReportCardsModule({
                             }}
                             rows={5}
                             placeholder="Add a personal note for the owner..."
-                            className="resize-y rounded-none border-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
+                            className="resize-y rounded-none border-0 text-sm/relaxed shadow-none focus-visible:ring-0"
                           />
                         </div>
                       )}

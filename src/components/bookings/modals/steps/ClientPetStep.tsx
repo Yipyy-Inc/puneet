@@ -14,6 +14,10 @@ import {
   Info,
   CheckCheck,
   XCircle,
+  User,
+  Sparkles,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { bookings } from "@/data/bookings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -39,6 +43,18 @@ interface ClientPetStepProps {
   preSelectedClientId?: number;
   selectedService: string;
   configs: { daycare: ModuleConfig; boarding: ModuleConfig };
+  // Guest estimate props
+  isEstimateMode?: boolean;
+  isGuestEstimate?: boolean;
+  setIsGuestEstimate?: (v: boolean) => void;
+  guestName?: string;
+  setGuestName?: (v: string) => void;
+  guestEmail?: string;
+  setGuestEmail?: (v: string) => void;
+  guestPhone?: string;
+  setGuestPhone?: (v: string) => void;
+  guestPetName?: string;
+  setGuestPetName?: (v: string) => void;
 }
 
 export function ClientPetStep({
@@ -53,6 +69,17 @@ export function ClientPetStep({
   preSelectedClientId,
   selectedService,
   configs,
+  isEstimateMode,
+  isGuestEstimate,
+  setIsGuestEstimate,
+  guestName,
+  setGuestName,
+  guestEmail,
+  setGuestEmail,
+  guestPhone,
+  setGuestPhone,
+  guestPetName,
+  setGuestPetName,
 }: ClientPetStepProps) {
   // Check if service requires evaluation
   const serviceRequiresEvaluation = React.useMemo(() => {
@@ -269,8 +296,124 @@ export function ClientPetStep({
         </Alert>
       )}
 
+      {/* Estimate mode: Existing client vs New inquiry toggle */}
+      {isEstimateMode && !preSelectedClientId && setIsGuestEstimate && (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setIsGuestEstimate(false)}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-all",
+              !isGuestEstimate
+                ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                : "border-slate-200 hover:border-blue-200",
+            )}
+          >
+            <div
+              className={cn(
+                "flex size-9 items-center justify-center rounded-lg",
+                !isGuestEstimate ? "bg-blue-100" : "bg-slate-100",
+              )}
+            >
+              <User
+                className={cn(
+                  "size-4",
+                  !isGuestEstimate ? "text-blue-600" : "text-slate-400",
+                )}
+              />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Existing Client</p>
+              <p className="text-muted-foreground text-[11px]">
+                Search your database
+              </p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsGuestEstimate(true)}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-all",
+              isGuestEstimate
+                ? "border-violet-400 bg-violet-50/50 shadow-sm"
+                : "border-slate-200 hover:border-violet-200",
+            )}
+          >
+            <div
+              className={cn(
+                "flex size-9 items-center justify-center rounded-lg",
+                isGuestEstimate ? "bg-violet-100" : "bg-slate-100",
+              )}
+            >
+              <Sparkles
+                className={cn(
+                  "size-4",
+                  isGuestEstimate ? "text-violet-600" : "text-slate-400",
+                )}
+              />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">New Inquiry</p>
+              <p className="text-muted-foreground text-[11px]">
+                No account yet
+              </p>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Guest estimate contact form */}
+      {isEstimateMode && isGuestEstimate && setGuestName && setGuestEmail && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Contact Info</h3>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium">
+                <User className="size-3.5" /> Name *
+              </label>
+              <Input
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Customer name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium">
+                <Mail className="size-3.5" /> Email *
+              </label>
+              <Input
+                type="email"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium">
+                <Phone className="size-3.5" /> Phone
+              </label>
+              <Input
+                value={guestPhone}
+                onChange={(e) => setGuestPhone?.(e.target.value)}
+                placeholder="(555) 123-4567"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium">
+                <PawPrint className="size-3.5" /> Pet Name
+              </label>
+              <Input
+                value={guestPetName}
+                onChange={(e) => setGuestPetName?.(e.target.value)}
+                placeholder="Pet's name (optional)"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Client Selection */}
-      {!preSelectedClientId && (
+      {!preSelectedClientId && !(isEstimateMode && isGuestEstimate) && (
         <>
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Select Client</h3>
@@ -389,172 +532,174 @@ export function ClientPetStep({
         </>
       )}
 
-      {/* Pet Selection */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <h3 className="text-lg font-semibold">Select Pet(s)</h3>
-            {serviceRequiresEvaluation && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="text-muted-foreground ml-2 size-4" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>
-                    Evaluation is enabled and{" "}
-                    {isEvaluationOptional ? "optional" : "required"} for this
-                    service.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+      {/* Pet Selection — hidden for guest estimates */}
+      {!(isEstimateMode && isGuestEstimate) && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <h3 className="text-lg font-semibold">Select Pet(s)</h3>
+              {serviceRequiresEvaluation && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="text-muted-foreground ml-2 size-4" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      Evaluation is enabled and{" "}
+                      {isEvaluationOptional ? "optional" : "required"} for this
+                      service.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* #5 — Select all / Deselect all */}
+              {selectedClient && allPetIds.length >= 3 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  onClick={handleToggleAll}
+                >
+                  {allSelected ? (
+                    <>
+                      <XCircle className="size-3" />
+                      Deselect all
+                    </>
+                  ) : (
+                    <>
+                      <CheckCheck className="size-3" />
+                      Select all
+                    </>
+                  )}
+                </Button>
+              )}
+              {selectedClient && (
+                <Badge variant="secondary">
+                  {selectedPetIds.length} pet
+                  {selectedPetIds.length !== 1 ? "s" : ""} selected
+                </Badge>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* #5 — Select all / Deselect all */}
-            {selectedClient && allPetIds.length >= 3 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 text-xs"
-                onClick={handleToggleAll}
-              >
-                {allSelected ? (
-                  <>
-                    <XCircle className="size-3" />
-                    Deselect all
-                  </>
-                ) : (
-                  <>
-                    <CheckCheck className="size-3" />
-                    Select all
-                  </>
-                )}
-              </Button>
-            )}
-            {selectedClient && (
-              <Badge variant="secondary">
-                {selectedPetIds.length} pet
-                {selectedPetIds.length !== 1 ? "s" : ""} selected
-              </Badge>
-            )}
-          </div>
-        </div>
-        {selectedClient ? (
-          <div className="space-y-3">
-            {selectedClient.pets.length > 0 ? (
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="grid grid-cols-2 gap-3 pr-2">
-                  {selectedClient.pets.map((pet) => {
-                    const isSelected = selectedPetIds.includes(pet.id);
-                    const canSelect = canSelectForEvaluation(pet);
-                    const isDisabled = !canSelect;
-                    const evalBadge = renderEvalBadge(pet);
+          {selectedClient ? (
+            <div className="space-y-3">
+              {selectedClient.pets.length > 0 ? (
+                <div className="max-h-[400px] overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-3 pr-2">
+                    {selectedClient.pets.map((pet) => {
+                      const isSelected = selectedPetIds.includes(pet.id);
+                      const canSelect = canSelectForEvaluation(pet);
+                      const isDisabled = !canSelect;
+                      const evalBadge = renderEvalBadge(pet);
 
-                    return (
-                      <div
-                        key={pet.id}
-                        // #6 — accessibility
-                        role="checkbox"
-                        aria-checked={isSelected}
-                        aria-disabled={isDisabled}
-                        aria-label={`${pet.name}, ${pet.type}, ${pet.breed}`}
-                        tabIndex={isDisabled ? -1 : 0}
-                        onKeyDown={(e) => {
-                          if (
-                            !isDisabled &&
-                            (e.key === "Enter" || e.key === " ")
-                          ) {
-                            e.preventDefault();
-                            handlePetToggle(pet.id);
-                          }
-                        }}
-                        // #3 — cn() instead of template literals
-                        className={cn(
-                          "rounded-lg border p-3 transition-all outline-none",
-                          "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
-                          isDisabled
-                            ? "bg-muted cursor-not-allowed opacity-50"
-                            : isSelected
-                              ? "border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2"
-                              : "hover:border-primary/50 cursor-pointer",
-                        )}
-                        onClick={() => {
-                          if (!isDisabled) handlePetToggle(pet.id);
-                        }}
-                      >
-                        <div className="flex gap-3">
-                          {pet.imageUrl ? (
-                            <Image
-                              src={pet.imageUrl}
-                              alt={pet.name}
-                              width={64}
-                              height={64}
-                              className="size-16 rounded-lg object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="bg-muted flex size-16 items-center justify-center rounded-lg">
-                              {pet.type === "Cat" ? (
-                                <Cat className="text-muted-foreground size-8" />
-                              ) : (
-                                <PawPrint className="text-muted-foreground size-8" />
-                              )}
-                            </div>
+                      return (
+                        <div
+                          key={pet.id}
+                          // #6 — accessibility
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          aria-disabled={isDisabled}
+                          aria-label={`${pet.name}, ${pet.type}, ${pet.breed}`}
+                          tabIndex={isDisabled ? -1 : 0}
+                          onKeyDown={(e) => {
+                            if (
+                              !isDisabled &&
+                              (e.key === "Enter" || e.key === " ")
+                            ) {
+                              e.preventDefault();
+                              handlePetToggle(pet.id);
+                            }
+                          }}
+                          // #3 — cn() instead of template literals
+                          className={cn(
+                            "rounded-lg border p-3 transition-all outline-none",
+                            "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
+                            isDisabled
+                              ? "bg-muted cursor-not-allowed opacity-50"
+                              : isSelected
+                                ? "border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2"
+                                : "hover:border-primary/50 cursor-pointer",
                           )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium">
-                                  {pet.name}
-                                </p>
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {pet.type} • {pet.breed}
-                                </p>
-                                <p className="text-muted-foreground text-xs">
-                                  {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
-                                  {pet.weight}kg
-                                </p>
-                                {/* #1 — only render wrapper when badge exists */}
-                                {evalBadge && (
-                                  <div className="mt-1">{evalBadge}</div>
+                          onClick={() => {
+                            if (!isDisabled) handlePetToggle(pet.id);
+                          }}
+                        >
+                          <div className="flex gap-3">
+                            {pet.imageUrl ? (
+                              <Image
+                                src={pet.imageUrl}
+                                alt={pet.name}
+                                width={64}
+                                height={64}
+                                className="size-16 rounded-lg object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="bg-muted flex size-16 items-center justify-center rounded-lg">
+                                {pet.type === "Cat" ? (
+                                  <Cat className="text-muted-foreground size-8" />
+                                ) : (
+                                  <PawPrint className="text-muted-foreground size-8" />
                                 )}
                               </div>
-                              {isSelected && !isDisabled && (
-                                <Check className="text-primary size-5 shrink-0" />
-                              )}
-                              {isDisabled &&
-                                selectedService === "evaluation" && (
-                                  <Badge
-                                    variant="outline"
-                                    className="shrink-0 text-xs"
-                                  >
-                                    Already Evaluated
-                                  </Badge>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between">
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-medium">
+                                    {pet.name}
+                                  </p>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {pet.type} • {pet.breed}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {pet.age} {pet.age === 1 ? "yr" : "yrs"} •{" "}
+                                    {pet.weight}kg
+                                  </p>
+                                  {/* #1 — only render wrapper when badge exists */}
+                                  {evalBadge && (
+                                    <div className="mt-1">{evalBadge}</div>
+                                  )}
+                                </div>
+                                {isSelected && !isDisabled && (
+                                  <Check className="text-primary size-5 shrink-0" />
                                 )}
+                                {isDisabled &&
+                                  selectedService === "evaluation" && (
+                                    <Badge
+                                      variant="outline"
+                                      className="shrink-0 text-xs"
+                                    >
+                                      Already Evaluated
+                                    </Badge>
+                                  )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-muted rounded-lg p-4 text-center">
-                <p className="text-muted-foreground text-sm">
-                  This client has no pets registered.
-                </p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-muted rounded-lg p-4 text-center">
-            <p className="text-muted-foreground text-sm">
-              Please select a client first
-            </p>
-          </div>
-        )}
-      </div>
+              ) : (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground text-sm">
+                    This client has no pets registered.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-muted rounded-lg p-4 text-center">
+              <p className="text-muted-foreground text-sm">
+                Please select a client first
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

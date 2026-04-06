@@ -77,7 +77,7 @@ export function AgreementSigningDialog({
             Agreement
           </p>
           <ScrollArea className="max-h-[250px] rounded-xl border bg-slate-50/50 p-5">
-            <div className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-600">
+            <div className="prose prose-sm max-w-none text-sm/relaxed text-slate-600">
               {agreementContent.split("\n").map((line, i) => (
                 <p key={i} className={line.trim() === "" ? "h-2" : ""}>
                   {line}

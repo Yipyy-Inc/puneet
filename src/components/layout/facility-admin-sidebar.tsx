@@ -191,6 +191,12 @@ export function FacilitySidebar() {
             count: 8,
           },
           {
+            title: "Estimates",
+            url: "/facility/dashboard/estimates",
+            icon: FileText,
+            disabled: false,
+          },
+          {
             title: "Tasks",
             url: "/facility/dashboard/tasks",
             icon: ClipboardList,

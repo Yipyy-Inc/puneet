@@ -370,7 +370,7 @@ function MultiDimSelector({
               if (!Number.isNaN(val) && val > 0) setQuantity(val);
             }}
             onFocus={(e) => e.target.select()}
-            className="focus:border-primary h-8 w-12 rounded border bg-transparent text-center text-sm font-medium focus:outline-none"
+            className="focus:border-primary h-8 w-12 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
           />
           <Button
             variant="outline"
@@ -640,7 +640,7 @@ function SingleDimSelector({
               if (!Number.isNaN(val) && val > 0) setQuantity(val);
             }}
             onFocus={(e) => e.target.select()}
-            className="focus:border-primary h-8 w-12 rounded border bg-transparent text-center text-sm font-medium focus:outline-none"
+            className="focus:border-primary h-8 w-12 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
           />
           <Button
             variant="outline"

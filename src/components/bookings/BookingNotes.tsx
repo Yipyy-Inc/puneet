@@ -87,7 +87,7 @@ export function BookingNotes() {
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Write a note..."
-            className="min-h-[120px] resize-y text-sm leading-7"
+            className="min-h-[120px] resize-y text-sm/7"
             autoFocus
           />
           <div className="flex gap-2">

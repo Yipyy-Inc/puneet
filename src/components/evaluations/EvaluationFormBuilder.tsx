@@ -142,7 +142,7 @@ function QuestionEditor({
               {typeConfig?.label}
             </span>
             {question.required && (
-              <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
+              <span className="rounded-sm bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
                 REQ
               </span>
             )}
@@ -581,7 +581,7 @@ function BehaviorCodesEditor({
           type="color"
           value={draftColor}
           onChange={(e) => setDraftColor(e.target.value)}
-          className="size-8 cursor-pointer rounded border p-0.5"
+          className="size-8 cursor-pointer rounded-sm border p-0.5"
         />
         <Input
           value={draft}
@@ -746,7 +746,7 @@ export function EvaluationFormBuilder() {
                           {q.label}
                         </span>
                         {q.required && (
-                          <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
+                          <span className="rounded-sm bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-500">
                             REQ
                           </span>
                         )}

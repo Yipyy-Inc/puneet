@@ -16,9 +16,12 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Estimate } from "@/types/booking";
+import { EstimatePdfDownload } from "@/components/estimates/EstimatePdfDownload";
+import { RevisionHistoryButton } from "@/components/estimates/EstimateRevisionHistory";
 
 const STATUS_CONFIG = {
   draft: {
@@ -72,6 +75,7 @@ interface EstimateCardProps {
   onConvert?: (id: string) => void;
   onDecline?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
 }
 
 export function EstimateCard({
@@ -80,6 +84,7 @@ export function EstimateCard({
   onConvert,
   onDecline,
   onDelete,
+  onDuplicate,
 }: EstimateCardProps) {
   const [expanded, setExpanded] = useState(false);
   const config = STATUS_CONFIG[estimate.status];
@@ -318,9 +323,31 @@ export function EstimateCard({
               <span>· #{estimate.id}</span>
             </div>
 
+            {/* Secondary actions — PDF, History, Duplicate */}
+            <div className="flex items-center gap-1.5 border-t pt-3">
+              <EstimatePdfDownload
+                estimate={estimate}
+                size="sm"
+                variant="ghost"
+              />
+              <RevisionHistoryButton estimate={estimate} />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => {
+                  onDuplicate?.(estimate.id);
+                  toast.success("Estimate duplicated");
+                }}
+              >
+                <Copy className="size-3" />
+                Duplicate
+              </Button>
+            </div>
+
             {/* Actions */}
             {isActionable && (
-              <div className="flex items-center gap-2 border-t pt-3">
+              <div className="flex items-center gap-2 pt-2">
                 {(estimate.status === "draft" ||
                   estimate.status === "sent") && (
                   <Button

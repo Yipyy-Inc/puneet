@@ -107,6 +107,13 @@ export function BookingModal({
   const [isEstimateMode, setIsEstimateMode] = useState(false);
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [estimateSent, setEstimateSent] = useState(false);
+
+  // Guest estimate fields
+  const [isGuestEstimate, setIsGuestEstimate] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestPetName, setGuestPetName] = useState("");
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -496,6 +503,8 @@ export function BookingModal({
       case "service":
         return selectedService !== "";
       case "client-pet":
+        // Guest estimates skip client/pet requirement
+        if (isEstimateMode && isGuestEstimate) return true;
         if (selectedClientId === null || selectedPetIds.length === 0)
           return false;
         // If any selected pet has an expired or failed evaluation, lock services (except booking a new evaluation)
@@ -1748,6 +1757,17 @@ export function BookingModal({
                     preSelectedClientId={preSelectedClientId}
                     selectedService={selectedService}
                     configs={configs}
+                    isEstimateMode={isEstimateMode}
+                    isGuestEstimate={isGuestEstimate}
+                    setIsGuestEstimate={setIsGuestEstimate}
+                    guestName={guestName}
+                    setGuestName={setGuestName}
+                    guestEmail={guestEmail}
+                    setGuestEmail={setGuestEmail}
+                    guestPhone={guestPhone}
+                    setGuestPhone={setGuestPhone}
+                    guestPetName={guestPetName}
+                    setGuestPetName={setGuestPetName}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (

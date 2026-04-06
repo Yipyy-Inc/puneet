@@ -289,6 +289,14 @@ export const estimateLineItemSchema = z.object({
 });
 export type EstimateLineItem = z.infer<typeof estimateLineItemSchema>;
 
+export const guestPetInfoSchema = z.object({
+  name: z.string(),
+  breed: z.string().optional(),
+  weight: z.string().optional(),
+  notes: z.string().optional(),
+});
+export type GuestPetInfo = z.infer<typeof guestPetInfoSchema>;
+
 export const estimateSchema = z.object({
   id: z.string(),
   clientId: z.number(),
@@ -317,6 +325,38 @@ export const estimateSchema = z.object({
   createdAt: z.string(),
   createdBy: z.string(),
   convertedBookingId: z.number().optional(),
+  // Guest estimate fields
+  isGuestEstimate: z.boolean().optional(),
+  guestName: z.string().optional(),
+  guestEmail: z.string().optional(),
+  guestPhone: z.string().optional(),
+  accountCreated: z.boolean().optional(),
+  estimateToken: z.string().optional(),
+  viewedAt: z.string().optional(),
+  publicNote: z.string().optional(),
+  internalNote: z.string().optional(),
+  roomType: z.string().optional(),
+  checkInTime: z.string().optional(),
+  checkOutTime: z.string().optional(),
+  guestPetInfo: guestPetInfoSchema.optional(),
+  // Revision history
+  revisions: z
+    .array(
+      z.object({
+        version: z.number(),
+        changedAt: z.string(),
+        changedBy: z.string(),
+        changes: z.string(),
+        previousTotal: z.number(),
+        newTotal: z.number(),
+      }),
+    )
+    .optional(),
+  currentVersion: z.number().optional(),
+  // Follow-up tracking
+  followUpSentAt: z.string().optional(),
+  followUpType: z.enum(["not_viewed", "viewed_not_booked"]).optional(),
+  duplicatedFrom: z.string().optional(),
 });
 export type Estimate = z.infer<typeof estimateSchema>;
 

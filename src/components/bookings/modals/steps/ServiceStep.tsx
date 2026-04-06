@@ -318,9 +318,7 @@ export function ServiceStep({
 
               {/* ── Content strip ───────────────────────────── */}
               <div className="p-3.5">
-                <p className="text-sm leading-tight font-semibold">
-                  {displayName}
-                </p>
+                <p className="text-sm/tight font-semibold">{displayName}</p>
                 {displaySlogan && (
                   <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
                     {displaySlogan}

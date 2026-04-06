@@ -250,7 +250,7 @@ export function SignaturePad({
       {agreementText && (
         <div className="space-y-2">
           <ScrollArea className="max-h-[200px] rounded-lg border bg-slate-50/50 p-4">
-            <div className="prose prose-sm max-w-none text-sm leading-relaxed text-slate-600">
+            <div className="prose prose-sm max-w-none text-sm/relaxed text-slate-600">
               {agreementText}
             </div>
           </ScrollArea>

@@ -395,13 +395,13 @@ export function YipyyGoConfigStep({ data, onChange }: YipyyGoConfigStepProps) {
                       <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           onClick={() => openEditSection(section)}
-                          className="hover:text-foreground text-muted-foreground rounded p-1"
+                          className="hover:text-foreground text-muted-foreground rounded-sm p-1"
                         >
                           <Pencil className="size-3.5" />
                         </button>
                         <button
                           onClick={() => removeSection(section.id)}
-                          className="hover:text-destructive text-muted-foreground rounded p-1"
+                          className="hover:text-destructive text-muted-foreground rounded-sm p-1"
                         >
                           <Trash2 className="size-3.5" />
                         </button>

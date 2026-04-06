@@ -570,7 +570,7 @@ export default function POSPage() {
       // Re-focus the search bar after dialog animation settles
       setTimeout(() => searchInputRef.current?.focus(), 200);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [addToCart],
   );
 
@@ -2337,7 +2337,7 @@ export default function POSPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm leading-tight font-medium">
+                        <p className="text-sm/tight font-medium">
                           {item.productName}
                           {item.variantName && (
                             <span className="text-muted-foreground ml-1 text-xs font-normal">
@@ -2386,7 +2386,7 @@ export default function POSPage() {
                             }
                           }}
                           onFocus={(e) => e.target.select()}
-                          className="focus:border-primary h-6 w-8 rounded border bg-transparent text-center text-sm font-medium focus:outline-none"
+                          className="focus:border-primary h-6 w-8 rounded-sm border bg-transparent text-center text-sm font-medium focus:outline-none"
                         />
                         <Button
                           variant="outline"

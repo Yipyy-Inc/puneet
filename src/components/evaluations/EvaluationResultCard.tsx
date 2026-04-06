@@ -230,7 +230,7 @@ export function EvaluationResultCard({
 
         {/* Result message */}
         <div className="py-4">
-          <p className="text-sm leading-relaxed text-gray-700">
+          <p className="text-sm/relaxed text-gray-700">
             {passed ? config.passMessage : config.failMessage}
           </p>
         </div>
@@ -340,7 +340,7 @@ export function EvaluationResultCard({
                 Staff Notes
               </p>
             </div>
-            <p className="text-sm leading-relaxed text-gray-700 italic">
+            <p className="text-sm/relaxed text-gray-700 italic">
               &ldquo;{data.staffNotes}&rdquo;
             </p>
           </div>
@@ -376,7 +376,7 @@ export function EvaluationResultCard({
           <div className="py-4">
             <div className="flex items-start gap-2">
               <Users className="text-muted-foreground mt-0.5 size-3.5 shrink-0" />
-              <p className="text-muted-foreground text-xs leading-relaxed">
+              <p className="text-muted-foreground text-xs/relaxed">
                 {config.footerNote}
               </p>
             </div>
