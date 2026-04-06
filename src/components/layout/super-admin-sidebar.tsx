@@ -23,6 +23,7 @@ import {
   Ticket,
   ToggleRight,
   Puzzle,
+  Sparkles,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
@@ -212,6 +213,12 @@ export function AppSidebar() {
           title: "System Configuration",
           url: "/dashboard/system-admin/system-config",
           icon: Settings,
+          disabled: false,
+        },
+        {
+          title: "AI Integration",
+          url: "/dashboard/system-admin/ai-settings",
+          icon: Sparkles,
           disabled: false,
         },
       ],

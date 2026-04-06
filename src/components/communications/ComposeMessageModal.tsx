@@ -28,6 +28,8 @@ import {
   resolveTemplate,
   getMockPreviewData,
 } from "@/lib/template-variable-resolver";
+import { useAiText } from "@/hooks/use-ai-text";
+import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 
 interface ComposeMessageModalProps {
   onClose: () => void;
@@ -89,6 +91,11 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
     activeValue,
     setActiveValue,
   );
+
+  const aiBody = useAiText({
+    type: formData.type === "sms" ? "sms_message" : "email_marketing",
+    maxWords: formData.type === "sms" ? 30 : 150,
+  });
 
   const availableTemplates = messageTemplates.filter(
     (t) => t.type === formData.type,
@@ -203,12 +210,25 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="body">Message *</Label>
-            {(formData.type === "sms" || activeField === "body") && (
-              <VariableInsertDropdown
-                context="general"
-                onInsert={handleInsertVariable}
+            <div className="flex items-center gap-1">
+              <AiGenerateButton
+                onClick={async () => {
+                  const result = await aiBody.generate({
+                    recipientName: formData.to,
+                    channel: formData.type,
+                    facilityName: "PawCare Facility",
+                  });
+                  if (result) setFormData({ ...formData, body: result });
+                }}
+                isGenerating={aiBody.isGenerating}
               />
-            )}
+              {(formData.type === "sms" || activeField === "body") && (
+                <VariableInsertDropdown
+                  context="general"
+                  onInsert={handleInsertVariable}
+                />
+              )}
+            </div>
           </div>
           <Textarea
             id="body"
@@ -218,7 +238,8 @@ export function ComposeMessageModal({ onClose }: ComposeMessageModalProps) {
             onChange={(e) => setFormData({ ...formData, body: e.target.value })}
             onFocus={() => setActiveField("body")}
             placeholder="Enter your message..."
-            rows={formData.type === "sms" ? 5 : 10}
+            rows={8}
+            className="min-h-[180px] resize-y text-sm leading-7"
           />
           {formData.type === "sms" && (
             <div className="text-muted-foreground space-y-0.5 text-xs">

@@ -31,6 +31,8 @@ import { facilityBranding, EMAIL_USE_CASE_OPTIONS } from "@/data/marketing";
 import { getContrastTextColor, hexToRgba } from "@/lib/color-utils";
 import { VariableInsertDropdown } from "@/components/shared/VariableInsertDropdown";
 import { useInsertAtCursor } from "@/hooks/use-insert-at-cursor";
+import { useAiText } from "@/hooks/use-ai-text";
+import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 
 interface EmailTemplateModalProps {
   template?: EmailTemplate | null;
@@ -85,6 +87,9 @@ export function EmailTemplateModal({
     activeValue,
     setActiveValue,
   );
+
+  const aiSubject = useAiText({ type: "email_subject", maxWords: 20 });
+  const aiBody = useAiText({ type: "email_marketing", maxWords: 150 });
 
   return (
     <>
@@ -157,10 +162,23 @@ export function EmailTemplateModal({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="subject">Subject Line *</Label>
-                  <VariableInsertDropdown
-                    context="marketing"
-                    onInsert={insertVariable}
-                  />
+                  <div className="flex items-center gap-1">
+                    <AiGenerateButton
+                      onClick={async () => {
+                        const result = await aiSubject.generate({
+                          facilityName: facilityBranding.fromName,
+                          templateName: formData.name,
+                          category: formData.category,
+                        });
+                        if (result) update("subject", result);
+                      }}
+                      isGenerating={aiSubject.isGenerating}
+                    />
+                    <VariableInsertDropdown
+                      context="marketing"
+                      onInsert={insertVariable}
+                    />
+                  </div>
                 </div>
                 <Input
                   id="subject"
@@ -175,7 +193,20 @@ export function EmailTemplateModal({
 
               {/* Body */}
               <div className="space-y-2">
-                <Label htmlFor="body">Email Body *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="body">Email Body *</Label>
+                  <AiGenerateButton
+                    onClick={async () => {
+                      const result = await aiBody.generate({
+                        facilityName: facilityBranding.fromName,
+                        templateName: formData.name,
+                        subject: formData.subject,
+                      });
+                      if (result) update("body", result);
+                    }}
+                    isGenerating={aiBody.isGenerating}
+                  />
+                </div>
                 <Textarea
                   id="body"
                   ref={bodyRef}
@@ -184,7 +215,8 @@ export function EmailTemplateModal({
                   onChange={(e) => update("body", e.target.value)}
                   onFocus={() => setActiveField("body")}
                   placeholder="Enter your email content here..."
-                  rows={8}
+                  rows={10}
+                  className="min-h-[200px] resize-y text-sm leading-7"
                 />
               </div>
 

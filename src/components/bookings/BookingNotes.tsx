@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useAiText } from "@/hooks/use-ai-text";
+import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 
 interface Note {
   id: string;
@@ -45,6 +47,7 @@ export function BookingNotes() {
   const [notes, setNotes] = useState<Note[]>(MOCK_NOTES);
   const [adding, setAdding] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const ai = useAiText({ type: "booking_note", maxWords: 60 });
 
   const handleAdd = () => {
     if (!newNote.trim()) return;
@@ -67,11 +70,24 @@ export function BookingNotes() {
       {/* Add note — always visible input */}
       {adding ? (
         <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Note</span>
+            <AiGenerateButton
+              onClick={async () => {
+                const result = await ai.generate({
+                  petName: "Pet",
+                  serviceName: "Booking",
+                });
+                if (result) setNewNote(result);
+              }}
+              isGenerating={ai.isGenerating}
+            />
+          </div>
           <Textarea
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Write a note..."
-            className="min-h-[80px] text-sm"
+            className="min-h-[120px] resize-y text-sm leading-7"
             autoFocus
           />
           <div className="flex gap-2">

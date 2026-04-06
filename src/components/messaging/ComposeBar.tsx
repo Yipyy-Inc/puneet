@@ -9,20 +9,37 @@ import {
   Image as ImageIcon,
   Mic,
   Plus,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
+import { useAiText } from "@/hooks/use-ai-text";
 
 export function ComposeBar({
   onSend,
+  clientName,
+  lastMessage,
 }: {
   onSend?: (message: string, channel: "sms" | "email") => void;
+  clientName?: string;
+  lastMessage?: string;
 }) {
   const [text, setText] = useState("");
   const [showExtras, setShowExtras] = useState(false);
+  const ai = useAiText({ type: "chat_reply", maxWords: 60 });
 
   const handleSend = () => {
     if (!text.trim()) return;
     onSend?.(text.trim(), "sms");
     setText("");
+  };
+
+  const handleAiReply = async () => {
+    const result = await ai.generate({
+      clientName: clientName || "the client",
+      lastMessage: lastMessage || "General inquiry",
+      facilityName: "PawCare Facility",
+    });
+    if (result) setText(result);
   };
 
   return (
@@ -53,6 +70,20 @@ export function ComposeBar({
           >
             <Mic className="size-4" />
             Voice
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-violet-50 hover:text-violet-600"
+            onClick={handleAiReply}
+            disabled={ai.isGenerating}
+          >
+            {ai.isGenerating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
+            AI Reply
           </Button>
         </div>
       )}

@@ -299,7 +299,10 @@ export function ConversationThread({
       </div>
 
       {/* Compose */}
-      <ComposeBar />
+      <ComposeBar
+        clientName={clientName}
+        lastMessage={threadMessages[threadMessages.length - 1]?.body}
+      />
     </div>
   );
 }

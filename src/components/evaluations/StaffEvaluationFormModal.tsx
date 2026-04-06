@@ -738,123 +738,163 @@ export function StaffEvaluationFormModal({
 
         {/* AI Summary Panel — shown after saving, before sending */}
         {saved && evaluationReportCard.enabled && (
-          <Card className="border-blue-200 bg-blue-50/30">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Sparkles className="size-4 text-blue-500" />
-                  AI Report Summary
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="use-ai-toggle" className="text-xs">
-                    Use AI
-                  </Label>
-                  <Switch
-                    id="use-ai-toggle"
-                    checked={useAi}
-                    onCheckedChange={(v) => {
-                      setUseAi(v);
-                      localStorage.setItem("eval-use-ai-summary", String(v));
-                      if (!v) ai.reset();
-                    }}
-                  />
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b bg-slate-50 px-5 py-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
+                  <Sparkles className="size-4 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    AI Report Summary
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    {useAi
+                      ? "Polished narrative for the pet parent"
+                      : "AI is off — raw notes will be used"}
+                  </p>
                 </div>
               </div>
-              <p className="text-muted-foreground text-xs">
-                {useAi
-                  ? "Generate a polished summary from your evaluation notes. You can edit before sending."
-                  : "AI summary is off. Raw staff notes will be used on the result card."}
-              </p>
-            </CardHeader>
-            {useAi && (
-              <CardContent className="space-y-3 pt-2">
-                {!ai.summary && !ai.isGenerating && (
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => {
-                      const cardData = buildCardData();
-                      ai.generate("/api/ai/evaluation-summary", {
-                        petName,
-                        petBreed: "Mixed",
-                        facilityName: businessProfile.businessName,
-                        evaluatorName,
-                        evaluationDate: new Date().toISOString(),
-                        result: form.evaluationResult,
-                        temperament: {
-                          dogFriendly: form.answers.dog_friendly === "yes",
-                          humanFriendly: form.answers.human_friendly === "yes",
-                          energy:
-                            (form.answers.energy_level as string) || "medium",
-                          anxiety:
-                            (form.answers.anxiety_level as string) || "low",
-                          reactivity:
-                            (form.answers.reactivity as string) || "low",
-                        },
-                        playStyle: cardData.playStyle || "",
-                        playGroup: cardData.playGroup || "",
-                        behaviorTags: form.behaviorCodes,
-                        staffNotes:
-                          (form.answers.temperament_notes as string) || "",
-                        approvedServices: [
-                          ...(form.approvedServices.daycare ? ["Daycare"] : []),
-                          ...(form.approvedServices.boarding
-                            ? ["Boarding"]
-                            : []),
-                          ...form.approvedServices.customApproved,
-                        ],
-                        answers: form.answers,
-                      });
-                    }}
-                  >
-                    <Sparkles className="size-4" />
-                    Generate with AI
-                  </Button>
-                )}
+              <div className="flex items-center gap-2">
+                <Label
+                  htmlFor="use-ai-toggle"
+                  className="text-xs text-slate-500"
+                >
+                  Use AI
+                </Label>
+                <Switch
+                  id="use-ai-toggle"
+                  checked={useAi}
+                  onCheckedChange={(v) => {
+                    setUseAi(v);
+                    localStorage.setItem("eval-use-ai-summary", String(v));
+                    if (!v) ai.reset();
+                  }}
+                />
+              </div>
+            </div>
 
-                {ai.isGenerating && (
-                  <div className="space-y-2">
-                    <div className="h-4 w-3/4 animate-pulse rounded bg-blue-200" />
-                    <div className="h-4 w-full animate-pulse rounded bg-blue-200" />
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-blue-200" />
-                    <div className="h-4 w-2/3 animate-pulse rounded bg-blue-200" />
+            {/* Body */}
+            {useAi && (
+              <div className="p-5">
+                {/* Generate button — empty state */}
+                {!ai.summary && !ai.isGenerating && (
+                  <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 py-10">
+                    <div className="flex size-12 items-center justify-center rounded-full bg-violet-50">
+                      <Sparkles className="size-5 text-violet-500" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-slate-700">
+                        Ready to generate
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        AI will create a warm, professional summary from your
+                        evaluation data
+                      </p>
+                    </div>
+                    <Button
+                      className="mt-1 gap-2 bg-violet-500 hover:bg-violet-600"
+                      onClick={() => {
+                        const cardData = buildCardData();
+                        ai.generate("/api/ai/evaluation-summary", {
+                          petName,
+                          petBreed: "Mixed",
+                          facilityName: businessProfile.businessName,
+                          evaluatorName,
+                          evaluationDate: new Date().toISOString(),
+                          result: form.evaluationResult,
+                          temperament: {
+                            dogFriendly: form.answers.dog_friendly === "yes",
+                            humanFriendly:
+                              form.answers.human_friendly === "yes",
+                            energy:
+                              (form.answers.energy_level as string) || "medium",
+                            anxiety:
+                              (form.answers.anxiety_level as string) || "low",
+                            reactivity:
+                              (form.answers.reactivity as string) || "low",
+                          },
+                          playStyle: cardData.playStyle || "",
+                          playGroup: cardData.playGroup || "",
+                          behaviorTags: form.behaviorCodes,
+                          staffNotes:
+                            (form.answers.temperament_notes as string) || "",
+                          approvedServices: [
+                            ...(form.approvedServices.daycare
+                              ? ["Daycare"]
+                              : []),
+                            ...(form.approvedServices.boarding
+                              ? ["Boarding"]
+                              : []),
+                            ...form.approvedServices.customApproved,
+                          ],
+                          answers: form.answers,
+                        });
+                      }}
+                    >
+                      <Sparkles className="size-4" />
+                      Generate Summary
+                    </Button>
                   </div>
                 )}
 
+                {/* Loading skeleton */}
+                {ai.isGenerating && (
+                  <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-5">
+                    <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-5/6 animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-3/4 animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-slate-200" />
+                    <div className="h-4 w-1/2 animate-pulse rounded-full bg-slate-200" />
+                    <p className="text-muted-foreground pt-1 text-center text-xs">
+                      Generating summary with AI...
+                    </p>
+                  </div>
+                )}
+
+                {/* Generated result */}
                 {ai.summary && !ai.isGenerating && (
-                  <>
-                    <Textarea
-                      value={ai.summary}
-                      onChange={(e) => ai.setSummary(e.target.value)}
-                      rows={8}
-                      className="border-blue-200 bg-white font-serif text-sm"
-                    />
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-amber-600">
-                        <AlertTriangle className="size-3" />
-                        <span className="text-[11px]">
-                          AI-generated — review before sending
-                        </span>
-                      </div>
+                      <p className="text-xs font-medium text-slate-500">
+                        Generated Summary
+                      </p>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="gap-1.5"
-                        onClick={() => {
-                          ai.reset();
-                        }}
+                        className="h-7 gap-1.5 text-xs text-violet-500 hover:text-violet-700"
+                        onClick={() => ai.reset()}
                       >
                         <RefreshCw className="size-3" />
                         Regenerate
                       </Button>
                     </div>
-                  </>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <textarea
+                        value={ai.summary}
+                        onChange={(e) => ai.setSummary(e.target.value)}
+                        className="min-h-[280px] w-full resize-y border-0 bg-transparent text-sm leading-7 text-slate-700 outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
+                      <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
+                      <p className="text-[11px] text-amber-700">
+                        AI-generated — review and edit before sending to the pet
+                        parent.
+                      </p>
+                    </div>
+                  </div>
                 )}
 
-                {ai.error && <p className="text-xs text-red-500">{ai.error}</p>}
-              </CardContent>
+                {ai.error && (
+                  <p className="mt-2 text-xs text-red-500">{ai.error}</p>
+                )}
+              </div>
             )}
-          </Card>
+          </div>
         )}
 
         <div className="flex justify-end gap-2">

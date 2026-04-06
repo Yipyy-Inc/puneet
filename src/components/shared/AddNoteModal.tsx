@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Eye, EyeOff, Pin } from "lucide-react";
 import type { Note, NoteVisibility, PetNoteSubType } from "@/data/tags-notes";
+import { useAiText } from "@/hooks/use-ai-text";
+import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 
 interface AddNoteModalProps {
   open: boolean;
@@ -47,6 +49,7 @@ export function AddNoteModal({
     editNote?.subType ?? "general",
   );
   const [isPinned, setIsPinned] = useState(editNote?.isPinned ?? false);
+  const ai = useAiText({ type: "staff_note", maxWords: 80 });
 
   const isEdit = !!editNote;
   const modalTitle = title ?? (isEdit ? "Edit Note" : "Add Note");
@@ -112,16 +115,28 @@ export function AddNoteModal({
 
         {/* Content */}
         <div className="space-y-1.5">
-          <Label htmlFor="note-content" className="text-sm">
-            Note
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="note-content" className="text-sm">
+              Note
+            </Label>
+            <AiGenerateButton
+              onClick={async () => {
+                const result = await ai.generate({
+                  noteType: showSubType ? subType : "general",
+                  subjectName: title ?? "Note",
+                });
+                if (result) setContent(result);
+              }}
+              isGenerating={ai.isGenerating}
+            />
+          </div>
           <Textarea
             id="note-content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Write your note here..."
-            rows={4}
-            className="resize-none"
+            rows={5}
+            className="min-h-[140px] resize-y text-sm leading-7"
           />
         </div>
 

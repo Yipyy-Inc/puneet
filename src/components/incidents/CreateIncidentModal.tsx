@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Camera, X, UserPlus } from "lucide-react";
 import { clients } from "@/data/clients";
+import { useAiText } from "@/hooks/use-ai-text";
+import { AiGenerateButton } from "@/components/shared/AiGenerateButton";
 
 interface CreateIncidentModalProps {
   onClose: () => void;
@@ -183,6 +185,15 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
     console.log("Creating incident:", formData, "Photos:", photos);
     onClose();
   };
+
+  const aiDescription = useAiText({
+    type: "incident_description",
+    maxWords: 100,
+  });
+  const aiClientNote = useAiText({
+    type: "incident_client_note",
+    maxWords: 80,
+  });
 
   const selectedSeverity = severityLevels.find(
     (s) => s.value === formData.severity,
@@ -417,7 +428,20 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
 
         {/* Description */}
         <div className="space-y-2">
-          <Label htmlFor="description">Incident Description *</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="description">Incident Description *</Label>
+            <AiGenerateButton
+              onClick={async () => {
+                const result = await aiDescription.generate({
+                  petName: formData.selectedPets.map((p) => p.name).join(", "),
+                  incidentType: formData.type,
+                  title: formData.title,
+                });
+                if (result) setFormData({ ...formData, description: result });
+              }}
+              isGenerating={aiDescription.isGenerating}
+            />
+          </div>
           <Textarea
             id="description"
             value={formData.description}
@@ -425,7 +449,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
               setFormData({ ...formData, description: e.target.value })
             }
             placeholder="Detailed description of what happened..."
-            rows={4}
+            rows={6}
+            className="min-h-[160px] resize-y text-sm leading-7"
           />
         </div>
 
@@ -464,7 +489,26 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                 <Label htmlFor="clientFacingNotes" className="text-base">
                   Client-Facing Notes
                 </Label>
-                <Badge variant="default">Visible to Clients</Badge>
+                <div className="flex items-center gap-1">
+                  <AiGenerateButton
+                    onClick={async () => {
+                      const result = await aiClientNote.generate({
+                        petName: formData.selectedPets
+                          .map((p) => p.name)
+                          .join(", "),
+                        incidentType: formData.type,
+                        title: formData.title,
+                      });
+                      if (result)
+                        setFormData({
+                          ...formData,
+                          clientFacingNotes: result,
+                        });
+                    }}
+                    isGenerating={aiClientNote.isGenerating}
+                  />
+                  <Badge variant="default">Visible to Clients</Badge>
+                </div>
               </div>
               <Textarea
                 id="clientFacingNotes"
@@ -476,7 +520,8 @@ export function CreateIncidentModal({ onClose }: CreateIncidentModalProps) {
                   })
                 }
                 placeholder="What to communicate to the pet owner..."
-                rows={3}
+                rows={5}
+                className="min-h-[140px] resize-y text-sm leading-7"
               />
               <p className="text-muted-foreground text-xs">
                 This version will be shared with clients if you choose to notify
