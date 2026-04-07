@@ -143,6 +143,7 @@ export const multiNightDiscountSchema = z
     minNights: z.number(),
     maxNights: z.number().nullable(),
     discountPercent: z.number(),
+    applicableServices: z.array(z.string()).optional(),
     isActive: z.boolean(),
   })
   .catchall(z.unknown());
