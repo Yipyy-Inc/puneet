@@ -8,6 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   ClipboardList,
   AlertTriangle,
   Clock,
@@ -73,142 +79,170 @@ export function TaskNotificationsPanel() {
   const visible = notifications.filter((n) => !dismissed.has(n.id));
   const unreadCount = visible.filter((n) => !n.readAt).length;
   const criticalCount = visible.filter((n) => n.priority === "critical").length;
+  const hasUnread = unreadCount > 0;
 
   const handleDismiss = (id: string) => {
     setDismissed((prev) => new Set([...prev, id]));
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0">
-          <ClipboardList className="size-4" />
-          {unreadCount > 0 && (
-            <span
-              className={cn(
-                "absolute -top-0.5 -right-0.5 flex size-4.5 items-center justify-center rounded-full text-[9px] font-bold text-white",
-                criticalCount > 0 ? "animate-pulse bg-red-500" : "bg-primary",
-              )}
-            >
-              {unreadCount}
-            </span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-[380px] p-0"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold">Task Notifications</p>
-            <p className="text-muted-foreground text-xs">
-              {unreadCount} unread
-              {criticalCount > 0 && (
-                <span className="ml-1 font-medium text-red-600">
-                  · {criticalCount} critical
-                </span>
-              )}
-            </p>
-          </div>
-          {visible.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground h-7 text-[11px]"
-              onClick={() =>
-                setDismissed(new Set(notifications.map((n) => n.id)))
-              }
-            >
-              Clear all
-            </Button>
-          )}
-        </div>
-
-        {/* Notifications */}
-        <div className="max-h-[400px] overflow-y-auto">
-          {visible.length === 0 ? (
-            <div className="py-8 text-center">
-              <CheckCircle2 className="text-muted-foreground/20 mx-auto size-8" />
-              <p className="text-muted-foreground mt-2 text-sm">
-                All caught up
+    <TooltipProvider delayDuration={150}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="group relative h-9 w-9 rounded-xl p-0"
+                aria-label="Task Notifications"
+              >
+                <ClipboardList
+                  className={cn(
+                    "size-4 transition-colors",
+                    hasUnread
+                      ? criticalCount > 0
+                        ? "text-red-600"
+                        : "text-primary"
+                      : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                />
+                {hasUnread && (
+                  <span
+                    className={cn(
+                      "absolute -top-0.5 -right-0.5 flex size-4.5 items-center justify-center rounded-full text-[9px] font-bold text-white",
+                      criticalCount > 0
+                        ? "animate-pulse bg-red-500"
+                        : "bg-primary",
+                    )}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="center">
+            Task Notifications
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent
+          align="end"
+          className="w-[380px] p-0"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Task Notifications</p>
+              <p className="text-muted-foreground text-xs">
+                {unreadCount} unread
+                {criticalCount > 0 && (
+                  <span className="ml-1 font-medium text-red-600">
+                    · {criticalCount} critical
+                  </span>
+                )}
               </p>
             </div>
-          ) : (
-            <div className="divide-y">
-              {visible.map((notif) => {
-                const style = priorityStyles[notif.priority];
-                const Icon = style.icon;
-                return (
-                  <div
-                    key={notif.id}
-                    className={cn(
-                      "group hover:bg-muted/30 relative flex cursor-pointer gap-3 px-4 py-3 transition-colors",
-                      notif.priority === "critical" && "bg-red-50/50",
-                    )}
-                    onClick={() => {
-                      const url = notif.taskId
-                        ? `/facility/dashboard/tasks?taskId=${notif.taskId}`
-                        : (notif.actionUrl ?? "/facility/dashboard/tasks");
-                      router.push(url);
-                      setOpen(false);
-                    }}
-                  >
+            {visible.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground h-7 text-[11px]"
+                onClick={() =>
+                  setDismissed(new Set(notifications.map((n) => n.id)))
+                }
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
+
+          {/* Notifications */}
+          <div className="max-h-[400px] overflow-y-auto">
+            {visible.length === 0 ? (
+              <div className="py-8 text-center">
+                <CheckCircle2 className="text-muted-foreground/20 mx-auto size-8" />
+                <p className="text-muted-foreground mt-2 text-sm">
+                  All caught up
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {visible.map((notif) => {
+                  const style = priorityStyles[notif.priority];
+                  const Icon = style.icon;
+                  return (
                     <div
+                      key={notif.id}
                       className={cn(
-                        "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
-                        style.bg,
+                        "group hover:bg-muted/30 relative flex cursor-pointer gap-3 px-4 py-3 transition-colors",
+                        notif.priority === "critical" && "bg-red-50/50",
                       )}
+                      onClick={() => {
+                        const url = notif.taskId
+                          ? `/facility/dashboard/tasks?taskId=${notif.taskId}`
+                          : (notif.actionUrl ?? "/facility/dashboard/tasks");
+                        router.push(url);
+                        setOpen(false);
+                      }}
                     >
-                      <Icon className={cn("size-3.5", style.text)} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
+                      <div
                         className={cn(
-                          "text-xs font-semibold",
-                          notif.priority === "critical" && "text-red-800",
+                          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
+                          style.bg,
                         )}
                       >
-                        {notif.title}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
-                        {notif.message}
-                      </p>
-                      <div className="text-muted-foreground/60 mt-1 flex items-center gap-2 text-[10px]">
-                        <span>{fmtRelative(notif.createdAt)}</span>
-                        {notif.assignedTo && <span>· {notif.assignedTo}</span>}
+                        <Icon className={cn("size-3.5", style.text)} />
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            "text-xs font-semibold",
+                            notif.priority === "critical" && "text-red-800",
+                          )}
+                        >
+                          {notif.title}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                          {notif.message}
+                        </p>
+                        <div className="text-muted-foreground/60 mt-1 flex items-center gap-2 text-[10px]">
+                          <span>{fmtRelative(notif.createdAt)}</span>
+                          {notif.assignedTo && (
+                            <span>· {notif.assignedTo}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDismiss(notif.id);
+                        }}
+                        className="text-muted-foreground/40 hover:text-muted-foreground absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <X className="size-3" />
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismiss(notif.id);
-                      }}
-                      className="text-muted-foreground/40 hover:text-muted-foreground absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-        {/* Footer */}
-        <div className="border-t px-4 py-2">
-          <Link
-            href="/facility/dashboard/tasks"
-            className="text-primary flex items-center justify-center gap-1 text-xs font-medium hover:underline"
-            onClick={() => setOpen(false)}
-          >
-            View Task Management Center
-            <ArrowRight className="size-3" />
-          </Link>
-        </div>
-      </PopoverContent>
-    </Popover>
+          {/* Footer */}
+          <div className="border-t px-4 py-2">
+            <Link
+              href="/facility/dashboard/tasks"
+              className="text-primary flex items-center justify-center gap-1 text-xs font-medium hover:underline"
+              onClick={() => setOpen(false)}
+            >
+              View Task Management Center
+              <ArrowRight className="size-3" />
+            </Link>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </TooltipProvider>
   );
 }

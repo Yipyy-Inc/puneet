@@ -25,6 +25,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
   getFacilityNotifications,
   getUnreadFacilityNotificationCount,
   markFacilityNotificationRead,
@@ -157,6 +164,7 @@ export function FacilityNotificationsDropdown({
     [facilityId],
   );
   const unreadCount = getUnreadFacilityNotificationCount(facilityId);
+  const hasUnread = unreadCount > 0;
 
   useEffect(() => {
     const unsub = subscribeToFacilityNotifications(refresh);
@@ -174,65 +182,84 @@ export function FacilityNotificationsDropdown({
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <button
-          className="hover:bg-muted relative flex size-10 items-center justify-center rounded-xl transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="text-muted-foreground size-5" />
-          {unreadCount > 0 && (
-            <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="flex w-[calc(100vw-2rem)] flex-col sm:w-80"
-      >
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-medium">Notifications</span>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground h-auto p-0 text-xs"
-              onClick={markAllRead}
-            >
-              Mark all read
-            </Button>
-          )}
-        </div>
-        <div className="max-h-[340px] overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center text-sm">
-              No notifications
-            </div>
-          ) : (
-            <div className="py-1">
-              {notifications.slice(0, 15).map((n) => (
-                <NotificationRow
-                  key={n.id}
-                  n={n}
-                  onMarkRead={markRead}
-                  onClose={() => setOpen(false)}
+    <TooltipProvider delayDuration={150}>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="group relative size-10 rounded-xl"
+                aria-label="Notifications"
+              >
+                <Bell
+                  className={cn(
+                    "size-5 transition-colors",
+                    hasUnread
+                      ? "text-primary"
+                      : "text-muted-foreground group-hover:text-foreground",
+                  )}
                 />
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="border-t px-3 py-2">
-          <Link
-            href="/facility/dashboard/notifications"
-            className="text-primary text-xs hover:underline"
-            onClick={() => setOpen(false)}
-          >
-            View all notifications
-          </Link>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+                {hasUnread && (
+                  <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="center">
+            Notifications
+          </TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent
+          align="end"
+          className="flex w-[calc(100vw-2rem)] flex-col sm:w-80"
+        >
+          <div className="flex items-center justify-between border-b px-3 py-2">
+            <span className="text-sm font-medium">Notifications</span>
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground h-auto p-0 text-xs"
+                onClick={markAllRead}
+              >
+                Mark all read
+              </Button>
+            )}
+          </div>
+          <div className="max-h-[340px] overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="text-muted-foreground py-8 text-center text-sm">
+                No notifications
+              </div>
+            ) : (
+              <div className="py-1">
+                {notifications.slice(0, 15).map((n) => (
+                  <NotificationRow
+                    key={n.id}
+                    n={n}
+                    onMarkRead={markRead}
+                    onClose={() => setOpen(false)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="border-t px-3 py-2">
+            <Link
+              href="/facility/dashboard/notifications"
+              className="text-primary text-xs hover:underline"
+              onClick={() => setOpen(false)}
+            >
+              View all notifications
+            </Link>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
   );
 }
