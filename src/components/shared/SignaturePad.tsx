@@ -99,15 +99,16 @@ export function SignaturePad({
     ip: string;
   } | null>(null);
 
-  // Initialize signature pad
+  // Initialize signature pad (and re-init when draw canvas remounts)
   useEffect(() => {
-    if (!canvasRef.current || readOnly) return;
+    if (readOnly || mode !== "draw") {
+      padRef.current?.off();
+      padRef.current = null;
+      return;
+    }
+
     const canvas = canvasRef.current;
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    canvas.width = canvas.offsetWidth * ratio;
-    canvas.height = canvas.offsetHeight * ratio;
-    const ctx = canvas.getContext("2d");
-    if (ctx) ctx.scale(ratio, ratio);
+    if (!canvas) return;
 
     const pad = new SignaturePadLib(canvas, {
       penColor: "#1e293b",
@@ -116,17 +117,51 @@ export function SignaturePad({
     });
 
     pad.addEventListener("beginStroke", () => setIsEmpty(false));
-
-    if (disabled || !agreed) {
-      pad.off();
-    }
-
     padRef.current = pad;
 
-    return () => {
-      pad.off();
+    const resizeCanvas = () => {
+      const width = canvas.offsetWidth;
+      const height = canvas.offsetHeight;
+      if (width <= 0 || height <= 0) return;
+
+      const existingData = pad.toData();
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+
+      const ctx = canvas.getContext("2d");
+      if (ctx) ctx.scale(ratio, ratio);
+
+      if (existingData.length > 0) {
+        pad.fromData(existingData);
+        setIsEmpty(false);
+      } else {
+        pad.clear();
+        setIsEmpty(true);
+      }
     };
-  }, [readOnly, disabled, agreed]);
+
+    resizeCanvas();
+    const frameId = window.requestAnimationFrame(resizeCanvas);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        resizeCanvas();
+      });
+      resizeObserver.observe(canvas);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      pad.off();
+      if (padRef.current === pad) {
+        padRef.current = null;
+      }
+    };
+  }, [mode, readOnly]);
 
   // Enable/disable based on agreement
   useEffect(() => {
@@ -249,8 +284,8 @@ export function SignaturePad({
       {/* Agreement text */}
       {agreementText && (
         <div className="space-y-2">
-          <ScrollArea className="max-h-[200px] rounded-lg border bg-slate-50/50 p-4">
-            <div className="prose prose-sm max-w-none text-sm/relaxed text-slate-600">
+          <ScrollArea className="h-[200px] rounded-lg border bg-slate-50/50">
+            <div className="prose prose-sm max-w-none p-4 text-sm/relaxed text-slate-600">
               {agreementText}
             </div>
           </ScrollArea>
