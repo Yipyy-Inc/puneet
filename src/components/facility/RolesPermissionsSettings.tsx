@@ -210,18 +210,12 @@ export function RolesPermissionsSettings() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {ALL_FACILITY_ROLES.length} roles
-          </Badge>
+          <Badge variant="outline">{ALL_FACILITY_ROLES.length} roles</Badge>
           <Badge variant="outline">
             {Object.keys(PERMISSION_CATEGORIES).length} categories
           </Badge>
-          <Badge variant="outline">
-            {totalPermissionKeys} permissions
-          </Badge>
-          <Badge variant="outline">
-            {totalEnabled} active grants
-          </Badge>
+          <Badge variant="outline">{totalPermissionKeys} permissions</Badge>
+          <Badge variant="outline">{totalEnabled} active grants</Badge>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -235,7 +229,9 @@ export function RolesPermissionsSettings() {
                   ROLE_VISUALS[role].chipClassName,
                 )}
               >
-                <Icon className={cn("size-3.5", ROLE_VISUALS[role].iconClassName)} />
+                <Icon
+                  className={cn("size-3.5", ROLE_VISUALS[role].iconClassName)}
+                />
                 {FACILITY_ROLE_LABELS[role]}
               </span>
             );
@@ -243,7 +239,7 @@ export function RolesPermissionsSettings() {
         </div>
 
         <div className="relative max-w-sm">
-          <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
@@ -264,7 +260,7 @@ export function RolesPermissionsSettings() {
               key={category}
               className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.7)] backdrop-blur-sm transition-all hover:border-slate-300 hover:shadow-[0_18px_34px_-24px_rgba(15,23,42,0.65)]"
             >
-              <div className="bg-linear-to-r from-slate-50 via-white to-slate-100/70 flex items-center justify-between border-b px-4 py-2.5">
+              <div className="flex items-center justify-between border-b bg-linear-to-r from-slate-50 via-white to-slate-100/70 px-4 py-2.5">
                 <p className="text-sm font-semibold">{category}</p>
                 <Badge variant="secondary" className="text-xs">
                   {permissions.length} permissions
@@ -325,24 +321,34 @@ export function RolesPermissionsSettings() {
                         className="group border-b transition-colors last:border-0 hover:bg-slate-50/70"
                       >
                         <td className="px-4 py-2.5 align-middle">
-                          <p className="font-medium">{PERMISSION_LABELS[permission]}</p>
+                          <p className="font-medium">
+                            {PERMISSION_LABELS[permission]}
+                          </p>
                           <p className="text-muted-foreground mt-0.5 text-xs">
                             {permission}
                           </p>
                         </td>
                         {ALL_FACILITY_ROLES.map((role) => {
-                          const checked = permissionsByRole[role].has(permission);
+                          const checked =
+                            permissionsByRole[role].has(permission);
                           return (
-                            <td key={`${permission}-${role}`} className="px-3 py-2.5 text-center align-middle">
+                            <td
+                              key={`${permission}-${role}`}
+                              className="px-3 py-2.5 text-center align-middle"
+                            >
                               <div className="flex justify-center">
                                 <div className="rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm transition-all group-hover:border-slate-300 group-hover:shadow">
-                                <Switch
-                                  checked={checked}
-                                  onCheckedChange={(next) =>
-                                    handlePermissionChange(role, permission, next)
-                                  }
-                                  aria-label={`${FACILITY_ROLE_LABELS[role]} can ${PERMISSION_LABELS[permission]}`}
-                                />
+                                  <Switch
+                                    checked={checked}
+                                    onCheckedChange={(next) =>
+                                      handlePermissionChange(
+                                        role,
+                                        permission,
+                                        next,
+                                      )
+                                    }
+                                    aria-label={`${FACILITY_ROLE_LABELS[role]} can ${PERMISSION_LABELS[permission]}`}
+                                  />
                                 </div>
                               </div>
                             </td>
@@ -380,7 +386,9 @@ export function RolesPermissionsSettings() {
                       )}
                     />
                   </div>
-                  <p className="text-sm font-medium">{FACILITY_ROLE_LABELS[role]}</p>
+                  <p className="text-sm font-medium">
+                    {FACILITY_ROLE_LABELS[role]}
+                  </p>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   {FACILITY_ROLE_DESCRIPTIONS[role]}

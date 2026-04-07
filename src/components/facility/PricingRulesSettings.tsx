@@ -342,7 +342,7 @@ export function PricingRulesSettings() {
                 </div>
 
                 <div className="relative mt-3">
-                  <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
+                  <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
                   <Input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
@@ -360,75 +360,79 @@ export function PricingRulesSettings() {
                     </p>
                   </div>
                 ) : (
-                  Object.entries(filteredGroups).map(([groupName, categories]) => (
-                    <div key={groupName}>
-                      <p className="text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-                        {groupName}
-                      </p>
-                      <div className="space-y-1.5">
-                        {categories.map((category) => {
-                          const Icon = category.icon;
-                          const isActive = activeCategory?.id === category.id;
+                  Object.entries(filteredGroups).map(
+                    ([groupName, categories]) => (
+                      <div key={groupName}>
+                        <p className="text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
+                          {groupName}
+                        </p>
+                        <div className="space-y-1.5">
+                          {categories.map((category) => {
+                            const Icon = category.icon;
+                            const isActive = activeCategory?.id === category.id;
 
-                          return (
-                            <button
-                              key={category.id}
-                              ref={(element) => {
-                                categoryButtonRefs.current[category.id] =
-                                  element;
-                              }}
-                              type="button"
-                              onClick={() => handleCategorySelect(category.id)}
-                              className={cn(
-                                "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
-                                isActive
-                                  ? "border-primary/45 bg-primary/[0.08] shadow-sm"
-                                  : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
-                              )}
-                            >
-                              {isActive && (
-                                <span className="bg-primary absolute left-0 top-0 h-full w-1" />
-                              )}
-
-                              <div
+                            return (
+                              <button
+                                key={category.id}
+                                ref={(element) => {
+                                  categoryButtonRefs.current[category.id] =
+                                    element;
+                                }}
+                                type="button"
+                                onClick={() =>
+                                  handleCategorySelect(category.id)
+                                }
                                 className={cn(
-                                  "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
-                                  category.iconBg,
+                                  "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
+                                  isActive
+                                    ? "border-primary/45 bg-primary/[0.08] shadow-sm"
+                                    : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
                                 )}
                               >
-                                <Icon
-                                  className={cn("size-4", category.iconColor)}
-                                />
-                              </div>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium">
-                                    {category.title}
-                                  </p>
-                                  {category.activeCount > 0 && (
-                                    <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
-                                      {category.activeCount}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
-                                  {category.description}
-                                </p>
-                              </div>
-
-                              <ChevronRight
-                                className={cn(
-                                  "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
-                                  isActive && "text-primary rotate-90",
+                                {isActive && (
+                                  <span className="bg-primary absolute top-0 left-0 h-full w-1" />
                                 )}
-                              />
-                            </button>
-                          );
-                        })}
+
+                                <div
+                                  className={cn(
+                                    "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                                    category.iconBg,
+                                  )}
+                                >
+                                  <Icon
+                                    className={cn("size-4", category.iconColor)}
+                                  />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-medium">
+                                      {category.title}
+                                    </p>
+                                    {category.activeCount > 0 && (
+                                      <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
+                                        {category.activeCount}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                                    {category.description}
+                                  </p>
+                                </div>
+
+                                <ChevronRight
+                                  className={cn(
+                                    "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
+                                    isActive && "text-primary rotate-90",
+                                  )}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ),
+                  )
                 )}
               </div>
             </CardContent>
@@ -463,7 +467,7 @@ export function PricingRulesSettings() {
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+                <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
                   Available for
                 </span>
                 {allServices.slice(0, 8).map((service) => (

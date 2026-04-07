@@ -243,7 +243,7 @@ export function AddRetailItemModal({
               </p>
             </div>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2">
               {filtered.map((product) => {
                 const inCart = cart.has(product.id);
                 const cartQty = cart.get(product.id)?.quantity ?? 0;
@@ -251,7 +251,7 @@ export function AddRetailItemModal({
                   <div
                     key={product.id}
                     className={cn(
-                      "group relative flex items-start gap-3 rounded-xl border p-3 transition-all duration-200",
+                      "group relative grid grid-cols-[2.75rem,minmax(0,1fr),auto] items-start gap-3 rounded-xl border p-3 transition-all duration-200",
                       inCart
                         ? "border-emerald-300 bg-emerald-50/60 shadow-sm"
                         : "border-slate-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md",
@@ -275,7 +275,10 @@ export function AddRetailItemModal({
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm/tight font-medium">
+                      <p
+                        className="pr-1 text-sm/tight font-medium break-words"
+                        title={product.name}
+                      >
                         {product.name}
                       </p>
                       <p className="text-muted-foreground mt-0.5 text-xs">
@@ -301,7 +304,7 @@ export function AddRetailItemModal({
                     </div>
                     {/* Add / Quantity stepper */}
                     {inCart ? (
-                      <div className="flex items-center gap-1">
+                      <div className="flex min-w-[86px] shrink-0 items-center justify-end gap-1 self-start">
                         <button
                           onClick={() =>
                             updateQuantity(product.id, cartQty - 1)
@@ -327,7 +330,7 @@ export function AddRetailItemModal({
                         onClick={() =>
                           addToCart(product.id, product.name, product.basePrice)
                         }
-                        className="flex size-8 items-center justify-center rounded-lg text-slate-300 transition-all hover:scale-110 hover:bg-emerald-50 hover:text-emerald-500"
+                        className="flex size-8 shrink-0 items-center justify-center self-start rounded-lg text-slate-300 transition-all hover:scale-110 hover:bg-emerald-50 hover:text-emerald-500"
                       >
                         <Plus className="size-5" />
                       </button>
