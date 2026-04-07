@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { facilityConfig } from "@/data/facility-config";
+import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
   MultiPetDiscountRule,
   LatePickupFee,
@@ -53,6 +54,25 @@ function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+interface ServiceOption {
+  value: string;
+  label: string;
+}
+
+const CORE_SERVICE_OPTIONS: ServiceOption[] = [
+  { value: "boarding", label: "Boarding" },
+  { value: "daycare", label: "Daycare" },
+  { value: "grooming", label: "Grooming" },
+  { value: "training", label: "Training" },
+];
+
+function normalizeApplicableServices(applicableServices?: string[]) {
+  if (!applicableServices || applicableServices.length === 0) return ["all"];
+  return applicableServices.includes("all")
+    ? ["all"]
+    : Array.from(new Set(applicableServices));
+}
+
 // ── Props ────────────────────────────────────────────────────────────
 
 type PricingSection =
@@ -67,6 +87,7 @@ type PricingSection =
 interface PricingRulesPanelProps {
   serviceType: string;
   showSections?: PricingSection[];
+  hideSectionHeader?: boolean;
 }
 
 // ── Main component ───────────────────────────────────────────────────
@@ -84,9 +105,40 @@ const ALL_SECTIONS: PricingSection[] = [
 export function PricingRulesPanel({
   serviceType,
   showSections,
+  hideSectionHeader = false,
 }: PricingRulesPanelProps) {
   const sections = showSections ?? ALL_SECTIONS;
   const rules = facilityConfig.pricingRules;
+  const { activeModules } = useCustomServices();
+
+  const serviceOptions: ServiceOption[] = [
+    ...CORE_SERVICE_OPTIONS,
+    ...activeModules.map((module) => ({
+      value: module.slug,
+      label: module.name,
+    })),
+  ];
+  const serviceLabelMap = Object.fromEntries(
+    serviceOptions.map((service) => [service.value, service.label]),
+  ) as Record<string, string>;
+  const serviceScopeLabel =
+    serviceType === "all"
+      ? "all services"
+      : (serviceLabelMap[serviceType] ?? serviceType);
+
+  const formatApplicableServices = (applicableServices?: string[]) => {
+    const normalized = normalizeApplicableServices(applicableServices);
+    if (normalized.includes("all")) return "All services";
+    return normalized
+      .map((service) => serviceLabelMap[service] ?? service)
+      .join(", ");
+  };
+
+  const appliesToService = (applicableServices?: string[]) => {
+    if (serviceType === "all") return true;
+    const normalized = normalizeApplicableServices(applicableServices);
+    return normalized.includes("all") || normalized.includes(serviceType);
+  };
 
   // State for each rule type
   const [multiPet, setMultiPet] = useState<MultiPetDiscountRule[]>(
@@ -138,28 +190,34 @@ export function PricingRulesPanel({
 
   // Filter rules by service
   const filteredMultiPet = multiPet.filter((r) =>
-    r.applicableServices.includes(serviceType),
+    appliesToService(r.applicableServices),
   );
   const filteredTimeFees = timeFees.filter(
-    (r) =>
-      !r.applicableServices?.length ||
-      r.applicableServices.includes(serviceType),
+    (r) => appliesToService(r.applicableServices),
   );
   const filteredCustomFees = customFees.filter((r) =>
-    r.applicableServices.includes(serviceType),
+    appliesToService(r.applicableServices),
+  );
+  const filteredMultiNight = multiNight.filter((r) =>
+    appliesToService(r.applicableServices),
+  );
+  const filteredPeakSurcharges = peakSurcharges.filter((r) =>
+    appliesToService(r.applicableServices),
   );
 
   return (
     <div className="space-y-5">
       {/* ── Section header ── */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
-        <h3 className="text-sm font-bold tracking-tight text-slate-800">
-          Pricing Rules
-        </h3>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          Configure discounts, surcharges, and fees for {serviceType} bookings
-        </p>
-      </div>
+      {!hideSectionHeader && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <h3 className="text-sm font-bold tracking-tight text-slate-800">
+            Pricing Rules
+          </h3>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Set up discounts and extra fees for {serviceScopeLabel} bookings
+          </p>
+        </div>
+      )}
 
       {/* ── Discount Stacking ── */}
       {sections.includes("stacking") && (
@@ -170,7 +228,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-slate-200">
                   <Settings2 className="size-4 text-slate-700" />
                 </div>
-                Discount Stacking
+                How Discounts Combine
               </span>
               <Button
                 size="sm"
@@ -178,27 +236,27 @@ export function PricingRulesPanel({
                 className="h-7 gap-1.5 text-xs"
                 onClick={() => setPreviewOpen(!previewOpen)}
               >
-                Preview
+                Quick Estimate
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-muted-foreground text-xs">
-              When multiple discount rules apply to a booking, how should they
-              combine?
+              If more than one discount matches a booking, choose how they
+              should apply.
             </p>
             <div className="space-y-2">
               {(
                 [
                   {
                     value: "best_only" as const,
-                    label: "Only apply the best discount",
-                    desc: "Automatically selects the most beneficial discount",
+                    label: "Apply best discount only",
+                    desc: "Customer gets the single largest discount",
                   },
                   {
                     value: "apply_all_sequence" as const,
-                    label: "Apply all rules in sequence",
-                    desc: "Stack multiple discounts when conditions are met",
+                    label: "Combine all matching discounts",
+                    desc: "Every matching discount is applied",
                   },
                 ] as const
               ).map((opt) => (
@@ -222,7 +280,7 @@ export function PricingRulesPanel({
             {previewOpen && (
               <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                  Discount Preview
+                  Quick Estimate
                 </p>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
@@ -362,7 +420,7 @@ export function PricingRulesPanel({
           <CardContent className="space-y-2">
             {filteredMultiPet.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No multi-pet discount rules for {serviceType}
+                No multi-pet discount rules yet for these services
               </p>
             ) : (
               filteredMultiPet.map((rule) => (
@@ -390,6 +448,9 @@ export function PricingRulesPanel({
                           (t) => `${t.petCount}+ pets: -$${t.discountAmount}`,
                         )
                         .join(" · ")}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Applies to: {formatApplicableServices(rule.applicableServices)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -444,7 +505,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-blue-100">
                   <Moon className="size-4 text-blue-700" />
                 </div>
-                Multi-Night Discounts
+                Long-Stay Discounts
               </span>
               <Button
                 size="sm"
@@ -461,12 +522,12 @@ export function PricingRulesPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {multiNight.length === 0 ? (
+            {filteredMultiNight.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No multi-night discount rules configured
+                No long-stay discount rules yet
               </p>
             ) : (
-              multiNight.map((rule) => (
+              filteredMultiNight.map((rule) => (
                 <div
                   key={rule.id}
                   className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
@@ -477,6 +538,9 @@ export function PricingRulesPanel({
                       {rule.minNights}
                       {rule.maxNights ? `–${rule.maxNights}` : "+"} nights ·{" "}
                       {rule.discountPercent}% off
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Applies to: {formatApplicableServices(rule.applicableServices)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -531,7 +595,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-amber-100">
                   <CalendarRange className="size-4 text-amber-700" />
                 </div>
-                Peak Date Surcharges
+                Busy-Date Surcharges
               </span>
               <Button
                 size="sm"
@@ -548,12 +612,12 @@ export function PricingRulesPanel({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {peakSurcharges.length === 0 ? (
+            {filteredPeakSurcharges.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No peak date surcharges configured
+                No busy-date surcharges yet
               </p>
             ) : (
-              peakSurcharges.map((rule) => (
+              filteredPeakSurcharges.map((rule) => (
                 <div
                   key={rule.id}
                   className="flex items-center justify-between rounded-xl border p-3.5 transition-shadow hover:shadow-sm"
@@ -573,10 +637,8 @@ export function PricingRulesPanel({
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
-                      {rule.startDate} → {rule.endDate}
-                      {rule.applicableServices?.length
-                        ? ` · ${rule.applicableServices.join(", ")}`
-                        : ""}
+                      {rule.startDate} → {rule.endDate} · Applies to{" "}
+                      {formatApplicableServices(rule.applicableServices)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -650,7 +712,7 @@ export function PricingRulesPanel({
           <CardContent className="space-y-2">
             {filteredTimeFees.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No time-based fees configured
+                No late pickup or early drop-off fees yet
               </p>
             ) : (
               filteredTimeFees.map((fee) => (
@@ -691,6 +753,7 @@ export function PricingRulesPanel({
                         ? "business hours"
                         : `custom time (${fee.customTime})`}
                       {fee.maxFee ? ` · Max $${fee.maxFee}` : ""}
+                      {` · Applies to ${formatApplicableServices(fee.applicableServices)}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -737,7 +800,8 @@ export function PricingRulesPanel({
       )}
 
       {/* ── Exceed 24-Hour Fee (boarding only) ── */}
-      {sections.includes("exceed_24h") && serviceType === "boarding" && (
+      {sections.includes("exceed_24h") &&
+        (serviceType === "boarding" || serviceType === "all") && (
         <Card className="overflow-hidden transition-shadow hover:shadow-md">
           <CardHeader className="border-b bg-slate-50/50 pb-3">
             <CardTitle className="flex items-center justify-between text-sm">
@@ -745,7 +809,7 @@ export function PricingRulesPanel({
                 <div className="flex size-8 items-center justify-center rounded-lg bg-rose-100">
                   <AlertTriangle className="size-4 text-rose-700" />
                 </div>
-                Exceed 24-Hour Fee
+                Over 24-Hour Stay Fee
               </span>
               <div className="flex items-center gap-2">
                 <Switch
@@ -811,7 +875,7 @@ export function PricingRulesPanel({
           <CardContent className="space-y-2">
             {filteredCustomFees.length === 0 ? (
               <p className="text-muted-foreground text-xs">
-                No custom fees configured
+                No custom fees yet
               </p>
             ) : (
               filteredCustomFees.map((fee) => (
@@ -843,6 +907,9 @@ export function PricingRulesPanel({
                         {fee.description}
                       </p>
                     )}
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Applies to: {formatApplicableServices(fee.applicableServices)}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
@@ -895,6 +962,7 @@ export function PricingRulesPanel({
         onOpenChange={setMpModal}
         editing={editingMp}
         serviceType={serviceType}
+        serviceOptions={serviceOptions}
         onSave={(rule) => {
           if (editingMp) {
             setMultiPet((prev) =>
@@ -914,6 +982,7 @@ export function PricingRulesPanel({
         onOpenChange={setTfModal}
         editing={editingTf}
         serviceType={serviceType}
+        serviceOptions={serviceOptions}
         onSave={(fee) => {
           if (editingTf) {
             setTimeFees((prev) =>
@@ -1034,6 +1103,7 @@ export function PricingRulesPanel({
         onOpenChange={setCfModal}
         editing={editingCf}
         serviceType={serviceType}
+        serviceOptions={serviceOptions}
         onSave={(fee) => {
           if (editingCf) {
             setCustomFees((prev) =>
@@ -1052,6 +1122,8 @@ export function PricingRulesPanel({
         open={mnModal}
         onOpenChange={setMnModal}
         editing={editingMn}
+        serviceType={serviceType}
+        serviceOptions={serviceOptions}
         onSave={(rule) => {
           if (editingMn) {
             setMultiNight((prev) =>
@@ -1070,6 +1142,8 @@ export function PricingRulesPanel({
         open={pdModal}
         onOpenChange={setPdModal}
         editing={editingPd}
+        serviceType={serviceType}
+        serviceOptions={serviceOptions}
         onSave={(rule) => {
           if (editingPd) {
             setPeakSurcharges((prev) =>
@@ -1093,12 +1167,14 @@ function MultiPetModal({
   onOpenChange,
   editing,
   serviceType,
+  serviceOptions,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: MultiPetDiscountRule | null;
   serviceType: string;
+  serviceOptions: ServiceOption[];
   onSave: (rule: MultiPetDiscountRule) => void;
 }) {
   const [form, setForm] = useState({
@@ -1106,6 +1182,9 @@ function MultiPetModal({
     discountType: "additional_pet" as "per_pet" | "additional_pet",
     sameLodging: false,
     tiers: [{ petCount: 2, discountAmount: 5 }],
+    applicableServices: normalizeApplicableServices(
+      serviceType === "all" ? ["all"] : [serviceType],
+    ),
     isActive: true,
   });
 
@@ -1118,6 +1197,9 @@ function MultiPetModal({
         discountType: editing.discountType,
         sameLodging: editing.sameLodging,
         tiers: editing.tiers.map((t) => ({ ...t })),
+        applicableServices: normalizeApplicableServices(
+          editing.applicableServices,
+        ),
         isActive: editing.isActive,
       });
     } else {
@@ -1126,6 +1208,9 @@ function MultiPetModal({
         discountType: "additional_pet",
         sameLodging: false,
         tiers: [{ petCount: 2, discountAmount: 5 }],
+        applicableServices: normalizeApplicableServices(
+          serviceType === "all" ? ["all"] : [serviceType],
+        ),
         isActive: true,
       });
     }
@@ -1141,7 +1226,7 @@ function MultiPetModal({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule Name</Label>
+            <Label>Rule name</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -1260,6 +1345,54 @@ function MultiPetModal({
               </Button>
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Where this applies</Label>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.applicableServices.includes("all")}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      applicableServices: checked === true ? ["all"] : [],
+                    }))
+                  }
+                />
+                <span className="text-sm font-medium">All services</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {serviceOptions.map((service) => (
+                  <label key={service.value} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.applicableServices.includes(service.value)}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => {
+                          const withoutAll = prev.applicableServices.filter(
+                            (value) => value !== "all",
+                          );
+                          if (checked === true) {
+                            if (withoutAll.includes(service.value)) return prev;
+                            return {
+                              ...prev,
+                              applicableServices: [...withoutAll, service.value],
+                            };
+                          }
+                          return {
+                            ...prev,
+                            applicableServices: withoutAll.filter(
+                              (value) => value !== service.value,
+                            ),
+                          };
+                        })
+                      }
+                      disabled={form.applicableServices.includes("all")}
+                    />
+                    <span className="text-xs">{service.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1274,7 +1407,9 @@ function MultiPetModal({
               onSave({
                 id: editing?.id ?? makeId("mpd"),
                 name: form.name,
-                applicableServices: [serviceType],
+                applicableServices: normalizeApplicableServices(
+                  form.applicableServices,
+                ),
                 isActive: form.isActive,
                 discountType: form.discountType,
                 sameLodging: form.sameLodging,
@@ -1297,12 +1432,14 @@ function TimeFeeModal({
   onOpenChange,
   editing,
   serviceType,
+  serviceOptions,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: LatePickupFee | null;
   serviceType: string;
+  serviceOptions: ServiceOption[];
   onSave: (fee: LatePickupFee) => void;
 }) {
   const [form, setForm] = useState({
@@ -1316,6 +1453,9 @@ function TimeFeeModal({
     basedOn: "business_hours" as "business_hours" | "custom_time",
     customTime: "",
     taxRate: undefined as number | undefined,
+    applicableServices: normalizeApplicableServices(
+      serviceType === "all" ? ["all"] : [serviceType],
+    ),
   });
 
   const [prevEditing, setPrevEditing] = useState(editing);
@@ -1333,6 +1473,9 @@ function TimeFeeModal({
         basedOn: editing.basedOn,
         customTime: editing.customTime ?? "",
         taxRate: editing.taxRate,
+        applicableServices: normalizeApplicableServices(
+          editing.applicableServices,
+        ),
       });
     } else {
       setForm({
@@ -1346,6 +1489,9 @@ function TimeFeeModal({
         basedOn: "business_hours",
         customTime: "",
         taxRate: undefined,
+        applicableServices: normalizeApplicableServices(
+          serviceType === "all" ? ["all"] : [serviceType],
+        ),
       });
     }
   }
@@ -1530,10 +1676,57 @@ function TimeFeeModal({
               placeholder="Uses facility default"
             />
           </div>
+          <div className="space-y-2">
+            <Label>Where this applies</Label>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.applicableServices.includes("all")}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      applicableServices: checked === true ? ["all"] : [],
+                    }))
+                  }
+                />
+                <span className="text-sm font-medium">All services</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {serviceOptions.map((service) => (
+                  <label key={service.value} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.applicableServices.includes(service.value)}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => {
+                          const withoutAll = prev.applicableServices.filter(
+                            (value) => value !== "all",
+                          );
+                          if (checked === true) {
+                            if (withoutAll.includes(service.value)) return prev;
+                            return {
+                              ...prev,
+                              applicableServices: [...withoutAll, service.value],
+                            };
+                          }
+                          return {
+                            ...prev,
+                            applicableServices: withoutAll.filter(
+                              (value) => value !== service.value,
+                            ),
+                          };
+                        })
+                      }
+                      disabled={form.applicableServices.includes("all")}
+                    />
+                    <span className="text-xs">{service.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
           <p className="text-muted-foreground rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed">
-            By default, only the rule matching the latest time applies per
-            checkout. Multiple rules do not stack unless enabled at the facility
-            level.
+            If more than one time fee could apply, the most recent matching fee
+            is used unless your facility enables fee stacking.
           </p>
         </div>
         <DialogFooter>
@@ -1556,7 +1749,9 @@ function TimeFeeModal({
                 customTime:
                   form.basedOn === "custom_time" ? form.customTime : undefined,
                 taxRate: form.taxRate,
-                applicableServices: [serviceType],
+                applicableServices: normalizeApplicableServices(
+                  form.applicableServices,
+                ),
               })
             }
           >
@@ -1574,11 +1769,15 @@ function MultiNightModal({
   open,
   onOpenChange,
   editing,
+  serviceType,
+  serviceOptions,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: MultiNightDiscount | null;
+  serviceType: string;
+  serviceOptions: ServiceOption[];
   onSave: (rule: MultiNightDiscount) => void;
 }) {
   const [form, setForm] = useState({
@@ -1586,6 +1785,9 @@ function MultiNightModal({
     minNights: 3,
     maxNights: null as number | null,
     discountPercent: 10,
+    applicableServices: normalizeApplicableServices(
+      serviceType === "all" ? ["all"] : [serviceType],
+    ),
     isActive: true,
   });
 
@@ -1598,6 +1800,9 @@ function MultiNightModal({
         minNights: editing.minNights,
         maxNights: editing.maxNights,
         discountPercent: editing.discountPercent,
+        applicableServices: normalizeApplicableServices(
+          editing.applicableServices,
+        ),
         isActive: editing.isActive,
       });
     } else {
@@ -1606,6 +1811,9 @@ function MultiNightModal({
         minNights: 3,
         maxNights: null,
         discountPercent: 10,
+        applicableServices: normalizeApplicableServices(
+          serviceType === "all" ? ["all"] : [serviceType],
+        ),
         isActive: true,
       });
     }
@@ -1621,7 +1829,7 @@ function MultiNightModal({
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label>Rule Name</Label>
+            <Label>Rule name</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -1674,6 +1882,54 @@ function MultiNightModal({
               />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Where this applies</Label>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.applicableServices.includes("all")}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      applicableServices: checked === true ? ["all"] : [],
+                    }))
+                  }
+                />
+                <span className="text-sm font-medium">All services</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {serviceOptions.map((service) => (
+                  <label key={service.value} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.applicableServices.includes(service.value)}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => {
+                          const withoutAll = prev.applicableServices.filter(
+                            (value) => value !== "all",
+                          );
+                          if (checked === true) {
+                            if (withoutAll.includes(service.value)) return prev;
+                            return {
+                              ...prev,
+                              applicableServices: [...withoutAll, service.value],
+                            };
+                          }
+                          return {
+                            ...prev,
+                            applicableServices: withoutAll.filter(
+                              (value) => value !== service.value,
+                            ),
+                          };
+                        })
+                      }
+                      disabled={form.applicableServices.includes("all")}
+                    />
+                    <span className="text-xs">{service.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1691,6 +1947,9 @@ function MultiNightModal({
                 minNights: form.minNights,
                 maxNights: form.maxNights,
                 discountPercent: form.discountPercent,
+                applicableServices: normalizeApplicableServices(
+                  form.applicableServices,
+                ),
                 isActive: form.isActive,
               });
             }}
@@ -1709,11 +1968,15 @@ function PeakSurchargeModal({
   open,
   onOpenChange,
   editing,
+  serviceType,
+  serviceOptions,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: PeakSurcharge | null;
+  serviceType: string;
+  serviceOptions: ServiceOption[];
   onSave: (rule: PeakSurcharge) => void;
 }) {
   const [form, setForm] = useState({
@@ -1724,7 +1987,9 @@ function PeakSurchargeModal({
     surchargePercent: 15,
     surchargeAmount: 0,
     scope: "per_each_pet" as "per_each_pet" | "first_pet_only",
-    applicableServices: [] as string[],
+    applicableServices: normalizeApplicableServices(
+      serviceType === "all" ? ["all"] : [serviceType],
+    ),
     isActive: true,
   });
 
@@ -1740,7 +2005,9 @@ function PeakSurchargeModal({
         surchargePercent: editing.surchargePercent,
         surchargeAmount: editing.surchargeAmount ?? 0,
         scope: editing.scope ?? "per_each_pet",
-        applicableServices: editing.applicableServices ?? [],
+        applicableServices: normalizeApplicableServices(
+          editing.applicableServices,
+        ),
         isActive: editing.isActive,
       });
     } else {
@@ -1752,13 +2019,13 @@ function PeakSurchargeModal({
         surchargePercent: 15,
         surchargeAmount: 0,
         scope: "per_each_pet",
-        applicableServices: [],
+        applicableServices: normalizeApplicableServices(
+          serviceType === "all" ? ["all"] : [serviceType],
+        ),
         isActive: true,
       });
     }
   }
-
-  const allServices = ["boarding", "daycare", "grooming", "training"];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1866,24 +2133,54 @@ function PeakSurchargeModal({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Applicable Services</Label>
-            <div className="flex flex-wrap gap-3">
-              {allServices.map((svc) => (
-                <label key={svc} className="flex items-center gap-1.5">
+            <Label>Where this applies</Label>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.applicableServices.includes("all")}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      applicableServices: checked === true ? ["all"] : [],
+                    }))
+                  }
+                />
+                <span className="text-sm font-medium">All services</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {serviceOptions.map((service) => (
+                  <label
+                    key={service.value}
+                    className="flex items-center gap-1.5"
+                  >
                   <Checkbox
-                    checked={form.applicableServices.includes(svc)}
-                    onCheckedChange={(c) =>
-                      setForm((p) => ({
-                        ...p,
-                        applicableServices: c
-                          ? [...p.applicableServices, svc]
-                          : p.applicableServices.filter((s) => s !== svc),
-                      }))
+                    checked={form.applicableServices.includes(service.value)}
+                    onCheckedChange={(checked) =>
+                      setForm((prev) => {
+                        const withoutAll = prev.applicableServices.filter(
+                          (value) => value !== "all",
+                        );
+                        if (checked === true) {
+                          if (withoutAll.includes(service.value)) return prev;
+                          return {
+                            ...prev,
+                            applicableServices: [...withoutAll, service.value],
+                          };
+                        }
+                        return {
+                          ...prev,
+                          applicableServices: withoutAll.filter(
+                            (value) => value !== service.value,
+                          ),
+                        };
+                      })
                     }
+                    disabled={form.applicableServices.includes("all")}
                   />
-                  <span className="text-sm capitalize">{svc}</span>
+                  <span className="text-xs">{service.label}</span>
                 </label>
               ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1915,10 +2212,9 @@ function PeakSurchargeModal({
                     ? form.surchargeAmount
                     : undefined,
                 scope: form.scope,
-                applicableServices:
-                  form.applicableServices.length > 0
-                    ? form.applicableServices
-                    : undefined,
+                applicableServices: normalizeApplicableServices(
+                  form.applicableServices,
+                ),
               });
             }}
           >
@@ -1937,12 +2233,14 @@ function CustomFeeModal({
   onOpenChange,
   editing,
   serviceType,
+  serviceOptions,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: CustomFee | null;
   serviceType: string;
+  serviceOptions: ServiceOption[];
   onSave: (fee: CustomFee) => void;
 }) {
   const [form, setForm] = useState({
@@ -1954,6 +2252,9 @@ function CustomFeeModal({
     scope: "per_pet" as "per_booking" | "per_pet",
     autoApply: "none" as "none" | "at_checkout" | "by_care_type",
     autoApplyCareTypes: [] as string[],
+    applicableServices: normalizeApplicableServices(
+      serviceType === "all" ? ["all"] : [serviceType],
+    ),
   });
 
   const [prevEditing, setPrevEditing] = useState(editing);
@@ -1969,6 +2270,9 @@ function CustomFeeModal({
         scope: editing.scope,
         autoApply: editing.autoApply,
         autoApplyCareTypes: editing.autoApplyCareTypes ?? [],
+        applicableServices: normalizeApplicableServices(
+          editing.applicableServices,
+        ),
       });
     } else {
       setForm({
@@ -1980,6 +2284,9 @@ function CustomFeeModal({
         scope: "per_pet",
         autoApply: "none",
         autoApplyCareTypes: [],
+        applicableServices: normalizeApplicableServices(
+          serviceType === "all" ? ["all"] : [serviceType],
+        ),
       });
     }
   }
@@ -2087,24 +2394,72 @@ function CustomFeeModal({
             />
           </div>
           <div className="space-y-2">
-            <Label>Auto-Apply</Label>
+            <Label>Where this applies</Label>
+            <div className="space-y-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  checked={form.applicableServices.includes("all")}
+                  onCheckedChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      applicableServices: checked === true ? ["all"] : [],
+                    }))
+                  }
+                />
+                <span className="text-sm font-medium">All services</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {serviceOptions.map((service) => (
+                  <label key={service.value} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={form.applicableServices.includes(service.value)}
+                      onCheckedChange={(checked) =>
+                        setForm((prev) => {
+                          const withoutAll = prev.applicableServices.filter(
+                            (value) => value !== "all",
+                          );
+                          if (checked === true) {
+                            if (withoutAll.includes(service.value)) return prev;
+                            return {
+                              ...prev,
+                              applicableServices: [...withoutAll, service.value],
+                            };
+                          }
+                          return {
+                            ...prev,
+                            applicableServices: withoutAll.filter(
+                              (value) => value !== service.value,
+                            ),
+                          };
+                        })
+                      }
+                      disabled={form.applicableServices.includes("all")}
+                    />
+                    <span className="text-xs">{service.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>When to apply automatically</Label>
             <div className="space-y-1.5">
               {(
                 [
                   {
                     value: "none",
-                    label: "Manual only",
-                    desc: "Staff adds fee manually at checkout",
+                    label: "Add manually at checkout",
+                    desc: "Staff chooses when to add this fee",
                   },
                   {
                     value: "at_checkout",
-                    label: "Auto-apply at checkout",
-                    desc: "Fee added automatically when appointment is checked out",
+                    label: "Always add at checkout",
+                    desc: "Fee is automatically added every time",
                   },
                   {
                     value: "by_care_type",
-                    label: "Auto-apply by care type",
-                    desc: "Auto-apply when booking matches specific service types",
+                    label: "Add only for selected services",
+                    desc: "Fee is added only when selected services are booked",
                   },
                 ] as const
               ).map((opt) => (
@@ -2129,22 +2484,30 @@ function CustomFeeModal({
             </div>
             {form.autoApply === "by_care_type" && (
               <div className="space-y-1.5 rounded-lg border p-3">
-                <Label className="text-xs">Apply to care types</Label>
+                <Label className="text-xs">Select services</Label>
                 <div className="flex flex-wrap gap-2">
-                  {["boarding", "daycare", "grooming"].map((ct) => (
-                    <label key={ct} className="flex items-center gap-1.5">
+                  {serviceOptions.map((service) => (
+                    <label
+                      key={service.value}
+                      className="flex items-center gap-1.5"
+                    >
                       <Checkbox
-                        checked={form.autoApplyCareTypes.includes(ct)}
-                        onCheckedChange={(c) =>
+                        checked={form.autoApplyCareTypes.includes(service.value)}
+                        onCheckedChange={(checked) =>
                           setForm((p) => ({
                             ...p,
-                            autoApplyCareTypes: c
-                              ? [...p.autoApplyCareTypes, ct]
-                              : p.autoApplyCareTypes.filter((t) => t !== ct),
+                            autoApplyCareTypes:
+                              checked === true
+                                ? p.autoApplyCareTypes.includes(service.value)
+                                  ? p.autoApplyCareTypes
+                                  : [...p.autoApplyCareTypes, service.value]
+                                : p.autoApplyCareTypes.filter(
+                                    (type) => type !== service.value,
+                                  ),
                           }))
                         }
                       />
-                      <span className="text-xs capitalize">{ct}</span>
+                      <span className="text-xs">{service.label}</span>
                     </label>
                   ))}
                 </div>
@@ -2180,9 +2543,9 @@ function CustomFeeModal({
                   form.autoApply === "by_care_type"
                     ? form.autoApplyCareTypes
                     : undefined,
-                applicableServices: editing?.applicableServices ?? [
-                  serviceType,
-                ],
+                applicableServices: normalizeApplicableServices(
+                  form.applicableServices,
+                ),
                 isActive: editing?.isActive ?? true,
               });
             }}

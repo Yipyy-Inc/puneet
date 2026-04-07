@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { DollarSign, Clock, Edit, Trash2, Plus, Save, X } from "lucide-react";
 import { daycareRates, DaycareRate } from "@/data/daycare";
@@ -26,15 +25,6 @@ export default function DaycareRatesPage() {
   const [editingRate, setEditingRate] = useState<DaycareRate | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingRate, setDeletingRate] = useState<DaycareRate | null>(null);
-
-  const [pricingSettings, setPricingSettings] = useState({
-    fullDayRate: 35,
-    halfDayRate: 22,
-    multiPetDiscount: 10,
-    packageDiscountEnabled: true,
-  });
-
-  const [isEditingPricing, setIsEditingPricing] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -229,113 +219,10 @@ export default function DaycareRatesPage() {
           Daycare Rates & Pricing
         </h2>
         <p className="text-muted-foreground mt-0.5 text-sm">
-          Configure rates, packages, and pricing rules for daycare services
+          Manage daycare base rates. Discounts, surcharges, and other pricing
+          rules are configured in Settings.
         </p>
       </div>
-
-      {/* Pricing Configuration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Pricing Configuration</CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Base pricing and discount settings for daycare services
-              </p>
-            </div>
-            {!isEditingPricing ? (
-              <Button onClick={() => setIsEditingPricing(true)}>
-                <Edit className="mr-2 size-4" />
-                Edit
-              </Button>
-            ) : (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditingPricing(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={() => setIsEditingPricing(false)}>
-                  <Save className="mr-2 size-4" />
-                  Save
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Full Day Rate ($)</Label>
-              <Input
-                type="number"
-                value={pricingSettings.fullDayRate}
-                onChange={(e) =>
-                  setPricingSettings({
-                    ...pricingSettings,
-                    fullDayRate: parseFloat(e.target.value) || 0,
-                  })
-                }
-                disabled={!isEditingPricing}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Half Day Rate ($)</Label>
-              <Input
-                type="number"
-                value={pricingSettings.halfDayRate}
-                onChange={(e) =>
-                  setPricingSettings({
-                    ...pricingSettings,
-                    halfDayRate: parseFloat(e.target.value) || 0,
-                  })
-                }
-                disabled={!isEditingPricing}
-              />
-            </div>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Package Discounts</Label>
-              <p className="text-muted-foreground text-sm">
-                Offer discounted rates for daycare packages
-              </p>
-            </div>
-            <Switch
-              checked={pricingSettings.packageDiscountEnabled}
-              onCheckedChange={(checked) =>
-                setPricingSettings({
-                  ...pricingSettings,
-                  packageDiscountEnabled: checked,
-                })
-              }
-              disabled={!isEditingPricing}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Multi-Pet Discount (%)</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                value={pricingSettings.multiPetDiscount}
-                onChange={(e) =>
-                  setPricingSettings({
-                    ...pricingSettings,
-                    multiPetDiscount: parseInt(e.target.value) || 0,
-                  })
-                }
-                disabled={!isEditingPricing}
-                className="w-24"
-              />
-              <span className="text-muted-foreground">
-                % off for additional pets
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">

@@ -397,6 +397,7 @@ export const facilityConfig = {
         minNights: 7,
         maxNights: null,
         discountPercent: 10,
+        applicableServices: ["boarding"],
         isActive: true,
       },
       {
@@ -405,6 +406,7 @@ export const facilityConfig = {
         minNights: 3,
         maxNights: 6,
         discountPercent: 5,
+        applicableServices: ["boarding"],
         isActive: false,
       },
     ],
