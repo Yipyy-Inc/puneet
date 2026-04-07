@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Users,
   Moon,
@@ -13,6 +14,7 @@ import {
   Clock,
   Timer,
   Receipt,
+  Search,
   ChevronRight,
   Settings2,
 } from "lucide-react";
@@ -201,6 +203,7 @@ export function PricingRulesSettings() {
   const [activeCategoryId, setActiveCategoryId] = useState<string>(
     uniqueCategories[0]?.id ?? "",
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorCardRef = useRef<HTMLDivElement | null>(null);
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement | null>>(
@@ -208,14 +211,62 @@ export function PricingRulesSettings() {
   );
   const { activeModules } = useCustomServices();
 
-  const groups = uniqueCategories.reduce(
+  const categoriesWithCounts = useMemo(
+    () =>
+      uniqueCategories.map((category) => ({
+        ...category,
+        activeCount: getActiveCount(category.countKey),
+      })),
+    [uniqueCategories],
+  );
+
+  const groups = categoriesWithCounts.reduce(
     (acc, cat) => {
       if (!acc[cat.group]) acc[cat.group] = [];
       acc[cat.group].push(cat);
       return acc;
     },
-    {} as Record<string, CategoryDef[]>,
+    {} as Record<string, Array<CategoryDef & { activeCount: number }>>,
   );
+
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  const filteredGroups = useMemo(() => {
+    if (!normalizedSearch) return groups;
+
+    return Object.entries(groups).reduce(
+      (acc, [groupName, categories]) => {
+        const nextCategories = categories.filter((category) => {
+          return (
+            category.title.toLowerCase().includes(normalizedSearch) ||
+            category.description.toLowerCase().includes(normalizedSearch) ||
+            category.group.toLowerCase().includes(normalizedSearch)
+          );
+        });
+
+        if (nextCategories.length > 0) {
+          acc[groupName] = nextCategories;
+        }
+
+        return acc;
+      },
+      {} as Record<string, Array<CategoryDef & { activeCount: number }>>,
+    );
+  }, [groups, normalizedSearch]);
+
+  const totalActiveRules = useMemo(() => {
+    return categoriesWithCounts.reduce(
+      (total, category) => total + category.activeCount,
+      0,
+    );
+  }, [categoriesWithCounts]);
+
+  const visibleCategoryCount = useMemo(() => {
+    return Object.values(filteredGroups).reduce(
+      (total, categories) => total + categories.length,
+      0,
+    );
+  }, [filteredGroups]);
 
   const allServices = [
     { value: "boarding", label: "Boarding" },
@@ -226,8 +277,8 @@ export function PricingRulesSettings() {
   ];
 
   const activeCategory =
-    uniqueCategories.find((category) => category.id === activeCategoryId) ??
-    uniqueCategories[0];
+    categoriesWithCounts.find((category) => category.id === activeCategoryId) ??
+    categoriesWithCounts[0];
 
   const centerEditorCardInViewport = () => {
     const editorElement = editorCardRef.current ?? editorRef.current;
@@ -264,124 +315,175 @@ export function PricingRulesSettings() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] space-y-5">
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50/50 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">Pricing Rules</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Set up discounts and extra fees by category. Changes appear
-              instantly in the editor panel.
-            </p>
-          </div>
-          <Badge variant="outline" className="bg-white/80 text-xs">
-            {uniqueCategories.length} categories
-          </Badge>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs">Available for:</span>
-          {allServices.map((s) => (
-            <Badge
-              key={s.value}
-              variant="outline"
-              className="bg-white text-[10px]"
-            >
-              {s.label}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)]">
-          <Card className="h-full border-slate-200 shadow-sm">
-            <CardContent className="flex h-full flex-col gap-3 p-2 sm:p-3">
-              <div className="flex items-center justify-between px-2 pt-1">
-                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
-                  Categories
+    <div className="w-full space-y-4">
+      <div className="grid items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="xl:sticky xl:top-20">
+          <Card className="border-slate-200/90 shadow-sm">
+            <CardContent className="space-y-3 p-3.5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  Pricing Rules
                 </p>
-                <Badge variant="secondary" className="h-5 px-2 text-[10px]">
-                  {uniqueCategories.length}
-                </Badge>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                  Configure discounts, surcharges, and bundles with clear,
+                  category-based controls.
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge variant="outline" className="bg-white text-[10px]">
+                    {uniqueCategories.length} categories
+                  </Badge>
+                  <Badge variant="outline" className="bg-white text-[10px]">
+                    {totalActiveRules} active
+                  </Badge>
+                  <Badge variant="outline" className="bg-white text-[10px]">
+                    {allServices.length} services
+                  </Badge>
+                </div>
+
+                <div className="relative mt-3">
+                  <Search className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="h-8 border-slate-200 bg-white pl-8 text-xs"
+                    placeholder="Search categories"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-3 overflow-y-auto pr-1">
-                {Object.entries(groups).map(([groupName, cats]) => (
-                  <div key={groupName}>
-                    <p className="text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
-                      {groupName}
+              <div className="max-h-[calc(100vh-14rem)] space-y-3 overflow-y-auto pr-1 xl:max-h-[calc(100vh-12rem)]">
+                {Object.entries(filteredGroups).length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
+                    <p className="text-muted-foreground text-xs">
+                      No categories match your search.
                     </p>
-                    <div className="space-y-1.5">
-                      {cats.map((cat) => {
-                        const Icon = cat.icon;
-                        const activeCount = getActiveCount(cat.countKey);
-                        const isActive = activeCategory?.id === cat.id;
+                  </div>
+                ) : (
+                  Object.entries(filteredGroups).map(([groupName, categories]) => (
+                    <div key={groupName}>
+                      <p className="text-muted-foreground px-2 pb-1 text-[10px] font-semibold tracking-wider uppercase">
+                        {groupName}
+                      </p>
+                      <div className="space-y-1.5">
+                        {categories.map((category) => {
+                          const Icon = category.icon;
+                          const isActive = activeCategory?.id === category.id;
 
-                        return (
-                          <button
-                            key={cat.id}
-                            ref={(el) => {
-                              categoryButtonRefs.current[cat.id] = el;
-                            }}
-                            type="button"
-                            onClick={() => handleCategorySelect(cat.id)}
-                            className={cn(
-                              "group flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
-                              isActive
-                                ? "border-primary/45 bg-primary/[0.08] shadow-sm"
-                                : "border-slate-200/70 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
-                            )}
-                          >
-                            <div
+                          return (
+                            <button
+                              key={category.id}
+                              ref={(element) => {
+                                categoryButtonRefs.current[category.id] =
+                                  element;
+                              }}
+                              type="button"
+                              onClick={() => handleCategorySelect(category.id)}
                               className={cn(
-                                "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
-                                cat.iconBg,
+                                "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
+                                isActive
+                                  ? "border-primary/45 bg-primary/[0.08] shadow-sm"
+                                  : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
                               )}
                             >
-                              <Icon className={cn("size-4", cat.iconColor)} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium">
-                                  {cat.title}
-                                </p>
-                                {activeCount > 0 && (
-                                  <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
-                                    {activeCount}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
-                                {cat.description}
-                              </p>
-                            </div>
-                            <ChevronRight
-                              className={cn(
-                                "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
-                                isActive && "text-primary rotate-90",
+                              {isActive && (
+                                <span className="bg-primary absolute left-0 top-0 h-full w-1" />
                               )}
-                            />
-                          </button>
-                        );
-                      })}
+
+                              <div
+                                className={cn(
+                                  "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                                  category.iconBg,
+                                )}
+                              >
+                                <Icon
+                                  className={cn("size-4", category.iconColor)}
+                                />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">
+                                    {category.title}
+                                  </p>
+                                  {category.activeCount > 0 && (
+                                    <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
+                                      {category.activeCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-muted-foreground mt-0.5 text-[11px] leading-relaxed">
+                                  {category.description}
+                                </p>
+                              </div>
+
+                              <ChevronRight
+                                className={cn(
+                                  "mt-0.5 size-4 shrink-0 text-slate-300 transition-all group-hover:translate-x-0.5",
+                                  isActive && "text-primary rotate-90",
+                                )}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div
-          ref={editorRef}
-          className="scroll-mt-24 lg:flex lg:min-h-[calc(100vh-8rem)] lg:items-center"
-        >
+        <div ref={editorRef} className="scroll-mt-24">
           <div
             ref={editorCardRef}
-            className="w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_16px_40px_-24px_rgba(15,23,42,0.35)]"
+            className="w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm"
           >
-            <div className="bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_40%)] p-4 sm:p-5">
+            <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-4 sm:px-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.1em] uppercase">
+                    {activeCategory.group}
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+                    {activeCategory.title}
+                  </h3>
+                  <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+                    {activeCategory.description}
+                  </p>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className="border-slate-300 bg-white text-[11px]"
+                >
+                  {activeCategory.activeCount} active
+                </Badge>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wider">
+                  Available for
+                </span>
+                {allServices.slice(0, 8).map((service) => (
+                  <Badge
+                    key={service.value}
+                    variant="outline"
+                    className="bg-white text-[10px]"
+                  >
+                    {service.label}
+                  </Badge>
+                ))}
+                {allServices.length > 8 && (
+                  <Badge variant="outline" className="bg-white text-[10px]">
+                    +{allServices.length - 8} more
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.07),transparent_38%)] p-4 sm:p-5">
               <div
                 key={activeCategory.id}
                 className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200"
