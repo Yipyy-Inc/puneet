@@ -68,8 +68,13 @@ const STATIC_GROUPS: SettingsGroup[] = [
     label: "Forms & Intake",
     sections: [
       { id: "form-requirements", label: "Form Requirements", icon: FileText },
-      { id: "form-permissions", label: "Form Permissions", icon: Shield },
       { id: "form-notifications", label: "Form Notifications", icon: Bell },
+    ],
+  },
+  {
+    label: "Access Control",
+    sections: [
+      { id: "roles-permissions", label: "Roles & Permissions", icon: Shield },
     ],
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -20,7 +20,6 @@ import { MobileAppSettings } from "@/components/additional-features/MobileAppSet
 import { YipyyGoSettings } from "@/components/yipyygo/YipyyGoSettings";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { FormRequirementsSettings } from "@/components/forms/FormRequirementsSettings";
-import { FormPermissionsPanel } from "@/components/forms/FormPermissionsPanel";
 import { TagNotesSettings } from "@/components/facility-config/TagNotesSettings";
 import { BreedManagement } from "@/components/facility/BreedManagement";
 import { CareTaskSettings } from "@/components/facility/CareTaskSettings";
@@ -57,6 +56,13 @@ const PricingRulesSettings = dynamic(
   () =>
     import("@/components/facility/PricingRulesSettings").then(
       (mod) => mod.PricingRulesSettings,
+    ),
+  { ssr: false },
+);
+const RolesPermissionsSettings = dynamic(
+  () =>
+    import("@/components/facility/RolesPermissionsSettings").then(
+      (mod) => mod.RolesPermissionsSettings,
     ),
   { ssr: false },
 );
@@ -3618,8 +3624,20 @@ function NotificationSettingsCard() {
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialSection = searchParams.get("section") ?? "business";
+  const requestedSection = searchParams.get("section");
+  const initialSection =
+    requestedSection === "form-permissions"
+      ? "roles-permissions"
+      : (requestedSection ?? "business");
   const [activeSection, setActiveSection] = useState(initialSection);
+
+  useEffect(() => {
+    if (requestedSection === "form-permissions") {
+      router.replace("/facility/dashboard/settings?section=roles-permissions", {
+        scroll: false,
+      });
+    }
+  }, [requestedSection, router]);
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
@@ -4426,10 +4444,10 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Form Permissions */}
-          {activeSection === "form-permissions" && (
+          {/* Roles & Permissions */}
+          {activeSection === "roles-permissions" && (
             <div className="space-y-6">
-              <FormPermissionsPanel />
+              <RolesPermissionsSettings />
             </div>
           )}
 
