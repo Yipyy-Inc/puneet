@@ -255,6 +255,11 @@ export const businessProfileSchema = z.object({
     instagram: z.string().optional(),
     twitter: z.string().optional(),
   }),
+  preferences: z.object({
+    clockFormat: z.enum(["12h", "24h"]),
+    weightUnit: z.enum(["lbs", "kg"]),
+    temperatureUnit: z.enum(["celsius", "fahrenheit"]),
+  }),
 });
 export type BusinessProfile = z.infer<typeof businessProfileSchema>;
 

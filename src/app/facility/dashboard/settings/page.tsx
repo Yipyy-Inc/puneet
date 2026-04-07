@@ -110,13 +110,57 @@ import type {
 
 // Business Profile Component
 function BusinessProfileCard() {
-  const { profile, updateProfile } = useSettings();
+  const { profile, updateProfile, weatherRules, updateWeatherRules } =
+    useSettings();
+
+  const convertTemperatureValue = (
+    value: number,
+    fromUnit: "celsius" | "fahrenheit",
+    toUnit: "celsius" | "fahrenheit",
+  ) => {
+    if (fromUnit === toUnit) return value;
+    const converted =
+      fromUnit === "celsius"
+        ? value * (9 / 5) + 32
+        : ((value - 32) * 5) / 9;
+    return Math.round(converted * 10) / 10;
+  };
+
+  const handleSaveProfile = (nextProfile: typeof profile) => {
+    const previousUnit = profile.preferences.temperatureUnit;
+    const nextUnit = nextProfile.preferences.temperatureUnit;
+
+    if (previousUnit !== nextUnit) {
+      const convertedRules = weatherRules.map((rule) => {
+        if (
+          ![
+            "temperature_below",
+            "temperature_above",
+            "feels_like_below",
+            "feels_like_above",
+          ].includes(rule.condition)
+        ) {
+          return rule;
+        }
+        if (typeof rule.value !== "number") return rule;
+
+        return {
+          ...rule,
+          value: convertTemperatureValue(rule.value, previousUnit, nextUnit),
+        };
+      });
+
+      updateWeatherRules(convertedRules);
+    }
+
+    updateProfile(nextProfile);
+  };
 
   return (
     <SettingsBlock
       title="Business Profile"
       data={profile}
-      onSave={updateProfile}
+      onSave={handleSaveProfile}
     >
       {(isEditing, localProfile, setLocalProfile) => (
         <div className="space-y-4">
@@ -334,6 +378,90 @@ function BusinessProfileCard() {
                 className={!isEditing ? "cursor-not-allowed bg-gray-100" : ""}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Business Preferences</Label>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="clockFormat">Clock Format</Label>
+                <Select
+                  value={localProfile.preferences.clockFormat}
+                  onValueChange={(value) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      preferences: {
+                        ...localProfile.preferences,
+                        clockFormat: value as "12h" | "24h",
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger id="clockFormat">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12h">12-hour clock</SelectItem>
+                    <SelectItem value="24h">24-hour clock</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="weightUnit">Weight Unit</Label>
+                <Select
+                  value={localProfile.preferences.weightUnit}
+                  onValueChange={(value) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      preferences: {
+                        ...localProfile.preferences,
+                        weightUnit: value as "lbs" | "kg",
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger id="weightUnit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lbs">lbs</SelectItem>
+                    <SelectItem value="kg">kg</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="temperatureUnit">Temperature Unit</Label>
+                <Select
+                  value={localProfile.preferences.temperatureUnit}
+                  onValueChange={(value) =>
+                    setLocalProfile({
+                      ...localProfile,
+                      preferences: {
+                        ...localProfile.preferences,
+                        temperatureUnit: value as "celsius" | "fahrenheit",
+                      },
+                    })
+                  }
+                  disabled={!isEditing}
+                >
+                  <SelectTrigger id="temperatureUnit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="celsius">Celsius (°C)</SelectItem>
+                    <SelectItem value="fahrenheit">Fahrenheit (°F)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Changing temperature unit automatically converts existing weather
+              warning thresholds.
+            </p>
           </div>
         </div>
       )}

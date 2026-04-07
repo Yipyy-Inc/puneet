@@ -295,20 +295,7 @@ export function WeatherWidget() {
     return localStorage.getItem("weather-widget-collapsed") === "true";
   });
 
-  const [unit, setUnit] = useState<"celsius" | "fahrenheit">(() => {
-    if (typeof window === "undefined") return "celsius";
-    return (
-      (localStorage.getItem("weather-temp-unit") as "celsius" | "fahrenheit") ||
-      "celsius"
-    );
-  });
-
-  const toggleUnit = () => {
-    const next = unit === "celsius" ? "fahrenheit" : "celsius";
-    setUnit(next);
-    localStorage.setItem("weather-temp-unit", next);
-    cacheRef.current = null; // force refetch with new unit
-  };
+  const unit = profile.preferences.temperatureUnit;
 
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -318,6 +305,10 @@ export function WeatherWidget() {
 
   const city = profile.address.city;
   const state = profile.address.state;
+
+  useEffect(() => {
+    cacheRef.current = null;
+  }, [unit]);
 
   const fetchWeather = useCallback(async () => {
     if (
@@ -537,13 +528,9 @@ export function WeatherWidget() {
                   <span className="text-4xl font-bold tracking-tight text-slate-800 tabular-nums">
                     {data.current.temperature}
                   </span>
-                  <button
-                    type="button"
-                    onClick={toggleUnit}
-                    className="text-lg font-medium text-slate-400 transition-colors hover:text-slate-600"
-                  >
+                  <span className="text-lg font-medium text-slate-400">
                     {unitSymbol}
-                  </button>
+                  </span>
                 </div>
                 <p className="text-sm font-semibold text-slate-700">
                   {getWeatherName(data.current.weatherCode)}

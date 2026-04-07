@@ -121,6 +121,28 @@ function normalizeEvaluation(
   return { ...next, schedule: fallback.schedule };
 }
 
+function normalizeBusinessProfile(
+  next: BusinessProfile,
+  fallback: BusinessProfile,
+): BusinessProfile {
+  return {
+    ...fallback,
+    ...next,
+    address: {
+      ...fallback.address,
+      ...(next.address ?? {}),
+    },
+    socialMedia: {
+      ...fallback.socialMedia,
+      ...(next.socialMedia ?? {}),
+    },
+    preferences: {
+      ...fallback.preferences,
+      ...(next.preferences ?? {}),
+    },
+  };
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [daycare, setDaycare] = useState<ModuleConfig>(() =>
     loadStored("settings-daycare", daycareConfig),
@@ -152,7 +174,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     loadStored("settings-hours", businessHours),
   );
   const [profile, setProfile] = useState<BusinessProfile>(() =>
-    loadStored("settings-profile", businessProfile),
+    normalizeBusinessProfile(
+      loadStored("settings-profile", businessProfile),
+      businessProfile,
+    ),
   );
   const [rules, setRules] = useState<BookingRules>(() =>
     loadStored("settings-rules", bookingRules),
@@ -238,8 +263,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("settings-hours", JSON.stringify(hours));
   };
   const updateProfile = (profile: BusinessProfile) => {
-    setProfile(profile);
-    localStorage.setItem("settings-profile", JSON.stringify(profile));
+    const normalizedProfile = normalizeBusinessProfile(profile, businessProfile);
+    setProfile(normalizedProfile);
+    localStorage.setItem("settings-profile", JSON.stringify(normalizedProfile));
   };
   const updateRules = (rules: BookingRules) => {
     setRules(rules);
