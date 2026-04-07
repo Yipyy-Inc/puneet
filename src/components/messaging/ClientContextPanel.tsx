@@ -24,11 +24,21 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
+import { facilities } from "@/data/facilities";
 import type { Message } from "@/types/communications";
 
 // ── Quick-send links (staff can send these into chat) ────────────────
 
-const QUICK_LINKS = [
+type QuickLink = {
+  id: string;
+  label: string;
+  icon: typeof FileText;
+  color: string;
+  url?: string;
+  href?: string;
+};
+
+const QUICK_LINKS: QuickLink[] = [
   {
     id: "ql-1",
     label: "Boarding Agreement",
@@ -63,6 +73,37 @@ const QUICK_LINKS = [
     url: "https://pawcare.com/policies",
     icon: Link2,
     color: "bg-slate-100 text-slate-600",
+  },
+];
+
+const CUSTOMER_QUICK_LINKS: QuickLink[] = [
+  {
+    id: "cql-1",
+    label: "Documents & Agreements",
+    href: "/customer/documents",
+    icon: FileText,
+    color: "bg-blue-50 text-blue-600",
+  },
+  {
+    id: "cql-2",
+    label: "My Bookings",
+    href: "/customer/bookings",
+    icon: Calendar,
+    color: "bg-emerald-50 text-emerald-600",
+  },
+  {
+    id: "cql-3",
+    label: "My Pets",
+    href: "/customer/pets",
+    icon: PawPrint,
+    color: "bg-violet-50 text-violet-600",
+  },
+  {
+    id: "cql-4",
+    label: "Billing & Payments",
+    href: "/customer/billing",
+    icon: Link2,
+    color: "bg-amber-50 text-amber-600",
   },
 ];
 
@@ -208,38 +249,86 @@ export function ClientContextPanel({
   threadId,
   messages,
   onClose,
+  mode = "facility",
+  customerId = 15,
 }: {
   threadId: string | null;
   messages: Message[];
   onClose: () => void;
+  mode?: "facility" | "customer";
+  customerId?: number;
 }) {
+  const isCustomerMode = mode === "customer";
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const clientId = useMemo(() => {
+  const threadEntityId = useMemo(() => {
     if (!threadId) return null;
     const msg = messages.find((m) => (m.threadId ?? m.id) === threadId);
     return msg?.clientId ?? null;
   }, [threadId, messages]);
 
-  const client = clientId ? clients.find((c) => c.id === clientId) : null;
+  const client = !isCustomerMode && threadEntityId
+    ? clients.find((c) => c.id === threadEntityId)
+    : null;
+  const facility = isCustomerMode && threadEntityId
+    ? facilities.find((f) => f.id === threadEntityId)
+    : null;
+  const customer = isCustomerMode
+    ? clients.find((c) => c.id === customerId)
+    : null;
+  const facilityContact = (facility as Record<string, unknown>)?.contact as
+    | {
+        phone?: string;
+        email?: string;
+      }
+    | undefined;
 
-  const clientBookings = useMemo(() => {
-    if (!clientId) return [];
+  const scopedBookings = useMemo(() => {
+    if (isCustomerMode) {
+      return bookings
+        .filter(
+          (b) =>
+            b.clientId === customerId &&
+            (threadEntityId ? b.facilityId === threadEntityId : true),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+        );
+    }
+
+    if (!threadEntityId) return [];
     return bookings
-      .filter((b) => b.clientId === clientId)
+      .filter((b) => b.clientId === threadEntityId)
       .sort(
         (a, b) =>
           new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
       );
-  }, [clientId]);
+  }, [isCustomerMode, customerId, threadEntityId]);
 
-  const upcoming = clientBookings.filter(
+  const upcoming = scopedBookings.filter(
     (b) => new Date(b.startDate) > new Date() && b.status !== "cancelled",
   );
-  const completed = clientBookings.filter((b) => b.status === "completed");
-  const totalSpend = clientBookings.reduce((s, b) => s + b.totalCost, 0);
+  const completed = scopedBookings.filter((b) => b.status === "completed");
+  const totalSpend = scopedBookings.reduce((s, b) => s + b.totalCost, 0);
 
-  if (!client) {
+  const profileName = isCustomerMode
+    ? (facility?.name ?? "Facility")
+    : (client?.name ?? "Client");
+  const profilePhone = isCustomerMode ? facilityContact?.phone : client?.phone;
+  const profileEmail = isCustomerMode ? facilityContact?.email : client?.email;
+  const profileImage = isCustomerMode
+    ? ((facility as Record<string, unknown>)?.logo as string | undefined)
+    : ((client as Record<string, unknown>)?.imageUrl as string | undefined);
+  const pets = isCustomerMode ? (customer?.pets ?? []) : (client?.pets ?? []);
+  const infoTitle = isCustomerMode ? "Facility Info" : "Client Info";
+  const profileHref = isCustomerMode
+    ? "/customer/dashboard"
+    : `/facility/dashboard/clients/${client?.id}`;
+  const profileButtonLabel = isCustomerMode ? "View Facility" : "View Profile";
+  const quickLinks = isCustomerMode ? CUSTOMER_QUICK_LINKS : QUICK_LINKS;
+
+  if (!profileName || (isCustomerMode ? !facility : !client)) {
     return (
       <div className="flex h-full w-80 shrink-0 flex-col items-center justify-center bg-white">
         <p className="text-sm text-slate-400">Select a conversation</p>
@@ -247,16 +336,12 @@ export function ClientContextPanel({
     );
   }
 
-  const clientImage = (client as Record<string, unknown>)?.imageUrl as
-    | string
-    | undefined;
-
   return (
     <div className="flex h-full w-80 shrink-0 flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-5 py-3">
         <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
-          Client Info
+          {infoTitle}
         </span>
         <Button
           variant="ghost"
@@ -271,9 +356,9 @@ export function ClientContextPanel({
       <div className="flex-1 overflow-y-auto">
         {/* ── Client profile ── */}
         <div className="flex flex-col items-center border-b px-5 pt-5 pb-4">
-          {clientImage ? (
+          {profileImage ? (
             <img
-              src={clientImage}
+              src={profileImage}
               alt=""
               className="size-18 rounded-full object-cover ring-4 ring-slate-100"
             />
@@ -281,46 +366,48 @@ export function ClientContextPanel({
             <div
               className={cn(
                 "flex size-18 items-center justify-center rounded-full text-2xl font-bold text-white",
-                avatarColor(client.name),
+                avatarColor(profileName),
               )}
             >
-              {initials(client.name)}
+              {initials(profileName)}
             </div>
           )}
           <h3 className="mt-3 text-base font-bold text-slate-800">
-            {client.name}
+            {profileName}
           </h3>
 
           {/* Contact row */}
           <div className="mt-2 flex flex-col items-center gap-1 text-xs text-slate-400">
-            {client.phone && (
+            {profilePhone && (
               <a
-                href={`tel:${client.phone}`}
+                href={`tel:${profilePhone}`}
                 className="flex items-center gap-1.5 hover:text-slate-600"
               >
                 <Phone className="size-3.5" />
-                {client.phone}
+                {profilePhone}
               </a>
             )}
-            <a
-              href={`mailto:${client.email}`}
-              className="flex items-center gap-1.5 truncate hover:text-slate-600"
-            >
-              <Mail className="size-3.5" />
-              {client.email}
-            </a>
+            {profileEmail && (
+              <a
+                href={`mailto:${profileEmail}`}
+                className="flex items-center gap-1.5 truncate hover:text-slate-600"
+              >
+                <Mail className="size-3.5" />
+                {profileEmail}
+              </a>
+            )}
           </div>
 
           {/* Quick actions */}
           <div className="mt-3 flex gap-2">
-            <Link href={`/facility/dashboard/clients/${client.id}`}>
+            <Link href={profileHref}>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1.5 rounded-full text-xs"
               >
                 <ExternalLink className="size-3.5" />
-                View Profile
+                {profileButtonLabel}
               </Button>
             </Link>
           </div>
@@ -348,12 +435,16 @@ export function ClientContextPanel({
         </div>
 
         {/* ── Pets ── */}
-        <Section title="Pets" icon={PawPrint}>
+        <Section title={isCustomerMode ? "My Pets" : "Pets"} icon={PawPrint}>
           <div className="space-y-1">
-            {client.pets.map((pet) => (
+            {pets.map((pet) => (
               <Link
                 key={pet.id}
-                href={`/facility/dashboard/clients/${client.id}/pets/${pet.id}`}
+                href={
+                  isCustomerMode
+                    ? "/customer/pets"
+                    : `/facility/dashboard/clients/${client?.id}/pets/${pet.id}`
+                }
                 className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-50"
               >
                 {pet.imageUrl ? (
@@ -404,33 +495,57 @@ export function ClientContextPanel({
           )}
         </Section>
 
-        {/* ── Quick Send Links ── */}
-        <Section title="Quick Send" icon={Send} defaultOpen>
+        {/* ── Quick Links ── */}
+        <Section title={isCustomerMode ? "Quick Links" : "Quick Send"} icon={Send} defaultOpen>
           <div className="space-y-1">
-            {QUICK_LINKS.map((link) => (
-              <button
-                key={link.id}
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(link.url);
-                  toast.success(`"${link.label}" link copied — paste in chat`);
-                }}
-                className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
-              >
-                <div
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-lg",
-                    link.color,
+            {quickLinks.map((link) => {
+              const content = (
+                <>
+                  <div
+                    className={cn(
+                      "flex size-7 shrink-0 items-center justify-center rounded-lg",
+                      link.color,
+                    )}
+                  >
+                    <link.icon className="size-3.5" />
+                  </div>
+                  <span className="flex-1 text-xs font-medium text-slate-600">
+                    {link.label}
+                  </span>
+                  {link.href ? (
+                    <ExternalLink className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                  ) : (
+                    <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
                   )}
+                </>
+              );
+
+              if (link.href) {
+                return (
+                  <Link
+                    key={link.id}
+                    href={link.href}
+                    className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
+                  >
+                    {content}
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={link.id}
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(link.url ?? "");
+                    toast.success(`"${link.label}" link copied — paste in chat`);
+                  }}
+                  className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
                 >
-                  <link.icon className="size-3.5" />
-                </div>
-                <span className="flex-1 text-xs font-medium text-slate-600">
-                  {link.label}
-                </span>
-                <Copy className="size-3 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            ))}
+                  {content}
+                </button>
+              );
+            })}
           </div>
         </Section>
 

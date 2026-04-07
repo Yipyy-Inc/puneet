@@ -1,10 +1,10 @@
 "use client";
 
-import { CustomerMessageCenter } from "@/components/customer/messaging/CustomerMessageCenter";
+import { MessageCenter } from "@/components/messaging/MessageCenter";
 
 export default function CustomerMessagesPage() {
-  // Static client ID for now (would come from auth in production)
-  const clientId = 15;
+  // Static customer ID for mock mode; swap with auth context when available.
+  const customerId = 15;
 
-  return <CustomerMessageCenter clientId={clientId} />;
+  return <MessageCenter mode="customer" customerId={customerId} />;
 }

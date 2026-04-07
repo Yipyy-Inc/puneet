@@ -104,13 +104,17 @@ export function ContactList({
   messages,
   selectedThreadId,
   onSelectThread,
+  mode = "facility",
 }: {
   messages: Message[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
+  mode?: "facility" | "customer";
 }) {
+  const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
-  const canPurchase = role === "owner" || role === "manager";
+  const canPurchase =
+    !isCustomerMode && (role === "owner" || role === "manager");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
@@ -132,29 +136,41 @@ export function ContactList({
     for (const msg of messages) {
       const tid = msg.threadId ?? msg.id;
       const existing = map.get(tid);
+
+      const customer = msg.clientId ? clients.find((c) => c.id === msg.clientId) : null;
+      const facility = msg.clientId
+        ? facilities.find((f) => f.id === msg.clientId)
+        : null;
+      const counterpartyName = isCustomerMode
+        ? (facility?.name ?? msg.from)
+        : (customer?.name ?? msg.from);
+      const shouldCountUnread = isCustomerMode
+        ? !msg.hasRead && msg.direction === "inbound"
+        : !msg.hasRead;
+
       if (
         !existing ||
         new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)
       ) {
-        const client = msg.clientId
-          ? clients.find((c) => c.id === msg.clientId)
-          : null;
         const ch = new Set(existing?.channels ?? []);
         ch.add(msg.type);
         map.set(tid, {
           threadId: tid,
           clientId: msg.clientId ?? 0,
-          clientName: client?.name ?? msg.from,
-          clientImage: (client as Record<string, unknown>)?.imageUrl as
-            | string
-            | undefined,
+          clientName: counterpartyName,
+          clientImage: isCustomerMode
+            ? undefined
+            : ((customer as Record<string, unknown>)?.imageUrl as
+                | string
+                | undefined),
           lastMessage: msg,
-          unreadCount: (existing?.unreadCount ?? 0) + (!msg.hasRead ? 1 : 0),
+          unreadCount:
+            (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
           channels: [...ch],
         });
       } else {
         existing.channels = [...new Set([...existing.channels, msg.type])];
-        if (!msg.hasRead) existing.unreadCount++;
+        if (shouldCountUnread) existing.unreadCount++;
       }
     }
     return [...map.values()].sort(
@@ -188,21 +204,23 @@ export function ContactList({
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
         <h1 className="text-xl font-bold text-slate-900">Messages</h1>
-        <Button
-          size="icon"
-          variant={compose ? "secondary" : "default"}
-          className="size-9 rounded-full"
-          onClick={() => {
-            setCompose(!compose);
-            setClientSearch("");
-          }}
-        >
-          {compose ? <X className="size-4" /> : <Plus className="size-4" />}
-        </Button>
+        {!isCustomerMode && (
+          <Button
+            size="icon"
+            variant={compose ? "secondary" : "default"}
+            className="size-9 rounded-full"
+            onClick={() => {
+              setCompose(!compose);
+              setClientSearch("");
+            }}
+          >
+            {compose ? <X className="size-4" /> : <Plus className="size-4" />}
+          </Button>
+        )}
       </div>
 
       {/* SMS credits strip */}
-      {credits && !compose && (
+      {credits && !compose && !isCustomerMode && (
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -393,7 +411,7 @@ export function ContactList({
       )}
 
       {/* Compose — client search */}
-      {compose && (
+      {!isCustomerMode && compose && (
         <div className="flex-1 overflow-y-auto">
           {clientResults.map((client) => (
             <button
@@ -429,7 +447,7 @@ export function ContactList({
       )}
 
       {/* Thread list */}
-      {!compose && (
+      {(!compose || isCustomerMode) && (
         <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-center">

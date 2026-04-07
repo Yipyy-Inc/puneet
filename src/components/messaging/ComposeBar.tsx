@@ -18,11 +18,14 @@ export function ComposeBar({
   onSend,
   clientName,
   lastMessage,
+  mode = "facility",
 }: {
   onSend?: (message: string, channel: "sms" | "email") => void;
   clientName?: string;
   lastMessage?: string;
+  mode?: "facility" | "customer";
 }) {
+  const isCustomerMode = mode === "customer";
   const [text, setText] = useState("");
   const [showExtras, setShowExtras] = useState(false);
   const ai = useAiText({ type: "chat_reply", maxWords: 60 });
@@ -71,20 +74,22 @@ export function ComposeBar({
             <Mic className="size-4" />
             Voice
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-violet-50 hover:text-violet-600"
-            onClick={handleAiReply}
-            disabled={ai.isGenerating}
-          >
-            {ai.isGenerating ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Sparkles className="size-4" />
-            )}
-            AI Reply
-          </Button>
+          {!isCustomerMode && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 rounded-full text-xs text-slate-500 hover:bg-violet-50 hover:text-violet-600"
+              onClick={handleAiReply}
+              disabled={ai.isGenerating}
+            >
+              {ai.isGenerating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              AI Reply
+            </Button>
+          )}
         </div>
       )}
 
@@ -116,7 +121,11 @@ export function ComposeBar({
                 handleSend();
               }
             }}
-            placeholder="Type a message..."
+            placeholder={
+              isCustomerMode
+                ? "Type a message to your facility..."
+                : "Type a message..."
+            }
             rows={1}
             className="max-h-32 min-h-[22px] flex-1 resize-none bg-transparent text-sm leading-[22px] text-slate-800 outline-none placeholder:text-slate-400"
             style={{ height: "22px", overflowY: "hidden" }}
