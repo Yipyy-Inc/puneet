@@ -76,13 +76,14 @@ export function AgreementSigningDialog({
           <p className="mb-2 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
             Agreement
           </p>
-          <ScrollArea className="max-h-[250px] rounded-xl border bg-slate-50/50 p-5">
-            <div className="prose prose-sm max-w-none text-sm/relaxed text-slate-600">
-              {agreementContent.split("\n").map((line, i) => (
-                <p key={i} className={line.trim() === "" ? "h-2" : ""}>
-                  {line}
-                </p>
-              ))}
+          <ScrollArea className="h-[250px] rounded-xl border bg-slate-50/50">
+            <div className="prose prose-sm max-w-none p-5 text-sm/relaxed text-slate-600">
+              {agreementContent.split("\n").map((line, i) => {
+                if (line.trim() === "") {
+                  return <div key={i} className="h-2" aria-hidden="true" />;
+                }
+                return <p key={i}>{line}</p>;
+              })}
             </div>
           </ScrollArea>
         </div>
