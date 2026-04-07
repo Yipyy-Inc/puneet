@@ -349,16 +349,16 @@ function FormCard({
         </CardContent>
       </Card>
 
-      {/* Permissions link — moved to Settings */}
+      {/* Permissions link — managed in Roles & Permissions */}
       <div className="bg-muted/50 flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
         <Shield className="text-muted-foreground size-4" />
         <span className="text-muted-foreground">
           Manage form permissions in{" "}
           <Link
-            href="/facility/dashboard/settings?section=form-permissions"
+            href="/facility/dashboard/settings?section=roles-permissions"
             className="text-primary hover:underline"
           >
-            Settings → Forms &amp; Intake → Permissions
+            Settings → Roles &amp; Permissions
           </Link>
         </span>
       </div>
