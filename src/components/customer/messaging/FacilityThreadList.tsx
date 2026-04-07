@@ -48,9 +48,11 @@ export function FacilityThreadList({
 
   const threads = useMemo(() => {
     const map = new Map<number, FacilityThread>();
+
     for (const msg of communications) {
       const fid = msg.facilityId;
       const existing = map.get(fid);
+
       if (
         !existing ||
         new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)
@@ -73,6 +75,7 @@ export function FacilityThreadList({
         });
       }
     }
+
     return [...map.values()].sort(
       (a, b) =>
         new Date(b.lastMessage.timestamp).getTime() -

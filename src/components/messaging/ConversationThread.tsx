@@ -24,6 +24,7 @@ import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
 
 const COLORS = [
   "bg-rose-500",
@@ -52,12 +53,15 @@ export function ConversationThread({
   messages,
   detailOpen,
   onToggleDetail,
+  mode = "facility",
 }: {
   threadId: string | null;
   messages: Message[];
   detailOpen: boolean;
   onToggleDetail: () => void;
+  mode?: "facility" | "customer";
 }) {
+  const isCustomerMode = mode === "customer";
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const threadMessages = useMemo(() => {
@@ -70,9 +74,34 @@ export function ConversationThread({
       );
   }, [threadId, messages]);
 
-  const clientId = threadMessages[0]?.clientId;
-  const client = clientId ? clients.find((c) => c.id === clientId) : null;
-  const clientName = client?.name ?? threadMessages[0]?.from ?? "Unknown";
+  const counterpartyId = threadMessages[0]?.clientId;
+  const client = counterpartyId
+    ? clients.find((c) => c.id === counterpartyId)
+    : null;
+  const facility = counterpartyId
+    ? facilities.find((f) => f.id === counterpartyId)
+    : null;
+  const facilityLogo = (facility as Record<string, unknown>)?.logo as
+    | string
+    | undefined;
+  const counterpartyName = isCustomerMode
+    ? (facility?.name ?? threadMessages[0]?.from ?? "Facility")
+    : (client?.name ?? threadMessages[0]?.from ?? "Unknown");
+  const counterpartyImage = isCustomerMode
+    ? facilityLogo
+    : ((client as Record<string, unknown>)?.imageUrl as string | undefined);
+  const counterpartyContact = isCustomerMode
+    ? (facility as Record<string, unknown>)?.contact
+    : null;
+  const contactLine = isCustomerMode
+    ? ((counterpartyContact as Record<string, unknown>)?.phone as
+        | string
+        | undefined) ||
+      ((counterpartyContact as Record<string, unknown>)?.email as
+        | string
+        | undefined) ||
+      "Typically responds within 2 hours"
+    : (client?.phone ?? client?.email ?? "Active now");
   const channels = [...new Set(threadMessages.map((m) => m.type))];
 
   useEffect(() => {
@@ -96,7 +125,9 @@ export function ConversationThread({
         </div>
         <h3 className="mt-6 text-xl font-bold text-slate-700">Your Messages</h3>
         <p className="mt-2 max-w-xs text-center text-sm/relaxed text-slate-400">
-          Select a client from the left panel or create a new message
+          {isCustomerMode
+            ? "Select a facility conversation from the left panel"
+            : "Select a client from the left panel or create a new message"}
         </p>
       </div>
     );
@@ -137,7 +168,7 @@ export function ConversationThread({
           {/* Avatar */}
           {(client as Record<string, unknown>)?.imageUrl ? (
             <img
-              src={(client as Record<string, unknown>).imageUrl as string}
+              src={counterpartyImage}
               alt=""
               className="size-11 rounded-full object-cover ring-2 ring-slate-100"
             />
@@ -145,15 +176,15 @@ export function ConversationThread({
             <div
               className={cn(
                 "flex size-11 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm",
-                avatarColor(clientName),
+                avatarColor(counterpartyName),
               )}
             >
-              {initials(clientName)}
+              {initials(counterpartyName)}
             </div>
           )}
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">{clientName}</h3>
+              <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
               <Badge
                 variant="outline"
                 className="border-slate-200 text-[9px] text-slate-400"
@@ -161,9 +192,7 @@ export function ConversationThread({
                 {channelLabel}
               </Badge>
             </div>
-            <p className="text-[11px] text-slate-400">
-              {client?.phone ?? client?.email ?? "Active now"}
-            </p>
+            <p className="text-[11px] text-slate-400">{contactLine}</p>
           </div>
         </div>
 
@@ -214,8 +243,12 @@ export function ConversationThread({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>View client profile</DropdownMenuItem>
-              <DropdownMenuItem>Booking history</DropdownMenuItem>
+              <DropdownMenuItem>
+                {isCustomerMode ? "View facility profile" : "View client profile"}
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                {isCustomerMode ? "My booking history" : "Booking history"}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Pin conversation</DropdownMenuItem>
               <DropdownMenuItem>Mark as unread</DropdownMenuItem>
@@ -239,9 +272,9 @@ export function ConversationThread({
         <div className="mx-auto max-w-2xl px-6 py-5">
           {/* Conversation start indicator */}
           <div className="mb-4 flex flex-col items-center py-4 text-center">
-            {(client as Record<string, unknown>)?.imageUrl ? (
+            {counterpartyImage ? (
               <img
-                src={(client as Record<string, unknown>).imageUrl as string}
+                src={counterpartyImage}
                 alt=""
                 className="size-16 rounded-full object-cover shadow-md ring-4 ring-white"
               />
@@ -249,17 +282,32 @@ export function ConversationThread({
               <div
                 className={cn(
                   "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md ring-4 ring-white",
-                  avatarColor(clientName),
+                  avatarColor(counterpartyName),
                 )}
               >
-                {initials(clientName)}
+                {initials(counterpartyName)}
               </div>
             )}
             <p className="mt-2 text-sm font-semibold text-slate-700">
-              {clientName}
+              {counterpartyName}
             </p>
             <p className="text-[11px] text-slate-400">
-              {client?.email ?? ""} {client?.phone ? `· ${client.phone}` : ""}
+              {isCustomerMode
+                ? (((counterpartyContact as Record<string, unknown>)?.email as
+                    | string
+                    | undefined) ?? "")
+                : (client?.email ?? "")}{" "}
+              {(isCustomerMode
+                ? ((counterpartyContact as Record<string, unknown>)?.phone as
+                    | string
+                    | undefined)
+                : client?.phone)
+                ? `· ${
+                    isCustomerMode
+                      ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
+                      : client?.phone
+                  }`
+                : ""}
             </p>
             <p className="mt-1 text-[10px] text-slate-300">
               Conversation started{" "}
@@ -285,12 +333,8 @@ export function ConversationThread({
                 <MessageBubble
                   key={item.msg.id}
                   message={item.msg}
-                  clientName={clientName}
-                  clientImage={
-                    (client as Record<string, unknown>)?.imageUrl as
-                      | string
-                      | undefined
-                  }
+                  clientName={counterpartyName}
+                  clientImage={counterpartyImage}
                 />
               ),
             )}
@@ -300,7 +344,8 @@ export function ConversationThread({
 
       {/* Compose */}
       <ComposeBar
-        clientName={clientName}
+        mode={mode}
+        clientName={counterpartyName}
         lastMessage={threadMessages[threadMessages.length - 1]?.body}
       />
     </div>
