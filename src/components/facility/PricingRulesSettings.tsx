@@ -1,11 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Users,
   Moon,
+  BedDouble,
+  Scissors,
+  Link2,
   CalendarRange,
   Clock,
   Timer,
@@ -16,7 +19,10 @@ import {
 import { cn } from "@/lib/utils";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { PricingRulesPanel } from "./PricingRulesPanel";
-import { facilityConfig } from "@/data/facility-config";
+import {
+  getStoredPricingRules,
+  type StoredPricingRules,
+} from "@/lib/pricing-rules";
 
 // ── Category definitions ─────────────────────────────────────────────────────
 
@@ -29,7 +35,7 @@ interface CategoryDef {
   iconBg: string;
   iconColor: string;
   section: string;
-  countKey: string;
+  countKey: keyof StoredPricingRules;
 }
 
 const CATEGORIES: CategoryDef[] = [
@@ -58,7 +64,7 @@ const CATEGORIES: CategoryDef[] = [
     countKey: "multiPetDiscounts",
   },
   {
-    id: "stacking",
+    id: "multi_night",
     group: "Discounts",
     title: "Long-stay discounts",
     description:
@@ -70,11 +76,21 @@ const CATEGORIES: CategoryDef[] = [
     countKey: "multiNightDiscounts",
   },
   {
+    id: "room_type",
+    group: "Discounts",
+    title: "Room-type pricing",
+    description: "Add discounts or surcharges for specific boarding room types",
+    icon: BedDouble,
+    iconBg: "bg-indigo-50",
+    iconColor: "text-indigo-600",
+    section: "room_type",
+    countKey: "roomTypeAdjustments",
+  },
+  {
     id: "peak",
     group: "Demand pricing",
     title: "Busy-date surcharges",
-    description:
-      "Add a surcharge during high-demand dates such as holidays",
+    description: "Add a surcharge during high-demand dates such as holidays",
     icon: CalendarRange,
     iconBg: "bg-amber-50",
     iconColor: "text-amber-600",
@@ -94,11 +110,22 @@ const CATEGORIES: CategoryDef[] = [
     countKey: "latePickupFees",
   },
   {
+    id: "grooming_conditions",
+    group: "Surcharges",
+    title: "Pet-spec condition fees",
+    description:
+      "Adjust pricing by pet age, breed, sex, status, coat, weight, duration, and appointment window",
+    icon: Scissors,
+    iconBg: "bg-pink-50",
+    iconColor: "text-pink-600",
+    section: "grooming_conditions",
+    countKey: "groomingConditionAdjustments",
+  },
+  {
     id: "exceed_24h",
     group: "Surcharges",
     title: "Over 24-hour stay fee",
-    description:
-      "Add a fee when a stay goes beyond a full 24-hour period",
+    description: "Add a fee when a stay goes beyond a full 24-hour period",
     icon: Timer,
     iconBg: "bg-orange-50",
     iconColor: "text-orange-600",
@@ -116,12 +143,23 @@ const CATEGORIES: CategoryDef[] = [
     section: "custom_fees",
     countKey: "customFees",
   },
+  {
+    id: "service_bundles",
+    group: "Bundles",
+    title: "Service bundles",
+    description:
+      "Auto-add combined services with mandatory or discounted bundle pricing",
+    icon: Link2,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-700",
+    section: "service_bundles",
+    countKey: "serviceBundles",
+  },
 ];
 
-function getActiveCount(countKey: string): number {
-  const rules = facilityConfig.pricingRules;
-  if (!rules) return 0;
-  const data = (rules as Record<string, unknown>)[countKey];
+function getActiveCount(countKey: keyof StoredPricingRules): number {
+  const rules = getStoredPricingRules();
+  const data = rules[countKey];
   if (typeof data === "string") return data ? 1 : 0;
   if (Array.isArray(data))
     return data.filter((rule) => {
@@ -137,8 +175,8 @@ function getActiveCount(countKey: string): number {
     ("enabled" in (data as Record<string, unknown>) ||
       "isActive" in (data as Record<string, unknown>))
   )
-    return (data as { enabled?: boolean; isActive?: boolean }).isActive ??
-      (data as { enabled?: boolean; isActive?: boolean }).enabled
+    return ((data as { enabled?: boolean; isActive?: boolean }).isActive ??
+      (data as { enabled?: boolean; isActive?: boolean }).enabled)
       ? 1
       : 0;
   return 0;
@@ -147,8 +185,21 @@ function getActiveCount(countKey: string): number {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function PricingRulesSettings() {
+  const uniqueCategories = useMemo(() => {
+    const seenIds = new Set<string>();
+    const seenSections = new Set<string>();
+    return CATEGORIES.filter((category) => {
+      if (seenIds.has(category.id) || seenSections.has(category.section)) {
+        return false;
+      }
+      seenIds.add(category.id);
+      seenSections.add(category.section);
+      return true;
+    });
+  }, []);
+
   const [activeCategoryId, setActiveCategoryId] = useState<string>(
-    CATEGORIES[0]?.id ?? "",
+    uniqueCategories[0]?.id ?? "",
   );
   const editorRef = useRef<HTMLDivElement | null>(null);
   const editorCardRef = useRef<HTMLDivElement | null>(null);
@@ -157,7 +208,7 @@ export function PricingRulesSettings() {
   );
   const { activeModules } = useCustomServices();
 
-  const groups = CATEGORIES.reduce(
+  const groups = uniqueCategories.reduce(
     (acc, cat) => {
       if (!acc[cat.group]) acc[cat.group] = [];
       acc[cat.group].push(cat);
@@ -175,8 +226,8 @@ export function PricingRulesSettings() {
   ];
 
   const activeCategory =
-    CATEGORIES.find((category) => category.id === activeCategoryId) ??
-    CATEGORIES[0];
+    uniqueCategories.find((category) => category.id === activeCategoryId) ??
+    uniqueCategories[0];
 
   const centerEditorCardInViewport = () => {
     const editorElement = editorCardRef.current ?? editorRef.current;
@@ -224,14 +275,18 @@ export function PricingRulesSettings() {
             </p>
           </div>
           <Badge variant="outline" className="bg-white/80 text-xs">
-            {CATEGORIES.length} categories
+            {uniqueCategories.length} categories
           </Badge>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-muted-foreground text-xs">Available for:</span>
           {allServices.map((s) => (
-            <Badge key={s.value} variant="outline" className="bg-white text-[10px]">
+            <Badge
+              key={s.value}
+              variant="outline"
+              className="bg-white text-[10px]"
+            >
               {s.label}
             </Badge>
           ))}
@@ -247,7 +302,7 @@ export function PricingRulesSettings() {
                   Categories
                 </p>
                 <Badge variant="secondary" className="h-5 px-2 text-[10px]">
-                  {CATEGORIES.length}
+                  {uniqueCategories.length}
                 </Badge>
               </div>
 
@@ -288,7 +343,9 @@ export function PricingRulesSettings() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium">{cat.title}</p>
+                                <p className="text-sm font-medium">
+                                  {cat.title}
+                                </p>
                                 {activeCount > 0 && (
                                   <Badge className="bg-emerald-50 text-[10px] text-emerald-700">
                                     {activeCount}
@@ -324,34 +381,6 @@ export function PricingRulesSettings() {
             ref={editorCardRef}
             className="w-full overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_16px_40px_-24px_rgba(15,23,42,0.35)]"
           >
-            <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-blue-50/60 px-4 py-3 sm:px-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <div
-                    className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-lg border border-white/80 shadow-sm",
-                      activeCategory.iconBg,
-                    )}
-                  >
-                    <activeCategory.icon
-                      className={cn("size-4", activeCategory.iconColor)}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
-                      Now editing
-                    </p>
-                    <p className="truncate text-sm font-semibold tracking-tight">
-                      {activeCategory.title}
-                    </p>
-                  </div>
-                </div>
-                <Badge className="bg-emerald-50 text-emerald-700 shadow-sm">
-                  {getActiveCount(activeCategory.countKey)} active
-                </Badge>
-              </div>
-            </div>
-
             <div className="bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.08),transparent_40%)] p-4 sm:p-5">
               <div
                 key={activeCategory.id}
@@ -365,10 +394,13 @@ export function PricingRulesSettings() {
                       | "stacking"
                       | "multi_pet"
                       | "multi_night"
+                      | "room_type"
                       | "peak"
                       | "time_fees"
+                      | "grooming_conditions"
                       | "exceed_24h"
-                      | "custom_fees",
+                      | "custom_fees"
+                      | "service_bundles",
                   ]}
                 />
               </div>

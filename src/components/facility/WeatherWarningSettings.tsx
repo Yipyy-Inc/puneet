@@ -114,7 +114,10 @@ function makeId() {
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function conditionSummary(rule: WeatherWarningRule, unitSymbol: string): string {
+function conditionSummary(
+  rule: WeatherWarningRule,
+  unitSymbol: string,
+): string {
   const label = CONDITION_LABELS[rule.condition];
   if (rule.condition === "weather_is") return `${label} ${rule.value}`;
   if (rule.condition === "wind_speed_above")

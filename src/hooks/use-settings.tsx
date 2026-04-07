@@ -263,7 +263,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("settings-hours", JSON.stringify(hours));
   };
   const updateProfile = (profile: BusinessProfile) => {
-    const normalizedProfile = normalizeBusinessProfile(profile, businessProfile);
+    const normalizedProfile = normalizeBusinessProfile(
+      profile,
+      businessProfile,
+    );
     setProfile(normalizedProfile);
     localStorage.setItem("settings-profile", JSON.stringify(normalizedProfile));
   };

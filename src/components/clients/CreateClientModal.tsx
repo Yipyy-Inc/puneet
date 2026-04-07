@@ -120,6 +120,59 @@ const STEPS = [
 
 const STORAGE_KEY = "yipyy_create_client_draft";
 
+const DEFAULT_CLIENT: ClientForm = {
+  name: "",
+  email: "",
+  phone: "",
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+  country: "Canada",
+  emergencyName: "",
+  emergencyRelationship: "",
+  emergencyPhone: "",
+  contactMethod: "sms",
+  language: "English",
+  vetName: "",
+  vetPhone: "",
+};
+
+const DEFAULT_VACCINES: VaccineEntry[] = [
+  { name: "Rabies", dateAdministered: "", expiryDate: "" },
+  { name: "DHPP", dateAdministered: "", expiryDate: "" },
+  { name: "Bordetella", dateAdministered: "", expiryDate: "" },
+];
+
+const DEFAULT_AGREEMENTS = {
+  terms: false,
+  liability: false,
+  marketing: false,
+  sms: true,
+  photoVideo: false,
+};
+
+type CreateClientDraft = {
+  step?: number;
+  client?: ClientForm;
+  pets?: PetForm[];
+};
+
+function loadCreateClientDraft(): CreateClientDraft {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return {};
+    const draft = JSON.parse(saved) as CreateClientDraft;
+    return draft && typeof draft === "object" ? draft : {};
+  } catch {
+    return {};
+  }
+}
+
 // ========================================
 // Props
 // ========================================
@@ -203,63 +256,29 @@ export function CreateClientModal({
   onSave,
   facilityName,
 }: CreateClientModalProps) {
-  const [step, setStep] = useState(1);
+  const [initialDraft] = useState<CreateClientDraft>(() =>
+    loadCreateClientDraft(),
+  );
+
+  const [step, setStep] = useState(initialDraft.step ?? 1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Step 1: Client
-  const [client, setClient] = useState<ClientForm>({
-    name: "",
-    email: "",
-    phone: "",
-    street: "",
-    city: "",
-    state: "",
-    zip: "",
-    country: "Canada",
-    emergencyName: "",
-    emergencyRelationship: "",
-    emergencyPhone: "",
-    contactMethod: "sms",
-    language: "English",
-    vetName: "",
-    vetPhone: "",
-  });
+  const [client, setClient] = useState<ClientForm>(
+    initialDraft.client ?? DEFAULT_CLIENT,
+  );
 
   // Step 2: Pets
   const [petForm, setPetForm] = useState<PetForm>({ ...EMPTY_PET });
-  const [pets, setPets] = useState<PetForm[]>([]);
+  const [pets, setPets] = useState<PetForm[]>(initialDraft.pets ?? []);
 
   // Step 4: Vaccines
-  const [vaccines, setVaccines] = useState<VaccineEntry[]>([
-    { name: "Rabies", dateAdministered: "", expiryDate: "" },
-    { name: "DHPP", dateAdministered: "", expiryDate: "" },
-    { name: "Bordetella", dateAdministered: "", expiryDate: "" },
-  ]);
+  const [vaccines, setVaccines] = useState<VaccineEntry[]>(
+    DEFAULT_VACCINES.map((vaccine) => ({ ...vaccine })),
+  );
 
   // Step 5: Agreements
-  const [agreements, setAgreements] = useState({
-    terms: false,
-    liability: false,
-    marketing: false,
-    sms: true,
-    photoVideo: false,
-  });
-
-  // Restore draft from localStorage on open
-  useEffect(() => {
-    if (!open) return;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return;
-      const draft = JSON.parse(saved);
-      // Batch into a single render via callback to avoid React Compiler warning
-      if (draft.client) setClient(() => draft.client);
-      if (draft.pets) setPets(() => draft.pets);
-      if (draft.step) setStep(() => draft.step);
-    } catch {
-      /* ignore */
-    }
-  }, [open]);
+  const [agreements, setAgreements] = useState({ ...DEFAULT_AGREEMENTS });
 
   useEffect(() => {
     if (!open) return;
@@ -377,37 +396,11 @@ export function CreateClientModal({
 
   const resetAll = () => {
     setStep(1);
-    setClient({
-      name: "",
-      email: "",
-      phone: "",
-      street: "",
-      city: "",
-      state: "",
-      zip: "",
-      country: "Canada",
-      emergencyName: "",
-      emergencyRelationship: "",
-      emergencyPhone: "",
-      contactMethod: "sms",
-      language: "English",
-      vetName: "",
-      vetPhone: "",
-    });
+    setClient({ ...DEFAULT_CLIENT });
     setPetForm({ ...EMPTY_PET });
     setPets([]);
-    setVaccines([
-      { name: "Rabies", dateAdministered: "", expiryDate: "" },
-      { name: "DHPP", dateAdministered: "", expiryDate: "" },
-      { name: "Bordetella", dateAdministered: "", expiryDate: "" },
-    ]);
-    setAgreements({
-      terms: false,
-      liability: false,
-      marketing: false,
-      sms: true,
-      photoVideo: false,
-    });
+    setVaccines(DEFAULT_VACCINES.map((vaccine) => ({ ...vaccine })));
+    setAgreements({ ...DEFAULT_AGREEMENTS });
     setErrors({});
   };
 

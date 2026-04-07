@@ -17,7 +17,6 @@ import {
   GROOMING_PACKAGES,
   GROOMING_ADDONS,
 } from "@/components/bookings/modals/constants";
-import { defaultServiceAddOns } from "@/data/service-addons";
 import type { ServiceAddOn } from "@/types/facility";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
@@ -25,6 +24,10 @@ import {
   resolveIcon,
   isBuiltinService,
 } from "@/lib/service-registry";
+import {
+  applyDynamicPricingRules,
+  getStoredServiceAddOns,
+} from "@/lib/pricing-rules";
 import { getCategoryMeta } from "@/data/custom-services";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +80,7 @@ import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
+import { bookings as historicalBookings } from "@/data/bookings";
 import { facilityConfig } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
 import { vaccinationRules, evaluationConfig } from "@/data/settings";
@@ -101,19 +105,6 @@ interface CustomerBookingModalProps {
   onCancel?: () => void;
   existingBooking?: Booking | null;
   onBookingCreated: () => void;
-}
-
-// Load add-ons from settings (same source as facility side)
-function getCustomerAddOns(): ServiceAddOn[] {
-  if (typeof window === "undefined") return defaultServiceAddOns;
-  try {
-    const stored = localStorage.getItem("settings-service-addons");
-    if (stored)
-      return (JSON.parse(stored) as ServiceAddOn[]).filter((a) => a.isActive);
-  } catch {
-    /* ignore */
-  }
-  return defaultServiceAddOns.filter((a) => a.isActive);
 }
 
 // Adapt ServiceAddOn to the shape the customer flow expects
@@ -431,6 +422,35 @@ export function CustomerBookingModal({
     [customerPets, selectedPetIds],
   );
 
+  const selectedCustomerBookings = useMemo(() => {
+    if (!customer) return [];
+    return historicalBookings.filter(
+      (existingBooking) => existingBooking.clientId === customer.id,
+    );
+  }, [customer]);
+
+  const isNewCustomer = useMemo(() => {
+    if (!customer) return false;
+    return selectedCustomerBookings.length === 0;
+  }, [customer, selectedCustomerBookings]);
+
+  const newPetIdsForCustomer = useMemo(() => {
+    if (selectedPetIds.length === 0) return [];
+
+    if (selectedCustomerBookings.length === 0) {
+      return selectedPetIds;
+    }
+
+    return selectedPetIds.filter(
+      (petId) =>
+        !selectedCustomerBookings.some((existingBooking) =>
+          Array.isArray(existingBooking.petId)
+            ? existingBooking.petId.includes(petId)
+            : existingBooking.petId === petId,
+        ),
+    );
+  }, [selectedPetIds, selectedCustomerBookings]);
+
   // Number of Details sub-steps: daycare 2 (Schedule, Add-ons); boarding 3 (Schedule, Room Type, Add-ons); grooming 3 (Schedule, Package, Add-ons)
   // Custom modules: 2 (Schedule, Service Details — duration/resource/capacity)
   const detailsSubStepCount = useMemo(() => {
@@ -441,11 +461,16 @@ export function CustomerBookingModal({
     return 1;
   }, [selectedService, selectedCustomModule]);
 
+  const storedServiceAddOns = useMemo(
+    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
+    [open],
+  );
+
   // Add-ons from settings (dynamic, filtered by service + pet eligibility)
   const eligibleAddons = useMemo(() => {
     if (selectedService !== "daycare" && selectedService !== "boarding")
       return [];
-    return getCustomerAddOns()
+    return storedServiceAddOns
       .filter((a) => a.applicableServices.includes(selectedService))
       .filter((a) => {
         if (!a.petTypeFilter || selectedPets.length === 0) return true;
@@ -458,7 +483,7 @@ export function CustomerBookingModal({
         });
       })
       .map(toCustomerAddon);
-  }, [selectedService, selectedPets]);
+  }, [selectedService, selectedPets, storedServiceAddOns]);
 
   // Boarding: filter room types by pet eligibility (type, weight limits)
   const eligibleBoardingRooms = useMemo(() => {
@@ -1041,20 +1066,27 @@ export function CustomerBookingModal({
   ]);
   const recommendedTipIndex = tippingConfig.recommendedIndex ?? null;
 
-  // Add-ons total (daycare/boarding extra services)
-  const extraServicesTotal = useMemo(() => {
-    return extraServices.reduce((sum, es) => {
-      const addon = eligibleAddons.find((a) => a.id === es.serviceId);
-      if (!addon) return sum;
-      if (addon.hasUnits && addon.pricePerUnit != null)
-        return sum + addon.pricePerUnit * es.quantity;
-      return sum + (addon.basePrice ?? 0) * es.quantity;
-    }, 0);
-  }, [extraServices]);
+  const boardingNights = useMemo(() => {
+    if (
+      selectedService !== "boarding" ||
+      !effectiveStartDate ||
+      !effectiveEndDate
+    ) {
+      return 0;
+    }
+    return Math.max(
+      1,
+      Math.ceil(
+        (new Date(effectiveEndDate).getTime() -
+          new Date(effectiveStartDate).getTime()) /
+          (24 * 60 * 60 * 1000),
+      ),
+    );
+  }, [selectedService, effectiveStartDate, effectiveEndDate]);
 
-  // Calculate price (simplified)
-  const calculatedPrice = useMemo(() => {
+  const baseServicePrice = useMemo(() => {
     if (!selectedService) return 0;
+
     if (selectedService === "grooming") {
       const pkg = GROOMING_PACKAGES.find(
         (p) => p.id === selectedGroomingPackage,
@@ -1067,55 +1099,48 @@ export function CustomerBookingModal({
       );
       return (pkgPrice + addonsPrice) * selectedPetIds.length;
     }
+
     if (selectedService === "boarding") {
-      let base = 0;
       if (
         roomAssignments.length > 0 &&
         effectiveEndDate &&
         effectiveStartDate
       ) {
-        const nights = Math.max(
-          1,
-          Math.ceil(
-            (new Date(effectiveEndDate).getTime() -
-              new Date(effectiveStartDate).getTime()) /
-              (24 * 60 * 60 * 1000),
-          ),
-        );
-        base = roomAssignments.reduce((sum, a) => {
+        return roomAssignments.reduce((sum, assignment) => {
           const room = CUSTOMER_BOARDING_ROOM_TYPES.find(
-            (r) => r.id === a.roomId,
+            (candidate) => candidate.id === assignment.roomId,
           );
-          return sum + (room ? room.price * nights : 0);
+          return sum + (room ? room.price * boardingNights : 0);
         }, 0);
       }
-      return base + extraServicesTotal;
+      return 0;
     }
+
     if (selectedService === "daycare") {
       const service = allServices.find((s) => s.id === selectedService);
-      const base = service ? service.basePrice * selectedPetIds.length : 0;
-      return base + extraServicesTotal;
+      return service ? service.basePrice * selectedPetIds.length : 0;
     }
-    // Custom module pricing — duration-based or base price
+
     if (isCustomModule && selectedCustomModule) {
-      const mod = selectedCustomModule;
-      // Duration-based: match selected duration to calendar durationOptions or pricing durationTiers
+      const moduleConfig = selectedCustomModule;
       if (customDurationMinutes > 0) {
-        const durationOpt = mod.calendar.durationOptions.find(
-          (o) => o.minutes === customDurationMinutes,
+        const durationOpt = moduleConfig.calendar.durationOptions.find(
+          (option) => option.minutes === customDurationMinutes,
         );
-        if (durationOpt?.price != null)
+        if (durationOpt?.price != null) {
           return durationOpt.price * selectedPetIds.length;
-        const tier = mod.pricing.durationTiers?.find(
-          (t) => t.durationMinutes === customDurationMinutes,
+        }
+        const tier = moduleConfig.pricing.durationTiers?.find(
+          (durationTier) =>
+            durationTier.durationMinutes === customDurationMinutes,
         );
         if (tier) return tier.price * selectedPetIds.length;
       }
-      return mod.pricing.basePrice * selectedPetIds.length;
+      return moduleConfig.pricing.basePrice * selectedPetIds.length;
     }
+
     const service = allServices.find((s) => s.id === selectedService);
-    if (!service) return 0;
-    return service.basePrice * selectedPetIds.length;
+    return service ? service.basePrice * selectedPetIds.length : 0;
   }, [
     selectedService,
     selectedPetIds,
@@ -1124,12 +1149,115 @@ export function CustomerBookingModal({
     roomAssignments,
     effectiveStartDate,
     effectiveEndDate,
-    extraServicesTotal,
+    boardingNights,
     allServices,
     isCustomModule,
     selectedCustomModule,
     customDurationMinutes,
   ]);
+
+  const pricingComputation = useMemo(() => {
+    const groomingPackage = GROOMING_PACKAGES.find(
+      (pkg) => pkg.id === selectedGroomingPackage,
+    );
+
+    const daycareServiceDates =
+      daycareDateTimes.length > 0
+        ? daycareDateTimes.map((entry) => entry.date)
+        : daycareSelectedDates.map((date) => formatDateToISO(date));
+
+    const serviceStartDate =
+      selectedService === "daycare"
+        ? (daycareServiceDates[0] ?? undefined)
+        : effectiveStartDate || undefined;
+
+    const serviceEndDate =
+      selectedService === "daycare"
+        ? (daycareServiceDates[daycareServiceDates.length - 1] ??
+          daycareServiceDates[0] ??
+          undefined)
+        : effectiveEndDate || effectiveStartDate || undefined;
+
+    return applyDynamicPricingRules({
+      serviceId: selectedService,
+      basePrice: baseServicePrice,
+      existingExtraServices:
+        selectedService === "daycare" || selectedService === "boarding"
+          ? extraServices
+          : [],
+      selectedPetIds,
+      isNewCustomer,
+      newPetIds: newPetIdsForCustomer,
+      customer: customer
+        ? {
+            status: customer.status,
+            membershipPlan: customer.membership?.plan,
+            membershipStatus: customer.membership?.status,
+            storeCreditBalance: customer.storeCredit?.balance,
+            hasPackageCredits: (customer.packages ?? []).some(
+              (pkg) => pkg.remainingCredits > 0,
+            ),
+          }
+        : undefined,
+      pets: selectedPets,
+      addOnsCatalog: storedServiceAddOns,
+      roomAssignments,
+      boardingNights,
+      sessionUnits:
+        selectedService === "daycare"
+          ? daycareSelectedDates.length
+          : selectedService === "boarding"
+            ? boardingNights
+            : 1,
+      serviceStartDate,
+      serviceEndDate,
+      serviceDates:
+        selectedService === "daycare" && daycareServiceDates.length > 0
+          ? daycareServiceDates
+          : undefined,
+      groomingDurationMinutes:
+        selectedService === "grooming"
+          ? groomingPackage?.durationMinutes
+          : undefined,
+      appointmentTime:
+        selectedService === "grooming" ? effectiveCheckInTime : undefined,
+      scheduledCheckInTime: effectiveCheckInTime || undefined,
+      scheduledCheckOutTime: effectiveCheckOutTime || undefined,
+      actualCheckInTime: effectiveCheckInTime || undefined,
+      actualCheckOutTime: effectiveCheckOutTime || undefined,
+    });
+  }, [
+    selectedService,
+    baseServicePrice,
+    extraServices,
+    selectedPetIds,
+    isNewCustomer,
+    newPetIdsForCustomer,
+    customer,
+    selectedPets,
+    storedServiceAddOns,
+    roomAssignments,
+    boardingNights,
+    daycareDateTimes,
+    daycareSelectedDates,
+    selectedGroomingPackage,
+    effectiveStartDate,
+    effectiveEndDate,
+    effectiveCheckInTime,
+    effectiveCheckOutTime,
+    formatDateToISO,
+  ]);
+
+  const pricedExtraServices = useMemo(() => {
+    if (selectedService === "daycare" || selectedService === "boarding") {
+      return pricingComputation.extraServices;
+    }
+    return extraServices;
+  }, [selectedService, pricingComputation.extraServices, extraServices]);
+
+  const calculatedPrice = useMemo(() => {
+    return pricingComputation.total;
+  }, [pricingComputation.total]);
 
   const totalPrice = useMemo(() => {
     return calculatedPrice + tipAmount;
@@ -3656,7 +3784,7 @@ export function CustomerBookingModal({
                       )}
 
                       {/* Add-ons (daycare/boarding) */}
-                      {extraServices.length > 0 &&
+                      {pricedExtraServices.length > 0 &&
                         (selectedService === "daycare" ||
                           selectedService === "boarding") && (
                           <div className="text-sm">
@@ -3664,17 +3792,23 @@ export function CustomerBookingModal({
                               Add-ons
                             </p>
                             <div className="space-y-0.5">
-                              {extraServices.map((es, idx) => {
+                              {pricedExtraServices.map((es, idx) => {
                                 const addon = eligibleAddons.find(
                                   (a) => a.id === es.serviceId,
                                 );
+                                const configuredAddOn =
+                                  storedServiceAddOns.find(
+                                    (a) => a.id === es.serviceId,
+                                  );
                                 const pet = selectedPets.find(
                                   (p) => p.id === es.petId,
                                 );
                                 return (
                                   <p key={`${es.serviceId}-${es.petId}-${idx}`}>
-                                    {addon?.name ?? es.serviceId} ×{" "}
-                                    {es.quantity}
+                                    {addon?.name ??
+                                      configuredAddOn?.name ??
+                                      es.serviceId}{" "}
+                                    × {es.quantity}
                                     {pet ? ` (${pet.name})` : ""}
                                   </p>
                                 );
@@ -3760,16 +3894,22 @@ export function CustomerBookingModal({
                             Pricing breakdown
                           </p>
                           <div className="space-y-2 text-sm">
-                            {extraServices.length > 0 && (
+                            {pricedExtraServices.length > 0 && (
                               <div className="space-y-1">
-                                {extraServices.map((es, i) => {
+                                {pricedExtraServices.map((es, i) => {
                                   const addon = eligibleAddons.find(
                                     (a) => a.id === es.serviceId,
                                   );
-                                  const unitPrice =
-                                    addon?.hasUnits && addon?.pricePerUnit
+                                  const configuredAddOn =
+                                    storedServiceAddOns.find(
+                                      (a) => a.id === es.serviceId,
+                                    );
+                                  const unitPrice = addon
+                                    ? addon.hasUnits &&
+                                      addon.pricePerUnit != null
                                       ? addon.pricePerUnit
-                                      : (addon?.basePrice ?? 0);
+                                      : (addon.basePrice ?? 0)
+                                    : (configuredAddOn?.price ?? 0);
                                   const lineTotal = unitPrice * es.quantity;
                                   const pet = selectedPets.find(
                                     (p) => p.id === es.petId,
@@ -3780,8 +3920,10 @@ export function CustomerBookingModal({
                                       className="text-muted-foreground flex justify-between text-xs"
                                     >
                                       <span>
-                                        {addon?.name ?? es.serviceId} ×{" "}
-                                        {es.quantity}
+                                        {addon?.name ??
+                                          configuredAddOn?.name ??
+                                          es.serviceId}{" "}
+                                        × {es.quantity}
                                         {pet ? ` (${pet.name})` : ""}
                                       </span>
                                       <span>${lineTotal.toFixed(2)}</span>
@@ -3790,6 +3932,22 @@ export function CustomerBookingModal({
                                 })}
                               </div>
                             )}
+                            {pricingComputation.adjustments
+                              .filter((adjustment) => adjustment.amount !== 0)
+                              .map((adjustment) => (
+                                <div
+                                  key={adjustment.id}
+                                  className="flex justify-between text-xs"
+                                >
+                                  <span className="text-muted-foreground">
+                                    {adjustment.label}
+                                  </span>
+                                  <span>
+                                    {adjustment.amount > 0 ? "+" : ""}$
+                                    {adjustment.amount.toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">
                                 Subtotal

@@ -16,16 +16,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
-import {
-  DollarSign,
-  Plus,
-  Edit,
-  Trash2,
-} from "lucide-react";
-import {
-  boardingRates,
-  BoardingRate,
-} from "@/data/boarding";
+import { DollarSign, Plus, Edit, Trash2 } from "lucide-react";
+import { boardingRates, BoardingRate } from "@/data/boarding";
 
 export default function BoardingRatesPage() {
   const [rates, setRates] = useState<BoardingRate[]>(boardingRates);
@@ -223,9 +215,7 @@ export default function BoardingRatesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card
-          className="transition-all hover:-translate-y-0.5 hover:shadow-md"
-        >
+        <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -233,14 +223,15 @@ export default function BoardingRatesPage() {
                   Avg. Nightly Rate
                 </p>
                 <p className="mt-1.5 text-3xl font-bold tabular-nums">
-                  ${
-                    rates.length > 0
-                      ? Math.round(
-                          rates.reduce((total, rate) => total + rate.basePrice, 0) /
-                            rates.length,
-                        )
-                      : 0
-                  }
+                  $
+                  {rates.length > 0
+                    ? Math.round(
+                        rates.reduce(
+                          (total, rate) => total + rate.basePrice,
+                          0,
+                        ) / rates.length,
+                      )
+                    : 0}
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   based on {rates.length} configured rates

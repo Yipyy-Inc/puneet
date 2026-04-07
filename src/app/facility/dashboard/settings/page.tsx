@@ -120,9 +120,7 @@ function BusinessProfileCard() {
   ) => {
     if (fromUnit === toUnit) return value;
     const converted =
-      fromUnit === "celsius"
-        ? value * (9 / 5) + 32
-        : ((value - 32) * 5) / 9;
+      fromUnit === "celsius" ? value * (9 / 5) + 32 : ((value - 32) * 5) / 9;
     return Math.round(converted * 10) / 10;
   };
 

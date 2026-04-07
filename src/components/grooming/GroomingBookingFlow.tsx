@@ -55,6 +55,10 @@ import {
   schedule24HourReminder,
   type GroomingBookingData,
 } from "@/lib/grooming-post-booking";
+import {
+  applyDynamicPricingRules,
+  getStoredServiceAddOns,
+} from "@/lib/pricing-rules";
 import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
@@ -702,6 +706,16 @@ export function GroomingBookingFlow({
     return petsWithInfo.find((p) => p.id === selectedPetId);
   }, [petsWithInfo, selectedPetId]);
 
+  const isSelectedPetNew = useMemo(() => {
+    if (!customer || !selectedPetId) return false;
+    return !bookings.some((existingBooking) => {
+      if (existingBooking.clientId !== customer.id) return false;
+      return Array.isArray(existingBooking.petId)
+        ? existingBooking.petId.includes(selectedPetId)
+        : existingBooking.petId === selectedPetId;
+    });
+  }, [customer, selectedPetId]);
+
   // Get available service categories based on facility config
   const availableServiceCategories = useMemo(() => {
     return SERVICE_CATEGORIES.filter((category) => {
@@ -927,6 +941,70 @@ export function GroomingBookingFlow({
     return total;
   }, [calculatedPrice, selectedAddOns]);
 
+  const storedServiceAddOns = useMemo(
+    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
+    [open],
+  );
+
+  const groomingPricingComputation = useMemo(() => {
+    if (!selectedPet || !selectedServiceCategory) {
+      return {
+        adjustments: [] as Array<{ id: string; label: string; amount: number }>,
+        adjustmentsTotal: 0,
+      };
+    }
+
+    const selectedDateIso = selectedDate
+      ? `${selectedDate.getFullYear()}-${`${selectedDate.getMonth() + 1}`.padStart(2, "0")}-${`${selectedDate.getDate()}`.padStart(2, "0")}`
+      : undefined;
+
+    const normalizedAppointmentTime = selectedTimeSlot
+      ? selectedTimeSlot.trim().split(/\s+/).pop()
+      : undefined;
+
+    return applyDynamicPricingRules({
+      serviceId: "grooming",
+      basePrice: totalPriceWithAddOns,
+      existingExtraServices: [],
+      selectedPetIds: [selectedPet.id],
+      isNewCustomer: isNewClient,
+      newPetIds: isSelectedPetNew ? [selectedPet.id] : [],
+      customer: customer
+        ? {
+            status: customer.status,
+            membershipPlan: customer.membership?.plan,
+            membershipStatus: customer.membership?.status,
+            storeCreditBalance: customer.storeCredit?.balance,
+            hasPackageCredits: (customer.packages ?? []).some(
+              (pkg) => pkg.remainingCredits > 0,
+            ),
+          }
+        : undefined,
+      pets: [selectedPet],
+      addOnsCatalog: storedServiceAddOns,
+      serviceStartDate: selectedDateIso,
+      serviceEndDate: selectedDateIso,
+      serviceDates: selectedDateIso ? [selectedDateIso] : undefined,
+      groomingDurationMinutes: totalDurationWithAddOns,
+      appointmentTime: normalizedAppointmentTime,
+      scheduledCheckInTime: normalizedAppointmentTime,
+      scheduledCheckOutTime: normalizedAppointmentTime,
+      actualCheckInTime: normalizedAppointmentTime,
+      actualCheckOutTime: normalizedAppointmentTime,
+    });
+  }, [
+    selectedPet,
+    selectedServiceCategory,
+    totalPriceWithAddOns,
+    isNewClient,
+    isSelectedPetNew,
+    customer,
+    storedServiceAddOns,
+    totalDurationWithAddOns,
+    selectedDate,
+    selectedTimeSlot,
+  ]);
+
   // Mock data for packages and memberships (in production, fetch from API)
   const customerPackages = useMemo(() => {
     // Mock: Customer has a 4-pack grooming package with 3 remaining credits
@@ -980,7 +1058,10 @@ export function GroomingBookingFlow({
 
   // Calculate final price with discounts and groomer surcharge
   const finalPrice = useMemo(() => {
-    const price = totalPriceWithAddOns + groomerSurcharge;
+    const price =
+      totalPriceWithAddOns +
+      groomingPricingComputation.adjustmentsTotal +
+      groomerSurcharge;
     let discount = 0;
     let discountReason = "";
 
@@ -1019,6 +1100,7 @@ export function GroomingBookingFlow({
     };
   }, [
     totalPriceWithAddOns,
+    groomingPricingComputation.adjustmentsTotal,
     groomerSurcharge,
     recurringEnabled,
     upgradeToVIP,
