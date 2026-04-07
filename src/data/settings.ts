@@ -232,6 +232,11 @@ export const businessProfile: BusinessProfile = {
     instagram: "https://instagram.com/pawcare",
     twitter: "https://twitter.com/pawcare",
   },
+  preferences: {
+    clockFormat: "12h",
+    weightUnit: "lbs",
+    temperatureUnit: "celsius",
+  },
 };
 
 export const businessHours: BusinessHours = {

@@ -114,14 +114,14 @@ function makeId() {
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function conditionSummary(rule: WeatherWarningRule): string {
+function conditionSummary(rule: WeatherWarningRule, unitSymbol: string): string {
   const label = CONDITION_LABELS[rule.condition];
   if (rule.condition === "weather_is") return `${label} ${rule.value}`;
   if (rule.condition === "wind_speed_above")
     return `${label} ${rule.value} km/h`;
   if (rule.condition === "precipitation_probability_above")
     return `${label} ${rule.value}%`;
-  return `${label} ${rule.value}°`;
+  return `${label} ${rule.value}${unitSymbol}`;
 }
 
 interface RuleForm {
@@ -145,13 +145,15 @@ const emptyForm: RuleForm = {
 };
 
 export function WeatherWarningSettings() {
-  const { weatherRules, updateWeatherRules } = useSettings();
+  const { weatherRules, updateWeatherRules, profile } = useSettings();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<WeatherWarningRule | null>(null);
   const [form, setForm] = useState<RuleForm>(emptyForm);
   const [customAreas, setCustomAreas] = useState(getStoredCustomAreas);
   const [newAreaName, setNewAreaName] = useState("");
   const AREA_OPTIONS = [...DEFAULT_AREAS, ...customAreas];
+  const unitSymbol =
+    profile.preferences.temperatureUnit === "fahrenheit" ? "°F" : "°C";
 
   const addCustomArea = () => {
     const name = newAreaName.trim();
@@ -307,7 +309,7 @@ export function WeatherWarningSettings() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground text-xs">
-                        {conditionSummary(rule)}
+                        {conditionSummary(rule, unitSymbol)}
                       </p>
                       <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
                         {rule.message}
@@ -446,7 +448,7 @@ export function WeatherWarningSettings() {
                         ? "%"
                         : form.condition.includes("wind")
                           ? "km/h"
-                          : "°"}
+                          : unitSymbol}
                     </span>
                   </div>
                 )}
