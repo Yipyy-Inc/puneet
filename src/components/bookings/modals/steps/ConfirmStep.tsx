@@ -87,7 +87,12 @@ interface ConfirmStepProps {
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
-  calculatePrice: { basePrice: number; total: number };
+  calculatePrice: {
+    basePrice: number;
+    addOnsTotal?: number;
+    total: number;
+    adjustments?: Array<{ id: string; label: string; amount: number }>;
+  };
   notificationEmail: boolean;
   setNotificationEmail: (value: boolean) => void;
   notificationSMS: boolean;
@@ -806,6 +811,7 @@ export function ConfirmStep({
             (() => {
               const addOns = getStoredAddOns();
               const addonsTotal =
+                calculatePrice.addOnsTotal ??
                 calculatePrice.total - calculatePrice.basePrice;
               return (
                 <div className="space-y-1">
@@ -837,6 +843,22 @@ export function ConfirmStep({
                 </div>
               );
             })()}
+          {(calculatePrice.adjustments ?? [])
+            .filter((adjustment) => adjustment.amount !== 0)
+            .map((adjustment) => (
+              <div
+                key={adjustment.id}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="text-muted-foreground">
+                  {adjustment.label}
+                </span>
+                <span className="font-[tabular-nums] font-medium">
+                  {adjustment.amount > 0 ? "+" : ""}$
+                  {adjustment.amount.toFixed(2)}
+                </span>
+              </div>
+            ))}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">

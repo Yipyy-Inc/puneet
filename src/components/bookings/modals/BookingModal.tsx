@@ -47,9 +47,14 @@ import {
 } from "./constants";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
+import {
+  applyDynamicPricingRules,
+  getStoredServiceAddOns,
+} from "@/lib/pricing-rules";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
+import { bookings as historicalBookings } from "@/data/bookings";
 
 import type { Client } from "@/types/client";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
@@ -390,6 +395,35 @@ export function BookingModal({
     );
   }, [selectedClient, selectedPetIds]);
 
+  const selectedClientBookings = useMemo(() => {
+    if (selectedClientId == null) return [];
+    return historicalBookings.filter(
+      (existingBooking) => existingBooking.clientId === selectedClientId,
+    );
+  }, [selectedClientId]);
+
+  const isNewCustomer = useMemo(() => {
+    if (selectedClientId == null) return false;
+    return selectedClientBookings.length === 0;
+  }, [selectedClientId, selectedClientBookings]);
+
+  const newPetIdsForCustomer = useMemo(() => {
+    if (selectedPetIds.length === 0) return [];
+
+    if (selectedClientBookings.length === 0) {
+      return selectedPetIds;
+    }
+
+    return selectedPetIds.filter(
+      (petId) =>
+        !selectedClientBookings.some((existingBooking) =>
+          Array.isArray(existingBooking.petId)
+            ? existingBooking.petId.includes(petId)
+            : existingBooking.petId === petId,
+        ),
+    );
+  }, [selectedPetIds, selectedClientBookings]);
+
   const canAccessLockedServices = useMemo(() => {
     if (
       !bookingFlow.evaluationRequired ||
@@ -445,7 +479,23 @@ export function BookingModal({
     [bookingFlow, configs],
   );
 
-  // Calculate total price
+  const storedAddOns = useMemo(
+    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
+    [open],
+  );
+
+  const boardingNights = useMemo(() => {
+    if (!boardingRangeStart || !boardingRangeEnd) return 0;
+    return Math.max(
+      1,
+      Math.ceil(
+        (boardingRangeEnd.getTime() - boardingRangeStart.getTime()) /
+          (1000 * 60 * 60 * 24),
+      ),
+    );
+  }, [boardingRangeStart, boardingRangeEnd]);
+
+  // Calculate total price with dynamic pricing rules
   const calculatePrice = useMemo(() => {
     let basePrice = 0;
 
@@ -454,14 +504,11 @@ export function BookingModal({
         serviceType === "half_day" ? daycare.basePrice / 2 : daycare.basePrice;
       basePrice = pricePerDay * daycareSelectedDates.length;
     } else if (selectedService === "boarding") {
-      basePrice = boarding.basePrice;
-      if (boardingRangeStart && boardingRangeEnd) {
-        const days = Math.ceil(
-          (boardingRangeEnd.getTime() - boardingRangeStart.getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        basePrice = basePrice * Math.max(days, 1);
-      }
+      basePrice = boarding.basePrice * Math.max(boardingNights, 1);
+    } else if (selectedService === "grooming") {
+      basePrice = grooming.basePrice * Math.max(selectedPetIds.length, 1);
+    } else if (selectedService === "training") {
+      basePrice = training.basePrice * Math.max(selectedPetIds.length, 1);
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
     } else if (selectedService && !isBuiltinService(selectedService)) {
@@ -471,19 +518,115 @@ export function BookingModal({
       }
     }
 
+    const groomingDurationMinutes =
+      selectedService === "grooming"
+        ? (() => {
+            const checkIn = new Date(`2000-01-01T${checkInTime}`);
+            const checkOut = new Date(`2000-01-01T${checkOutTime}`);
+            const diff = Math.round(
+              (checkOut.getTime() - checkIn.getTime()) / (1000 * 60),
+            );
+            return Number.isFinite(diff) && diff > 0 ? diff : undefined;
+          })()
+        : undefined;
+
+    const formatDateOnly = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = `${date.getMonth() + 1}`.padStart(2, "0");
+      const day = `${date.getDate()}`.padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const daycareServiceDates =
+      daycareDateTimes.length > 0
+        ? daycareDateTimes.map((entry) => entry.date)
+        : daycareSelectedDates.map((date) => formatDateOnly(date));
+
+    const pricingComputation = applyDynamicPricingRules({
+      serviceId: selectedService,
+      basePrice,
+      existingExtraServices: extraServices,
+      selectedPetIds,
+      isNewCustomer,
+      newPetIds: newPetIdsForCustomer,
+      customer: selectedClient
+        ? {
+            status: selectedClient.status,
+            membershipPlan: selectedClient.membership?.plan,
+            membershipStatus: selectedClient.membership?.status,
+            storeCreditBalance: selectedClient.storeCredit?.balance,
+            hasPackageCredits: (selectedClient.packages ?? []).some(
+              (pkg) => pkg.remainingCredits > 0,
+            ),
+          }
+        : undefined,
+      pets: selectedPets,
+      addOnsCatalog: storedAddOns,
+      roomAssignments,
+      boardingNights,
+      sessionUnits:
+        selectedService === "daycare"
+          ? daycareSelectedDates.length
+          : selectedService === "boarding"
+            ? boardingNights
+            : 1,
+      serviceStartDate:
+        selectedService === "daycare"
+          ? daycareServiceDates[0]
+          : selectedService === "boarding" && boardingRangeStart
+            ? boardingRangeStart.toISOString().slice(0, 10)
+            : startDate || undefined,
+      serviceEndDate:
+        selectedService === "daycare"
+          ? daycareServiceDates[daycareServiceDates.length - 1]
+          : selectedService === "boarding" && boardingRangeEnd
+            ? boardingRangeEnd.toISOString().slice(0, 10)
+            : endDate || startDate || undefined,
+      serviceDates:
+        selectedService === "daycare" && daycareServiceDates.length > 0
+          ? daycareServiceDates
+          : undefined,
+      groomingDurationMinutes,
+      appointmentTime: selectedService === "grooming" ? checkInTime : undefined,
+      scheduledCheckInTime: checkInTime,
+      scheduledCheckOutTime: checkOutTime,
+      actualCheckInTime: checkInTime,
+      actualCheckOutTime: checkOutTime,
+    });
+
     return {
       basePrice,
-      total: basePrice,
+      addOnsTotal: pricingComputation.addOnsTotal,
+      adjustments: pricingComputation.adjustments,
+      discount: pricingComputation.discountTotal,
+      total: pricingComputation.total,
+      effectiveExtraServices: pricingComputation.extraServices,
     };
   }, [
     selectedService,
     serviceType,
+    boardingNights,
     boardingRangeStart,
     boardingRangeEnd,
-    daycareSelectedDates.length,
+    startDate,
+    endDate,
+    daycareSelectedDates,
+    daycareDateTimes,
+    selectedPetIds,
+    isNewCustomer,
+    newPetIdsForCustomer,
+    selectedClient,
+    selectedPets,
+    extraServices,
+    roomAssignments,
+    checkInTime,
+    checkOutTime,
     boarding.basePrice,
     daycare.basePrice,
+    grooming.basePrice,
+    training.basePrice,
     getModuleBySlug,
+    storedAddOns,
   ]);
 
   // Check if service requires evaluation
@@ -703,7 +846,7 @@ export function BookingModal({
           : checkOutTime,
       status: "pending",
       basePrice: calculatePrice.basePrice,
-      discount: 0,
+      discount: calculatePrice.discount,
       totalCost: calculatePrice.total,
       paymentStatus: "pending",
       daycareSelectedDates:
@@ -717,7 +860,10 @@ export function BookingModal({
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
-      extraServices: extraServices.length > 0 ? extraServices : undefined,
+      extraServices:
+        calculatePrice.effectiveExtraServices.length > 0
+          ? calculatePrice.effectiveExtraServices
+          : undefined,
       notificationEmail: notificationEmail,
       notificationSMS: notificationSMS,
       tipAmount: tipAmount > 0 ? tipAmount : undefined,
@@ -1950,7 +2096,7 @@ export function BookingModal({
                       roomAssignments={roomAssignments}
                       feedingSchedule={feedingSchedule}
                       medications={medications}
-                      extraServices={extraServices}
+                      extraServices={calculatePrice.effectiveExtraServices}
                       calculatePrice={calculatePrice}
                       notificationEmail={notificationEmail}
                       setNotificationEmail={setNotificationEmail}

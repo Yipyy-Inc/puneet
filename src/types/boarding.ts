@@ -143,6 +143,9 @@ export const multiNightDiscountSchema = z
     minNights: z.number(),
     maxNights: z.number().nullable(),
     discountPercent: z.number(),
+    discountMode: z.enum(["percentage", "flat", "free_nights"]).optional(),
+    discountAmount: z.number().optional(),
+    freeNights: z.number().optional(),
     applicableServices: z.array(z.string()).optional(),
     isActive: z.boolean(),
   })
@@ -173,9 +176,15 @@ export const peakSurchargeSchema = z
     surchargePercent: z.number(),
     isActive: z.boolean(),
     // MoéGo parity fields
-    dateMode: z.enum(["specific", "repeat"]).optional(),
+    dateMode: z.enum(["specific", "repeat", "holiday"]).optional(),
     dateRanges: z.array(peakDateRangeSchema).optional(),
     repeatPattern: peakRepeatPatternSchema.optional(),
+    holidayCountryCode: z.string().optional(),
+    holidayNames: z.array(z.string()).optional(),
+    holidayYearsAhead: z.number().optional(),
+    holidayDates: z.array(z.string()).optional(),
+    holidayExtensionDaysBefore: z.number().optional(),
+    holidayExtensionDaysAfter: z.number().optional(),
     surchargeType: z.enum(["percentage", "flat"]).optional(),
     surchargeAmount: z.number().optional(),
     scope: z.enum(["per_each_pet", "first_pet_only"]).optional(),
@@ -202,6 +211,7 @@ export const multiPetDiscountRuleSchema = z.object({
   applicableServices: z.array(z.string()),
   isActive: z.boolean(),
   discountType: z.enum(["per_pet", "additional_pet"]),
+  discountValueType: z.enum(["flat", "percentage"]).optional(),
   sameLodging: z.boolean(),
   tiers: z.array(multiPetDiscountTierSchema),
 });
@@ -217,13 +227,21 @@ export const latePickupFeeSchema = z.object({
   enabled: z.boolean(),
   condition: z.enum(["late_pickup", "early_dropoff"]),
   graceMinutes: z.number(),
-  feeType: z.enum(["flat", "per_hour", "per_30min", "per_minute"]),
+  feeType: z.enum([
+    "flat",
+    "per_hour",
+    "per_30min",
+    "per_minute",
+    "extra_night",
+  ]),
   amount: z.number(),
   maxFee: z.number().optional(),
   taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
   basedOn: z.enum(["business_hours", "custom_time"]),
   customTime: z.string().optional(),
+  applyFromTime: z.string().optional(),
+  applyUntilTime: z.string().optional(),
   applicableServices: z.array(z.string()).optional(),
 });
 export type LatePickupFee = z.infer<typeof latePickupFeeSchema>;
@@ -245,14 +263,97 @@ export const customFeeSchema = z.object({
   description: z.string().optional(),
   amount: z.number(),
   feeType: z.enum(["flat", "percentage"]),
+  adjustmentKind: z.enum(["fee", "discount"]).optional(),
   taxRate: z.number().optional(),
   scope: z.enum(["per_booking", "per_pet"]),
-  autoApply: z.enum(["none", "at_checkout", "by_care_type"]),
+  autoApply: z.enum([
+    "none",
+    "at_checkout",
+    "by_care_type",
+    "new_customer",
+    "new_pet",
+    "customer_segment",
+    "addon_purchase",
+  ]),
   autoApplyCareTypes: z.array(z.string()).optional(),
+  customerStatuses: z.array(z.string()).optional(),
+  membershipPlans: z.array(z.string()).optional(),
+  requireMembershipActive: z.boolean().optional(),
+  requirePrepaidBalance: z.boolean().optional(),
+  triggerAddOnIds: z.array(z.string()).optional(),
+  waivedAddOnIds: z.array(z.string()).optional(),
+  waivePercentage: z.number().optional(),
   applicableServices: z.array(z.string()),
   isActive: z.boolean(),
 });
 export type CustomFee = z.infer<typeof customFeeSchema>;
+
+export const roomTypeAdjustmentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  roomTypeIds: z.array(z.string()),
+  minNights: z.number().nullable().optional(),
+  maxNights: z.number().nullable().optional(),
+  sameRoomRequired: z.boolean(),
+  adjustmentKind: z.enum(["discount", "surcharge"]),
+  adjustmentType: z.enum(["flat", "percentage"]),
+  amount: z.number(),
+  applicableServices: z.array(z.string()).optional(),
+  isActive: z.boolean(),
+});
+export type RoomTypeAdjustment = z.infer<typeof roomTypeAdjustmentSchema>;
+
+export const groomingConditionAdjustmentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  hairTypes: z.array(z.string()).optional(),
+  breeds: z.array(z.string()).optional(),
+  sexes: z.array(z.enum(["male", "female"])).optional(),
+  petStatuses: z.array(z.enum(["active", "inactive", "deceased"])).optional(),
+  ageMinYears: z.number().nullable().optional(),
+  ageMaxYears: z.number().nullable().optional(),
+  weightMinKg: z.number().nullable().optional(),
+  weightMaxKg: z.number().nullable().optional(),
+  durationMinutesMin: z.number().nullable().optional(),
+  durationMinutesMax: z.number().nullable().optional(),
+  appointmentWindowStart: z.string().optional(),
+  appointmentWindowEnd: z.string().optional(),
+  billingMode: z.enum(["one_time", "per_unit"]).optional(),
+  unitType: z.enum(["nights", "days", "sessions"]).optional(),
+  adjustmentKind: z.enum(["discount", "surcharge"]),
+  adjustmentType: z.enum(["flat", "percentage"]),
+  amount: z.number(),
+  applicableServices: z.array(z.string()).optional(),
+  isActive: z.boolean(),
+});
+export type GroomingConditionAdjustment = z.infer<
+  typeof groomingConditionAdjustmentSchema
+>;
+
+export const serviceBundleRuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  triggerService: z.string(),
+  bundledService: z.string(),
+  bundledServiceLabel: z.string(),
+  triggerUnit: z.enum(["nights", "sessions", "days"]),
+  minUnits: z.number(),
+  maxUnits: z.number().nullable().optional(),
+  requireSamePet: z.boolean(),
+  requireSameRoom: z.boolean(),
+  bundleMode: z.enum(["mandatory", "optional"]),
+  pricingMode: z.enum([
+    "included",
+    "discount_flat",
+    "discount_percentage",
+    "fixed_price",
+  ]),
+  pricingValue: z.number().optional(),
+  notes: z.string().optional(),
+  applicableServices: z.array(z.string()).optional(),
+  isActive: z.boolean(),
+});
+export type ServiceBundleRule = z.infer<typeof serviceBundleRuleSchema>;
 
 export type DiscountStackingMode = "best_only" | "apply_all_sequence";
 
