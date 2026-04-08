@@ -312,11 +312,22 @@ export function ClientContextPanel({
       );
   }, [isCustomerMode, customerId, threadEntityId]);
 
-  const upcoming = scopedBookings.filter(
-    (b) => new Date(b.startDate) > new Date() && b.status !== "cancelled",
-  );
+  const upcoming = scopedBookings
+    .filter((b) => new Date(b.startDate) > new Date() && b.status !== "cancelled")
+    .sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
   const completed = scopedBookings.filter((b) => b.status === "completed");
   const totalSpend = scopedBookings.reduce((s, b) => s + b.totalCost, 0);
+  const nextUpcomingBooking = upcoming[0] ?? null;
+  const nextAppointmentHref = nextUpcomingBooking
+    ? isCustomerMode
+      ? `/customer/bookings/${nextUpcomingBooking.id}`
+      : `/facility/dashboard/bookings/${nextUpcomingBooking.id}`
+    : isCustomerMode
+      ? "/customer/bookings"
+      : "/facility/dashboard/bookings";
 
   const profileName = isCustomerMode
     ? (facility?.name ?? "Facility")
@@ -513,21 +524,25 @@ export function ClientContextPanel({
 
         {/* ── Next Appointment ── */}
         <Section title="Next Appointment" icon={Calendar}>
-          {upcoming[0] ? (
-            <div className="rounded-xl bg-slate-50 p-2.5">
+          {nextUpcomingBooking ? (
+            <Link
+              href={nextAppointmentHref}
+              className="block rounded-xl bg-slate-50 p-2.5 transition-colors hover:bg-slate-100"
+            >
               <div className="flex items-center justify-between">
                 <Badge className="bg-blue-100 text-[10px] text-blue-700 capitalize">
-                  {upcoming[0].service}
+                  {nextUpcomingBooking.service}
                 </Badge>
                 <span className="text-xs font-bold text-slate-700 tabular-nums">
-                  ${upcoming[0].totalCost}
+                  ${nextUpcomingBooking.totalCost}
                 </span>
               </div>
               <p className="mt-1.5 text-xs text-slate-500">
-                {formatDate(upcoming[0].startDate)}
-                {upcoming[0].checkInTime && ` · ${upcoming[0].checkInTime}`}
+                {formatDate(nextUpcomingBooking.startDate)}
+                {nextUpcomingBooking.checkInTime &&
+                  ` · ${nextUpcomingBooking.checkInTime}`}
               </p>
-            </div>
+            </Link>
           ) : (
             <p className="text-xs text-slate-400 italic">
               No upcoming bookings

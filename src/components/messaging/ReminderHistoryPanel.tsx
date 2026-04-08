@@ -66,21 +66,17 @@ export function getReminderHistoryForCustomer({
       .filter(
         (message) =>
           message.clientId === counterpartyId &&
+          message.type === "email" &&
           isReminderMessage(message, true),
       )
-      .map((message) => {
-        const channel: ReminderChannel =
-          message.type === "email" ? "email" : "sms";
-
-        return {
-          id: message.id,
-          type: channel,
-          subject: message.subject,
-          body: message.body,
-          timestamp: message.timestamp,
-          status: message.status,
-        };
-      })
+      .map((message) => ({
+        id: message.id,
+        type: "email" as const,
+        subject: message.subject,
+        body: message.body,
+        timestamp: message.timestamp,
+        status: message.status,
+      }))
       .sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
@@ -246,6 +242,11 @@ export function ReminderHistoryPanel({
     [reminderHistory],
   );
 
+  const customerReminders = useMemo(
+    () => reminderHistory.filter((message) => message.type === "email"),
+    [reminderHistory],
+  );
+
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-b from-amber-50/40 via-white to-slate-50/60">
       <div className="mx-auto w-full max-w-5xl px-6 py-6">
@@ -268,7 +269,7 @@ export function ReminderHistoryPanel({
               </h4>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
                 {isCustomerMode
-                  ? "Email and SMS reminders from this facility are listed here so your chat stays clean and easy to follow."
+                  ? "All reminders from this facility are listed here so your chat stays clean and easy to follow."
                   : "Every outbound reminder sent to this customer, separated by email and SMS for fast follow-up checks."}
               </p>
             </div>
@@ -279,26 +280,70 @@ export function ReminderHistoryPanel({
                 Total reminders
               </p>
               <p className="mt-1 text-right text-2xl font-bold text-slate-900 tabular-nums">
-                {reminderHistory.length}
+                {isCustomerMode ? customerReminders.length : reminderHistory.length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          <ReminderColumn
-            title="Email Reminders"
-            icon={Mail}
-            channel="email"
-            items={emailReminders}
-          />
-          <ReminderColumn
-            title="SMS Reminders"
-            icon={Smartphone}
-            channel="sms"
-            items={smsReminders}
-          />
-        </div>
+        {isCustomerMode ? (
+          <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] backdrop-blur-sm">
+            <div className="space-y-2">
+              {customerReminders.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center">
+                  <p className="text-sm font-medium text-slate-500">No reminders yet</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    New reminders for this facility will appear here automatically.
+                  </p>
+                </div>
+              ) : (
+                customerReminders.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {item.subject ?? "Automated reminder"}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-600">{item.body}</p>
+                      </div>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                          reminderStatusClass(item.status),
+                        )}
+                      >
+                        {reminderStatusLabel(item.status)}
+                      </span>
+                    </div>
+
+                    <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <Clock3 className="size-3.5" />
+                      {formatReminderTimestamp(item.timestamp)}
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        ) : (
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            <ReminderColumn
+              title="Email Reminders"
+              icon={Mail}
+              channel="email"
+              items={emailReminders}
+            />
+            <ReminderColumn
+              title="SMS Reminders"
+              icon={Smartphone}
+              channel="sms"
+              items={smsReminders}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
