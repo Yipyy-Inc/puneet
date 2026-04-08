@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,17 +16,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { estimates } from "@/data/estimates";
+import { clients } from "@/data/clients";
 import { EstimateCard } from "@/components/bookings/EstimateCard";
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
-import dynamic from "next/dynamic";
-
-const EstimateWizard = dynamic(
-  () =>
-    import("@/components/estimates/EstimateWizard").then((m) => ({
-      default: m.EstimateWizard,
-    })),
-  { ssr: false },
-);
+import { useBookingModal } from "@/hooks/use-booking-modal";
 
 type TabFilter =
   | "all"
@@ -48,9 +41,22 @@ const TAB_FILTERS: { key: TabFilter; label: string }[] = [
 ];
 
 export default function EstimatesPage() {
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
+  const { openBookingModal } = useBookingModal();
+
+  const openDashboardEstimateWizard = useCallback(() => {
+    const facilityName = "Example Pet Care Facility";
+    localStorage.setItem("booking-modal-mode", "estimate");
+    openBookingModal({
+      clients: clients.filter((c) => c.facility === facilityName),
+      facilityId: 11,
+      facilityName,
+      onCreateBooking: () => {
+        toast.success("Booking created");
+      },
+    });
+  }, [openBookingModal]);
 
   const filtered = useMemo(() => {
     let list = estimates;
@@ -88,7 +94,7 @@ export default function EstimatesPage() {
             prospects.
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setWizardOpen(true)}>
+        <Button className="gap-2" onClick={openDashboardEstimateWizard}>
           <Plus className="size-4" />
           Create Estimate
         </Button>
@@ -219,13 +225,6 @@ export default function EstimatesPage() {
 
       {/* Follow-up settings */}
       <EstimateFollowUpSettings />
-
-      {/* Wizard */}
-      <EstimateWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        facilityId={11}
-      />
     </div>
   );
 }

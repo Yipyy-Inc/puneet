@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import {
 } from "lucide-react";
 import { trainingSessions, trainers, enrollments } from "@/data/training";
 import { clients } from "@/data/clients";
+import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 
 type SessionStatus = "scheduled" | "pending" | "in-progress" | "completed";
 
@@ -103,6 +105,7 @@ const findClientForPet = (petId: number) => {
 };
 
 export function TrainingSection() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [inProgressQuery, setInProgressQuery] = useState("");
   const [completedQuery, setCompletedQuery] = useState("");
@@ -319,10 +322,32 @@ export function TrainingSection() {
   };
 
   const handleViewDetails = (session: TrainingSessionLocal) => {
-    setSelectedSession(session);
-    setArrivedPets(new Set());
-    setIsCheckInModalOpen(false);
-    setIsDetailsModalOpen(true);
+    const sessionEnrollments = getSessionEnrollments(session.attendees);
+    const firstPet = sessionEnrollments[0];
+
+    if (!firstPet) {
+      toast.error("No booking overview found for this session");
+      return;
+    }
+
+    const bookingHref = getBookingOverviewHref({
+      petId: firstPet.petId,
+      clientId: firstPet.ownerId,
+      service: "training",
+    });
+
+    if (bookingHref) {
+      router.push(bookingHref);
+      return;
+    }
+
+    const client = findClientForPet(firstPet.petId);
+    if (client) {
+      router.push(`/facility/dashboard/clients/${client.id}/bookings`);
+      return;
+    }
+
+    toast.error("No booking overview found for this session");
   };
 
   const canStartSession = (session: TrainingSessionLocal) => {
