@@ -47,6 +47,7 @@ import {
   getStoredServiceAddOns,
   getStoredPricingRules,
   saveStoredPricingRules,
+  saveStoredPricingRulesForScope,
 } from "@/lib/pricing-rules";
 import type {
   MultiPetDiscountRule,
@@ -278,6 +279,7 @@ type PricingSection =
 
 interface PricingRulesPanelProps {
   serviceType: string;
+  facilityId?: number;
   showSections?: PricingSection[];
   hideSectionHeader?: boolean;
 }
@@ -299,11 +301,12 @@ const ALL_SECTIONS: PricingSection[] = [
 
 export function PricingRulesPanel({
   serviceType,
+  facilityId,
   showSections,
   hideSectionHeader = false,
 }: PricingRulesPanelProps) {
   const sections = showSections ?? ALL_SECTIONS;
-  const rules = getStoredPricingRules();
+  const rules = getStoredPricingRules(facilityId);
   const { activeModules } = useCustomServices();
 
   const serviceOptions: ServiceOption[] = [
@@ -316,7 +319,7 @@ export function PricingRulesPanel({
   const serviceLabelMap = Object.fromEntries(
     serviceOptions.map((service) => [service.value, service.label]),
   ) as Record<string, string>;
-  const addOnOptions = getStoredServiceAddOns().filter(
+  const addOnOptions = getStoredServiceAddOns(facilityId).filter(
     (addOn) => addOn.isActive,
   );
   const serviceScopeLabel =
@@ -380,7 +383,7 @@ export function PricingRulesPanel({
   const holidayRulesAutoSyncedRef = useRef(false);
 
   useEffect(() => {
-    saveStoredPricingRules({
+    const nextRules = {
       discountStacking: stacking,
       multiPetDiscounts: multiPet,
       latePickupFees: timeFees,
@@ -391,8 +394,16 @@ export function PricingRulesPanel({
       roomTypeAdjustments,
       groomingConditionAdjustments,
       serviceBundles,
-    });
+    };
+
+    if (facilityId != null) {
+      saveStoredPricingRulesForScope(nextRules, facilityId);
+      return;
+    }
+
+    saveStoredPricingRules(nextRules);
   }, [
+    facilityId,
     stacking,
     multiPet,
     timeFees,

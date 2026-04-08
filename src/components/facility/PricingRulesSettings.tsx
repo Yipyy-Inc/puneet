@@ -159,8 +159,11 @@ const CATEGORIES: CategoryDef[] = [
   },
 ];
 
-function getActiveCount(countKey: keyof StoredPricingRules): number {
-  const rules = getStoredPricingRules();
+function getActiveCount(
+  countKey: keyof StoredPricingRules,
+  facilityId?: number,
+): number {
+  const rules = getStoredPricingRules(facilityId);
   const data = rules[countKey];
   if (typeof data === "string") return data ? 1 : 0;
   if (Array.isArray(data))
@@ -186,7 +189,7 @@ function getActiveCount(countKey: keyof StoredPricingRules): number {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function PricingRulesSettings() {
+export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
   const uniqueCategories = useMemo(() => {
     const seenIds = new Set<string>();
     const seenSections = new Set<string>();
@@ -215,9 +218,9 @@ export function PricingRulesSettings() {
     () =>
       uniqueCategories.map((category) => ({
         ...category,
-        activeCount: getActiveCount(category.countKey),
+        activeCount: getActiveCount(category.countKey, facilityId),
       })),
-    [uniqueCategories],
+    [uniqueCategories, facilityId],
   );
 
   const groups = categoriesWithCounts.reduce(
@@ -494,6 +497,7 @@ export function PricingRulesSettings() {
               >
                 <PricingRulesPanel
                   serviceType="all"
+                  facilityId={facilityId}
                   hideSectionHeader
                   showSections={[
                     (activeCategory?.section ?? "stacking") as

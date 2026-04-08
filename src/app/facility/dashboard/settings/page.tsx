@@ -36,6 +36,7 @@ import { TipSettings } from "@/components/facility/TipSettings";
 import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
+import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -3826,7 +3827,14 @@ export default function SettingsPage() {
           {/* Pricing Rules */}
           {activeSection === "pricing-rules" && (
             <div className="space-y-6">
-              <PricingRulesSettings />
+              <PricingRulesSettings facilityId={11} />
+            </div>
+          )}
+
+          {/* Estimate Settings */}
+          {activeSection === "estimate-settings" && (
+            <div className="space-y-6">
+              <EstimateFollowUpSettings />
             </div>
           )}
 

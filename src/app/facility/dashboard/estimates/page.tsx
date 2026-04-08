@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,8 @@ import { toast } from "sonner";
 import { estimates } from "@/data/estimates";
 import { clients } from "@/data/clients";
 import { EstimateCard } from "@/components/bookings/EstimateCard";
-import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { formatBookingRef } from "@/lib/booking-id";
 
 type TabFilter =
   | "all"
@@ -41,9 +42,15 @@ const TAB_FILTERS: { key: TabFilter; label: string }[] = [
 ];
 
 export default function EstimatesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const searchFromUrl = searchParams.get("q") ?? "";
+  const [searchQuery, setSearchQuery] = useState(searchFromUrl);
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const { openBookingModal } = useBookingModal();
+
+  useEffect(() => {
+    setSearchQuery(searchFromUrl);
+  }, [searchFromUrl]);
 
   const openDashboardEstimateWizard = useCallback(() => {
     const facilityName = "Example Pet Care Facility";
@@ -69,7 +76,12 @@ export default function EstimatesPage() {
         (e) =>
           e.clientName.toLowerCase().includes(q) ||
           e.clientEmail.toLowerCase().includes(q) ||
-          e.service.toLowerCase().includes(q),
+          e.service.toLowerCase().includes(q) ||
+          e.id.toLowerCase().includes(q) ||
+          e.estimateId.toLowerCase().includes(q) ||
+          (e.convertedBookingId != null &&
+            (String(e.convertedBookingId).includes(q) ||
+              formatBookingRef(e.convertedBookingId).toLowerCase().includes(q))),
       );
     }
     return list;
@@ -222,9 +234,6 @@ export default function EstimatesPage() {
           ))}
         </div>
       )}
-
-      {/* Follow-up settings */}
-      <EstimateFollowUpSettings />
     </div>
   );
 }

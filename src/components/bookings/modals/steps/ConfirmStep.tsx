@@ -87,9 +87,13 @@ interface ConfirmStepProps {
   feedingSchedule: FeedingScheduleItem[];
   medications: MedicationItem[];
   extraServices: Array<{ serviceId: string; quantity: number; petId: number }>;
+  addOnsCatalog?: ServiceAddOn[];
   calculatePrice: {
     basePrice: number;
+    subtotal?: number;
     addOnsTotal?: number;
+    taxRate?: number;
+    taxAmount?: number;
     total: number;
     adjustments?: Array<{ id: string; label: string; amount: number }>;
   };
@@ -184,6 +188,7 @@ export function ConfirmStep({
   feedingSchedule,
   medications,
   extraServices,
+  addOnsCatalog,
   calculatePrice,
   notificationEmail,
   setNotificationEmail,
@@ -201,6 +206,7 @@ export function ConfirmStep({
   const isEvaluation = selectedService === "evaluation";
   const isDaycareOrBoarding =
     selectedService === "daycare" || selectedService === "boarding";
+  const resolvedAddOns = addOnsCatalog ?? getStoredAddOns();
 
   // Pending waivers for this service type
   const [signingWaiver, setSigningWaiver] = useState<
@@ -474,7 +480,6 @@ export function ConfirmStep({
       {/* ── Add-ons ─────────────────────────────────────────────── */}
       {hasAddons &&
         (() => {
-          const addOns = getStoredAddOns();
           return (
             <div className="rounded-2xl border p-4">
               <SectionHeader
@@ -487,7 +492,9 @@ export function ConfirmStep({
               <div className="space-y-2">
                 {extraServices.map((es) => {
                   const pet = selectedPets.find((p) => p.id === es.petId);
-                  const addon = addOns.find((a) => a.id === es.serviceId);
+                  const addon = resolvedAddOns.find(
+                    (a) => a.id === es.serviceId,
+                  );
                   const unitPrice = addon?.price ?? 0;
                   const lineTotal = unitPrice * es.quantity;
                   return (
@@ -711,7 +718,10 @@ export function ConfirmStep({
           <SectionHeader icon={Star} label="Add a Tip" />
           <TipSelector
             tipConfig={tipConfig}
-            subtotal={calculatePrice.total}
+            subtotal={
+              calculatePrice.subtotal ??
+              calculatePrice.total - (calculatePrice.taxAmount ?? 0)
+            }
             tipAmount={tipAmount}
             onTipChange={onTipChange}
           />
@@ -809,14 +819,15 @@ export function ConfirmStep({
           </div>
           {hasAddons &&
             (() => {
-              const addOns = getStoredAddOns();
               const addonsTotal =
                 calculatePrice.addOnsTotal ??
                 calculatePrice.total - calculatePrice.basePrice;
               return (
                 <div className="space-y-1">
                   {extraServices.map((es, i) => {
-                    const addon = addOns.find((a) => a.id === es.serviceId);
+                    const addon = resolvedAddOns.find(
+                      (a) => a.id === es.serviceId,
+                    );
                     const lineTotal = (addon?.price ?? 0) * es.quantity;
                     return (
                       <div
@@ -859,6 +870,16 @@ export function ConfirmStep({
                 </span>
               </div>
             ))}
+          {(calculatePrice.taxAmount ?? 0) > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Tax ({((calculatePrice.taxRate ?? 0) * 100).toFixed(2)}%)
+              </span>
+              <span className="font-[tabular-nums] font-medium">
+                +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
+              </span>
+            </div>
+          )}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">
