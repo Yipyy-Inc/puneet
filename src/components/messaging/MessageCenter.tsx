@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ContactList } from "./ContactList";
 import { ConversationThread } from "./ConversationThread";
 import { ClientContextPanel } from "./ClientContextPanel";
 import { messages as facilityMessages } from "@/data/communications-hub";
 import { clientCommunications } from "@/data/communications";
 import { facilities } from "@/data/facilities";
+import { clients } from "@/data/clients";
 import type { Message } from "@/types/communications";
 
 export type MessageCenterMode = "facility" | "customer";
@@ -50,6 +51,39 @@ function buildCustomerMessages(customerId: number): Message[] {
     });
 }
 
+function getCustomerFacilityIds(customerId: number): number[] {
+  const customer = clients.find((client) => client.id === customerId);
+  if (!customer) return [];
+
+  const customerEmail = customer.email.trim().toLowerCase();
+  const customerName = customer.name.trim().toLowerCase();
+
+  return facilities
+    .filter((facility) => {
+      const roster = (facility as Record<string, unknown>).clients as
+        | Array<{
+            person?: {
+              name?: string;
+              email?: string;
+            };
+          }>
+        | undefined;
+
+      if (!roster) return false;
+
+      return roster.some((entry) => {
+        const personName = entry.person?.name?.trim().toLowerCase();
+        const personEmail = entry.person?.email?.trim().toLowerCase();
+
+        return (
+          (personEmail !== undefined && personEmail === customerEmail) ||
+          (personName !== undefined && personName === customerName)
+        );
+      });
+    })
+    .map((facility) => facility.id);
+}
+
 export function MessageCenter({
   mode = "facility",
   customerId = 15,
@@ -73,6 +107,41 @@ export function MessageCenter({
       : facilityMessages;
   }, [mode, customerId]);
 
+  const customerFacilityIds = useMemo(
+    () => (mode === "customer" ? getCustomerFacilityIds(customerId) : []),
+    [mode, customerId],
+  );
+
+  const threadIds = useMemo(
+    () => [...new Set(activeMessages.map((message) => message.threadId ?? message.id))],
+    [activeMessages],
+  );
+
+  const customerThreadIds = useMemo(() => {
+    if (mode !== "customer") return threadIds;
+
+    const enrollmentThreadIds = customerFacilityIds.map(
+      (facilityId) => `facility-${facilityId}`,
+    );
+
+    return [...new Set([...enrollmentThreadIds, ...threadIds])];
+  }, [mode, customerFacilityIds, threadIds]);
+
+  const showContactList = mode !== "customer" || customerThreadIds.length !== 1;
+
+  useEffect(() => {
+    if (mode !== "customer") return;
+    if (customerThreadIds.length === 0) return;
+    if (
+      selectedThreadId !== null &&
+      customerThreadIds.includes(selectedThreadId)
+    ) {
+      return;
+    }
+
+    setSelectedThreadId(customerThreadIds[0]);
+  }, [mode, selectedThreadId, customerThreadIds]);
+
   const [detailOpen, setDetailOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return localStorage.getItem(detailStorageKey) !== "false";
@@ -93,14 +162,19 @@ export function MessageCenter({
       }}
     >
       {/* Contacts */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <ContactList
-          messages={activeMessages}
-          mode={mode}
-          selectedThreadId={selectedThreadId}
-          onSelectThread={setSelectedThreadId}
-        />
-      </div>
+      {showContactList && (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <ContactList
+            messages={activeMessages}
+            mode={mode}
+            selectedThreadId={selectedThreadId}
+            onSelectThread={setSelectedThreadId}
+            customerFacilityIds={
+              mode === "customer" ? customerFacilityIds : undefined
+            }
+          />
+        </div>
+      )}
 
       {/* Conversation */}
       <div className="flex min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

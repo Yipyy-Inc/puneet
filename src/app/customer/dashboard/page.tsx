@@ -423,52 +423,171 @@ export default function CustomerDashboardPage() {
   };
 
   return (
-    <div className="from-background via-muted/20 to-background min-h-screen bg-linear-to-br p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="from-background via-muted/20 to-background relative min-h-screen overflow-hidden bg-linear-to-br p-4 md:p-6">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="bg-primary/10 absolute -top-32 right-0 h-80 w-80 rounded-full blur-3xl" />
+        <div className="absolute left-0 top-1/3 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl" />
+      </div>
+      <div className="relative mx-auto max-w-7xl space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          {selectedFacility?.logo && (
-            <Image
-              src={selectedFacility.logo}
-              alt={selectedFacility.name}
-              width={48}
-              height={48}
-              className="h-12 w-auto"
-            />
-          )}
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold">
-              Welcome back{customer ? `, ${customer.name.split(" ")[0]}` : ""}!
-            </h1>
-            <p className="text-muted-foreground">
-              {isMounted && selectedFacility
-                ? `Manage your pets and book services at ${selectedFacility.name}`
-                : "Manage your pets and book services with ease"}
-            </p>
+        <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/75 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm md:p-6">
+          <div className="bg-primary/10 pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl" />
+          <div className="relative flex items-center gap-4">
+            {selectedFacility?.logo && (
+              <Image
+                src={selectedFacility.logo}
+                alt={selectedFacility.name}
+                width={48}
+                height={48}
+                className="h-12 w-auto"
+              />
+            )}
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight">
+                Welcome back{customer ? `, ${customer.name.split(" ")[0]}` : ""}!
+              </h1>
+              <p className="text-muted-foreground">
+                {isMounted && selectedFacility
+                  ? `Manage your pets and book services at ${selectedFacility.name}`
+                  : "Manage your pets and book services with ease"}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Next Appointment Card */}
-        {nextBooking && (
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="text-lg">NEXT APPOINTMENT</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-start gap-4">
-                <div className="bg-primary/10 rounded-lg p-3">
+        {/* Dashboard Summary Tiles */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Link href="/customer/pets" className="group block">
+            <Card className="relative cursor-pointer overflow-hidden border border-emerald-100/70 bg-linear-to-br from-white via-white to-emerald-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-100/60">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-emerald-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">My Pets</CardTitle>
+                <PawPrint className="size-4 text-emerald-600 transition-transform duration-300 group-hover:scale-110" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{customerPets.length}</div>
+                <p className="text-muted-foreground text-xs">
+                  {customerPets.length > 0
+                    ? customerPets.map((p) => p.name).join(" & ")
+                    : "Add your first pet"}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/customer/bookings" className="group block">
+            <Card className="relative cursor-pointer overflow-hidden border border-sky-100/80 bg-linear-to-br from-white via-white to-sky-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-100/60">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-sky-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Upcoming Appointments
+                </CardTitle>
+                <Calendar className="size-4 text-sky-600 transition-transform duration-300 group-hover:scale-110" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {upcomingBookings.length}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {upcomingBookings.length > 0 && nextBooking
+                    ? `Next: ${formatDateShort(new Date(nextBooking.startDate))}`
+                    : "No upcoming appointments"}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/customer/messages" className="group block">
+            <Card className="relative cursor-pointer overflow-hidden border border-amber-100/80 bg-linear-to-br from-white via-white to-amber-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-100/60">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-amber-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Messages</CardTitle>
+                <MessageSquare className="size-4 text-amber-600 transition-transform duration-300 group-hover:scale-110" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{messagesData.total}</div>
+                <p className="text-muted-foreground text-xs">
+                  {messagesData.unread > 0 ? (
+                    <span className="font-medium text-orange-600">
+                      {messagesData.unread} new messages
+                    </span>
+                  ) : (
+                    "No new messages"
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/customer/report-cards" className="group block">
+            <Card className="relative cursor-pointer overflow-hidden border border-rose-100/80 bg-linear-to-br from-white via-white to-rose-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-100/60">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-rose-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Report Cards
+                </CardTitle>
+                <FileText className="size-4 text-rose-600 transition-transform duration-300 group-hover:scale-110" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{reportCardsData.total}</div>
+                <p className="text-muted-foreground text-xs">
+                  {reportCardsData.latest
+                    ? `Latest: ${formatDateShort(reportCardsData.latest)}`
+                    : "No report cards yet"}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {/* Upcoming Appointment Card */}
+        <Card className="relative overflow-hidden border border-amber-100/80 bg-linear-to-br from-white via-white to-amber-50/60 shadow-xl shadow-amber-100/60">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-amber-300/20 blur-3xl" />
+          <CardHeader className="relative border-b border-amber-100/60 bg-white/70 backdrop-blur-sm">
+            <CardTitle className="flex items-center gap-2 text-lg tracking-wide">
+              <Calendar className="size-5 text-amber-600" />
+              UPCOMING APPOINTMENT
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="relative pt-6">
+            {nextBooking ? (
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                <div className="bg-primary/10 ring-primary/15 rounded-xl p-3 ring-1">
                   {(() => {
                     const ServiceIcon = getServiceIcon(nextBooking.service);
                     return <ServiceIcon className="text-primary size-6" />;
                   })()}
                 </div>
-                <div className="flex-1 space-y-2">
+                <Link
+                  href={`/customer/bookings/${nextBooking.id}`}
+                  className="hover:bg-accent/40 flex-1 rounded-xl border border-amber-100/70 bg-white/70 p-3 transition-colors"
+                >
                   <div>
                     <h3 className="text-lg font-semibold capitalize">
                       {nextBooking.service}
-                      {nextBookingPet &&
-                        ` – ${nextBookingPet.name} (${nextBookingPet.breed})`}
                     </h3>
+                    {nextBookingPet && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="ring-primary/20 relative size-8 overflow-hidden rounded-full ring-2">
+                          {nextBookingPet.imageUrl ? (
+                            <Image
+                              src={nextBookingPet.imageUrl}
+                              alt={`${nextBookingPet.name} photo`}
+                              width={32}
+                              height={32}
+                              className="size-8 object-cover"
+                            />
+                          ) : (
+                            <div className="bg-primary/10 flex size-8 items-center justify-center">
+                              <Dog className="text-primary size-4" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {nextBookingPet.name} ({nextBookingPet.breed})
+                        </span>
+                      </div>
+                    )}
                     <p className="text-muted-foreground text-sm">
                       {formatDateTime(
                         nextBooking.startDate,
@@ -487,115 +606,57 @@ export default function CustomerDashboardPage() {
                           )}
                       </p>
                     )}
-                    <p className="mt-2 text-lg font-semibold">
+                    <p className="bg-primary/10 text-primary mt-3 inline-flex w-fit rounded-full px-2.5 py-1 text-sm font-semibold">
                       ${nextBooking.totalCost}
                     </p>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" asChild>
+                </Link>
+                <div className="flex gap-2 sm:flex-col sm:self-start">
+                  <Button variant="outline" size="sm" className="bg-white/80" asChild>
                     <Link href={`/customer/bookings/${nextBooking.id}`}>
                       Reschedule
                     </Link>
                   </Button>
-                  <Button size="sm" asChild>
+                  <Button size="sm" className="shadow-sm" asChild>
                     <Link href={`/customer/bookings/${nextBooking.id}`}>
                       View Details
                     </Link>
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Dashboard Summary Tiles */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card
-            className="hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => (window.location.href = "/customer/pets")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">My Pets</CardTitle>
-              <PawPrint className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customerPets.length}</div>
-              <p className="text-muted-foreground text-xs">
-                {customerPets.length > 0
-                  ? customerPets.map((p) => p.name).join(" & ")
-                  : "Add your first pet"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => (window.location.href = "/customer/bookings")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
-              <Calendar className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {upcomingBookings.length}
+            ) : (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="bg-muted rounded-xl p-3 ring-1 ring-amber-100">
+                    <Calendar className="text-muted-foreground size-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold">
+                      No upcoming appointments yet
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Book your next visit to keep your pet on schedule.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="bg-white/80" asChild>
+                    <Link href="/customer/bookings">View All</Link>
+                  </Button>
+                  <Button size="sm" className="shadow-sm" asChild>
+                    <Link href="/customer/bookings/new">Book Appointment</Link>
+                  </Button>
+                </div>
               </div>
-              <p className="text-muted-foreground text-xs">
-                {upcomingBookings.length > 0 && nextBooking
-                  ? `Next: ${formatDateShort(new Date(nextBooking.startDate))}`
-                  : "No upcoming appointments"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => (window.location.href = "/customer/messages")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Messages</CardTitle>
-              <MessageSquare className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{messagesData.total}</div>
-              <p className="text-muted-foreground text-xs">
-                {messagesData.unread > 0 ? (
-                  <span className="font-medium text-orange-600">
-                    {messagesData.unread} new messages
-                  </span>
-                ) : (
-                  "No new messages"
-                )}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => (window.location.href = "/customer/report-cards")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Report Cards
-              </CardTitle>
-              <FileText className="text-muted-foreground size-4" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{reportCardsData.total}</div>
-              <p className="text-muted-foreground text-xs">
-                {reportCardsData.latest
-                  ? `Latest: ${formatDateShort(reportCardsData.latest)}`
-                  : "No report cards yet"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="from-primary border-0 bg-linear-to-br to-white shadow-lg">
-            <CardContent className="p-6">
+          <Card className="from-primary/95 relative overflow-hidden border-0 bg-linear-to-br via-primary/85 to-amber-100 shadow-xl shadow-primary/20">
+            <div className="pointer-events-none absolute -bottom-12 right-6 h-40 w-40 rounded-full bg-white/25 blur-3xl" />
+            <CardContent className="relative p-6">
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
                   <div className="text-4xl font-bold text-white drop-shadow-md">
@@ -627,7 +688,7 @@ export default function CustomerDashboardPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="text-primary bg-white hover:bg-white/90"
+                  className="text-primary bg-white/95 shadow-sm hover:bg-white"
                   asChild
                 >
                   <Link href="/customer/rewards">Redeem Points</Link>
@@ -637,148 +698,8 @@ export default function CustomerDashboardPage() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* My Pets Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>My Pets</CardTitle>
-                <Link
-                  href="/customer/pets"
-                  className="text-muted-foreground hover:text-foreground text-sm"
-                >
-                  Manage all →
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {customerPets.length === 0 ? (
-                <div className="text-muted-foreground py-8 text-center">
-                  <Dog className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>No pets registered yet</p>
-                  <Button variant="outline" size="sm" className="mt-4" asChild>
-                    <Link href="/customer/pets/add">Add your first pet</Link>
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {customerPets.map((pet) => {
-                    const petServices = getPetServices(pet.id);
-                    return (
-                      <div
-                        key={pet.id}
-                        className="bg-background/60 flex items-center gap-3 rounded-lg border p-3"
-                      >
-                        <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
-                          <Dog className="text-primary size-6" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium">{pet.name}</p>
-                            <div className="flex items-center gap-1">
-                              <div className="size-2 rounded-full bg-green-500" />
-                              <span className="text-muted-foreground text-xs">
-                                Healthy
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-muted-foreground text-xs">
-                            {pet.breed} - {pet.age}{" "}
-                            {pet.age === 1 ? "yr" : "yrs"}
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {petServices.map((service) => (
-                              <Badge
-                                key={service}
-                                variant="secondary"
-                                className="text-xs capitalize"
-                              >
-                                {service}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <Link
-                    href="/customer/pets/add"
-                    className="text-muted-foreground hover:text-foreground block border-t pt-2 text-center text-sm"
-                  >
-                    + Add a new pet
-                  </Link>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Messages Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Messages</CardTitle>
-                <Link
-                  href="/customer/messages"
-                  className="text-muted-foreground hover:text-foreground text-sm"
-                >
-                  View all →
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {messagesData.recent.length === 0 ? (
-                <div className="text-muted-foreground py-8 text-center">
-                  <MessageSquare className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>No messages yet</p>
-                </div>
-              ) : (
-                messagesData.recent.map((message) => {
-                  const isUnread = message.status !== "read";
-                  const getIcon = () => {
-                    if (message.staffName?.toLowerCase().includes("groomer"))
-                      return PawPrint;
-                    if (message.staffName?.toLowerCase().includes("trainer"))
-                      return GraduationCap;
-                    return Building2;
-                  };
-                  const Icon = getIcon();
-                  return (
-                    <div
-                      key={message.id}
-                      className="bg-background/60 hover:bg-accent/50 flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors"
-                      onClick={() =>
-                        (window.location.href = "/customer/messages")
-                      }
-                    >
-                      <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
-                        <Icon className="text-primary size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium">
-                            {message.staffName || "Facility Team"}
-                          </p>
-                          {isUnread && (
-                            <div className="size-2 shrink-0 rounded-full bg-orange-500" />
-                          )}
-                        </div>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {message.subject}
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {formatTimeAgo(message.timestamp)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Action Needed / Getting Started */}
-        <Card>
+        <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {urgentActions.length > 0 ? (
@@ -814,7 +735,7 @@ export default function CustomerDashboardPage() {
                   variant={
                     action.priority === "high" ? "destructive" : "default"
                   }
-                  className="border-l-4"
+                  className="border-l-4 bg-white/75 shadow-sm"
                 >
                   <AlertCircle className="size-4" />
                   <AlertDescription>
@@ -828,7 +749,7 @@ export default function CustomerDashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 text-xs"
+                        className="h-7 bg-white/90 text-xs"
                         asChild
                       >
                         <Link href={action.actionLink}>
@@ -844,9 +765,160 @@ export default function CustomerDashboardPage() {
           </CardContent>
         </Card>
 
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* My Pets Section */}
+          <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>My Pets</CardTitle>
+                <Link
+                  href="/customer/pets"
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  Manage all →
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {customerPets.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  <Dog className="mx-auto mb-2 size-12 opacity-50" />
+                  <p>No pets registered yet</p>
+                  <Button variant="outline" size="sm" className="mt-4" asChild>
+                    <Link href="/customer/pets/add">Add your first pet</Link>
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {customerPets.map((pet) => {
+                    const petServices = getPetServices(pet.id);
+                    return (
+                      <Link
+                        key={pet.id}
+                        href={`/customer/pets/${pet.id}`}
+                        className="bg-background/65 hover:bg-accent/50 hover:shadow-primary/10 flex items-center gap-3 rounded-lg border p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        <div className="ring-primary/20 relative size-12 shrink-0 overflow-hidden rounded-full ring-2">
+                          {pet.imageUrl ? (
+                            <Image
+                              src={pet.imageUrl}
+                              alt={`${pet.name} photo`}
+                              width={48}
+                              height={48}
+                              className="size-12 object-cover"
+                            />
+                          ) : (
+                            <div className="bg-primary/10 flex size-12 items-center justify-center">
+                              <Dog className="text-primary size-6" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{pet.name}</p>
+                            <div className="flex items-center gap-1">
+                              <div className="size-2 rounded-full bg-green-500" />
+                              <span className="text-muted-foreground text-xs">
+                                Healthy
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-muted-foreground text-xs">
+                            {pet.breed} - {pet.age}{" "}
+                            {pet.age === 1 ? "yr" : "yrs"}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {petServices.map((service) => (
+                              <Badge
+                                key={service}
+                                variant="secondary"
+                                className="text-xs capitalize"
+                              >
+                                {service}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  <Link
+                    href="/customer/pets/add"
+                    className="text-muted-foreground hover:text-foreground block border-t pt-2 text-center text-sm"
+                  >
+                    + Add a new pet
+                  </Link>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Messages Section */}
+          <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Messages</CardTitle>
+                <Link
+                  href="/customer/messages"
+                  className="text-muted-foreground hover:text-foreground text-sm"
+                >
+                  View all →
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {messagesData.recent.length === 0 ? (
+                <div className="text-muted-foreground py-8 text-center">
+                  <MessageSquare className="mx-auto mb-2 size-12 opacity-50" />
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                messagesData.recent.map((message) => {
+                  const isUnread = message.status !== "read";
+                  const getIcon = () => {
+                    if (message.staffName?.toLowerCase().includes("groomer"))
+                      return PawPrint;
+                    if (message.staffName?.toLowerCase().includes("trainer"))
+                      return GraduationCap;
+                    return Building2;
+                  };
+                  const Icon = getIcon();
+                  return (
+                    <Link
+                      key={message.id}
+                      href="/customer/messages"
+                      className="bg-background/65 hover:bg-accent/50 hover:shadow-primary/10 flex cursor-pointer items-start gap-3 rounded-lg border p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-full">
+                        <Icon className="text-primary size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {message.staffName || "Facility Team"}
+                          </p>
+                          {isUnread && (
+                            <div className="size-2 shrink-0 rounded-full bg-orange-500" />
+                          )}
+                        </div>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {message.subject}
+                        </p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {formatTimeAgo(message.timestamp)}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Upcoming Bookings List */}
         {upcomingBookings.length > 0 && (
-          <Card>
+          <Card className="border-white/70 bg-white/85 shadow-lg shadow-slate-200/60 backdrop-blur-sm">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Upcoming Bookings</CardTitle>
@@ -863,15 +935,30 @@ export default function CustomerDashboardPage() {
                 const pet = customerPets.find((p) => p.id === booking.petId);
                 const ServiceIcon = getServiceIcon(booking.service);
                 return (
-                  <div
+                  <Link
                     key={booking.id}
-                    className="bg-background/60 hover:bg-accent/50 flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors"
-                    onClick={() =>
-                      (window.location.href = `/customer/bookings/${booking.id}`)
-                    }
+                    href={`/customer/bookings/${booking.id}`}
+                    className="bg-background/65 hover:bg-accent/50 hover:shadow-primary/10 flex cursor-pointer items-center gap-3 rounded-lg border p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                   >
-                    <div className="bg-primary/10 rounded-lg p-2">
-                      <ServiceIcon className="text-primary size-4" />
+                    <div className="flex items-center gap-2">
+                      <div className="bg-primary/10 rounded-lg p-2">
+                        <ServiceIcon className="text-primary size-4" />
+                      </div>
+                      <div className="ring-primary/20 relative size-9 shrink-0 overflow-hidden rounded-full ring-2">
+                        {pet?.imageUrl ? (
+                          <Image
+                            src={pet.imageUrl}
+                            alt={`${pet.name} photo`}
+                            width={36}
+                            height={36}
+                            className="size-9 object-cover"
+                          />
+                        ) : (
+                          <div className="bg-primary/10 flex size-9 items-center justify-center">
+                            <Dog className="text-primary size-4" />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -900,7 +987,7 @@ export default function CustomerDashboardPage() {
                     <div className="text-primary text-sm font-semibold">
                       ${booking.totalCost}
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </CardContent>
