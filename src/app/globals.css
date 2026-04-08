@@ -679,6 +679,12 @@ button {
   cursor: pointer;
 }
 
+/* Monetary typography baseline (matches rates module treatment) */
+.price-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
 /* Report card theme patterns - decorative backgrounds */
 .report-card-pattern-dots {
   background-image: radial-gradient(

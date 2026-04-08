@@ -27,13 +27,13 @@ export function FilterLabel({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+      <p className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
         {label}
       </p>
       {comingSoon && (
         <Badge
           variant="outline"
-          className="border-border/40 text-muted-foreground/60 h-4 px-1.5 text-[8px]"
+          className="h-4 border-slate-200/80 bg-slate-50 px-1.5 text-[8px] text-slate-500"
         >
           Soon
         </Badge>
@@ -60,7 +60,7 @@ export function TriToggle({
   return (
     <div>
       <FilterLabel label={label} comingSoon={comingSoon} />
-      <div className="border-border/50 mt-1.5 inline-flex rounded-md border p-0.5">
+      <div className="mt-1.5 inline-flex rounded-md border border-slate-200 bg-white/90 p-0.5">
         {(["any", "yes", "no"] as const).map((v) => (
           <button
             key={v}
@@ -68,8 +68,8 @@ export function TriToggle({
             className={cn(
               "rounded-sm px-3 py-1 text-[11px] font-medium transition-all",
               value === v
-                ? "bg-foreground text-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-sky-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-sky-50 hover:text-slate-900",
               comingSoon && "cursor-not-allowed opacity-50",
             )}
           >
@@ -108,8 +108,8 @@ export function CheckGroup({
             className={cn(
               "flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-all",
               selected.includes(opt.value)
-                ? "border-foreground/30 bg-foreground/5 font-medium"
-                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                ? "border-sky-300 bg-sky-50 font-medium text-sky-700"
+                : "border-slate-200 text-slate-600 hover:border-sky-200 hover:bg-sky-50/60 hover:text-slate-900",
               comingSoon && "cursor-not-allowed opacity-50",
             )}
           >
@@ -157,8 +157,8 @@ export function PresetPills({
             className={cn(
               "rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
               value === opt.value
-                ? "bg-foreground text-background border-transparent"
-                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                ? "border-sky-600 bg-sky-600 text-white"
+                : "border-slate-200 text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-slate-900",
               comingSoon && "cursor-not-allowed opacity-50",
             )}
           >
@@ -194,7 +194,7 @@ export function TextFilter({
         value={value}
         onChange={(e) => !comingSoon && onChange(e.target.value)}
         placeholder={placeholder ?? "Type to filter..."}
-        className="mt-1.5 h-8 text-xs"
+        className="mt-1.5 h-8 border-slate-200 bg-white/90 text-xs"
         disabled={comingSoon}
       />
     </div>
@@ -233,16 +233,16 @@ export function RangeFilter({
           value={minValue}
           onChange={(e) => !comingSoon && onMinChange(e.target.value)}
           placeholder={minPlaceholder ?? "Min"}
-          className="h-8 w-20 text-xs"
+          className="h-8 w-20 border-slate-200 bg-white/90 text-xs"
           disabled={comingSoon}
         />
-        <span className="text-muted-foreground self-center text-xs">—</span>
+        <span className="self-center text-xs text-slate-400">—</span>
         <Input
           type="number"
           value={maxValue}
           onChange={(e) => !comingSoon && onMaxChange(e.target.value)}
           placeholder={maxPlaceholder ?? "Max"}
-          className="h-8 w-20 text-xs"
+          className="h-8 w-20 border-slate-200 bg-white/90 text-xs"
           disabled={comingSoon}
         />
       </div>
@@ -309,8 +309,8 @@ export function DayRangePreset({
             className={cn(
               "rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
               activePreset === p.value
-                ? "bg-foreground text-background border-transparent"
-                : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                ? "border-sky-600 bg-sky-600 text-white"
+                : "border-slate-200 text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-slate-900",
               comingSoon && "cursor-not-allowed opacity-50",
             )}
           >
@@ -324,8 +324,8 @@ export function DayRangePreset({
               className={cn(
                 "flex items-center gap-1 rounded-full border px-3 py-1 text-[11px] font-medium transition-all",
                 isCustom
-                  ? "bg-foreground text-background border-transparent"
-                  : "border-border/50 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                  ? "border-sky-600 bg-sky-600 text-white"
+                  : "border-slate-200 text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-slate-900",
                 comingSoon && "cursor-not-allowed opacity-50",
               )}
             >
@@ -333,11 +333,16 @@ export function DayRangePreset({
               <ChevronDown className="size-3" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-52 p-3">
-            <p className="mb-2.5 text-xs font-medium">Custom Range (days)</p>
+          <PopoverContent
+            align="start"
+            className="w-52 border-slate-200 bg-white/95 p-3"
+          >
+            <p className="mb-2.5 text-xs font-medium text-slate-700">
+              Custom Range (days)
+            </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground w-10 text-[11px]">
+                <span className="w-10 text-[11px] text-slate-500">
                   From
                 </span>
                 <Input
@@ -346,11 +351,11 @@ export function DayRangePreset({
                   value={customMin}
                   onChange={(e) => setCustomMin(e.target.value)}
                   placeholder="0"
-                  className="h-7 text-xs"
+                  className="h-7 border-slate-200 bg-white/90 text-xs"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground w-10 text-[11px]">
+                <span className="w-10 text-[11px] text-slate-500">
                   To
                 </span>
                 <Input
@@ -359,7 +364,7 @@ export function DayRangePreset({
                   value={customMax}
                   onChange={(e) => setCustomMax(e.target.value)}
                   placeholder="∞"
-                  className="h-7 text-xs"
+                  className="h-7 border-slate-200 bg-white/90 text-xs"
                 />
               </div>
             </div>

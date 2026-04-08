@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Calendar,
   DollarSign,
@@ -505,22 +506,22 @@ export default function ReportsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <input
+          <Input
             type="date"
             value={dateRange.start}
             onChange={(e) =>
               setDateRange({ ...dateRange, start: e.target.value })
             }
-            className="rounded-md border px-3 py-2"
+            className="w-[168px]"
           />
           <span className="text-muted-foreground">to</span>
-          <input
+          <Input
             type="date"
             value={dateRange.end}
             onChange={(e) =>
               setDateRange({ ...dateRange, end: e.target.value })
             }
-            className="rounded-md border px-3 py-2"
+            className="w-[168px]"
           />
         </div>
       </div>

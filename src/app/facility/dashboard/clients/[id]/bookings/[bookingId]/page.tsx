@@ -186,18 +186,92 @@ export default function ClientBookingDetailPage({
   const isEstimateSent = booking?.status === "estimate_sent";
   const isPaid = booking?.paymentStatus === "paid";
 
-  // Auto-transition config from facility settings
-  const autoTransitions = facility?.bookingStatusConfig?.autoTransitions as
-    | Record<string, string>
+  type AutoTransitionAction =
+    | "onDepositPaid"
+    | "onCheckIn"
+    | "onCheckout"
+    | "onPaymentComplete";
+
+  type IftttTransitionRule = {
+    id: string;
+    service: string;
+    action: AutoTransitionAction;
+    currentStatus: string;
+    targetStatus: string;
+    enabled: boolean;
+  };
+
+  const bookingStatusConfig = facility?.bookingStatusConfig as
+    | {
+        autoTransitions?: Record<string, string>;
+        iftttTransitionRules?: IftttTransitionRule[];
+        advancedAutoTransitions?: IftttTransitionRule[];
+      }
     | undefined;
-  const autoTransition = (action: string) => {
-    const target = autoTransitions?.[action];
-    if (target && target !== "none") {
-      const label = target
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      toast.success(`Status auto-updated to ${label}`);
+
+  const autoTransitions = bookingStatusConfig?.autoTransitions;
+
+  const iftttTransitionRules =
+    bookingStatusConfig?.iftttTransitionRules ??
+    bookingStatusConfig?.advancedAutoTransitions ??
+    [];
+
+  const resolveAutoTransition = (action: AutoTransitionAction) => {
+    if (!booking) {
+      return {
+        target: null,
+        sourceLabel: null,
+      };
     }
+
+    const bookingService = String(booking.service).toLowerCase();
+    const bookingStatus = booking.status;
+
+    const matchedRule = iftttTransitionRules.find((rule) => {
+      if (!rule || rule.enabled === false) return false;
+      if (rule.action !== action) return false;
+
+      const serviceMatches =
+        rule.service === "any" || rule.service === bookingService;
+      if (!serviceMatches) return false;
+
+      const statusMatches =
+        rule.currentStatus === "any" || rule.currentStatus === bookingStatus;
+      if (!statusMatches) return false;
+
+      return Boolean(rule.targetStatus && rule.targetStatus !== "none");
+    });
+
+    if (matchedRule) {
+      return {
+        target: matchedRule.targetStatus,
+        sourceLabel: "IFTTT rule",
+      };
+    }
+
+    const fallbackTarget = autoTransitions?.[action];
+    if (fallbackTarget && fallbackTarget !== "none") {
+      return {
+        target: fallbackTarget,
+        sourceLabel: "default rule",
+      };
+    }
+
+    return {
+      target: null,
+      sourceLabel: null,
+    };
+  };
+
+  const autoTransition = (action: AutoTransitionAction) => {
+    const { target, sourceLabel } = resolveAutoTransition(action);
+    if (!target) return;
+
+    const label = target
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+
+    toast.success(`Status auto-updated to ${label} (${sourceLabel})`);
   };
 
   const [editOpen, setEditOpen] = useState(false);

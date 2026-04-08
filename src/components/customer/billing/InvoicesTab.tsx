@@ -526,10 +526,10 @@ export function InvoicesTab() {
                               <TableCell className="text-right">
                                 {item.quantity}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="price-value text-right">
                                 {formatCurrency(item.unitPrice)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="price-value text-right">
                                 {formatCurrency(item.total)}
                               </TableCell>
                             </TableRow>
@@ -544,32 +544,40 @@ export function InvoicesTab() {
                           <span className="text-muted-foreground">
                             Subtotal:
                           </span>
-                          <span>{formatCurrency(invoice.subtotal)}</span>
+                          <span className="price-value">
+                            {formatCurrency(invoice.subtotal)}
+                          </span>
                         </div>
                         {invoice.tax > 0 && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">
                               Tax ({invoice.taxRate}%):
                             </span>
-                            <span>{formatCurrency(invoice.tax)}</span>
+                            <span className="price-value">
+                              {formatCurrency(invoice.tax)}
+                            </span>
                           </div>
                         )}
                         {invoice.discount > 0 && (
                           <div className="flex justify-between text-green-600">
                             <span>Discount:</span>
-                            <span>-{formatCurrency(invoice.discount)}</span>
+                            <span className="price-value">
+                              -{formatCurrency(invoice.discount)}
+                            </span>
                           </div>
                         )}
                         <div className="flex justify-between border-t pt-2 font-semibold">
                           <span>Total:</span>
-                          <span>{formatCurrency(invoice.total)}</span>
+                          <span className="price-value">
+                            {formatCurrency(invoice.total)}
+                          </span>
                         </div>
                         {invoice.amountPaid > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">
                               Amount Paid:
                             </span>
-                            <span className="text-green-600">
+                            <span className="price-value text-green-600">
                               {formatCurrency(invoice.amountPaid)}
                             </span>
                           </div>
@@ -580,7 +588,7 @@ export function InvoicesTab() {
                               <span className="text-muted-foreground">
                                 Amount Due:
                               </span>{" "}
-                              <span className="font-semibold">
+                              <span className="price-value">
                                 {formatCurrency(invoice.amountDue)}
                               </span>
                             </div>
@@ -618,7 +626,9 @@ export function InvoicesTab() {
                                 {payment.tipAmount &&
                                   ` + ${formatCurrency(payment.tipAmount)} tip`}
                               </span>
-                              <span>{formatCurrency(payment.totalAmount)}</span>
+                              <span className="price-value">
+                                {formatCurrency(payment.totalAmount)}
+                              </span>
                             </div>
                           ))}
                         </div>

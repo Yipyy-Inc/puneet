@@ -272,8 +272,11 @@ export default function BookingDetailPage({
               )}
               {booking.refundAmount != null && booking.refundAmount > 0 && (
                 <div className="mt-2 flex items-center gap-1.5 text-sm font-medium text-red-700 dark:text-red-300">
-                  <RotateCcw className="size-3.5" />$
-                  {booking.refundAmount.toFixed(2)} refunded
+                  <RotateCcw className="size-3.5" />
+                  <span className="price-value">
+                    ${booking.refundAmount.toFixed(2)}
+                  </span>{" "}
+                  refunded
                   {booking.refundMethod === "store_credit"
                     ? " as store credit"
                     : " to original payment"}
@@ -469,7 +472,7 @@ export default function BookingDetailPage({
                 {/* Total — emphasized */}
                 <div className="bg-muted/40 flex items-center justify-between rounded-lg px-3 py-2.5">
                   <span className="text-base font-bold">Total</span>
-                  <span className="font-[tabular-nums] text-base font-bold">
+                  <span className="price-value text-base">
                     ${inv.total.toFixed(2)}
                   </span>
                 </div>
@@ -514,7 +517,7 @@ export default function BookingDetailPage({
                           Paid in full
                         </span>
                       ) : (
-                        <span className="font-[tabular-nums] font-bold text-amber-700 dark:text-amber-400">
+                        <span className="price-value text-amber-700 dark:text-amber-400">
                           ${inv.remainingDue.toFixed(2)}
                         </span>
                       )}
@@ -661,8 +664,7 @@ function Row({
       <span className={cn("text-sm", bold && "font-semibold")}>{label}</span>
       <span
         className={cn(
-          "font-[tabular-nums] text-sm",
-          bold && "font-semibold",
+          "price-value text-sm",
           green && "text-emerald-600",
         )}
       >

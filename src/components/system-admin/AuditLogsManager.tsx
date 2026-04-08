@@ -1284,13 +1284,13 @@ export function AuditLogsManager() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date Range</label>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="date"
-                    className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                    className="h-10"
                   />
-                  <input
+                  <Input
                     type="date"
-                    className="border-input bg-background flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                    className="h-10"
                   />
                 </div>
               </div>

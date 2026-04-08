@@ -231,9 +231,9 @@ export default function FacilityBillingPage() {
       defaultVisible: true,
       render: (p) => (
         <span
-          className={
+          className={`price-value ${
             p.status === "refunded" ? "text-destructive" : "text-green-600"
-          }
+          }`}
         >
           ${p.totalAmount.toFixed(2)}
         </span>
@@ -291,7 +291,9 @@ export default function FacilityBillingPage() {
       label: "Total",
       icon: DollarSign,
       defaultVisible: true,
-      render: (inv) => `$${inv.total.toFixed(2)}`,
+      render: (inv) => (
+        <span className="price-value">${inv.total.toFixed(2)}</span>
+      ),
     },
     {
       key: "amountDue",
@@ -300,7 +302,7 @@ export default function FacilityBillingPage() {
       render: (inv) => (
         <span
           className={
-            inv.amountDue > 0 ? "font-medium text-amber-600" : "text-green-600"
+            inv.amountDue > 0 ? "price-value text-amber-600" : "price-value text-green-600"
           }
         >
           ${inv.amountDue.toFixed(2)}
@@ -424,7 +426,7 @@ export default function FacilityBillingPage() {
             <DollarSign className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="price-value text-2xl text-green-600">
               ${totalRevenue.toFixed(2)}
             </div>
             <p className="text-muted-foreground text-xs">
@@ -438,7 +440,7 @@ export default function FacilityBillingPage() {
             <TrendingUp className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
+            <div className="price-value text-2xl text-amber-600">
               ${pendingRevenue.toFixed(2)}
             </div>
             <p className="text-muted-foreground text-xs">
@@ -453,7 +455,7 @@ export default function FacilityBillingPage() {
             <AlertCircle className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="price-value text-2xl text-red-600">
               ${totalOutstanding.toFixed(2)}
             </div>
             <p className="text-muted-foreground text-xs">
@@ -467,7 +469,7 @@ export default function FacilityBillingPage() {
             <Gift className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalTips.toFixed(2)}</div>
+            <div className="price-value text-2xl">${totalTips.toFixed(2)}</div>
             <p className="text-muted-foreground text-xs">
               From {paidTransactions} transactions
             </p>
@@ -479,7 +481,7 @@ export default function FacilityBillingPage() {
             <TrendingDown className="text-muted-foreground size-4" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="price-value text-2xl text-red-600">
               ${refundedAmount.toFixed(2)}
             </div>
             <p className="text-muted-foreground text-xs">
@@ -545,7 +547,7 @@ export default function FacilityBillingPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold">
+                            <p className="price-value">
                               ${stats.amount.toFixed(2)}
                             </p>
                             <p className="text-muted-foreground text-xs">
@@ -593,7 +595,7 @@ export default function FacilityBillingPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold">
+                          <p className="price-value text-sm">
                             ${payment.totalAmount.toFixed(2)}
                           </p>
                           <Badge variant="outline" className="text-xs">
@@ -707,7 +709,7 @@ export default function FacilityBillingPage() {
                       <span className="text-muted-foreground text-sm">
                         Balance:
                       </span>
-                      <span className="font-bold">
+                      <span className="price-value">
                         ${gc.currentBalance.toFixed(2)}
                       </span>
                     </div>
@@ -715,7 +717,7 @@ export default function FacilityBillingPage() {
                       <span className="text-muted-foreground text-sm">
                         Initial:
                       </span>
-                      <span className="text-sm">
+                      <span className="price-value text-sm">
                         ${gc.initialAmount.toFixed(2)}
                       </span>
                     </div>
@@ -798,7 +800,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground">
                               Remaining:
                             </span>
-                            <span className="ml-1 font-bold">
+                            <span className="ml-1 price-value">
                               ${credit.remainingAmount.toFixed(2)}
                             </span>
                           </div>
@@ -806,7 +808,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground">
                               Original:
                             </span>
-                            <span className="ml-1">
+                            <span className="ml-1 price-value">
                               ${credit.amount.toFixed(2)}
                             </span>
                           </div>
@@ -823,7 +825,7 @@ export default function FacilityBillingPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="price-value text-2xl text-green-600">
                           ${credit.remainingAmount.toFixed(2)}
                         </div>
                         <p className="text-muted-foreground text-xs">
@@ -875,7 +877,7 @@ export default function FacilityBillingPage() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-red-600">
+                          <div className="price-value text-2xl text-red-600">
                             ${invoice.amountDue.toFixed(2)}
                           </div>
                           <Badge
@@ -904,7 +906,7 @@ export default function FacilityBillingPage() {
                         </div>
                         <div>
                           <p className="text-muted-foreground">Total:</p>
-                          <p className="font-medium">
+                          <p className="price-value">
                             ${invoice.total.toFixed(2)}
                           </p>
                         </div>
@@ -1045,7 +1047,7 @@ export default function FacilityBillingPage() {
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Subtotal:</span>
-                        <span className="font-medium">
+                        <span className="price-value">
                           ${selectedTransaction.amount.toFixed(2)}
                         </span>
                       </div>
@@ -1055,7 +1057,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground text-sm">
                               Tip:
                             </span>
-                            <span className="font-medium">
+                            <span className="price-value">
                               +${selectedTransaction.tipAmount.toFixed(2)}
                             </span>
                           </div>
@@ -1066,14 +1068,14 @@ export default function FacilityBillingPage() {
                             <span className="text-sm text-green-600">
                               Credit Applied:
                             </span>
-                            <span className="font-medium text-green-600">
+                            <span className="price-value text-green-600">
                               -${selectedTransaction.creditUsed.toFixed(2)}
                             </span>
                           </div>
                         )}
                       <div className="flex items-center justify-between border-t pt-2">
                         <span className="font-semibold">Total:</span>
-                        <span className="text-xl font-bold text-green-600">
+                        <span className="price-value text-xl text-green-600">
                           ${selectedTransaction.totalAmount.toFixed(2)}
                         </span>
                       </div>
@@ -1166,7 +1168,7 @@ export default function FacilityBillingPage() {
                       <CardContent className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-sm">Refund Amount:</span>
-                          <span className="text-destructive font-bold">
+                          <span className="text-destructive price-value">
                             ${selectedTransaction.refundAmount.toFixed(2)}
                           </span>
                         </div>
@@ -1312,10 +1314,13 @@ export default function FacilityBillingPage() {
                             <div>
                               <p className="font-medium">{item.description}</p>
                               <p className="text-muted-foreground text-sm">
-                                ${item.unitPrice.toFixed(2)} × {item.quantity}
+                                <span className="price-value">
+                                  ${item.unitPrice.toFixed(2)}
+                                </span>{" "}
+                                × {item.quantity}
                               </p>
                             </div>
-                            <p className="font-semibold">
+                            <p className="price-value">
                               ${item.total.toFixed(2)}
                             </p>
                           </div>
@@ -1325,7 +1330,7 @@ export default function FacilityBillingPage() {
                       <div className="mt-4 space-y-2 border-t pt-4">
                         <div className="flex justify-between">
                           <span className="text-sm">Subtotal:</span>
-                          <span className="font-medium">
+                          <span className="price-value">
                             ${selectedInvoice.subtotal.toFixed(2)}
                           </span>
                         </div>
@@ -1337,7 +1342,7 @@ export default function FacilityBillingPage() {
                                 `(${selectedInvoice.discountReason})`}
                               :
                             </span>
-                            <span className="font-medium">
+                            <span className="price-value">
                               -${selectedInvoice.discount.toFixed(2)}
                             </span>
                           </div>
@@ -1347,14 +1352,14 @@ export default function FacilityBillingPage() {
                             <span className="text-sm">
                               Tax ({selectedInvoice.taxRate}%):
                             </span>
-                            <span className="font-medium">
+                            <span className="price-value">
                               ${selectedInvoice.tax.toFixed(2)}
                             </span>
                           </div>
                         )}
                         <div className="flex justify-between border-t pt-2">
                           <span className="font-bold">Total:</span>
-                          <span className="text-xl font-bold">
+                          <span className="price-value text-xl">
                             ${selectedInvoice.total.toFixed(2)}
                           </span>
                         </div>
@@ -1362,13 +1367,13 @@ export default function FacilityBillingPage() {
                           <span className="text-muted-foreground text-sm">
                             Amount Paid:
                           </span>
-                          <span className="font-medium text-green-600">
+                          <span className="price-value text-green-600">
                             ${selectedInvoice.amountPaid.toFixed(2)}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="font-semibold">Amount Due:</span>
-                          <span className="text-lg font-bold text-amber-600">
+                          <span className="price-value text-lg text-amber-600">
                             ${selectedInvoice.amountDue.toFixed(2)}
                           </span>
                         </div>
@@ -1500,7 +1505,7 @@ export default function FacilityBillingPage() {
                       </Badge>
                     </div>
                     <div className="text-right">
-                      <p className="text-3xl font-bold text-green-600">
+                      <p className="price-value text-3xl text-green-600">
                         ${selectedGiftCard.currentBalance.toFixed(2)}
                       </p>
                       <p className="text-muted-foreground text-sm">
@@ -1515,7 +1520,7 @@ export default function FacilityBillingPage() {
                       <p className="text-muted-foreground text-sm">
                         Initial Amount
                       </p>
-                      <p className="font-medium">
+                      <p className="price-value">
                         ${selectedGiftCard.initialAmount.toFixed(2)}
                       </p>
                     </div>
@@ -1614,7 +1619,7 @@ export default function FacilityBillingPage() {
                             </div>
                             <div className="text-right">
                               <p
-                                className={`font-semibold ${
+                                className={`price-value ${
                                   tx.type === "redemption"
                                     ? `text-red-600`
                                     : `text-green-600`
@@ -1624,7 +1629,7 @@ export default function FacilityBillingPage() {
                                 {tx.amount.toFixed(2)}
                               </p>
                               <p className="text-muted-foreground text-xs">
-                                Balance: ${tx.balanceAfter.toFixed(2)}
+                                Balance: <span className="price-value">${tx.balanceAfter.toFixed(2)}</span>
                               </p>
                             </div>
                           </div>
