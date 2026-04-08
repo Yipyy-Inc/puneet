@@ -118,7 +118,7 @@ export function BookingModal({
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [guestPetName, setGuestPetName] = useState("");
+  const [guestPetNames, setGuestPetNames] = useState<string[]>([""]);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -394,6 +394,11 @@ export function BookingModal({
       selectedClient?.pets.filter((p) => selectedPetIds.includes(p.id)) || []
     );
   }, [selectedClient, selectedPetIds]);
+
+  const guestPetSummary = useMemo(
+    () => guestPetNames.map((name) => name.trim()).filter(Boolean),
+    [guestPetNames],
+  );
 
   const selectedClientBookings = useMemo(() => {
     if (selectedClientId == null) return [];
@@ -767,6 +772,11 @@ export function BookingModal({
   };
 
   const handleComplete = () => {
+    if (isEstimateMode && isGuestEstimate) {
+      setEstimateCreated(true);
+      return;
+    }
+
     const clientId = selectedClientId;
     const petId: number | number[] =
       selectedPetIds.length === 1 ? selectedPetIds[0] : selectedPetIds;
@@ -889,6 +899,11 @@ export function BookingModal({
     setSearchQuery("");
     setSelectedClientId(null);
     setSelectedPetIds([]);
+    setIsGuestEstimate(false);
+    setGuestName("");
+    setGuestEmail("");
+    setGuestPhone("");
+    setGuestPetNames([""]);
     setDaycareSelectedDates([]);
     setDaycareDateTimes([]);
     setBoardingRangeStart(null);
@@ -1912,8 +1927,8 @@ export function BookingModal({
                     setGuestEmail={setGuestEmail}
                     guestPhone={guestPhone}
                     setGuestPhone={setGuestPhone}
-                    guestPetName={guestPetName}
-                    setGuestPetName={setGuestPetName}
+                    guestPetNames={guestPetNames}
+                    setGuestPetNames={setGuestPetNames}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
@@ -1997,10 +2012,11 @@ export function BookingModal({
                           <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                             The estimate has been sent to{" "}
                             <span className="font-medium text-slate-700">
-                              {selectedClient?.name}
+                              {isGuestEstimate
+                                ? guestEmail || guestName || "the inquiry contact"
+                                : selectedClient?.name}
                             </span>
-                            . It will appear in their customer file under
-                            Estimates.
+                            .
                           </p>
                           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
                             <p className="text-xl font-bold text-emerald-800 tabular-nums">
@@ -2031,9 +2047,16 @@ export function BookingModal({
                           <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                             Estimate for{" "}
                             <span className="font-medium text-slate-700">
-                              {selectedClient?.name}
+                              {isGuestEstimate
+                                ? guestName || guestEmail || "New Inquiry"
+                                : selectedClient?.name}
                             </span>{" "}
-                            — {selectedPets.map((p) => p.name).join(", ")}
+                            —{" "}
+                            {isGuestEstimate
+                              ? guestPetSummary.length > 0
+                                ? guestPetSummary.join(", ")
+                                : "No pets added"
+                              : selectedPets.map((p) => p.name).join(", ")}
                           </p>
                           <div className="mt-4 rounded-xl border bg-slate-50 px-5 py-3">
                             <p className="text-xl font-bold tabular-nums">

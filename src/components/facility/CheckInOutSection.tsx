@@ -9,6 +9,7 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ import {
 } from "@/data/yipyygo-forms";
 import { TagList } from "@/components/shared/TagList";
 import { hasCriticalTags, hasWarningTags } from "@/data/tags-notes";
+import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 
 // Map pet IDs to dog images
 const petImages: Record<number, string> = {
@@ -157,6 +159,7 @@ interface CheckInOutSectionProps {
 }
 
 export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
+  const router = useRouter();
   const isMounted = useSyncExternalStore(
     (cb) => {
       cb();
@@ -324,10 +327,24 @@ export function CheckInOutSection({ facilityId }: CheckInOutSectionProps) {
   };
 
   const handleViewDetails = (item: UnifiedCheckIn) => {
-    setSelectedItem(item);
-    setPickupPerson(item.ownerName);
-    setPaymentStatus(null);
-    setIsDetailsModalOpen(true);
+    const client = findClientForPet(item.petId);
+    const bookingHref = getBookingOverviewHref({
+      petId: item.petId,
+      clientId: client?.id,
+      service: item.serviceType,
+    });
+
+    if (bookingHref) {
+      router.push(bookingHref);
+      return;
+    }
+
+    if (client) {
+      router.push(`/facility/dashboard/clients/${client.id}/bookings`);
+      return;
+    }
+
+    toast.error("No booking overview found for this card");
   };
 
   const revertToScheduled = (item: UnifiedCheckIn) => {

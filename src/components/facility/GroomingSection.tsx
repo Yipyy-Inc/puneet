@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ import { clients } from "@/data/clients";
 import { GroomingIntakeForm } from "@/components/grooming/GroomingIntakeForm";
 import { PriceAdjustmentForm } from "@/components/grooming/PriceAdjustmentForm";
 import { sendPickupNotifications } from "@/lib/grooming-pickup-notifications";
+import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 
 interface GroomingAppointmentWithPending extends Omit<
   GroomingAppointment,
@@ -74,6 +76,7 @@ const findClientForPet = (petId: number) => {
 };
 
 export function GroomingSection() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [inProgressQuery, setInProgressQuery] = useState("");
   const [completedQuery, setCompletedQuery] = useState("");
@@ -377,9 +380,24 @@ export function GroomingSection() {
   };
 
   const handleViewDetails = (appointment: GroomingAppointmentWithPending) => {
-    setSelectedAppointment(appointment);
-    setIsCheckInModalOpen(false);
-    setIsDetailsModalOpen(true);
+    const bookingHref = getBookingOverviewHref({
+      petId: appointment.petId,
+      clientId: appointment.ownerId,
+      service: "grooming",
+    });
+
+    if (bookingHref) {
+      router.push(bookingHref);
+      return;
+    }
+
+    const client = findClientForPet(appointment.petId);
+    if (client) {
+      router.push(`/facility/dashboard/clients/${client.id}/bookings`);
+      return;
+    }
+
+    toast.error("No booking overview found for this appointment");
   };
 
   const confirmCheckIn = () => {

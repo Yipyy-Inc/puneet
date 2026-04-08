@@ -27,6 +27,9 @@ import {
   Clock,
   Plus,
   Trash2,
+  Mail,
+  Phone,
+  PawPrint,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -64,8 +67,7 @@ export function EstimateWizard({
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [guestPetName, setGuestPetName] = useState("");
-  const [guestPetBreed, setGuestPetBreed] = useState("");
+  const [guestPetNames, setGuestPetNames] = useState<string[]>([""]);
   const [publicNote, setPublicNote] = useState("");
   const [createAccount, setCreateAccount] = useState(true);
 
@@ -109,6 +111,37 @@ export function EstimateWizard({
   }, [clientSearch, facilityClients]);
 
   const selectedClient = facilityClients.find((c) => c.id === selectedClientId);
+
+  const guestPetSummary = useMemo(
+    () => guestPetNames.map((name) => name.trim()).filter(Boolean),
+    [guestPetNames],
+  );
+
+  const resolvedGuestPetNames = useMemo(
+    () => (guestPetNames.length > 0 ? guestPetNames : [""]),
+    [guestPetNames],
+  );
+
+  const handleGuestPetNameChange = (index: number, value: string) => {
+    setGuestPetNames((prev) => {
+      const names = prev.length > 0 ? [...prev] : [""];
+      names[index] = value;
+      return names;
+    });
+  };
+
+  const addGuestPetField = () => {
+    setGuestPetNames((prev) => [...(prev.length > 0 ? prev : [""]), ""]);
+  };
+
+  const removeGuestPetField = (index: number) => {
+    setGuestPetNames((prev) => {
+      const names = prev.length > 0 ? [...prev] : [""];
+      if (names.length <= 1) return names;
+      const next = names.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [""];
+    });
+  };
 
   // Auto-generate line items from service details
   const autoLineItems = useMemo((): EstimateLineItem[] => {
@@ -154,7 +187,8 @@ export function EstimateWizard({
   const canProceed = () => {
     switch (step) {
       case 0:
-        return isGuest || !!selectedClientId;
+        if (isGuest) return !!guestName.trim() && !!guestEmail.trim();
+        return !!selectedClientId;
       case 1:
         return !!selectedService;
       case 2:
@@ -200,8 +234,7 @@ export function EstimateWizard({
     setGuestName("");
     setGuestEmail("");
     setGuestPhone("");
-    setGuestPetName("");
-    setGuestPetBreed("");
+    setGuestPetNames([""]);
     setPublicNote("");
     setInternalNote("");
     onOpenChange(false);
@@ -280,7 +313,9 @@ export function EstimateWizard({
                   <span className="font-medium text-slate-700">
                     {isGuest ? guestName : selectedClient?.name}
                   </span>
-                  {guestPetName && ` — ${guestPetName}`}
+                  {isGuest &&
+                    guestPetSummary.length > 0 &&
+                    ` — ${guestPetSummary.join(", ")}`}
                 </p>
                 <div className="rounded-xl border bg-slate-50 px-6 py-3">
                   <p className="text-xl font-bold tabular-nums">
@@ -417,25 +452,103 @@ export function EstimateWizard({
                   </div>
                 )}
 
-                {/* Guest quick pet info */}
+                {/* Guest inquiry details */}
                 {isGuest && (
-                  <div className="rounded-xl border bg-violet-50/30 p-4">
-                    <p className="mb-3 text-sm font-medium">
-                      Quick pet info (optional)
-                    </p>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Input
-                        value={guestPetName}
-                        onChange={(e) => setGuestPetName(e.target.value)}
-                        placeholder="Pet name (e.g., Max)"
-                        className="bg-white"
-                      />
-                      <Input
-                        value={guestPetBreed}
-                        onChange={(e) => setGuestPetBreed(e.target.value)}
-                        placeholder="Breed (e.g., Labrador)"
-                        className="bg-white"
-                      />
+                  <div className="space-y-5">
+                    <h3 className="text-lg font-semibold">New Inquiry</h3>
+
+                    <div className="space-y-4 rounded-xl border bg-slate-50/40 p-4">
+                      <h4 className="text-base font-semibold">
+                        Contact Information
+                      </h4>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="flex items-center gap-1.5 text-sm font-medium">
+                            <User className="size-3.5" /> Name *
+                          </Label>
+                          <Input
+                            value={guestName}
+                            onChange={(e) => setGuestName(e.target.value)}
+                            placeholder="Customer name"
+                            className="bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="flex items-center gap-1.5 text-sm font-medium">
+                            <Mail className="size-3.5" /> Email *
+                          </Label>
+                          <Input
+                            type="email"
+                            value={guestEmail}
+                            onChange={(e) => setGuestEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5 md:col-span-2">
+                          <Label className="flex items-center gap-1.5 text-sm font-medium">
+                            <Phone className="size-3.5" /> Phone
+                          </Label>
+                          <Input
+                            value={guestPhone}
+                            onChange={(e) => setGuestPhone(e.target.value)}
+                            placeholder="(555) 123-4567"
+                            className="bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 rounded-xl border bg-violet-50/30 p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="flex items-center gap-1.5 text-base font-semibold">
+                            <PawPrint className="size-4" /> Pet Information
+                          </h4>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            Add one or more pets to include in this estimate.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 px-2 text-xs"
+                          onClick={addGuestPetField}
+                        >
+                          <Plus className="size-3" />
+                          Add pet
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {resolvedGuestPetNames.map((petName, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="flex h-8 min-w-8 items-center justify-center rounded-md bg-violet-100 text-xs font-semibold text-violet-700">
+                              {index + 1}
+                            </div>
+                            <Input
+                              value={petName}
+                              onChange={(e) =>
+                                handleGuestPetNameChange(index, e.target.value)
+                              }
+                              placeholder={`Pet ${index + 1} name (optional)`}
+                              className="bg-white"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-slate-400 hover:text-red-500"
+                              disabled={resolvedGuestPetNames.length <= 1}
+                              onClick={() => removeGuestPetField(index)}
+                            >
+                              <Trash2 className="size-4" />
+                              <span className="sr-only">Remove pet</span>
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -713,10 +826,8 @@ export function EstimateWizard({
                     setEmail={setGuestEmail}
                     phone={guestPhone}
                     setPhone={setGuestPhone}
-                    petName={guestPetName}
-                    setPetName={setGuestPetName}
-                    petBreed={guestPetBreed}
-                    setPetBreed={setGuestPetBreed}
+                    guestPetNames={guestPetNames}
+                    setGuestPetNames={setGuestPetNames}
                     publicNote={publicNote}
                     setPublicNote={setPublicNote}
                     createAccount={createAccount}
