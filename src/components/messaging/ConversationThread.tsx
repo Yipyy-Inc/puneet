@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,9 +19,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
+import {
+  getReminderHistoryForCustomer,
+  ReminderHistoryPanel,
+  type ReminderTab,
+} from "./ReminderHistoryPanel";
 import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
@@ -63,11 +69,12 @@ export function ConversationThread({
 }) {
   const isCustomerMode = mode === "customer";
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<ReminderTab>("conversation");
 
   const threadMessages = useMemo(() => {
     if (!threadId) return [];
     return messages
-      .filter((m) => (m.threadId ?? m.id) === threadId)
+      .filter((message) => (message.threadId ?? message.id) === threadId)
       .sort(
         (a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
@@ -76,11 +83,12 @@ export function ConversationThread({
 
   const counterpartyId = threadMessages[0]?.clientId;
   const client = counterpartyId
-    ? clients.find((c) => c.id === counterpartyId)
+    ? clients.find((customer) => customer.id === counterpartyId)
     : null;
   const facility = counterpartyId
-    ? facilities.find((f) => f.id === counterpartyId)
+    ? facilities.find((facilityItem) => facilityItem.id === counterpartyId)
     : null;
+
   const facilityLogo = (facility as Record<string, unknown>)?.logo as
     | string
     | undefined;
@@ -93,6 +101,7 @@ export function ConversationThread({
   const counterpartyContact = isCustomerMode
     ? (facility as Record<string, unknown>)?.contact
     : null;
+
   const contactLine = isCustomerMode
     ? ((counterpartyContact as Record<string, unknown>)?.phone as
         | string
@@ -102,7 +111,8 @@ export function ConversationThread({
         | undefined) ||
       "Typically responds within 2 hours"
     : (client?.phone ?? client?.email ?? "Active now");
-  const channels = [...new Set(threadMessages.map((m) => m.type))];
+
+  const channels = [...new Set(threadMessages.map((message) => message.type))];
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -111,7 +121,10 @@ export function ConversationThread({
     });
   }, [threadMessages.length]);
 
-  // Empty state
+  useEffect(() => {
+    setActiveTab("conversation");
+  }, [threadId]);
+
   if (!threadId) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-slate-50/30">
@@ -133,22 +146,24 @@ export function ConversationThread({
     );
   }
 
-  // Group messages by date
   const grouped: Array<
     { type: "date"; date: string } | { type: "msg"; msg: Message }
   > = [];
   let lastDate = "";
-  for (const msg of threadMessages) {
-    const date = new Date(msg.timestamp).toLocaleDateString("en-US", {
+
+  for (const message of threadMessages) {
+    const date = new Date(message.timestamp).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
     });
+
     if (date !== lastDate) {
       grouped.push({ type: "date", date });
       lastDate = date;
     }
-    grouped.push({ type: "msg", msg });
+
+    grouped.push({ type: "msg", msg: message });
   }
 
   const channelLabel =
@@ -160,12 +175,109 @@ export function ConversationThread({
           : "Chat"
       : `${channels.length} channels`;
 
+  const reminderHistory = useMemo(
+    () =>
+      getReminderHistoryForCustomer({
+        messages,
+        counterpartyId,
+        isCustomerMode,
+      }),
+    [counterpartyId, isCustomerMode, messages],
+  );
+
+  const conversationPanel = (
+    <>
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto"
+        style={{
+          background:
+            "linear-gradient(180deg, rgb(248 250 252 / 0.5) 0%, rgb(241 245 249 / 0.3) 100%)",
+        }}
+      >
+        <div className="mx-auto max-w-2xl px-6 py-5">
+          <div className="mb-4 flex flex-col items-center py-4 text-center">
+            {counterpartyImage ? (
+              <img
+                src={counterpartyImage}
+                alt=""
+                className="size-16 rounded-full object-cover shadow-md ring-4 ring-white"
+              />
+            ) : (
+              <div
+                className={cn(
+                  "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md ring-4 ring-white",
+                  avatarColor(counterpartyName),
+                )}
+              >
+                {initials(counterpartyName)}
+              </div>
+            )}
+            <p className="mt-2 text-sm font-semibold text-slate-700">
+              {counterpartyName}
+            </p>
+            <p className="text-[11px] text-slate-400">
+              {isCustomerMode
+                ? (((counterpartyContact as Record<string, unknown>)?.email as
+                    | string
+                    | undefined) ?? "")
+                : (client?.email ?? "")}{" "}
+              {(isCustomerMode
+                ? ((counterpartyContact as Record<string, unknown>)?.phone as
+                    | string
+                    | undefined)
+                : client?.phone)
+                ? `- ${
+                    isCustomerMode
+                      ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
+                      : client?.phone
+                  }`
+                : ""}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-300">
+              Conversation started{" "}
+              {threadMessages[0]
+                ? new Date(threadMessages[0].timestamp).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    },
+                  )
+                : ""}
+            </p>
+          </div>
+
+          <div className="space-y-0.5">
+            {grouped.map((item, index) =>
+              item.type === "date" ? (
+                <DateSeparator key={`d-${index}`} date={item.date} />
+              ) : (
+                <MessageBubble
+                  key={item.msg.id}
+                  message={item.msg}
+                  clientName={counterpartyName}
+                  clientImage={counterpartyImage}
+                />
+              ),
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ComposeBar
+        mode={mode}
+        clientName={counterpartyName}
+        lastMessage={threadMessages[threadMessages.length - 1]?.body}
+      />
+    </>
+  );
+
   return (
     <div className="flex flex-1 flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between border-b bg-white px-5 py-3">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
           {(client as Record<string, unknown>)?.imageUrl ? (
             <img
               src={counterpartyImage}
@@ -182,6 +294,7 @@ export function ConversationThread({
               {initials(counterpartyName)}
             </div>
           )}
+
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
@@ -196,7 +309,6 @@ export function ConversationThread({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -252,102 +364,45 @@ export function ConversationThread({
               <DropdownMenuSeparator />
               <DropdownMenuItem>Pin conversation</DropdownMenuItem>
               <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-500">
-                Archive
-              </DropdownMenuItem>
+              <DropdownMenuItem className="text-red-500">Archive</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Messages area */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto"
-        style={{
-          background:
-            "linear-gradient(180deg, rgb(248 250 252 / 0.5) 0%, rgb(241 245 249 / 0.3) 100%)",
-        }}
-      >
-        <div className="mx-auto max-w-2xl px-6 py-5">
-          {/* Conversation start indicator */}
-          <div className="mb-4 flex flex-col items-center py-4 text-center">
-            {counterpartyImage ? (
-              <img
-                src={counterpartyImage}
-                alt=""
-                className="size-16 rounded-full object-cover shadow-md ring-4 ring-white"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md ring-4 ring-white",
-                  avatarColor(counterpartyName),
-                )}
-              >
-                {initials(counterpartyName)}
-              </div>
-            )}
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              {counterpartyName}
-            </p>
-            <p className="text-[11px] text-slate-400">
-              {isCustomerMode
-                ? (((counterpartyContact as Record<string, unknown>)?.email as
-                    | string
-                    | undefined) ?? "")
-                : (client?.email ?? "")}{" "}
-              {(isCustomerMode
-                ? ((counterpartyContact as Record<string, unknown>)?.phone as
-                    | string
-                    | undefined)
-                : client?.phone)
-                ? `· ${
-                    isCustomerMode
-                      ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
-                      : client?.phone
-                  }`
-                : ""}
-            </p>
-            <p className="mt-1 text-[10px] text-slate-300">
-              Conversation started{" "}
-              {threadMessages[0]
-                ? new Date(threadMessages[0].timestamp).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    },
-                  )
-                : ""}
-            </p>
-          </div>
+      {isCustomerMode ? (
+        conversationPanel
+      ) : (
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as ReminderTab)}
+          className="flex min-h-0 flex-1 flex-col gap-0"
+        >
+          <TabsList className="border-b border-slate-200 bg-white px-4">
+            <TabsTrigger value="conversation">Conversation</TabsTrigger>
+            <TabsTrigger value="reminders" className="gap-2">
+              Reminder History
+              <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
+                {reminderHistory.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Messages */}
-          <div className="space-y-0.5">
-            {grouped.map((item, i) =>
-              item.type === "date" ? (
-                <DateSeparator key={`d-${i}`} date={item.date} />
-              ) : (
-                <MessageBubble
-                  key={item.msg.id}
-                  message={item.msg}
-                  clientName={counterpartyName}
-                  clientImage={counterpartyImage}
-                />
-              ),
-            )}
-          </div>
-        </div>
-      </div>
+          <TabsContent
+            value="conversation"
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {conversationPanel}
+          </TabsContent>
 
-      {/* Compose */}
-      <ComposeBar
-        mode={mode}
-        clientName={counterpartyName}
-        lastMessage={threadMessages[threadMessages.length - 1]?.body}
-      />
+          <TabsContent value="reminders" className="min-h-0 flex-1 overflow-hidden">
+            <ReminderHistoryPanel
+              counterpartyName={counterpartyName}
+              reminderHistory={reminderHistory}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
