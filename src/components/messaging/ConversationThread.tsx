@@ -275,7 +275,7 @@ export function ConversationThread({
               </p>
               {isCustomerMode && (
                 <p className="mt-1 text-xs text-slate-500">
-                  Open the Reminders tab to see email and SMS reminders.
+                  Open the Reminders tab to see your reminders.
                 </p>
               )}
             </div>

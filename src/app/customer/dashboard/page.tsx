@@ -99,11 +99,9 @@ export default function CustomerDashboardPage() {
     return upcomingBookings[0] || null;
   }, [upcomingBookings]);
 
-  // Get pet for next booking
-  const nextBookingPet = useMemo(() => {
-    if (!nextBooking || !customer) return null;
-    return customer.pets.find((p) => p.id === nextBooking.petId);
-  }, [nextBooking, customer]);
+  const upcomingAppointmentHref = nextBooking
+    ? `/customer/bookings/${nextBooking.id}`
+    : "/customer/bookings";
 
   // Get messages count
   const messagesData = useMemo(() => {
@@ -426,7 +424,7 @@ export default function CustomerDashboardPage() {
     <div className="from-background via-muted/20 to-background relative min-h-screen overflow-hidden bg-linear-to-br p-4 md:p-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="bg-primary/10 absolute -top-32 right-0 h-80 w-80 rounded-full blur-3xl" />
-        <div className="absolute left-0 top-1/3 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl" />
+        <div className="absolute left-0 top-1/3 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-7xl space-y-6">
         {/* Header */}
@@ -475,7 +473,7 @@ export default function CustomerDashboardPage() {
             </Card>
           </Link>
 
-          <Link href="/customer/bookings" className="group block">
+          <Link href={upcomingAppointmentHref} className="group block">
             <Card className="relative cursor-pointer overflow-hidden border border-sky-100/80 bg-linear-to-br from-white via-white to-sky-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-100/60">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-sky-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -498,17 +496,17 @@ export default function CustomerDashboardPage() {
           </Link>
 
           <Link href="/customer/messages" className="group block">
-            <Card className="relative cursor-pointer overflow-hidden border border-amber-100/80 bg-linear-to-br from-white via-white to-amber-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-100/60">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-amber-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <Card className="relative cursor-pointer overflow-hidden border border-cyan-100/80 bg-linear-to-br from-white via-white to-cyan-50/70 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-100/60">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-linear-to-r from-transparent via-cyan-400/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Messages</CardTitle>
-                <MessageSquare className="size-4 text-amber-600 transition-transform duration-300 group-hover:scale-110" />
+                <MessageSquare className="size-4 text-cyan-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{messagesData.total}</div>
                 <p className="text-muted-foreground text-xs">
                   {messagesData.unread > 0 ? (
-                    <span className="font-medium text-orange-600">
+                    <span className="font-medium text-sky-700">
                       {messagesData.unread} new messages
                     </span>
                   ) : (
@@ -540,121 +538,9 @@ export default function CustomerDashboardPage() {
           </Link>
         </div>
 
-        {/* Upcoming Appointment Card */}
-        <Card className="relative overflow-hidden border border-amber-100/80 bg-linear-to-br from-white via-white to-amber-50/60 shadow-xl shadow-amber-100/60">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-amber-300/20 blur-3xl" />
-          <CardHeader className="relative border-b border-amber-100/60 bg-white/70 backdrop-blur-sm">
-            <CardTitle className="flex items-center gap-2 text-lg tracking-wide">
-              <Calendar className="size-5 text-amber-600" />
-              UPCOMING APPOINTMENT
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative pt-6">
-            {nextBooking ? (
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-                <div className="bg-primary/10 ring-primary/15 rounded-xl p-3 ring-1">
-                  {(() => {
-                    const ServiceIcon = getServiceIcon(nextBooking.service);
-                    return <ServiceIcon className="text-primary size-6" />;
-                  })()}
-                </div>
-                <Link
-                  href={`/customer/bookings/${nextBooking.id}`}
-                  className="hover:bg-accent/40 flex-1 rounded-xl border border-amber-100/70 bg-white/70 p-3 transition-colors"
-                >
-                  <div>
-                    <h3 className="text-lg font-semibold capitalize">
-                      {nextBooking.service}
-                    </h3>
-                    {nextBookingPet && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="ring-primary/20 relative size-8 overflow-hidden rounded-full ring-2">
-                          {nextBookingPet.imageUrl ? (
-                            <Image
-                              src={nextBookingPet.imageUrl}
-                              alt={`${nextBookingPet.name} photo`}
-                              width={32}
-                              height={32}
-                              className="size-8 object-cover"
-                            />
-                          ) : (
-                            <div className="bg-primary/10 flex size-8 items-center justify-center">
-                              <Dog className="text-primary size-4" />
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-muted-foreground text-xs font-medium">
-                          {nextBookingPet.name} ({nextBookingPet.breed})
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-muted-foreground text-sm">
-                      {formatDateTime(
-                        nextBooking.startDate,
-                        nextBooking.checkInTime || undefined,
-                      )}
-                    </p>
-                    {nextBooking.groomingStyle && (
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {nextBooking.groomingStyle}
-                        {nextBooking.groomingAddOns &&
-                          nextBooking.groomingAddOns.length > 0 && (
-                            <span>
-                              {" "}
-                              + {nextBooking.groomingAddOns.join(", ")}
-                            </span>
-                          )}
-                      </p>
-                    )}
-                    <p className="bg-primary/10 text-primary mt-3 inline-flex w-fit rounded-full px-2.5 py-1 text-sm font-semibold">
-                      ${nextBooking.totalCost}
-                    </p>
-                  </div>
-                </Link>
-                <div className="flex gap-2 sm:flex-col sm:self-start">
-                  <Button variant="outline" size="sm" className="bg-white/80" asChild>
-                    <Link href={`/customer/bookings/${nextBooking.id}`}>
-                      Reschedule
-                    </Link>
-                  </Button>
-                  <Button size="sm" className="shadow-sm" asChild>
-                    <Link href={`/customer/bookings/${nextBooking.id}`}>
-                      View Details
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <div className="bg-muted rounded-xl p-3 ring-1 ring-amber-100">
-                    <Calendar className="text-muted-foreground size-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold">
-                      No upcoming appointments yet
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Book your next visit to keep your pet on schedule.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="bg-white/80" asChild>
-                    <Link href="/customer/bookings">View All</Link>
-                  </Button>
-                  <Button size="sm" className="shadow-sm" asChild>
-                    <Link href="/customer/bookings/new">Book Appointment</Link>
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="from-primary/95 relative overflow-hidden border-0 bg-linear-to-br via-primary/85 to-amber-100 shadow-xl shadow-primary/20">
+          <Card className="from-primary/95 relative overflow-hidden border-0 bg-linear-to-br via-primary/85 to-sky-100 shadow-xl shadow-primary/20">
             <div className="pointer-events-none absolute -bottom-12 right-6 h-40 w-40 rounded-full bg-white/25 blur-3xl" />
             <CardContent className="relative p-6">
               <div className="flex flex-wrap items-center justify-between gap-6">
@@ -898,7 +784,7 @@ export default function CustomerDashboardPage() {
                             {message.staffName || "Facility Team"}
                           </p>
                           {isUnread && (
-                            <div className="size-2 shrink-0 rounded-full bg-orange-500" />
+                            <div className="size-2 shrink-0 rounded-full bg-sky-500" />
                           )}
                         </div>
                         <p className="text-muted-foreground truncate text-xs">
