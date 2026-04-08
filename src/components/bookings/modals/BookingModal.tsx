@@ -95,6 +95,8 @@ interface EstimatePricingSnapshot {
   adjustmentsSignature: string;
 }
 
+const SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function buildAdjustmentsSignature(
   adjustments: Array<{ id: string; amount: number }> = [],
 ): string {
@@ -505,6 +507,23 @@ export function BookingModal({
     [guestPetNames],
   );
 
+  const isGuestInquiryComplete = useMemo(() => {
+    if (!(isEstimateMode && isGuestEstimate)) return true;
+
+    const hasName = guestName.trim().length > 0;
+    const normalizedEmail = guestEmail.trim();
+    const hasValidEmail = SIMPLE_EMAIL_REGEX.test(normalizedEmail);
+    const hasAtLeastOnePet = guestPetSummary.length > 0;
+
+    return hasName && hasValidEmail && hasAtLeastOnePet;
+  }, [
+    isEstimateMode,
+    isGuestEstimate,
+    guestName,
+    guestEmail,
+    guestPetSummary,
+  ]);
+
   const guestPricingPetNames = useMemo(() => {
     if (!(isEstimateMode && isGuestEstimate)) return [];
     return guestPetSummary.length > 0 ? guestPetSummary : ["Guest Pet"];
@@ -796,8 +815,9 @@ export function BookingModal({
       case "service":
         return selectedService !== "";
       case "client-pet":
-        // Guest estimates skip client/pet requirement
-        if (isEstimateMode && isGuestEstimate) return true;
+        if (isEstimateMode && isGuestEstimate) {
+          return isGuestInquiryComplete;
+        }
         if (selectedClientId === null || selectedPetIds.length === 0)
           return false;
         // If any selected pet has an expired or failed evaluation, lock services (except booking a new evaluation)
@@ -857,6 +877,9 @@ export function BookingModal({
     isSubStepComplete,
     serviceRequiresEvaluation,
     isEvaluationOptional,
+    isEstimateMode,
+    isGuestEstimate,
+    isGuestInquiryComplete,
     selectedPets,
     petHasExpiredEvaluation,
     petHasFailedEvaluation,
