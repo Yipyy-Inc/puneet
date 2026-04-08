@@ -155,6 +155,7 @@ export default function POSPage() {
   );
   const isManager = facilityRole === "manager" || facilityRole === "owner";
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const lastProcessedScanRef = useRef({ code: "", at: 0 });
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
 
@@ -533,6 +534,17 @@ export default function POSPage() {
     (code: string) => {
       setCameraOpen(false);
       const trimmed = code.trim();
+      if (!trimmed) return;
+
+      const now = Date.now();
+      if (
+        trimmed === lastProcessedScanRef.current.code &&
+        now - lastProcessedScanRef.current.at < 300
+      ) {
+        return;
+      }
+      lastProcessedScanRef.current = { code: trimmed, at: now };
+
       const found = getProductByBarcode(trimmed);
 
       if (found) {

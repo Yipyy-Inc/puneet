@@ -131,6 +131,7 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
+          suppressHydrationWarning
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH,
@@ -210,6 +211,7 @@ function Sidebar({
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
+      suppressHydrationWarning
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
@@ -219,6 +221,7 @@ function Sidebar({
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
+        suppressHydrationWarning
         className={cn(
           `relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear`,
           "group-data-[collapsible=offcanvas]:w-0",
@@ -230,6 +233,7 @@ function Sidebar({
       />
       <div
         data-slot="sidebar-container"
+        suppressHydrationWarning
         className={cn(
           `fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex`,
           side === "left"
@@ -246,6 +250,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
+          suppressHydrationWarning
           className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex size-full min-w-0 flex-col overflow-x-hidden group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
         >
           {children}
