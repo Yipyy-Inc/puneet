@@ -191,12 +191,12 @@ export function ActiveFilterChips({
         <Badge
           key={chip.label}
           variant="secondary"
-          className="gap-1 pr-1 text-xs font-normal"
+          className="gap-1 rounded-full border border-sky-200 bg-sky-50/80 pr-1 text-xs font-medium text-sky-700"
         >
           {chip.label}
           <button
             onClick={chip.onRemove}
-            className="hover:bg-muted -mr-0.5 rounded-full p-0.5"
+            className="-mr-0.5 rounded-full p-0.5 text-sky-600 transition-colors hover:bg-sky-200/70 hover:text-sky-800"
           >
             <X className="size-2.5" />
           </button>
@@ -204,7 +204,7 @@ export function ActiveFilterChips({
       ))}
       <button
         onClick={clearAll}
-        className="text-muted-foreground text-[11px] hover:underline"
+        className="text-[11px] font-medium text-sky-700 transition-colors hover:text-sky-800 hover:underline"
       >
         Clear all
       </button>
@@ -1156,11 +1156,11 @@ export function ClientFiltersInline({
   );
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border-slate-200/80 bg-linear-to-br from-sky-50/70 via-white to-indigo-50/40 shadow-sm">
       {/* Search bar */}
-      <div className="border-b px-3 py-2">
+      <div className="border-b border-slate-200/80 bg-white/75 px-3 py-2">
         <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-2 size-3.5 -translate-y-1/2" />
+          <Search className="absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-slate-500" />
           <Input
             ref={searchRef}
             value={searchQuery}
@@ -1169,12 +1169,12 @@ export function ClientFiltersInline({
               if (e.key === "Escape") setSearchQuery("");
             }}
             placeholder='Search filters... e.g. "vaccine", "balance", "VIP"'
-            className="h-7 border-0 pl-7 text-xs shadow-none focus-visible:ring-0"
+            className="h-7 border-0 bg-transparent pl-7 text-xs text-slate-700 shadow-none placeholder:text-slate-400 focus-visible:ring-0"
           />
           {isSearching && (
             <button
               onClick={() => setSearchQuery("")}
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+              className="absolute top-1/2 right-2 -translate-y-1/2 text-slate-400 transition-colors hover:text-sky-700"
             >
               <X className="size-3.5" />
             </button>
@@ -1186,14 +1186,14 @@ export function ClientFiltersInline({
         /* Search results view */
         <CardContent className="max-h-[280px] overflow-y-auto py-3">
           {searchResults.length === 0 ? (
-            <p className="text-muted-foreground py-4 text-center text-xs">
+            <p className="py-4 text-center text-xs text-slate-500">
               No filters matching &ldquo;{searchQuery}&rdquo;
             </p>
           ) : (
             <div className="space-y-4">
               {searchResults.map((group) => (
                 <div key={group.categoryId}>
-                  <p className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                  <p className="mb-2 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
                     {group.categoryLabel}
                   </p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
@@ -1210,7 +1210,7 @@ export function ClientFiltersInline({
         /* Normal tabbed view */
         <div className="flex">
           {/* Left: category nav */}
-          <div className="bg-muted/30 border-r py-1">
+          <div className="border-r border-slate-200/80 bg-slate-50/70 py-1">
             <div className="max-h-[280px] overflow-y-auto">
               {CATEGORIES.map((cat) => (
                 <button
@@ -1219,8 +1219,8 @@ export function ClientFiltersInline({
                   className={cn(
                     "block w-full px-3 py-1.5 text-left text-[11px] font-medium whitespace-nowrap transition-colors",
                     activeCategory === cat.id
-                      ? "bg-background text-foreground border-r-foreground border-r-2"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                      ? "border-r-2 border-r-sky-500 bg-white text-sky-700"
+                      : "text-slate-600 hover:bg-sky-50/70 hover:text-slate-900",
                   )}
                 >
                   {cat.label}
@@ -1230,7 +1230,7 @@ export function ClientFiltersInline({
           </div>
 
           {/* Right: filter content from registry */}
-          <CardContent className="max-h-[280px] flex-1 overflow-y-auto py-3">
+          <CardContent className="max-h-[280px] flex-1 overflow-y-auto bg-white/80 py-3">
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3 lg:grid-cols-4">
               {categoryEntries.map((entry) => (
                 <div key={entry.key}>{entry.element}</div>

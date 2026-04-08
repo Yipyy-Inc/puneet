@@ -476,7 +476,7 @@ export default function FacilityBookingsPage() {
       sortable: true,
       sortValue: (booking) => booking.totalCost,
       render: (booking) => (
-        <span className="font-[tabular-nums] font-medium">
+        <span className="price-value">
           ${booking.totalCost.toFixed(2)}
         </span>
       ),
@@ -773,7 +773,7 @@ export default function FacilityBookingsPage() {
           value={`$${totalRevenue.toLocaleString()}`}
           subtitle="Total received"
           icon={DollarSign}
-          valueClassName="font-[tabular-nums]"
+          valueClassName="price-value"
         />
       </div>
 

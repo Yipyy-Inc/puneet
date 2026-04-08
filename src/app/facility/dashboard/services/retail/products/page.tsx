@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Plus,
@@ -54,7 +54,6 @@ import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import {
   products,
   categories,
-  getRetailStats,
   type Product,
   type ProductVariant,
   type VariantType,
@@ -64,17 +63,26 @@ import { toast } from "sonner";
 import { generateUniqueBarcode } from "@/lib/barcode-generator";
 import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
+import { BulkPriceLabelPrint } from "@/components/retail/BulkPriceLabelPrint";
 import { retailConfig } from "@/data/retail-config";
 import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
 
 type ProductWithRecord = Product & Record<string, unknown>;
 
 export default function ProductsPage() {
+  const [productList, setProductList] = useState<Product[]>(products);
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
     new Set(),
+  );
+  const [selectedProductIds, setSelectedProductIds] = useState<
+    Set<string | number>
+  >(new Set());
+  const [bulkLabelPrintOpen, setBulkLabelPrintOpen] = useState(false);
+  const [quickLabelProduct, setQuickLabelProduct] = useState<Product | null>(
+    null,
   );
 
   const [formData, setFormData] = useState({
@@ -156,7 +164,40 @@ export default function ProductsPage() {
     isVariantModalOpen,
   );
 
-  const stats = getRetailStats();
+  const stats = useMemo(() => {
+    const totalProducts = productList.length;
+    const activeProducts = productList.filter((p) => p.status === "active").length;
+
+    let inventoryRetailValue = 0;
+    let inventoryCostValue = 0;
+
+    for (const product of productList) {
+      if (product.hasVariants && product.variants.length > 0) {
+        for (const variant of product.variants) {
+          inventoryRetailValue += variant.stock * variant.price;
+          inventoryCostValue += variant.stock * variant.costPrice;
+        }
+      } else {
+        inventoryRetailValue += product.stock * product.basePrice;
+        inventoryCostValue += product.stock * product.baseCostPrice;
+      }
+    }
+
+    const lowStockCount = productList.filter((product) => {
+      if (product.hasVariants && product.variants.length > 0) {
+        return product.variants.some((variant) => variant.stock <= variant.minStock);
+      }
+      return product.stock <= product.minStock;
+    }).length;
+
+    return {
+      totalProducts,
+      activeProducts,
+      inventoryRetailValue,
+      inventoryCostValue,
+      lowStockCount,
+    };
+  }, [productList]);
 
   const handleAddNew = () => {
     setEditingProduct(null);
@@ -288,7 +329,35 @@ export default function ProductsPage() {
   };
 
   const handleSave = () => {
-    // In a real app, this would save to the backend
+    const now = new Date().toISOString().slice(0, 10);
+
+    if (editingProduct) {
+      setProductList((prev) =>
+        prev.map((product) =>
+          product.id === editingProduct.id
+            ? {
+                ...product,
+                ...formData,
+                variants: formData.hasVariants ? variants : [],
+                updatedAt: now,
+              }
+            : product,
+        ),
+      );
+      toast.success("Product updated");
+    } else {
+      const newProduct: Product = {
+        id: `prod-${Date.now()}`,
+        ...formData,
+        variants: formData.hasVariants ? variants : [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      setProductList((prev) => [newProduct, ...prev]);
+      toast.success("Product created");
+    }
+
+    setSelectedProductIds(new Set());
     setIsAddEditModalOpen(false);
   };
 
@@ -534,20 +603,47 @@ export default function ProductsPage() {
             Card View
           </Button>
         </div>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 size-4" />
-          Add Product
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBulkLabelPrintOpen(true)}
+            className="gap-2"
+          >
+            <Printer className="size-4" />
+            Print Price Labels
+          </Button>
+          <Button onClick={handleAddNew}>
+            <Plus className="mr-2 size-4" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {/* List View */}
       {viewMode === "list" && (
         <DataTable
-          data={products as ProductWithRecord[]}
+          data={productList as ProductWithRecord[]}
           columns={columns}
           filters={filters}
           searchKey="name"
           searchPlaceholder="Search products..."
+          selectable
+          getItemId={(item) => item.id as string}
+          selectedIds={selectedProductIds}
+          onSelectionChange={setSelectedProductIds}
+          toolbarExtra={
+            selectedProductIds.size > 0 ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => setBulkLabelPrintOpen(true)}
+              >
+                <Printer className="size-3.5" />
+                Print Selected ({selectedProductIds.size})
+              </Button>
+            ) : null
+          }
           actions={(item) => (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -558,6 +654,11 @@ export default function ProductsPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleEdit(item as Product)}>
                   Edit Product
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setQuickLabelProduct(item as Product)}
+                >
+                  Print Price Label
                 </DropdownMenuItem>
                 <DropdownMenuItem>View Variants</DropdownMenuItem>
                 <DropdownMenuItem>Adjust Stock</DropdownMenuItem>
@@ -573,7 +674,7 @@ export default function ProductsPage() {
       {/* Card View */}
       {viewMode === "cards" && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
+          {productList.map((product) => (
             <Collapsible
               key={product.id}
               open={expandedProducts.has(product.id)}
@@ -597,6 +698,11 @@ export default function ProductsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(product)}>
                           Edit Product
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setQuickLabelProduct(product)}
+                        >
+                          Print Price Label
                         </DropdownMenuItem>
                         <DropdownMenuItem>Adjust Stock</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
@@ -1517,6 +1623,25 @@ export default function ProductsPage() {
         barcode={formData.barcode}
         productName={formData.name}
         price={formData.basePrice}
+      />
+
+      {/* Quick single-product label print */}
+      <BarcodeLabelPrint
+        open={!!quickLabelProduct}
+        onOpenChange={(open) => {
+          if (!open) setQuickLabelProduct(null);
+        }}
+        barcode={quickLabelProduct?.barcode || ""}
+        productName={quickLabelProduct?.name || ""}
+        price={quickLabelProduct?.basePrice || 0}
+      />
+
+      {/* Bulk price label printing */}
+      <BulkPriceLabelPrint
+        open={bulkLabelPrintOpen}
+        onOpenChange={setBulkLabelPrintOpen}
+        products={productList}
+        selectedProductIds={selectedProductIds}
       />
     </div>
   );

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Zap, Palette, Shield, Lock } from "lucide-react";
+import { Plus, Trash2, Zap, Palette, Shield, Lock, WandSparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { facilities } from "@/data/facilities";
@@ -33,6 +34,17 @@ interface AutoTransitions {
   onCheckIn: string;
   onCheckout: string;
   onPaymentComplete: string;
+}
+
+type AutoTransitionAction = keyof AutoTransitions;
+
+interface IftttTransitionRule {
+  id: string;
+  service: string;
+  action: AutoTransitionAction;
+  currentStatus: string;
+  targetStatus: string;
+  enabled: boolean;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -64,14 +76,76 @@ const COLOR_OPTIONS = [
   { value: "slate", label: "Gray", dot: "bg-slate-500" },
 ];
 
-const ALL_STATUS_OPTIONS = [
-  ...SYSTEM_STATUSES.map((s) => ({ value: s.id, label: s.label })),
+const SYSTEM_STATUS_OPTIONS = SYSTEM_STATUSES.map((s) => ({
+  value: s.id,
+  label: s.label,
+}));
+
+const TRANSITION_EVENT_OPTIONS: { value: AutoTransitionAction; label: string }[] = [
+  { value: "onDepositPaid", label: "Deposit is paid" },
+  { value: "onPaymentComplete", label: "Full payment is received" },
+  { value: "onCheckIn", label: "Pet is checked in" },
+  { value: "onCheckout", label: "Checkout completes" },
+];
+
+const BASE_SERVICE_OPTIONS = [
+  { value: "any", label: "Any service" },
+  { value: "boarding", label: "Boarding" },
+  { value: "daycare", label: "Daycare" },
+  { value: "grooming", label: "Grooming" },
+  { value: "training", label: "Training" },
+  { value: "evaluation", label: "Evaluation" },
+  { value: "yodas-splash", label: "Yoda's Splash" },
+  { value: "paws-express", label: "Yipyy Express Check-in" },
+];
+
+const DEFAULT_IFTTT_RULES: IftttTransitionRule[] = [
+  {
+    id: "ifttt-grooming-checkin",
+    service: "grooming",
+    action: "onCheckIn",
+    currentStatus: "any",
+    targetStatus: "in_progress",
+    enabled: true,
+  },
+  {
+    id: "ifttt-yodas-checkin",
+    service: "yodas-splash",
+    action: "onCheckIn",
+    currentStatus: "any",
+    targetStatus: "in_progress",
+    enabled: true,
+  },
+  {
+    id: "ifttt-daycare-checkin",
+    service: "daycare",
+    action: "onCheckIn",
+    currentStatus: "any",
+    targetStatus: "checked_in",
+    enabled: true,
+  },
+  {
+    id: "ifttt-daycare-checkout",
+    service: "daycare",
+    action: "onCheckout",
+    currentStatus: "any",
+    targetStatus: "completed",
+    enabled: true,
+  },
 ];
 
 const defaultFacility = facilities.find((f) => f.id === 11);
-const defaultConfig = defaultFacility?.bookingStatusConfig;
+const defaultConfig = defaultFacility?.bookingStatusConfig as
+  | {
+      customStatuses?: CustomStatus[];
+      autoTransitions?: AutoTransitions;
+      iftttTransitionRules?: IftttTransitionRule[];
+      advancedAutoTransitions?: IftttTransitionRule[];
+    }
+  | undefined;
 
 let _customId = 600;
+let _iftttRuleId = 1200;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -89,6 +163,60 @@ export function BookingStatusSettings() {
       onPaymentComplete: "confirmed",
     },
   );
+  const [iftttTransitionRules, setIftttTransitionRules] = useState<
+    IftttTransitionRule[]
+  >(
+    (defaultConfig?.iftttTransitionRules as IftttTransitionRule[]) ??
+      (defaultConfig?.advancedAutoTransitions as IftttTransitionRule[]) ??
+      DEFAULT_IFTTT_RULES,
+  );
+
+  const serviceOptions = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const option of BASE_SERVICE_OPTIONS) {
+      map.set(option.value, option.label);
+    }
+
+    for (const location of defaultFacility?.locationsList ?? []) {
+      for (const service of location.services ?? []) {
+        if (!map.has(service)) {
+          map.set(
+            service,
+            service
+              .split(/[-_]/g)
+              .filter(Boolean)
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" "),
+          );
+        }
+      }
+    }
+
+    return Array.from(map.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  }, []);
+
+  const statusOptions = useMemo(() => {
+    const statusMap = new Map<string, string>();
+
+    for (const option of SYSTEM_STATUS_OPTIONS) {
+      statusMap.set(option.value, option.label);
+    }
+
+    for (const status of customStatuses) {
+      const name = status.name.trim();
+      if (!name || statusMap.has(status.id)) continue;
+      statusMap.set(status.id, name);
+    }
+
+    return Array.from(statusMap.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  }, [customStatuses]);
 
   const handleAddCustom = () => {
     _customId += 1;
@@ -113,8 +241,35 @@ export function BookingStatusSettings() {
     );
   };
 
+  const handleAddIftttRule = () => {
+    _iftttRuleId += 1;
+    setIftttTransitionRules((prev) => [
+      ...prev,
+      {
+        id: `ifttt_${_iftttRuleId}`,
+        service: "any",
+        action: "onCheckIn",
+        currentStatus: "any",
+        targetStatus: "checked_in",
+        enabled: true,
+      },
+    ]);
+  };
+
+  const handleUpdateIftttRule = (
+    id: string,
+    updates: Partial<IftttTransitionRule>,
+  ) => {
+    setIftttTransitionRules((prev) =>
+      prev.map((rule) => (rule.id === id ? { ...rule, ...updates } : rule)),
+    );
+  };
+
+  const handleRemoveIftttRule = (id: string) => {
+    setIftttTransitionRules((prev) => prev.filter((rule) => rule.id !== id));
+  };
+
   const handleSave = () => {
-    // Validate custom statuses have names
     const empty = customStatuses.find((s) => !s.name.trim());
     if (empty) {
       toast.error("All custom statuses must have a name");
@@ -125,6 +280,8 @@ export function BookingStatusSettings() {
       (defaultFacility as Record<string, unknown>).bookingStatusConfig = {
         customStatuses,
         autoTransitions,
+        iftttTransitionRules,
+        advancedAutoTransitions: iftttTransitionRules,
       };
     }
     toast.success("Booking status settings saved");
@@ -316,42 +473,94 @@ export function BookingStatusSettings() {
             can still override manually.
           </p>
 
-          <div className="space-y-3">
-            <TransitionRule
-              label="When deposit is paid"
-              value={autoTransitions.onDepositPaid}
-              onChange={(v) =>
-                setAutoTransitions((p) => ({ ...p, onDepositPaid: v }))
-              }
-              options={ALL_STATUS_OPTIONS}
-            />
-            <Separator />
-            <TransitionRule
-              label="When full payment is received"
-              value={autoTransitions.onPaymentComplete}
-              onChange={(v) =>
-                setAutoTransitions((p) => ({ ...p, onPaymentComplete: v }))
-              }
-              options={ALL_STATUS_OPTIONS}
-            />
-            <Separator />
-            <TransitionRule
-              label="When pet is checked in"
-              value={autoTransitions.onCheckIn}
-              onChange={(v) =>
-                setAutoTransitions((p) => ({ ...p, onCheckIn: v }))
-              }
-              options={ALL_STATUS_OPTIONS}
-            />
-            <Separator />
-            <TransitionRule
-              label="When checkout completes"
-              value={autoTransitions.onCheckout}
-              onChange={(v) =>
-                setAutoTransitions((p) => ({ ...p, onCheckout: v }))
-              }
-              options={ALL_STATUS_OPTIONS}
-            />
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+            <div className="flex items-center gap-2">
+              <Zap className="size-3.5 text-sky-600" />
+              <h4 className="text-sm font-semibold">Default Fallback Rules</h4>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              These apply when no service-specific IFTTT rule matches.
+            </p>
+
+            <div className="space-y-3">
+              <TransitionRule
+                label="When deposit is paid"
+                value={autoTransitions.onDepositPaid}
+                onChange={(v) =>
+                  setAutoTransitions((p) => ({ ...p, onDepositPaid: v }))
+                }
+                options={statusOptions}
+              />
+              <Separator />
+              <TransitionRule
+                label="When full payment is received"
+                value={autoTransitions.onPaymentComplete}
+                onChange={(v) =>
+                  setAutoTransitions((p) => ({ ...p, onPaymentComplete: v }))
+                }
+                options={statusOptions}
+              />
+              <Separator />
+              <TransitionRule
+                label="When pet is checked in"
+                value={autoTransitions.onCheckIn}
+                onChange={(v) => setAutoTransitions((p) => ({ ...p, onCheckIn: v }))}
+                options={statusOptions}
+              />
+              <Separator />
+              <TransitionRule
+                label="When checkout completes"
+                value={autoTransitions.onCheckout}
+                onChange={(v) => setAutoTransitions((p) => ({ ...p, onCheckout: v }))}
+                options={statusOptions}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <WandSparkles className="size-3.5 text-violet-600" />
+                  <h4 className="text-sm font-semibold">IFTTT Service Rules</h4>
+                </div>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  If this event happens for this service, then move booking to a
+                  specific status.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={handleAddIftttRule}
+              >
+                <Plus className="size-3.5" />
+                Add IFTTT Rule
+              </Button>
+            </div>
+
+            {iftttTransitionRules.length === 0 ? (
+              <p className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-sm">
+                No service rules yet. Add a rule like: IF service is Grooming +
+                event is Check-In THEN status becomes In Progress.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {iftttTransitionRules.map((rule) => (
+                  <IftttRuleRow
+                    key={rule.id}
+                    rule={rule}
+                    serviceOptions={serviceOptions}
+                    statusOptions={statusOptions}
+                    onUpdate={(updates) =>
+                      handleUpdateIftttRule(rule.id, updates)
+                    }
+                    onRemove={() => handleRemoveIftttRule(rule.id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -398,6 +607,127 @@ function TransitionRule({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function IftttRuleRow({
+  rule,
+  serviceOptions,
+  statusOptions,
+  onUpdate,
+  onRemove,
+}: {
+  rule: IftttTransitionRule;
+  serviceOptions: { value: string; label: string }[];
+  statusOptions: { value: string; label: string }[];
+  onUpdate: (updates: Partial<IftttTransitionRule>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div>
+          <Label className="text-[11px]">IF service is</Label>
+          <Select
+            value={rule.service}
+            onValueChange={(value) => onUpdate({ service: value })}
+          >
+            <SelectTrigger className="mt-1 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {serviceOptions.map((service) => (
+                <SelectItem key={service.value} value={service.value}>
+                  {service.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-[11px]">WHEN this event happens</Label>
+          <Select
+            value={rule.action}
+            onValueChange={(value) =>
+              onUpdate({ action: value as AutoTransitionAction })
+            }
+          >
+            <SelectTrigger className="mt-1 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TRANSITION_EVENT_OPTIONS.map((event) => (
+                <SelectItem key={event.value} value={event.value}>
+                  {event.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-[11px]">AND current status is</Label>
+          <Select
+            value={rule.currentStatus}
+            onValueChange={(value) => onUpdate({ currentStatus: value })}
+          >
+            <SelectTrigger className="mt-1 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any status</SelectItem>
+              {statusOptions.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-[11px]">THEN set status to</Label>
+          <Select
+            value={rule.targetStatus}
+            onValueChange={(value) => onUpdate({ targetStatus: value })}
+          >
+            <SelectTrigger className="mt-1 h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No auto-transition</SelectItem>
+              {statusOptions.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-end justify-between gap-3 xl:justify-end">
+          <div className="mb-1.5 flex items-center gap-2">
+            <Switch
+              checked={rule.enabled}
+              onCheckedChange={(checked) =>
+                onUpdate({ enabled: Boolean(checked) })
+              }
+            />
+            <span className="text-xs">Enabled</span>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+            onClick={onRemove}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -107,52 +107,56 @@ export function Calendar({
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className={cn("p-3", className)}>
-      <div className="mb-4 flex items-center justify-between">
+    <div
+      className={cn(
+        "rounded-xl border border-slate-200/80 bg-linear-to-br from-sky-50/70 via-white to-indigo-50/40 p-3 shadow-sm",
+        className,
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={handlePreviousMonth}
-          className="size-7"
+          className="size-7 rounded-full text-slate-600 hover:bg-sky-100 hover:text-sky-700"
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <div className="font-semibold">
+        <div className="text-sm font-semibold text-slate-700">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </div>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={handleNextMonth}
-          className="size-7"
+          className="size-7 rounded-full text-slate-600 hover:bg-sky-100 hover:text-sky-700"
         >
           <ChevronRight className="size-4" />
         </Button>
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {dayNames.map((day) => (
           <div
             key={day}
-            className="text-muted-foreground p-2 text-center text-sm font-medium"
+            className="p-1 text-center text-[11px] font-semibold tracking-wide text-slate-500 uppercase"
           >
             {day}
           </div>
         ))}
         {days.map((date, index) => {
           if (!date) {
-            return <div key={`empty-${index}`} className="p-2" />;
+            return <div key={`empty-${index}`} className="size-9" />;
           }
           return (
             <button
               key={date.toISOString()}
               onClick={() => handleDateClick(date)}
               className={cn(
-                "rounded-md p-2 text-sm transition-colors",
-                "hover:bg-accent hover:text-accent-foreground",
-                isToday(date) && "font-bold",
+                "size-9 rounded-full text-sm font-medium text-slate-700 transition-colors",
+                "hover:bg-sky-100 hover:text-sky-700",
+                isToday(date) && "ring-2 ring-sky-300",
                 isSelected(date) &&
-                  `bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground`,
-                !isSelected(date) && "text-foreground",
+                  "bg-sky-600 text-white hover:bg-sky-600 hover:text-white",
               )}
             >
               {date.getDate()}
