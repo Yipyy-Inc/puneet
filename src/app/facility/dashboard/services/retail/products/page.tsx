@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Plus,
@@ -65,6 +65,7 @@ import { generateUniqueBarcode } from "@/lib/barcode-generator";
 import { BarcodeDisplay } from "@/components/retail/BarcodeDisplay";
 import { BarcodeLabelPrint } from "@/components/retail/BarcodeLabelPrint";
 import { retailConfig } from "@/data/retail-config";
+import { useHardwareBarcodeScanner } from "@/hooks/use-hardware-barcode-scanner";
 
 type ProductWithRecord = Product & Record<string, unknown>;
 
@@ -119,6 +120,41 @@ export default function ProductsPage() {
     imageUrl: "",
     imageUrls: [] as string[],
   });
+
+  const productBarcodeInputRef = useRef<HTMLInputElement>(null);
+  const variantBarcodeInputRef = useRef<HTMLInputElement>(null);
+
+  const handleProductBarcodeScan = useCallback((code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      barcode: trimmed,
+    }));
+  }, []);
+
+  const handleVariantBarcodeScan = useCallback((code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+
+    setVariantForm((prev) => ({
+      ...prev,
+      barcode: trimmed,
+    }));
+  }, []);
+
+  useHardwareBarcodeScanner(
+    productBarcodeInputRef,
+    handleProductBarcodeScan,
+    isAddEditModalOpen && !formData.barcode.startsWith("YPY-"),
+  );
+
+  useHardwareBarcodeScanner(
+    variantBarcodeInputRef,
+    handleVariantBarcodeScan,
+    isVariantModalOpen,
+  );
 
   const stats = getRetailStats();
 
@@ -925,6 +961,7 @@ export default function ProductsPage() {
                     </div>
                   ) : (
                     <Input
+                      ref={productBarcodeInputRef}
                       value={formData.barcode}
                       onChange={(e) =>
                         setFormData({
@@ -1286,6 +1323,7 @@ export default function ProductsPage() {
                 <Label htmlFor="variantBarcode">Barcode</Label>
                 <Input
                   id="variantBarcode"
+                  ref={variantBarcodeInputRef}
                   value={variantForm.barcode}
                   onChange={(e) =>
                     setVariantForm({ ...variantForm, barcode: e.target.value })

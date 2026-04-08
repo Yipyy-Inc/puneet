@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 export function useHardwareBarcodeScanner(
   inputRef: React.RefObject<HTMLInputElement | null>,
   onScan: (code: string) => void,
+  enabled = true,
 ) {
   // Ref so the event listener is registered once but always calls
   // the latest onScan without needing the listener to be re-registered.
@@ -20,11 +21,15 @@ export function useHardwareBarcodeScanner(
   });
 
   useEffect(() => {
+    if (!enabled) return;
+
     const input = inputRef.current;
     if (!input) return;
 
     let buffer = "";
     let lastKeyTime = 0;
+    let lastEmittedCode = "";
+    let lastEmittedAt = 0;
     let clearTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,6 +43,14 @@ export function useHardwareBarcodeScanner(
           const code = buffer;
           buffer = "";
           if (clearTimer) clearTimeout(clearTimer);
+
+          // Some scanners emit the same payload twice back-to-back.
+          if (code === lastEmittedCode && now - lastEmittedAt < 300) {
+            return;
+          }
+
+          lastEmittedCode = code;
+          lastEmittedAt = now;
           onScanRef.current(code);
         }
         // Short buffer = manual typing → let Enter propagate (form submit)
@@ -67,5 +80,5 @@ export function useHardwareBarcodeScanner(
       input.removeEventListener("keydown", handleKeyDown);
       if (clearTimer) clearTimeout(clearTimer);
     };
-  }, [inputRef]); // inputRef is stable (created with useRef in the parent)
+  }, [enabled, inputRef]); // inputRef is stable (created with useRef in the parent)
 }

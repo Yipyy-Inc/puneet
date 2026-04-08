@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
 import "./globals.css";
@@ -36,8 +37,82 @@ export default function RootLayout({
       className={` ${inter.variable} ${plusJakarta.variable} `}
       suppressHydrationWarning
     >
+      <head suppressHydrationWarning>
+        <Script
+          id="remove-extension-injected-attrs"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                var attr = "bis_skin_checked";
+                var isBlockedAttr = function (name) {
+                  return typeof name === "string" && name.toLowerCase() === attr;
+                };
+
+                var removeAttr = function (node) {
+                  if (!node || node.nodeType !== 1) return;
+
+                  if (node.hasAttribute && node.hasAttribute(attr)) {
+                    node.removeAttribute(attr);
+                  }
+
+                  if (!node.querySelectorAll) return;
+                  var nodes = node.querySelectorAll("[" + attr + "]");
+                  for (var i = 0; i < nodes.length; i += 1) {
+                    nodes[i].removeAttribute(attr);
+                  }
+                };
+
+                var originalSetAttribute = Element.prototype.setAttribute;
+                Element.prototype.setAttribute = function (name, value) {
+                  if (isBlockedAttr(name)) return;
+                  return originalSetAttribute.call(this, name, value);
+                };
+
+                if (Element.prototype.setAttributeNS) {
+                  var originalSetAttributeNS = Element.prototype.setAttributeNS;
+                  Element.prototype.setAttributeNS = function (namespace, name, value) {
+                    if (isBlockedAttr(name)) return;
+                    return originalSetAttributeNS.call(this, namespace, name, value);
+                  };
+                }
+
+                removeAttr(document.documentElement);
+
+                var observer = new MutationObserver(function (mutations) {
+                  for (var i = 0; i < mutations.length; i += 1) {
+                    var mutation = mutations[i];
+
+                    if (
+                      mutation.type === "attributes" &&
+                      mutation.attributeName === attr &&
+                      mutation.target &&
+                      mutation.target.removeAttribute
+                    ) {
+                      mutation.target.removeAttribute(attr);
+                    }
+
+                    if (mutation.type === "childList" && mutation.addedNodes) {
+                      for (var j = 0; j < mutation.addedNodes.length; j += 1) {
+                        removeAttr(mutation.addedNodes[j]);
+                      }
+                    }
+                  }
+                });
+
+                observer.observe(document.documentElement, {
+                  subtree: true,
+                  childList: true,
+                  attributes: true,
+                  attributeFilter: [attr],
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <div className="flex min-h-screen flex-col pb-16">
+        <div className="flex min-h-screen flex-col pb-16" suppressHydrationWarning>
           <main className="flex-1">
             <QueryProvider>{children}</QueryProvider>
           </main>
