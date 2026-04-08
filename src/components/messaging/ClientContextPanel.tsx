@@ -264,7 +264,12 @@ export function ClientContextPanel({
   const threadEntityId = useMemo(() => {
     if (!threadId) return null;
     const msg = messages.find((m) => (m.threadId ?? m.id) === threadId);
-    return msg?.clientId ?? null;
+    if (msg?.clientId) return msg.clientId;
+
+    const facilityMatch = /^facility-(\d+)$/.exec(threadId);
+    if (facilityMatch) return Number(facilityMatch[1]);
+
+    return null;
   }, [threadId, messages]);
 
   const client = !isCustomerMode && threadEntityId
@@ -280,6 +285,7 @@ export function ClientContextPanel({
     | {
         phone?: string;
         email?: string;
+        website?: string;
       }
     | undefined;
 
@@ -322,10 +328,21 @@ export function ClientContextPanel({
     : ((client as Record<string, unknown>)?.imageUrl as string | undefined);
   const pets = isCustomerMode ? (customer?.pets ?? []) : (client?.pets ?? []);
   const infoTitle = isCustomerMode ? "Facility Info" : "Client Info";
-  const profileHref = isCustomerMode
-    ? "/customer/dashboard"
-    : `/facility/dashboard/clients/${client?.id}`;
-  const profileButtonLabel = isCustomerMode ? "View Facility" : "View Profile";
+  const facilityWebsite = isCustomerMode ? facilityContact?.website : undefined;
+  const profileButtonLabel = isCustomerMode ? "View Website" : "View Profile";
+  const stats = isCustomerMode
+    ? [
+        { n: upcoming.length, label: "Upcoming" },
+        { n: completed.length, label: "Past" },
+      ]
+    : [
+        { n: upcoming.length, label: "Upcoming" },
+        { n: completed.length, label: "Past" },
+        {
+          n: `$${totalSpend > 999 ? `${(totalSpend / 1000).toFixed(1)}k` : totalSpend}`,
+          label: "Spent",
+        },
+      ];
   const quickLinks = isCustomerMode ? CUSTOMER_QUICK_LINKS : QUICK_LINKS;
 
   if (!profileName || (isCustomerMode ? !facility : !client)) {
@@ -400,29 +417,52 @@ export function ClientContextPanel({
 
           {/* Quick actions */}
           <div className="mt-3 flex gap-2">
-            <Link href={profileHref}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 rounded-full text-xs"
-              >
-                <ExternalLink className="size-3.5" />
-                {profileButtonLabel}
-              </Button>
-            </Link>
+            {isCustomerMode ? (
+              facilityWebsite ? (
+                <a href={facilityWebsite} target="_blank" rel="noreferrer">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 rounded-full text-xs"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {profileButtonLabel}
+                  </Button>
+                </a>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-full text-xs"
+                  disabled
+                >
+                  <ExternalLink className="size-3.5" />
+                  {profileButtonLabel}
+                </Button>
+              )
+            ) : (
+              <Link href={`/facility/dashboard/clients/${client?.id}`}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 rounded-full text-xs"
+                >
+                  <ExternalLink className="size-3.5" />
+                  {profileButtonLabel}
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-3 border-b py-4">
-          {[
-            { n: upcoming.length, label: "Upcoming" },
-            { n: completed.length, label: "Past" },
-            {
-              n: `$${totalSpend > 999 ? `${(totalSpend / 1000).toFixed(1)}k` : totalSpend}`,
-              label: "Spent",
-            },
-          ].map((s) => (
+        <div
+          className={cn(
+            "grid border-b py-4",
+            isCustomerMode ? "grid-cols-2" : "grid-cols-3",
+          )}
+        >
+          {stats.map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-xl font-bold text-slate-800 tabular-nums">
                 {s.n}

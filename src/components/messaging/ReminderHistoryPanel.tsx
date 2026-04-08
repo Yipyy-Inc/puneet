@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Clock3, Mail, Smartphone, Sparkles } from "lucide-react";
 import { clientCommunications } from "@/data/communications";
@@ -40,9 +39,14 @@ function hasReminderKeywords(subject: string | undefined, body: string) {
   return REMINDER_KEYWORDS.some((keyword) => content.includes(keyword));
 }
 
-function isReminderMessage(message: Message) {
-  if (message.direction !== "outbound") return false;
+function isReminderMessage(message: Message, isCustomerMode: boolean) {
   if (message.type !== "email" && message.type !== "sms") return false;
+
+  if (isCustomerMode) {
+    return message.direction === "inbound";
+  }
+
+  if (message.direction !== "outbound") return false;
   return hasReminderKeywords(message.subject, message.body);
 }
 
@@ -55,20 +59,52 @@ export function getReminderHistoryForCustomer({
   counterpartyId?: number;
   isCustomerMode: boolean;
 }): ReminderHistoryItem[] {
-  if (isCustomerMode || !counterpartyId) return [];
+  if (!counterpartyId) return [];
+
+  if (isCustomerMode) {
+    return messages
+      .filter(
+        (message) =>
+          message.clientId === counterpartyId &&
+          isReminderMessage(message, true),
+      )
+      .map((message) => {
+        const channel: ReminderChannel =
+          message.type === "email" ? "email" : "sms";
+
+        return {
+          id: message.id,
+          type: channel,
+          subject: message.subject,
+          body: message.body,
+          timestamp: message.timestamp,
+          status: message.status,
+        };
+      })
+      .sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+  }
 
   const threadReminderMessages: ReminderHistoryItem[] = messages
     .filter(
-      (message) => message.clientId === counterpartyId && isReminderMessage(message),
+      (message) =>
+        message.clientId === counterpartyId &&
+        isReminderMessage(message, false),
     )
-    .map((message) => ({
-      id: message.id,
-      type: message.type === "email" ? "email" : "sms",
-      subject: message.subject,
-      body: message.body,
-      timestamp: message.timestamp,
-      status: message.status,
-    }));
+    .map((message) => {
+      const channel: ReminderChannel =
+        message.type === "email" ? "email" : "sms";
+
+      return {
+        id: message.id,
+        type: channel,
+        subject: message.subject,
+        body: message.body,
+        timestamp: message.timestamp,
+        status: message.status,
+      };
+    });
 
   const historicalReminders: ReminderHistoryItem[] = clientCommunications
     .filter(
@@ -78,14 +114,19 @@ export function getReminderHistoryForCustomer({
         (record.type === "email" || record.type === "sms") &&
         hasReminderKeywords(record.subject, record.content),
     )
-    .map((record) => ({
-      id: record.id,
-      type: record.type === "email" ? "email" : "sms",
-      subject: record.subject,
-      body: record.content,
-      timestamp: record.timestamp,
-      status: record.status ?? "sent",
-    }));
+    .map((record) => {
+      const channel: ReminderChannel =
+        record.type === "email" ? "email" : "sms";
+
+      return {
+        id: record.id,
+        type: channel,
+        subject: record.subject,
+        body: record.content,
+        timestamp: record.timestamp,
+        status: record.status ?? "sent",
+      };
+    });
 
   return [...threadReminderMessages, ...historicalReminders].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -188,10 +229,13 @@ function ReminderColumn({
 export function ReminderHistoryPanel({
   counterpartyName,
   reminderHistory,
+  mode = "facility",
 }: {
   counterpartyName: string;
   reminderHistory: ReminderHistoryItem[];
+  mode?: "facility" | "customer";
 }) {
+  const isCustomerMode = mode === "customer";
   const emailReminders = useMemo(
     () => reminderHistory.filter((message) => message.type === "email"),
     [reminderHistory],
@@ -223,7 +267,9 @@ export function ReminderHistoryPanel({
                 {counterpartyName} reminder timeline
               </h4>
               <p className="mt-1.5 max-w-2xl text-sm text-slate-600">
-                Every outbound reminder sent to this customer, separated by email and SMS for fast follow-up checks.
+                {isCustomerMode
+                  ? "Email and SMS reminders from this facility are listed here so your chat stays clean and easy to follow."
+                  : "Every outbound reminder sent to this customer, separated by email and SMS for fast follow-up checks."}
               </p>
             </div>
 

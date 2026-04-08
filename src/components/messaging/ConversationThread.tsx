@@ -81,7 +81,14 @@ export function ConversationThread({
       );
   }, [threadId, messages]);
 
-  const counterpartyId = threadMessages[0]?.clientId;
+  const threadFacilityId = useMemo(() => {
+    if (!isCustomerMode || !threadId) return null;
+    const match = /^facility-(\d+)$/.exec(threadId);
+    return match ? Number(match[1]) : null;
+  }, [isCustomerMode, threadId]);
+
+  const counterpartyId =
+    threadMessages[0]?.clientId ?? threadFacilityId ?? undefined;
   const client = counterpartyId
     ? clients.find((customer) => customer.id === counterpartyId)
     : null;
@@ -114,12 +121,20 @@ export function ConversationThread({
 
   const channels = [...new Set(threadMessages.map((message) => message.type))];
 
+  const chatMessages = useMemo(
+    () =>
+      isCustomerMode
+        ? threadMessages.filter((message) => message.type === "in-app")
+        : threadMessages,
+    [isCustomerMode, threadMessages],
+  );
+
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [threadMessages.length]);
+  }, [chatMessages.length]);
 
   useEffect(() => {
     setActiveTab("conversation");
@@ -151,7 +166,7 @@ export function ConversationThread({
   > = [];
   let lastDate = "";
 
-  for (const message of threadMessages) {
+  for (const message of chatMessages) {
     const date = new Date(message.timestamp).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -167,13 +182,15 @@ export function ConversationThread({
   }
 
   const channelLabel =
-    channels.length === 1
-      ? channels[0] === "sms"
-        ? "SMS"
-        : channels[0] === "email"
-          ? "Email"
-          : "Chat"
-      : `${channels.length} channels`;
+    channels.length === 0
+      ? "No history"
+      : channels.length === 1
+        ? channels[0] === "sms"
+          ? "SMS"
+          : channels[0] === "email"
+            ? "Email"
+            : "Chat"
+        : `${channels.length} channels`;
 
   const reminderHistory = useMemo(
     () =>
@@ -196,73 +213,88 @@ export function ConversationThread({
         }}
       >
         <div className="mx-auto max-w-2xl px-6 py-5">
-          <div className="mb-4 flex flex-col items-center py-4 text-center">
-            {counterpartyImage ? (
-              <img
-                src={counterpartyImage}
-                alt=""
-                className="size-16 rounded-full object-cover shadow-md ring-4 ring-white"
-              />
-            ) : (
-              <div
-                className={cn(
-                  "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md ring-4 ring-white",
-                  avatarColor(counterpartyName),
-                )}
-              >
-                {initials(counterpartyName)}
-              </div>
-            )}
-            <p className="mt-2 text-sm font-semibold text-slate-700">
-              {counterpartyName}
-            </p>
-            <p className="text-[11px] text-slate-400">
-              {isCustomerMode
-                ? (((counterpartyContact as Record<string, unknown>)?.email as
-                    | string
-                    | undefined) ?? "")
-                : (client?.email ?? "")}{" "}
-              {(isCustomerMode
-                ? ((counterpartyContact as Record<string, unknown>)?.phone as
-                    | string
-                    | undefined)
-                : client?.phone)
-                ? `- ${
-                    isCustomerMode
-                      ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
-                      : client?.phone
-                  }`
-                : ""}
-            </p>
-            <p className="mt-1 text-[10px] text-slate-300">
-              Conversation started{" "}
-              {threadMessages[0]
-                ? new Date(threadMessages[0].timestamp).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    },
-                  )
-                : ""}
-            </p>
-          </div>
-
-          <div className="space-y-0.5">
-            {grouped.map((item, index) =>
-              item.type === "date" ? (
-                <DateSeparator key={`d-${index}`} date={item.date} />
-              ) : (
-                <MessageBubble
-                  key={item.msg.id}
-                  message={item.msg}
-                  clientName={counterpartyName}
-                  clientImage={counterpartyImage}
+          {grouped.length > 0 && (
+            <div className="mb-4 flex flex-col items-center py-4 text-center">
+              {counterpartyImage ? (
+                <img
+                  src={counterpartyImage}
+                  alt=""
+                  className="size-16 rounded-full object-cover shadow-md ring-4 ring-white"
                 />
-              ),
-            )}
-          </div>
+              ) : (
+                <div
+                  className={cn(
+                    "flex size-16 items-center justify-center rounded-full text-xl font-bold text-white shadow-md ring-4 ring-white",
+                    avatarColor(counterpartyName),
+                  )}
+                >
+                  {initials(counterpartyName)}
+                </div>
+              )}
+              <p className="mt-2 text-sm font-semibold text-slate-700">
+                {counterpartyName}
+              </p>
+              <p className="text-[11px] text-slate-400">
+                {isCustomerMode
+                  ? (((counterpartyContact as Record<string, unknown>)?.email as
+                      | string
+                      | undefined) ?? "")
+                  : (client?.email ?? "")}{" "}
+                {(isCustomerMode
+                  ? ((counterpartyContact as Record<string, unknown>)?.phone as
+                      | string
+                      | undefined)
+                  : client?.phone)
+                  ? `- ${
+                      isCustomerMode
+                        ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
+                        : client?.phone
+                    }`
+                  : ""}
+              </p>
+              <p className="mt-1 text-[10px] text-slate-300">
+                Conversation started{" "}
+                {chatMessages[0]
+                  ? new Date(chatMessages[0].timestamp).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    )
+                  : ""}
+              </p>
+            </div>
+          )}
+
+          {grouped.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 px-5 py-8 text-center">
+              <p className="text-sm font-semibold text-slate-600">
+                No chat messages in this thread yet
+              </p>
+              {isCustomerMode && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Open the Reminders tab to see email and SMS reminders.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {grouped.map((item, index) =>
+                item.type === "date" ? (
+                  <DateSeparator key={`d-${index}`} date={item.date} />
+                ) : (
+                  <MessageBubble
+                    key={item.msg.id}
+                    message={item.msg}
+                    clientName={counterpartyName}
+                    clientImage={counterpartyImage}
+                  />
+                ),
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -370,39 +402,38 @@ export function ConversationThread({
         </div>
       </div>
 
-      {isCustomerMode ? (
-        conversationPanel
-      ) : (
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as ReminderTab)}
-          className="flex min-h-0 flex-1 flex-col gap-0"
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as ReminderTab)}
+        className="flex min-h-0 flex-1 flex-col gap-0"
+      >
+        <TabsList className="border-b border-slate-200 bg-white px-4">
+          <TabsTrigger value="conversation">
+            {isCustomerMode ? "Chat" : "Conversation"}
+          </TabsTrigger>
+          <TabsTrigger value="reminders" className="gap-2">
+            {isCustomerMode ? "Reminders" : "Reminder History"}
+            <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
+              {reminderHistory.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent
+          value="conversation"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          <TabsList className="border-b border-slate-200 bg-white px-4">
-            <TabsTrigger value="conversation">Conversation</TabsTrigger>
-            <TabsTrigger value="reminders" className="gap-2">
-              Reminder History
-              <Badge className="bg-amber-100 px-2 py-0 text-[10px] text-amber-800">
-                {reminderHistory.length}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
+          {conversationPanel}
+        </TabsContent>
 
-          <TabsContent
-            value="conversation"
-            className="flex min-h-0 flex-1 flex-col"
-          >
-            {conversationPanel}
-          </TabsContent>
-
-          <TabsContent value="reminders" className="min-h-0 flex-1 overflow-hidden">
-            <ReminderHistoryPanel
-              counterpartyName={counterpartyName}
-              reminderHistory={reminderHistory}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value="reminders" className="min-h-0 flex-1 overflow-hidden">
+          <ReminderHistoryPanel
+            counterpartyName={counterpartyName}
+            reminderHistory={reminderHistory}
+            mode={mode}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

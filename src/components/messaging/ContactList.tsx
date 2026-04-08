@@ -57,6 +57,7 @@ export interface Thread {
   lastMessage: Message;
   unreadCount: number;
   channels: string[];
+  isPlaceholder?: boolean;
 }
 
 const COLORS = [
@@ -105,11 +106,13 @@ export function ContactList({
   selectedThreadId,
   onSelectThread,
   mode = "facility",
+  customerFacilityIds,
 }: {
   messages: Message[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
   mode?: "facility" | "customer";
+  customerFacilityIds?: number[];
 }) {
   const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
@@ -167,18 +170,64 @@ export function ContactList({
           unreadCount:
             (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
           channels: [...ch],
+          isPlaceholder: false,
         });
       } else {
         existing.channels = [...new Set([...existing.channels, msg.type])];
         if (shouldCountUnread) existing.unreadCount++;
       }
     }
+
+    if (isCustomerMode && customerFacilityIds && customerFacilityIds.length > 0) {
+      const existingFacilityIds = new Set(
+        [...map.values()].map((thread) => thread.clientId),
+      );
+
+      for (const facilityId of customerFacilityIds) {
+        if (existingFacilityIds.has(facilityId)) continue;
+
+        const facility = facilities.find((entry) => entry.id === facilityId);
+        if (!facility) continue;
+
+        map.set(`facility-${facilityId}`, {
+          threadId: `facility-${facilityId}`,
+          clientId: facilityId,
+          clientName: facility.name,
+          clientImage: undefined,
+          unreadCount: 0,
+          channels: [],
+          isPlaceholder: true,
+          lastMessage: {
+            id: `placeholder-${facilityId}`,
+            type: "in-app",
+            direction: "inbound",
+            from: facility.name,
+            to: "You",
+            body: "No messages yet",
+            status: "delivered",
+            timestamp: new Date(0).toISOString(),
+            clientId: facilityId,
+            threadId: `facility-${facilityId}`,
+            hasRead: true,
+          },
+        });
+      }
+    }
+
     return [...map.values()].sort(
-      (a, b) =>
-        new Date(b.lastMessage.timestamp).getTime() -
-        new Date(a.lastMessage.timestamp).getTime(),
+      (a, b) => {
+        const aTime = a.isPlaceholder
+          ? 0
+          : new Date(a.lastMessage.timestamp).getTime();
+        const bTime = b.isPlaceholder
+          ? 0
+          : new Date(b.lastMessage.timestamp).getTime();
+
+        if (bTime !== aTime) return bTime - aTime;
+        return a.clientName.localeCompare(b.clientName);
+      },
     );
-  }, [messages]);
+  }, [customerFacilityIds, isCustomerMode, messages]);
 
   const filtered = useMemo(() => {
     let list = threads;
@@ -198,6 +247,10 @@ export function ContactList({
     }
     return list;
   }, [threads, filter, search]);
+
+  const customerCanSwitchFacilities = isCustomerMode && threads.length > 1;
+  const showSearch = !isCustomerMode || compose || customerCanSwitchFacilities;
+  const showFilters = !compose && !isCustomerMode;
 
   return (
     <div className="flex h-full w-80 shrink-0 flex-col bg-white">
@@ -365,25 +418,33 @@ export function ContactList({
       )}
 
       {/* Search */}
-      <div className="px-4 py-2">
-        <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            placeholder={compose ? "Search clients..." : "Search messages..."}
-            value={compose ? clientSearch : search}
-            onChange={(e) =>
-              compose
-                ? setClientSearch(e.target.value)
-                : setSearch(e.target.value)
-            }
-            className="h-9 rounded-full border-slate-200 bg-slate-50 pl-9 text-sm"
-            autoFocus={compose}
-          />
+      {showSearch && (
+        <div className="px-4 py-2">
+          <div className="relative">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              placeholder={
+                compose
+                  ? "Search clients..."
+                  : isCustomerMode
+                    ? "Search facilities..."
+                    : "Search messages..."
+              }
+              value={compose ? clientSearch : search}
+              onChange={(e) =>
+                compose
+                  ? setClientSearch(e.target.value)
+                  : setSearch(e.target.value)
+              }
+              className="h-9 rounded-full border-slate-200 bg-slate-50 pl-9 text-sm"
+              autoFocus={compose}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filters */}
-      {!compose && (
+      {showFilters && (
         <div className="flex gap-1 px-4 pb-2">
           {(
             [
@@ -457,7 +518,8 @@ export function ContactList({
           ) : (
             filtered.map((thread) => {
               const sel = selectedThreadId === thread.threadId;
-              const failed = thread.lastMessage.status === "failed";
+              const failed =
+                !thread.isPlaceholder && thread.lastMessage.status === "failed";
               return (
                 <button
                   key={thread.threadId}
@@ -511,7 +573,9 @@ export function ContactList({
                             : "text-slate-400",
                         )}
                       >
-                        {relTime(thread.lastMessage.timestamp)}
+                        {thread.isPlaceholder
+                          ? "new"
+                          : relTime(thread.lastMessage.timestamp)}
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center justify-between gap-2">
@@ -531,7 +595,9 @@ export function ContactList({
                         >
                           {thread.lastMessage.direction === "outbound" &&
                             "You: "}
-                          {thread.lastMessage.body}
+                          {thread.isPlaceholder
+                            ? "No messages yet"
+                            : thread.lastMessage.body}
                         </span>
                       )}
                       {thread.unreadCount > 0 && (
