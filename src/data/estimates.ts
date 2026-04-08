@@ -3,6 +3,7 @@ import type { Estimate } from "@/types/booking";
 export const estimates: Estimate[] = [
   {
     id: "est-001",
+    estimateId: "EST-10001",
     clientId: 15,
     clientName: "Alice Johnson",
     clientEmail: "alice@example.com",
@@ -73,6 +74,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-002",
+    estimateId: "EST-10002",
     clientId: 28,
     clientName: "John Doe",
     clientEmail: "john@example.com",
@@ -121,6 +123,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-003",
+    estimateId: "EST-10003",
     clientId: 16,
     clientName: "Bob Smith",
     clientEmail: "bob@example.com",
@@ -159,6 +162,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-004",
+    estimateId: "EST-10004",
     clientId: 15,
     clientName: "Alice Johnson",
     clientEmail: "alice@example.com",
@@ -204,6 +208,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-005",
+    estimateId: "EST-10005",
     clientId: 28,
     clientName: "John Doe",
     clientEmail: "john@example.com",
@@ -238,6 +243,7 @@ export const estimates: Estimate[] = [
   // Guest estimates
   {
     id: "est-006",
+    estimateId: "EST-10006",
     clientId: 30,
     clientName: "David Park",
     clientEmail: "david.park@gmail.com",
@@ -298,6 +304,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-007",
+    estimateId: "EST-10007",
     clientId: 31,
     clientName: "Maria Santos",
     clientEmail: "maria.santos@outlook.com",

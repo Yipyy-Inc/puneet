@@ -299,6 +299,7 @@ export type GuestPetInfo = z.infer<typeof guestPetInfoSchema>;
 
 export const estimateSchema = z.object({
   id: z.string(),
+  estimateId: z.string(),
   clientId: z.number(),
   clientName: z.string(),
   clientEmail: z.string(),

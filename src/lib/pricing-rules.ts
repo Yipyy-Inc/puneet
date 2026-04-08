@@ -17,7 +17,27 @@ import type { ServiceAddOn } from "@/types/facility";
 import type { Pet } from "@/types/pet";
 
 export const PRICING_RULES_STORAGE_KEY = "settings-pricing-rules";
-const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
+export const SERVICE_ADDONS_STORAGE_KEY = "settings-service-addons";
+
+function toScopeToken(scopeKey?: string | number): string | null {
+  if (scopeKey == null) return null;
+  const token = String(scopeKey).trim();
+  return token.length > 0 ? token : null;
+}
+
+export function getPricingRulesStorageKey(scopeKey?: string | number): string {
+  const token = toScopeToken(scopeKey);
+  return token
+    ? `${PRICING_RULES_STORAGE_KEY}::facility-${token}`
+    : PRICING_RULES_STORAGE_KEY;
+}
+
+export function getServiceAddOnsStorageKey(scopeKey?: string | number): string {
+  const token = toScopeToken(scopeKey);
+  return token
+    ? `${SERVICE_ADDONS_STORAGE_KEY}::facility-${token}`
+    : SERVICE_ADDONS_STORAGE_KEY;
+}
 
 export interface StoredPricingRules {
   discountStacking: DiscountStackingMode;
@@ -140,10 +160,27 @@ function parseStoredJson<T>(key: string): T | null {
   }
 }
 
-export function getStoredPricingRules(): StoredPricingRules {
+function parseStoredJsonFromKeys<T>(keys: string[]): T | null {
+  for (const key of keys) {
+    const parsed = parseStoredJson<T>(key);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+function uniqueKeys(keys: string[]): string[] {
+  return Array.from(new Set(keys.filter((key) => key.trim().length > 0)));
+}
+
+export function getStoredPricingRules(
+  scopeKey?: string | number,
+): StoredPricingRules {
   const defaults = defaultPricingRules();
-  const parsed = parseStoredJson<Partial<StoredPricingRules>>(
-    PRICING_RULES_STORAGE_KEY,
+  const parsed = parseStoredJsonFromKeys<Partial<StoredPricingRules>>(
+    uniqueKeys([
+      getPricingRulesStorageKey(scopeKey),
+      getPricingRulesStorageKey(),
+    ]),
   );
 
   if (!parsed || typeof parsed !== "object") {
@@ -193,11 +230,21 @@ export function getStoredPricingRules(): StoredPricingRules {
 
 export function saveStoredPricingRules(rules: StoredPricingRules): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(PRICING_RULES_STORAGE_KEY, JSON.stringify(rules));
+  localStorage.setItem(getPricingRulesStorageKey(), JSON.stringify(rules));
 }
 
-export function getStoredServiceAddOns(): ServiceAddOn[] {
-  const parsed = parseStoredJson<ServiceAddOn[]>(SERVICE_ADDONS_STORAGE_KEY);
+export function saveStoredPricingRulesForScope(
+  rules: StoredPricingRules,
+  scopeKey?: string | number,
+): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(getPricingRulesStorageKey(scopeKey), JSON.stringify(rules));
+}
+
+export function getStoredServiceAddOns(scopeKey?: string | number): ServiceAddOn[] {
+  const parsed = parseStoredJsonFromKeys<ServiceAddOn[]>(
+    uniqueKeys([getServiceAddOnsStorageKey(scopeKey), getServiceAddOnsStorageKey()]),
+  );
   if (Array.isArray(parsed)) return parsed;
   return defaultServiceAddOns;
 }
@@ -1196,15 +1243,34 @@ export function applyDynamicPricingRules(
     });
   }
 
-  const adjustmentsTotal = adjustments.reduce((sum, adjustment) => {
+  let finalAdjustments = adjustments;
+
+  if (rules.discountStacking === "best_only") {
+    const discountAdjustments = adjustments.filter(
+      (adjustment) => adjustment.amount < 0,
+    );
+
+    if (discountAdjustments.length > 1) {
+      const bestDiscount = discountAdjustments.reduce((best, current) =>
+        Math.abs(current.amount) > Math.abs(best.amount) ? current : best,
+      );
+
+      finalAdjustments = [
+        ...adjustments.filter((adjustment) => adjustment.amount >= 0),
+        bestDiscount,
+      ];
+    }
+  }
+
+  const adjustmentsTotal = finalAdjustments.reduce((sum, adjustment) => {
     return sum + adjustment.amount;
   }, 0);
 
-  const discountTotal = adjustments
+  const discountTotal = finalAdjustments
     .filter((adjustment) => adjustment.amount < 0)
     .reduce((sum, adjustment) => sum + Math.abs(adjustment.amount), 0);
 
-  const surchargeTotal = adjustments
+  const surchargeTotal = finalAdjustments
     .filter((adjustment) => adjustment.amount > 0)
     .reduce((sum, adjustment) => sum + adjustment.amount, 0);
 
@@ -1212,7 +1278,7 @@ export function applyDynamicPricingRules(
 
   return {
     extraServices: normalizedMergedExtraServices,
-    adjustments,
+    adjustments: finalAdjustments,
     addOnsTotal,
     adjustmentsTotal,
     discountTotal,

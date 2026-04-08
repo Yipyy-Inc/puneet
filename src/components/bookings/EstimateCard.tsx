@@ -136,6 +136,10 @@ export function EstimateCard({
                 <Badge className={`text-[10px] ${config.color}`}>
                   {config.label}
                 </Badge>
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <FileText className="size-2.5" />
+                  Estimate {estimate.estimateId}
+                </Badge>
                 {estimate.status === "converted" &&
                   estimate.convertedBookingId && (
                     <Badge variant="outline" className="gap-1 text-[10px]">
@@ -320,7 +324,7 @@ export function EstimateCard({
                   · Sent {formatDate(estimate.sentAt)} via {estimate.sentVia}
                 </span>
               )}
-              <span>· #{estimate.id}</span>
+              <span>· {estimate.estimateId}</span>
             </div>
 
             {/* Secondary actions — PDF, History, Duplicate */}

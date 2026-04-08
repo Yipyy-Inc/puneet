@@ -102,6 +102,11 @@ const STATIC_GROUPS: SettingsGroup[] = [
     label: "Financial",
     sections: [
       { id: "pricing-rules", label: "Pricing Rules", icon: Receipt },
+      {
+        id: "estimate-settings",
+        label: "Estimate Settings",
+        icon: FileText,
+      },
       { id: "financial", label: "Payments & Billing", icon: DollarSign },
       { id: "taxes", label: "Taxes", icon: DollarSign },
       { id: "subscription", label: "Subscription", icon: CreditCard },

@@ -19,7 +19,12 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 
-export type GlobalSearchEntityType = "pet" | "customer" | "booking" | "invoice";
+export type GlobalSearchEntityType =
+  | "pet"
+  | "customer"
+  | "booking"
+  | "estimate"
+  | "invoice";
 
 export interface GlobalSearchResultItem {
   entityType: GlobalSearchEntityType;
@@ -66,6 +71,7 @@ function groupLabel(entityType: GlobalSearchEntityType) {
   if (entityType === "pet" || entityType === "customer")
     return "Pets / Customers";
   if (entityType === "booking") return "Bookings";
+  if (entityType === "estimate") return "Estimates";
   return "Invoices";
 }
 
@@ -101,7 +107,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
           value={value}
           onChange={(e) => onChangeValue(e.target.value)}
           onFocus={onFocus}
-          placeholder="Search pets, customers, bookings, invoices..."
+          placeholder="Search pets, customers, bookings, estimates, invoices..."
           className="pl-9"
           aria-label="Global search"
         />
@@ -162,6 +168,7 @@ export function ResultsDropdown({
     const groups: Record<string, GlobalSearchResultItem[]> = {
       "Pets / Customers": [],
       Bookings: [],
+      Estimates: [],
       Invoices: [],
     };
     for (const r of results) {
@@ -169,6 +176,21 @@ export function ResultsDropdown({
     }
     return groups;
   }, [results]);
+
+  const orderedGroups = React.useMemo(
+    () => [
+      { heading: "Pets / Customers", items: grouped["Pets / Customers"] },
+      { heading: "Bookings", items: grouped.Bookings },
+      { heading: "Estimates", items: grouped.Estimates },
+      { heading: "Invoices", items: grouped.Invoices },
+    ],
+    [grouped],
+  );
+
+  const visibleGroups = React.useMemo(
+    () => orderedGroups.filter((group) => group.items.length > 0),
+    [orderedGroups],
+  );
 
   const showEmpty = !loading && query.trim().length > 0 && results.length === 0;
 
@@ -191,49 +213,20 @@ export function ResultsDropdown({
 
           {!loading && (
             <>
-              {grouped["Pets / Customers"].length > 0 && (
-                <CommandGroup heading="Pets / Customers">
-                  {grouped["Pets / Customers"].map((r) => (
-                    <ResultItem
-                      key={`${r.entityType}:${r.id}`}
-                      item={r}
-                      onSelect={onNavigate}
-                    />
-                  ))}
-                </CommandGroup>
-              )}
-
-              {grouped["Pets / Customers"].length > 0 &&
-                (grouped.Bookings.length > 0 ||
-                  grouped.Invoices.length > 0) && <CommandSeparator />}
-
-              {grouped.Bookings.length > 0 && (
-                <CommandGroup heading="Bookings">
-                  {grouped.Bookings.map((r) => (
-                    <ResultItem
-                      key={`${r.entityType}:${r.id}`}
-                      item={r}
-                      onSelect={onNavigate}
-                    />
-                  ))}
-                </CommandGroup>
-              )}
-
-              {grouped.Bookings.length > 0 && grouped.Invoices.length > 0 && (
-                <CommandSeparator />
-              )}
-
-              {grouped.Invoices.length > 0 && (
-                <CommandGroup heading="Invoices">
-                  {grouped.Invoices.map((r) => (
-                    <ResultItem
-                      key={`${r.entityType}:${r.id}`}
-                      item={r}
-                      onSelect={onNavigate}
-                    />
-                  ))}
-                </CommandGroup>
-              )}
+              {visibleGroups.map((group, index) => (
+                <React.Fragment key={group.heading}>
+                  <CommandGroup heading={group.heading}>
+                    {group.items.map((r) => (
+                      <ResultItem
+                        key={`${r.entityType}:${r.id}`}
+                        item={r}
+                        onSelect={onNavigate}
+                      />
+                    ))}
+                  </CommandGroup>
+                  {index < visibleGroups.length - 1 && <CommandSeparator />}
+                </React.Fragment>
+              ))}
 
               {showEmpty && (
                 <>

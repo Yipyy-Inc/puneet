@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -49,12 +49,15 @@ import { useCustomServices } from "@/hooks/use-custom-services";
 import { isBuiltinService } from "@/lib/service-registry";
 import {
   applyDynamicPricingRules,
+  getPricingRulesStorageKey,
+  getServiceAddOnsStorageKey,
   getStoredServiceAddOns,
 } from "@/lib/pricing-rules";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
+import { facilities } from "@/data/facilities";
 
 import type { Client } from "@/types/client";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
@@ -80,6 +83,61 @@ export interface NewBookingModalProps {
   preSelectedPetId?: number;
   preSelectedService?: string;
   booking?: Booking;
+}
+
+interface EstimatePricingSnapshot {
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  addOnsTotal: number;
+  discount: number;
+  adjustmentsSignature: string;
+}
+
+function buildAdjustmentsSignature(
+  adjustments: Array<{ id: string; amount: number }> = [],
+): string {
+  return adjustments
+    .map((adjustment) => `${adjustment.id}:${adjustment.amount.toFixed(4)}`)
+    .sort()
+    .join("|");
+}
+
+function buildEstimatePricingSnapshot(input: {
+  subtotal: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total: number;
+  addOnsTotal?: number;
+  discount: number;
+  adjustments?: Array<{ id: string; amount: number }>;
+}): EstimatePricingSnapshot {
+  return {
+    subtotal: input.subtotal,
+    taxRate: input.taxRate ?? 0,
+    taxAmount: input.taxAmount ?? 0,
+    total: input.total,
+    addOnsTotal: input.addOnsTotal ?? 0,
+    discount: input.discount,
+    adjustmentsSignature: buildAdjustmentsSignature(input.adjustments),
+  };
+}
+
+function pricingSnapshotChanged(
+  previous: EstimatePricingSnapshot,
+  current: EstimatePricingSnapshot,
+): boolean {
+  const epsilon = 0.005;
+  return (
+    Math.abs(previous.subtotal - current.subtotal) > epsilon ||
+    Math.abs(previous.taxRate - current.taxRate) > epsilon ||
+    Math.abs(previous.taxAmount - current.taxAmount) > epsilon ||
+    Math.abs(previous.total - current.total) > epsilon ||
+    Math.abs(previous.addOnsTotal - current.addOnsTotal) > epsilon ||
+    Math.abs(previous.discount - current.discount) > epsilon ||
+    previous.adjustmentsSignature !== current.adjustmentsSignature
+  );
 }
 
 export function BookingModal({
@@ -112,6 +170,51 @@ export function BookingModal({
   const [isEstimateMode, setIsEstimateMode] = useState(false);
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [estimateSent, setEstimateSent] = useState(false);
+  const [estimatePricingSnapshot, setEstimatePricingSnapshot] =
+    useState<EstimatePricingSnapshot | null>(null);
+
+  const pricingRulesStorageKey = useMemo(
+    () => getPricingRulesStorageKey(facilityId),
+    [facilityId],
+  );
+  const addOnsStorageKey = useMemo(
+    () => getServiceAddOnsStorageKey(facilityId),
+    [facilityId],
+  );
+  const [pricingStorageVersion, setPricingStorageVersion] = useState(0);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key) return;
+      if (
+        event.key === pricingRulesStorageKey ||
+        event.key === addOnsStorageKey ||
+        event.key === getPricingRulesStorageKey() ||
+        event.key === getServiceAddOnsStorageKey()
+      ) {
+        setPricingStorageVersion((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [pricingRulesStorageKey, addOnsStorageKey]);
+
+  const facilityTaxConfig = useMemo(
+    () => facilities.find((facility) => facility.id === facilityId)?.taxConfig,
+    [facilityId],
+  );
+
+  const estimateTaxRate = useMemo(() => {
+    if (!facilityTaxConfig || facilityTaxConfig.pricesIncludeTax) return 0;
+    return facilityTaxConfig.taxes
+      .filter(
+        (tax) =>
+          tax.enabled &&
+          (tax.appliesTo === "all" || tax.appliesTo === "services_only"),
+      )
+      .reduce((sum, tax) => sum + tax.rate, 0);
+  }, [facilityTaxConfig]);
 
   // Guest estimate fields
   const [isGuestEstimate, setIsGuestEstimate] = useState(false);
@@ -128,10 +231,12 @@ export function BookingModal({
       localStorage.removeItem("booking-modal-mode");
       setEstimateCreated(false);
       setEstimateSent(false);
+      setEstimatePricingSnapshot(null);
     } else {
       setIsEstimateMode(false);
       setEstimateCreated(false);
       setEstimateSent(false);
+      setEstimatePricingSnapshot(null);
     }
   }
 
@@ -400,6 +505,25 @@ export function BookingModal({
     [guestPetNames],
   );
 
+  const guestPricingPetNames = useMemo(() => {
+    if (!(isEstimateMode && isGuestEstimate)) return [];
+    return guestPetSummary.length > 0 ? guestPetSummary : ["Guest Pet"];
+  }, [isEstimateMode, isGuestEstimate, guestPetSummary]);
+
+  const pricingSelectedPetIds = useMemo(() => {
+    if (isEstimateMode && isGuestEstimate) {
+      return guestPricingPetNames.map((_, index) => -1 * (index + 1));
+    }
+    return selectedPetIds;
+  }, [isEstimateMode, isGuestEstimate, guestPricingPetNames, selectedPetIds]);
+
+  const pricingPets = useMemo(() => {
+    if (isEstimateMode && isGuestEstimate) {
+      return pricingSelectedPetIds.map((id) => ({ id }));
+    }
+    return selectedPets;
+  }, [isEstimateMode, isGuestEstimate, pricingSelectedPetIds, selectedPets]);
+
   const selectedClientBookings = useMemo(() => {
     if (selectedClientId == null) return [];
     return historicalBookings.filter(
@@ -428,6 +552,14 @@ export function BookingModal({
         ),
     );
   }, [selectedPetIds, selectedClientBookings]);
+
+  const effectiveIsNewCustomer =
+    isEstimateMode && isGuestEstimate ? true : isNewCustomer;
+
+  const effectiveNewPetIds =
+    isEstimateMode && isGuestEstimate
+      ? pricingSelectedPetIds
+      : newPetIdsForCustomer;
 
   const canAccessLockedServices = useMemo(() => {
     if (
@@ -485,8 +617,9 @@ export function BookingModal({
   );
 
   const storedAddOns = useMemo(
-    () => getStoredServiceAddOns().filter((addOn) => addOn.isActive),
-    [open],
+    () =>
+      getStoredServiceAddOns(facilityId).filter((addOn) => addOn.isActive),
+    [open, facilityId, pricingStorageVersion],
   );
 
   const boardingNights = useMemo(() => {
@@ -511,9 +644,9 @@ export function BookingModal({
     } else if (selectedService === "boarding") {
       basePrice = boarding.basePrice * Math.max(boardingNights, 1);
     } else if (selectedService === "grooming") {
-      basePrice = grooming.basePrice * Math.max(selectedPetIds.length, 1);
+      basePrice = grooming.basePrice * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "training") {
-      basePrice = training.basePrice * Math.max(selectedPetIds.length, 1);
+      basePrice = training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
     } else if (selectedService && !isBuiltinService(selectedService)) {
@@ -551,10 +684,11 @@ export function BookingModal({
       serviceId: selectedService,
       basePrice,
       existingExtraServices: extraServices,
-      selectedPetIds,
-      isNewCustomer,
-      newPetIds: newPetIdsForCustomer,
-      customer: selectedClient
+      selectedPetIds: pricingSelectedPetIds,
+      isNewCustomer: effectiveIsNewCustomer,
+      newPetIds: effectiveNewPetIds,
+      customer:
+        selectedClient && !(isEstimateMode && isGuestEstimate)
         ? {
             status: selectedClient.status,
             membershipPlan: selectedClient.membership?.plan,
@@ -565,7 +699,7 @@ export function BookingModal({
             ),
           }
         : undefined,
-      pets: selectedPets,
+      pets: pricingPets,
       addOnsCatalog: storedAddOns,
       roomAssignments,
       boardingNights,
@@ -579,13 +713,13 @@ export function BookingModal({
         selectedService === "daycare"
           ? daycareServiceDates[0]
           : selectedService === "boarding" && boardingRangeStart
-            ? boardingRangeStart.toISOString().slice(0, 10)
+            ? formatDateOnly(boardingRangeStart)
             : startDate || undefined,
       serviceEndDate:
         selectedService === "daycare"
           ? daycareServiceDates[daycareServiceDates.length - 1]
           : selectedService === "boarding" && boardingRangeEnd
-            ? boardingRangeEnd.toISOString().slice(0, 10)
+            ? formatDateOnly(boardingRangeEnd)
             : endDate || startDate || undefined,
       serviceDates:
         selectedService === "daycare" && daycareServiceDates.length > 0
@@ -599,12 +733,20 @@ export function BookingModal({
       actualCheckOutTime: checkOutTime,
     });
 
+    const subtotal = pricingComputation.total;
+    const taxRate = isEstimateMode ? estimateTaxRate : 0;
+    const taxAmount = subtotal * taxRate;
+    const total = subtotal + taxAmount;
+
     return {
       basePrice,
       addOnsTotal: pricingComputation.addOnsTotal,
       adjustments: pricingComputation.adjustments,
       discount: pricingComputation.discountTotal,
-      total: pricingComputation.total,
+      subtotal,
+      taxRate,
+      taxAmount,
+      total,
       effectiveExtraServices: pricingComputation.extraServices,
     };
   }, [
@@ -617,11 +759,11 @@ export function BookingModal({
     endDate,
     daycareSelectedDates,
     daycareDateTimes,
-    selectedPetIds,
-    isNewCustomer,
-    newPetIdsForCustomer,
+    pricingSelectedPetIds,
+    effectiveIsNewCustomer,
+    effectiveNewPetIds,
     selectedClient,
-    selectedPets,
+    pricingPets,
     extraServices,
     roomAssignments,
     checkInTime,
@@ -632,6 +774,9 @@ export function BookingModal({
     training.basePrice,
     getModuleBySlug,
     storedAddOns,
+    isEstimateMode,
+    isGuestEstimate,
+    estimateTaxRate,
   ]);
 
   // Check if service requires evaluation
@@ -773,6 +918,7 @@ export function BookingModal({
 
   const handleComplete = () => {
     if (isEstimateMode && isGuestEstimate) {
+      setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
       setEstimateCreated(true);
       return;
     }
@@ -883,6 +1029,7 @@ export function BookingModal({
 
     if (isEstimateMode) {
       // In estimate mode, show success state instead of creating a booking
+      setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
       setEstimateCreated(true);
       return;
     }
@@ -904,6 +1051,7 @@ export function BookingModal({
     setGuestEmail("");
     setGuestPhone("");
     setGuestPetNames([""]);
+    setEstimatePricingSnapshot(null);
     setDaycareSelectedDates([]);
     setDaycareDateTimes([]);
     setBoardingRangeStart(null);
@@ -927,6 +1075,25 @@ export function BookingModal({
     setNotificationSMS(false);
     setTipAmount(0);
     setIncludesEvaluation(false);
+  };
+
+  const handleSendEstimate = () => {
+    const latestSnapshot = buildEstimatePricingSnapshot(calculatePrice);
+
+    if (
+      estimatePricingSnapshot &&
+      pricingSnapshotChanged(estimatePricingSnapshot, latestSnapshot)
+    ) {
+      setEstimatePricingSnapshot(latestSnapshot);
+      setEstimateCreated(false);
+      alert(
+        "Pricing rules changed while preparing this estimate. Please review the updated total before sending.",
+      );
+      return;
+    }
+
+    setEstimatePricingSnapshot(latestSnapshot);
+    setEstimateSent(true);
   };
 
   const isViewMode = !!booking;
@@ -1873,6 +2040,12 @@ export function BookingModal({
                     <span>+${tipAmount.toFixed(2)}</span>
                   </div>
                 )}
+                {isEstimateMode && calculatePrice.taxAmount > 0 && (
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>Incl. tax</span>
+                    <span>+${calculatePrice.taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -2078,7 +2251,7 @@ export function BookingModal({
                             </Button>
                             <Button
                               className="gap-1.5"
-                              onClick={() => setEstimateSent(true)}
+                              onClick={handleSendEstimate}
                             >
                               <svg
                                 className="size-4"
@@ -2120,6 +2293,7 @@ export function BookingModal({
                       feedingSchedule={feedingSchedule}
                       medications={medications}
                       extraServices={calculatePrice.effectiveExtraServices}
+                      addOnsCatalog={storedAddOns}
                       calculatePrice={calculatePrice}
                       notificationEmail={notificationEmail}
                       setNotificationEmail={setNotificationEmail}
