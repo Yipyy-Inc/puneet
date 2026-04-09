@@ -16,6 +16,7 @@ import { BookingRequestsTopbarDropdown } from "@/components/facility/BookingRequ
 import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNotificationsDropdown";
 import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
 import { CallingButton } from "@/components/layout/CallingButton";
+import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 
 export default async function FacilityLayout({
   children,
@@ -53,6 +54,7 @@ export default async function FacilityLayout({
                 <TaskNotificationsPanel />
                 <FacilityNotificationsDropdown facilityId={11} />
                 <BookingRequestsTopbarDropdown />
+                <HeaderDropdown />
                 <FacilityHeader />
                 <UserProfileSheet showNotifications={false} />
               </div>

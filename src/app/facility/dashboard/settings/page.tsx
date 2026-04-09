@@ -77,6 +77,7 @@ import {
   DollarSign,
   MapPin,
   Mail,
+  Languages,
   Phone,
   Zap,
   Download,
@@ -468,6 +469,124 @@ function BusinessProfileCard() {
               warning thresholds.
             </p>
           </div>
+        </div>
+      )}
+    </SettingsBlock>
+  );
+}
+
+function LanguageSettingsCard() {
+  const { languageSettings, updateLanguageSettings } = useSettings();
+
+  return (
+    <SettingsBlock
+      title="Language & Localization"
+      description="Choose your primary language and whether to enable a secondary language for the software and forms."
+      data={languageSettings}
+      onSave={updateLanguageSettings}
+    >
+      {(isEditing, localLanguageSettings, setLocalLanguageSettings) => (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+            <Languages className="mt-0.5 size-4 shrink-0 text-sky-600" />
+            <div className="space-y-1 text-sm">
+              <p className="font-medium text-sky-900">
+                Software Language Mode
+              </p>
+              <p className="text-sky-800/90">
+                Use English only, or enable bilingual mode (English + French)
+                so forms and translated UI content can be used in both
+                languages.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="primary-language">Primary Language</Label>
+              <Select
+                value={localLanguageSettings.primaryLocale}
+                onValueChange={(value) => {
+                  const nextPrimary = value as "en" | "fr";
+                  const nextSecondary =
+                    localLanguageSettings.secondaryLocale === nextPrimary
+                      ? nextPrimary === "en"
+                        ? "fr"
+                        : "en"
+                      : localLanguageSettings.secondaryLocale;
+
+                  setLocalLanguageSettings({
+                    ...localLanguageSettings,
+                    primaryLocale: nextPrimary,
+                    secondaryLocale: nextSecondary,
+                  });
+                }}
+                disabled={!isEditing}
+              >
+                <SelectTrigger id="primary-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">Français</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="secondary-language">Secondary Language</Label>
+              <Select
+                value={localLanguageSettings.secondaryLocale}
+                onValueChange={(value) =>
+                  setLocalLanguageSettings({
+                    ...localLanguageSettings,
+                    secondaryLocale: value as "en" | "fr",
+                  })
+                }
+                disabled={!isEditing || !localLanguageSettings.secondaryEnabled}
+              >
+                <SelectTrigger id="secondary-language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {localLanguageSettings.primaryLocale !== "en" && (
+                    <SelectItem value="en">English</SelectItem>
+                  )}
+                  {localLanguageSettings.primaryLocale !== "fr" && (
+                    <SelectItem value="fr">Français</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Enable Secondary Language</p>
+              <p className="text-muted-foreground text-xs">
+                Turn this off for English-only operation.
+              </p>
+            </div>
+            <Switch
+              checked={localLanguageSettings.secondaryEnabled}
+              disabled={!isEditing}
+              onCheckedChange={(checked) =>
+                setLocalLanguageSettings({
+                  ...localLanguageSettings,
+                  secondaryEnabled: checked,
+                })
+              }
+            />
+          </div>
+
+          <p className="text-muted-foreground text-xs">
+            Current mode: {localLanguageSettings.secondaryEnabled ? "Bilingual" : "Single language"}
+            {" · "}
+            Primary: {localLanguageSettings.primaryLocale === "en" ? "English" : "Français"}
+            {localLanguageSettings.secondaryEnabled
+              ? ` · Secondary: ${localLanguageSettings.secondaryLocale === "en" ? "English" : "Français"}`
+              : ""}
+          </p>
         </div>
       )}
     </SettingsBlock>
@@ -3733,6 +3852,8 @@ export default function SettingsPage() {
           {activeSection === "business" && (
             <div className="space-y-6">
               <BusinessProfileCard />
+
+              <LanguageSettingsCard />
 
               <BusinessHoursCard />
 

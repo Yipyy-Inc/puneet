@@ -30,6 +30,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { SupportedFormLocale } from "@/data/forms-phase2-types";
+import {
+  getEnabledLocales,
+  setClientLocaleCookie,
+} from "@/lib/language-settings";
+import {
+  dispatchAppLanguageChanged,
+  useAppLanguageSettings,
+  useAppLocale,
+} from "@/hooks/use-app-locale";
 
 const DRAFT_PREFIX = "formDraft_";
 const AUTH_PREFIX = "formAuth_";
@@ -110,8 +119,14 @@ export default function PublicFormPage() {
     unknown
   > | null>(null);
 
+  const languageSettings = useAppLanguageSettings();
+  const enabledLocales = useMemo(
+    () => getEnabledLocales(languageSettings),
+    [languageSettings],
+  );
+
   // Phase 2: Multi-language locale state
-  const [locale, setLocale] = useState<SupportedFormLocale>("en");
+  const locale = useAppLocale() as SupportedFormLocale;
 
   // Feature 3: Multi-Pet Support state
   const [selectedPetIds, setSelectedPetIds] = useState<number[]>([]);
@@ -539,8 +554,11 @@ export default function PublicFormPage() {
     );
   }
 
-  // Phase 2: Detect if form has any French translations
-  const hasI18n = form?.questions.some((q) => q.labelI18n?.fr) ?? false;
+  // Phase 2: Detect if form can display bilingual labels
+  const hasFrenchTranslations =
+    form?.questions.some((q) => q.labelI18n?.fr) ?? false;
+  const showLocaleSwitcher =
+    hasFrenchTranslations && enabledLocales.length > 1;
 
   const isAnonymous = !customerId && !petIds?.length;
   const total = visibleQuestions.length;
@@ -580,32 +598,27 @@ export default function PublicFormPage() {
           )}
 
           {/* Phase 2: Language switcher (EN/FR) */}
-          {hasI18n && (
+          {showLocaleSwitcher && (
             <div className="mt-2 flex items-center gap-2">
               <Languages className="text-muted-foreground size-4" />
               <div className="inline-flex overflow-hidden rounded-lg border text-xs">
-                <button
-                  type="button"
-                  className={`px-3 py-1.5 font-medium transition-colors ${
-                    locale === "en"
-                      ? "bg-primary text-primary-foreground"
-                      : `bg-background text-muted-foreground hover:bg-muted/50`
-                  } `}
-                  onClick={() => setLocale("en")}
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  className={`px-3 py-1.5 font-medium transition-colors ${
-                    locale === "fr"
-                      ? "bg-primary text-primary-foreground"
-                      : `bg-background text-muted-foreground hover:bg-muted/50`
-                  } `}
-                  onClick={() => setLocale("fr")}
-                >
-                  FR
-                </button>
+                {enabledLocales.map((enabledLocale) => (
+                  <button
+                    key={enabledLocale}
+                    type="button"
+                    className={`px-3 py-1.5 font-medium transition-colors ${
+                      locale === enabledLocale
+                        ? "bg-primary text-primary-foreground"
+                        : `bg-background text-muted-foreground hover:bg-muted/50`
+                    } `}
+                    onClick={() => {
+                      setClientLocaleCookie(enabledLocale);
+                      dispatchAppLanguageChanged();
+                    }}
+                  >
+                    {enabledLocale.toUpperCase()}
+                  </button>
+                ))}
               </div>
             </div>
           )}

@@ -28,6 +28,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useUiText } from "@/hooks/use-ui-text";
 
 export interface MenuItem {
   title: string;
@@ -58,6 +59,7 @@ export function GenericSidebar({
   const { state } = useSidebar();
   const pathname = usePathname();
   const isExpanded = state === "expanded";
+  const { t } = useUiText();
 
   const [collapsedSections, setCollapsedSections] = React.useState<
     Record<string, boolean>
@@ -130,8 +132,8 @@ export function GenericSidebar({
                   className="hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-lg transition-colors"
                   title={
                     bulkCollapsed
-                      ? "Expand all sections"
-                      : "Collapse all sections"
+                      ? t("Expand all sections")
+                      : t("Collapse all sections")
                   }
                 >
                   <ChevronUp
@@ -149,7 +151,7 @@ export function GenericSidebar({
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <SidebarInput
                 type="text"
-                placeholder="Search..."
+                placeholder={t("Search...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pr-8 pl-9"
@@ -198,13 +200,14 @@ export function GenericSidebar({
                   <SidebarMenu className="gap-0.5">
                     {section.items.map((item) => {
                       const isActive = pathname === item.url;
+                        const itemLabel = t(item.title);
                       return (
                         <SidebarMenuItem key={item.title}>
                           {item.disabled ? (
                             <SidebarMenuButton
                               asChild={false}
                               disabled
-                              tooltip={item.title}
+                                tooltip={itemLabel}
                               className={cn(
                                 "w-full rounded-lg text-sm font-medium",
                                 "cursor-not-allowed opacity-50",
@@ -217,7 +220,7 @@ export function GenericSidebar({
                             <SidebarMenuButton
                               asChild
                               isActive={isActive}
-                              tooltip={item.title}
+                              tooltip={itemLabel}
                               className={cn(
                                 `w-full rounded-lg text-sm font-medium transition-all duration-200`,
                                 "hover:bg-sidebar-accent",
@@ -272,7 +275,7 @@ export function GenericSidebar({
                         !hasActiveItem && "cursor-pointer",
                       )}
                     >
-                      <span>{section.label}</span>
+                      <span>{t(section.label)}</span>
                       <ChevronRight
                         className={cn(
                           "size-4 transition-transform duration-200",
@@ -286,13 +289,14 @@ export function GenericSidebar({
                       <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {
                           const isActive = pathname === item.url;
+                          const itemLabel = t(item.title);
                           return (
                             <SidebarMenuItem key={item.title}>
                               {item.disabled ? (
                                 <SidebarMenuButton
                                   asChild={false}
                                   disabled
-                                  tooltip={item.title}
+                                  tooltip={itemLabel}
                                   className={cn(
                                     "w-full text-sm font-medium",
                                     isExpanded ? "rounded-xl" : "rounded-lg",
@@ -303,7 +307,7 @@ export function GenericSidebar({
                                   <item.icon className="size-4 shrink-0" />
                                   {isExpanded && (
                                     <span className="truncate">
-                                      {item.title}
+                                      {itemLabel}
                                     </span>
                                   )}
                                 </SidebarMenuButton>
@@ -311,7 +315,7 @@ export function GenericSidebar({
                                 <SidebarMenuButton
                                   asChild
                                   isActive={isActive}
-                                  tooltip={item.title}
+                                  tooltip={itemLabel}
                                   className={cn(
                                     `w-full text-sm font-medium transition-all duration-200`,
                                     isExpanded ? "rounded-xl" : "rounded-lg",
@@ -339,7 +343,7 @@ export function GenericSidebar({
                                     {isExpanded && (
                                       <>
                                         <span className="flex-1 truncate">
-                                          {item.title}
+                                          {itemLabel}
                                         </span>
                                         {item.count && (
                                           <Badge
@@ -369,13 +373,14 @@ export function GenericSidebar({
                   <SidebarMenu className="gap-0.5">
                     {section.items.map((item) => {
                       const isActive = pathname === item.url;
+                      const itemLabel = t(item.title);
                       return (
                         <SidebarMenuItem key={item.title}>
                           {item.disabled ? (
                             <SidebarMenuButton
                               asChild={false}
                               disabled
-                              tooltip={item.title}
+                              tooltip={itemLabel}
                               className={cn(
                                 "w-full rounded-xl text-sm font-medium",
                                 "cursor-not-allowed opacity-50",
@@ -383,13 +388,13 @@ export function GenericSidebar({
                               )}
                             >
                               <item.icon className="size-4 shrink-0" />
-                              <span className="truncate">{item.title}</span>
+                              <span className="truncate">{itemLabel}</span>
                             </SidebarMenuButton>
                           ) : (
                             <SidebarMenuButton
                               asChild
                               isActive={isActive}
-                              tooltip={item.title}
+                              tooltip={itemLabel}
                               className={cn(
                                 `w-full rounded-xl text-sm font-medium transition-all duration-200`,
                                 "hover:bg-sidebar-accent",
@@ -411,7 +416,7 @@ export function GenericSidebar({
                                   )}
                                 />
                                 <span className="flex-1 truncate">
-                                  {item.title}
+                                  {itemLabel}
                                 </span>
                                 {item.count && (
                                   <Badge
@@ -439,11 +444,13 @@ export function GenericSidebar({
                 <div className="mb-1">
                   <SidebarMenu className="gap-0.5">
                     <SidebarMenuItem>
-                      {activeItem.disabled ? (
+                      {(() => {
+                        const activeItemLabel = t(activeItem.title);
+                        return activeItem.disabled ? (
                         <SidebarMenuButton
                           asChild={false}
                           disabled
-                          tooltip={activeItem.title}
+                          tooltip={activeItemLabel}
                           className={cn(
                             "w-full rounded-xl text-sm font-medium",
                             "cursor-not-allowed opacity-50",
@@ -451,13 +458,13 @@ export function GenericSidebar({
                           )}
                         >
                           <activeItem.icon className="size-4 shrink-0" />
-                          <span className="truncate">{activeItem.title}</span>
+                          <span className="truncate">{activeItemLabel}</span>
                         </SidebarMenuButton>
                       ) : (
                         <SidebarMenuButton
                           asChild
                           isActive={true}
-                          tooltip={activeItem.title}
+                          tooltip={activeItemLabel}
                           className={cn(
                             `w-full rounded-xl text-sm font-medium transition-all duration-200`,
                             "bg-primary text-primary-foreground",
@@ -476,7 +483,7 @@ export function GenericSidebar({
                               )}
                             />
                             <span className="flex-1 truncate">
-                              {activeItem.title}
+                              {activeItemLabel}
                             </span>
                             {activeItem.count && (
                               <Badge variant="secondary" className="text-xs">
@@ -486,7 +493,8 @@ export function GenericSidebar({
                             <ChevronRight className="size-4 opacity-60" />
                           </Link>
                         </SidebarMenuButton>
-                      )}
+                      );
+                      })()}
                     </SidebarMenuItem>
                   </SidebarMenu>
                 </div>
@@ -506,7 +514,7 @@ export function GenericSidebar({
         {footer || (
           <SidebarMenuButton
             asChild
-            tooltip="Logout"
+            tooltip={t("Logout")}
             className={cn(
               "w-full text-sm font-medium",
               isExpanded ? "rounded-xl px-3 py-2.5" : "rounded-lg",
@@ -522,7 +530,7 @@ export function GenericSidebar({
               )}
             >
               <LogOut className="size-4 shrink-0" />
-              {isExpanded && <span>Logout</span>}
+              {isExpanded && <span>{t("Logout")}</span>}
             </button>
           </SidebarMenuButton>
         )}

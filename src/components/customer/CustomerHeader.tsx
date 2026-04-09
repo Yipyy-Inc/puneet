@@ -30,9 +30,11 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useUiText } from "@/hooks/use-ui-text";
 
 export function CustomerHeader() {
   const { selectedFacility } = useCustomerFacility();
+  const { t } = useUiText();
   const [isPending, startTransition] = useTransition();
 
   const switchToFacility = () => {
@@ -111,7 +113,7 @@ export function CustomerHeader() {
             <div className="text-sm font-semibold" suppressHydrationWarning>
               {selectedFacility?.name ?? "Yipyy"}
             </div>
-            <div className="text-muted-foreground text-xs">Customer Portal</div>
+            <div className="text-muted-foreground text-xs">{t("Customer Portal")}</div>
           </div>
         </Link>
       </div>
@@ -134,12 +136,12 @@ export function CustomerHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <User className="size-5" />
-              <span className="sr-only">User menu</span>
+              <span className="sr-only">{t("User menu")}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-2 py-1.5">
-              <p className="text-sm font-medium">Customer Account</p>
+              <p className="text-sm font-medium">{t("Customer Account")}</p>
               <p className="text-muted-foreground truncate text-xs">
                 {/* TODO: Get from auth context */}
                 customer@example.com
@@ -149,37 +151,37 @@ export function CustomerHeader() {
             <DropdownMenuItem asChild>
               <Link href="/customer/dashboard" className="cursor-pointer">
                 <User className="mr-2 size-4" />
-                Dashboard
+                {t("Dashboard")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/customer/messages" className="cursor-pointer">
                 <MessageSquare className="mr-2 size-4" />
-                Messages
+                {t("Messages")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/customer/report-cards" className="cursor-pointer">
                 <FileText className="mr-2 size-4" />
-                Report Cards
+                {t("Report Cards")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/customer/billing" className="cursor-pointer">
                 <CreditCard className="mr-2 size-4" />
-                Billing & Payments
+                {t("Billing & Payments")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/customer/pets" className="cursor-pointer">
                 <Dog className="mr-2 size-4" />
-                My Pets
+                {t("My Pets")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/customer/settings" className="cursor-pointer">
                 <Settings className="mr-2 size-4" />
-                Settings
+                {t("Settings")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -189,7 +191,7 @@ export function CustomerHeader() {
               className="cursor-pointer"
             >
               <Building2 className="mr-2 size-4" />
-              Switch to Facility
+              {t("Switch to Facility")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -201,7 +203,7 @@ export function CustomerHeader() {
               className="cursor-pointer"
             >
               <User className="mr-2 size-4" />
-              Switch to Customer
+              {t("Switch to Customer")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={switchToAdmin}
@@ -209,7 +211,7 @@ export function CustomerHeader() {
               className="cursor-pointer"
             >
               <Shield className="mr-2 size-4" />
-              Switch to Admin
+              {t("Switch to Admin")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -220,7 +222,7 @@ export function CustomerHeader() {
               className="text-destructive focus:text-destructive cursor-pointer"
             >
               <LogOut className="mr-2 size-4" />
-              Log out
+              {t("Log out")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -48,6 +48,7 @@ interface Phase2SettingsProps {
   scoring: FormScoringConfig;
   onScoringChange: (config: FormScoringConfig) => void;
   i18nEnabled: boolean;
+  secondaryLanguageEnabled: boolean;
   onI18nEnabledChange: (enabled: boolean) => void;
   onQuestionI18nChange: (
     questionId: string,
@@ -73,6 +74,7 @@ export function FormPhase2Settings({
   scoring,
   onScoringChange,
   i18nEnabled,
+  secondaryLanguageEnabled,
   onI18nEnabledChange,
   onQuestionI18nChange,
   esignEnabled,
@@ -318,10 +320,16 @@ export function FormPhase2Settings({
               <p className="text-muted-foreground text-xs">
                 Add French translations per question
               </p>
+              {!secondaryLanguageEnabled && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Secondary language is disabled in Facility Settings.
+                </p>
+              )}
             </div>
           </div>
           <Switch
             checked={i18nEnabled}
+            disabled={!secondaryLanguageEnabled}
             onCheckedChange={onI18nEnabledChange}
             onClick={(e) => e.stopPropagation()}
           />

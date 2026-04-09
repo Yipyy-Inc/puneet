@@ -33,6 +33,7 @@ import {
   Shield,
 } from "lucide-react";
 import { getUserRole, setUserRole, type UserRole } from "@/lib/role-utils";
+import { useUiText } from "@/hooks/use-ui-text";
 
 interface Notification {
   id: string;
@@ -132,6 +133,7 @@ export function UserProfileSheet({
 }: {
   showNotifications?: boolean;
 }) {
+  const { t } = useUiText();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -224,7 +226,7 @@ export function UserProfileSheet({
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
-              <span className="font-medium">Super Admin</span>
+              <span className="font-medium">{t("Super Admin")}</span>
               <span className="text-muted-foreground text-xs">
                 admin@yipyy.com
               </span>
@@ -234,7 +236,7 @@ export function UserProfileSheet({
           <DropdownMenuItem asChild>
             <Link href="/profile" className="flex items-center gap-2">
               <User className="size-4" />
-              Profile Settings
+              {t("Profile Settings")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -243,12 +245,12 @@ export function UserProfileSheet({
               className="flex items-center gap-2"
             >
               <Settings className="size-4" />
-              System Settings
+              {t("System Settings")}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs">
-            Context Switcher
+            {t("Context Switcher")}
           </DropdownMenuLabel>
           {isSuperAdmin && (
             <>
@@ -258,7 +260,7 @@ export function UserProfileSheet({
                 className="flex items-center gap-2"
               >
                 <Building2 className="size-4" />
-                Switch to Facility Admin
+                {t("Switch to Facility Admin")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -270,7 +272,7 @@ export function UserProfileSheet({
                 className="flex items-center gap-2"
               >
                 <User className="size-4" />
-                Switch to Customer
+                {t("Switch to Customer")}
               </DropdownMenuItem>
             </>
           )}
@@ -282,7 +284,7 @@ export function UserProfileSheet({
                 className="flex items-center gap-2"
               >
                 <Shield className="size-4" />
-                Switch to Super Admin
+                {t("Switch to Super Admin")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -294,7 +296,7 @@ export function UserProfileSheet({
                 className="flex items-center gap-2"
               >
                 <User className="size-4" />
-                Switch to Customer
+                {t("Switch to Customer")}
               </DropdownMenuItem>
             </>
           )}
@@ -304,7 +306,7 @@ export function UserProfileSheet({
             className="text-destructive focus:text-destructive"
           >
             <LogOut className="mr-2 size-4" />
-            Logout
+            {t("Logout")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -318,10 +320,10 @@ export function UserProfileSheet({
               <SheetHeader className="p-6 pb-4">
                 <SheetTitle className="flex items-center gap-2">
                   <Bell className="size-5" />
-                  Notifications
+                  {t("Notifications")}
                   {unreadCount > 0 && (
                     <Badge variant="secondary" className="text-xs">
-                      {unreadCount} new
+                      {unreadCount} {t("new")}
                     </Badge>
                   )}
                 </SheetTitle>
@@ -338,7 +340,7 @@ export function UserProfileSheet({
                         className="text-muted-foreground hover:text-foreground text-xs"
                         onClick={markAllAsRead}
                       >
-                        Mark all as read
+                        {t("Mark all as read")}
                       </Button>
                     </div>
                   )}
@@ -346,7 +348,7 @@ export function UserProfileSheet({
                   <div className="space-y-2">
                     {notifications.length === 0 ? (
                       <div className="text-muted-foreground p-8 text-center text-sm">
-                        No notifications
+                        {t("No notifications")}
                       </div>
                     ) : (
                       notifications.map((notification) => (
@@ -361,13 +363,13 @@ export function UserProfileSheet({
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm/tight font-medium">
-                              {notification.title}
+                              {t(notification.title)}
                             </p>
                             <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
-                              {notification.message}
+                              {t(notification.message)}
                             </p>
                             <p className="text-muted-foreground mt-1 text-xs">
-                              {notification.timestamp}
+                              {t(notification.timestamp)}
                             </p>
                           </div>
                           <Button

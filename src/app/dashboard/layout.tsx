@@ -11,6 +11,7 @@ import { UserProfileSheet } from "@/components/layout/UserProfileSheet";
 import { GlobalSearchNext } from "@/components/search/GlobalSearchNext";
 import { TopBarIconsNext } from "@/components/layout/TopBarIconsNext";
 import { SettingsProviderWrapper } from "@/components/providers/ModulesConfigProviderWrapper";
+import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 
 export const metadata: Metadata = {
   title: "Yipyy - Admin Dashboard",
@@ -44,6 +45,7 @@ export default async function DashboardLayout({
           <div className="flex items-center">
             {/* User Profile & Notifications */}
             <TopBarIconsNext messagesHref="/dashboard/communication/live-support" />
+            <HeaderDropdown />
             <UserProfileSheet showNotifications={false} />
           </div>
         </header>
