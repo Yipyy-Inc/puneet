@@ -18,11 +18,13 @@ export function ComposeBar({
   onSend,
   clientName,
   lastMessage,
+  preferredLanguageLabel,
   mode = "facility",
 }: {
   onSend?: (message: string, channel: "sms" | "email") => void;
   clientName?: string;
   lastMessage?: string;
+  preferredLanguageLabel?: string;
   mode?: "facility" | "customer";
 }) {
   const isCustomerMode = mode === "customer";
@@ -124,7 +126,9 @@ export function ComposeBar({
             placeholder={
               isCustomerMode
                 ? "Type a message to your facility..."
-                : "Type a message..."
+                : preferredLanguageLabel
+                  ? `Type a message in ${preferredLanguageLabel}...`
+                  : "Type a message..."
             }
             rows={1}
             className="max-h-32 min-h-[22px] flex-1 resize-none bg-transparent text-sm leading-[22px] text-slate-800 outline-none placeholder:text-slate-400"

@@ -37,6 +37,7 @@ import {
   isPetBirthdayThisWeek,
   daysUntilBirthday,
 } from "@/lib/pet-utils";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 
 export default function ClientOverviewPage({
   params,
@@ -127,9 +128,19 @@ export default function ClientOverviewPage({
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Overview</h1>
-          <p className="text-muted-foreground text-sm">
-            {client.name} · Client since 2024
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-muted-foreground text-sm">
+              {client.name} · Client since 2024
+            </p>
+            {client.preferredLanguage && (
+              <Badge
+                variant="outline"
+                className="h-5 border-indigo-200 bg-indigo-50 px-2 text-[10px] font-medium text-indigo-700"
+              >
+                {getCustomerLanguageLabel(client.preferredLanguage)}
+              </Badge>
+            )}
+          </div>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" asChild>
           <Link href={`/facility/dashboard/clients/${id}`}>

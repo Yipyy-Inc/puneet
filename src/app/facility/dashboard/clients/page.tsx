@@ -16,6 +16,7 @@ import {
 import { BulkActionsToolbar } from "@/components/clients/BulkActionsToolbar";
 import { cn } from "@/lib/utils";
 import { useClientFilters } from "@/hooks/use-client-filters";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import {
   Download,
   User,
@@ -26,12 +27,21 @@ import {
   CircleDot,
   BarChart3,
   Mail as MailIcon,
+  Languages,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
 const exportClientsToCSV = (clientsData: typeof clients) => {
-  const headers = ["ID", "Name", "Email", "Phone", "Status", "Pets Count"];
+  const headers = [
+    "ID",
+    "Name",
+    "Email",
+    "Phone",
+    "Preferred Language",
+    "Status",
+    "Pets Count",
+  ];
 
   const csvContent = [
     headers.join(","),
@@ -41,6 +51,9 @@ const exportClientsToCSV = (clientsData: typeof clients) => {
         `"${client.name.replace(/"/g, '""')}"`,
         client.email,
         client.phone || "",
+        client.preferredLanguage
+          ? getCustomerLanguageLabel(client.preferredLanguage)
+          : "",
         client.status,
         client.pets.length,
       ].join(","),
@@ -93,8 +106,22 @@ export default function FacilityClientsPage() {
     name: string;
     email: string;
     phone?: string;
+    preferredLanguage?: string;
     status: string;
     facility: string;
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      zip: string;
+    };
+    emergencyContact: {
+      name: string;
+      relationship: string;
+      phone: string;
+      email: string;
+    };
     pets: Array<{
       name: string;
       type: string;
@@ -123,21 +150,11 @@ export default function FacilityClientsPage() {
       name: newClient.name,
       email: newClient.email,
       phone: newClient.phone || "",
+      preferredLanguage: newClient.preferredLanguage,
       status: newClient.status,
       facility: newClient.facility,
-      address: {
-        street: "",
-        city: "",
-        state: "",
-        zip: "",
-        country: "",
-      },
-      emergencyContact: {
-        name: "",
-        relationship: "",
-        phone: "",
-        email: "",
-      },
+      address: newClient.address,
+      emergencyContact: newClient.emergencyContact,
       pets: petsWithIds,
     };
     setClientsData([...clientsData, clientWithId]);
@@ -210,6 +227,26 @@ export default function FacilityClientsPage() {
           {client.phone || "—"}
         </span>
       ),
+    },
+    {
+      key: "preferredLanguage",
+      label: "Language",
+      icon: Languages,
+      defaultVisible: true,
+      render: (client) => {
+        if (!client.preferredLanguage) {
+          return <span className="text-muted-foreground text-xs">-</span>;
+        }
+
+        return (
+          <Badge
+            variant="outline"
+            className="border-indigo-200 bg-indigo-50/80 text-[11px] font-medium text-indigo-700"
+          >
+            {getCustomerLanguageLabel(client.preferredLanguage)}
+          </Badge>
+        );
+      },
     },
     {
       key: "status",

@@ -24,6 +24,7 @@ import type { Message } from "@/types/communications";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { useFacilityRole } from "@/hooks/use-facility-role";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 
 // SMS credits
 const facility = facilities.find((f) => f.id === 11);
@@ -520,6 +521,13 @@ export function ContactList({
               const sel = selectedThreadId === thread.threadId;
               const failed =
                 !thread.isPlaceholder && thread.lastMessage.status === "failed";
+              const threadClient = !isCustomerMode
+                ? clients.find((client) => client.id === thread.clientId)
+                : null;
+              const preferredLanguageLabel = threadClient?.preferredLanguage
+                ? getCustomerLanguageLabel(threadClient.preferredLanguage)
+                : null;
+
               return (
                 <button
                   key={thread.threadId}
@@ -555,16 +563,23 @@ export function ContactList({
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "truncate text-sm",
-                          thread.unreadCount > 0
-                            ? "font-bold text-slate-900"
-                            : "font-medium text-slate-700",
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "truncate text-sm",
+                            thread.unreadCount > 0
+                              ? "font-bold text-slate-900"
+                              : "font-medium text-slate-700",
+                          )}
+                        >
+                          {thread.clientName}
+                        </span>
+                        {preferredLanguageLabel && (
+                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-indigo-700">
+                            {preferredLanguageLabel}
+                          </span>
                         )}
-                      >
-                        {thread.clientName}
-                      </span>
+                      </div>
                       <span
                         className={cn(
                           "shrink-0 text-[10px]",
