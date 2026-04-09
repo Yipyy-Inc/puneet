@@ -51,12 +51,14 @@ import {
   EMAIL_USE_CASE_LABELS,
   type Campaign,
   type CampaignGoal,
+  type CustomerSegment,
 } from "@/data/marketing";
 import { getContrastTextColor } from "@/lib/color-utils";
 import { clients } from "@/data/clients";
 
 interface CampaignBuilderModalProps {
   campaign?: Campaign | null;
+  segments?: CustomerSegment[];
   onClose: () => void;
 }
 
@@ -120,8 +122,10 @@ const SEND_OPTIONS = [
 
 export function CampaignBuilderModal({
   campaign,
+  segments,
   onClose,
 }: CampaignBuilderModalProps) {
+  const availableSegments = segments ?? customerSegments;
   const isViewing = !!campaign;
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -151,7 +155,9 @@ export function CampaignBuilderModal({
     campaign?.abTest?.splitPercentage || 50,
   );
 
-  const selectedSegment = customerSegments.find((s) => s.id === segmentId);
+  const selectedSegment = availableSegments.find((s) => s.id === segmentId);
+  const customSegments = availableSegments.filter((segment) => !segment.isBuiltIn);
+  const builtInSegments = availableSegments.filter((segment) => segment.isBuiltIn);
   const selectedTemplate = emailTemplates.find((t) => t.id === templateId);
   const suggestedSegmentIds = goal
     ? CAMPAIGN_GOALS.find((g) => g.value === goal)?.suggestedSegments || []
@@ -225,7 +231,7 @@ export function CampaignBuilderModal({
               <span className="text-muted-foreground">Segment:</span>{" "}
               <span className="font-medium">
                 {
-                  customerSegments.find((s) => s.id === campaign.segmentId)
+                  availableSegments.find((s) => s.id === campaign.segmentId)
                     ?.name
                 }
               </span>
@@ -390,7 +396,7 @@ export function CampaignBuilderModal({
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {suggestedSegmentIds.map((sid) => {
-                      const seg = customerSegments.find((s) => s.id === sid);
+                      const seg = availableSegments.find((s) => s.id === sid);
                       if (!seg) return null;
                       return (
                         <Button
@@ -417,11 +423,26 @@ export function CampaignBuilderModal({
                         <SelectValue placeholder="Choose a customer segment..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {customerSegments.map((seg) => (
-                          <SelectItem key={seg.id} value={seg.id}>
-                            {seg.name} ({seg.customerCount} customers)
-                          </SelectItem>
-                        ))}
+                        {customSegments.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>From Customer File</SelectLabel>
+                            {customSegments.map((seg) => (
+                              <SelectItem key={seg.id} value={seg.id}>
+                                {seg.name} ({seg.customerCount} customers)
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {builtInSegments.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>Built-in Segments</SelectLabel>
+                            {builtInSegments.map((seg) => (
+                              <SelectItem key={seg.id} value={seg.id}>
+                                {seg.name} ({seg.customerCount} customers)
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

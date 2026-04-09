@@ -2,10 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
@@ -15,8 +27,13 @@ import {
 } from "@/components/clients/ClientFiltersInline";
 import { BulkActionsToolbar } from "@/components/clients/BulkActionsToolbar";
 import { cn } from "@/lib/utils";
-import { useClientFilters } from "@/hooks/use-client-filters";
+import {
+  useClientFilters,
+  type ClientFilters,
+  type DayRange,
+} from "@/hooks/use-client-filters";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
+import { createCustomCustomerSegment } from "@/lib/marketing-segments";
 import {
   Download,
   User,
@@ -31,6 +48,74 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+
+function formatDayRangeFilter(label: string, range: DayRange | null): string | null {
+  if (!range) return null;
+
+  if (range.preset != null) {
+    return `${label}: ${range.preset} days`;
+  }
+
+  if (range.min != null && range.max != null) {
+    return `${label}: ${range.min}-${range.max} days`;
+  }
+
+  if (range.min != null) {
+    return `${label}: more than ${range.min} days`;
+  }
+
+  if (range.max != null) {
+    return `${label}: less than ${range.max} days`;
+  }
+
+  return null;
+}
+
+function buildFilterSummary(filters: ClientFilters): string {
+  const summary: string[] = [];
+
+  if (filters.status.length > 0) {
+    summary.push(`Status ${filters.status.join(", ")}`);
+  }
+
+  if (filters.preferredLanguages.length > 0) {
+    summary.push(
+      `Language ${filters.preferredLanguages
+        .map((code) => getCustomerLanguageLabel(code))
+        .join(", ")}`,
+    );
+  }
+
+  if (filters.vaccineExpired !== "any") {
+    summary.push(
+      filters.vaccineExpired === "yes"
+        ? "Vaccine expired or missing"
+        : "Vaccine records up to date",
+    );
+  }
+
+  const vaccineSummary = formatDayRangeFilter(
+    "Vaccination expiry",
+    filters.vaccineExpiryDays,
+  );
+  if (vaccineSummary) {
+    summary.push(vaccineSummary);
+  }
+
+  const lastVisitSummary = formatDayRangeFilter(
+    "No visit",
+    filters.lastVisitDays,
+  );
+  if (lastVisitSummary) {
+    summary.push(lastVisitSummary);
+  }
+
+  if (filters.hasActiveBooking !== "any") {
+    summary.push(`Active booking: ${filters.hasActiveBooking}`);
+  }
+
+  return summary.join("; ");
+}
 
 const exportClientsToCSV = (clientsData: typeof clients) => {
   const headers = [
@@ -90,6 +175,9 @@ export default function FacilityClientsPage() {
 
   const [clientsData, setClientsData] = useState(clients);
   const [creatingClient, setCreatingClient] = useState(false);
+  const [segmentDialogOpen, setSegmentDialogOpen] = useState(false);
+  const [segmentName, setSegmentName] = useState("");
+  const [segmentDescription, setSegmentDescription] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(
     new Set(),
   );
@@ -294,6 +382,59 @@ export default function FacilityClientsPage() {
   ];
 
   const filteredClients = applyFilters(facilityClients);
+  const selectedClients = facilityClients.filter((client) =>
+    selectedIds.has(client.id),
+  );
+  const selectedClientsWithEmail = selectedClients.filter(
+    (client) => client.email.trim().length > 0,
+  );
+  const filterSummary = buildFilterSummary(filters);
+
+  const handleOpenCreateSegmentModal = () => {
+    if (selectedClientsWithEmail.length === 0) {
+      toast.error("Select at least one client with an email address.");
+      return;
+    }
+
+    const dateLabel = new Date().toISOString().split("T")[0];
+    setSegmentName(`Client Segment ${dateLabel}`);
+    setSegmentDescription(
+      filterSummary
+        ? `Created from customer file selection. ${filterSummary}.`
+        : "Created from customer file selection.",
+    );
+    setSegmentDialogOpen(true);
+  };
+
+  const handleCreateEmailSegment = () => {
+    try {
+      const createdSegment = createCustomCustomerSegment({
+        name: segmentName,
+        description: segmentDescription,
+        customerIds: selectedClientsWithEmail.map((client) => client.id),
+        sourceFilterSummary: filterSummary,
+      });
+
+      if (selectedClientsWithEmail.length < selectedClients.length) {
+        toast.info(
+          `${selectedClients.length - selectedClientsWithEmail.length} selected client(s) were skipped because they do not have email addresses.`,
+        );
+      }
+
+      toast.success(
+        `Email segment "${createdSegment.name}" created with ${createdSegment.customerCount} clients.`,
+      );
+      setSegmentDialogOpen(false);
+      setSelectedIds(new Set());
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to create email segment",
+      );
+    }
+  };
+
   const activeClientCount = facilityClients.filter(
     (c) => c.status === "active",
   ).length;
@@ -483,6 +624,7 @@ export default function FacilityClientsPage() {
                           facilityClients.filter((c) => selectedIds.has(c.id)),
                         )
                       }
+                      onCreateEmailSegment={handleOpenCreateSegmentModal}
                     />
                   }
                 />
@@ -499,6 +641,68 @@ export default function FacilityClientsPage() {
         onSave={handleCreateClient}
         facilityName={facility.name}
       />
+
+      <Dialog open={segmentDialogOpen} onOpenChange={setSegmentDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create Email Segment</DialogTitle>
+            <DialogDescription>
+              Save selected customers as a reusable segment for Marketing
+              campaigns.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+              <p className="font-medium text-slate-800">
+                {selectedClientsWithEmail.length} email-ready client
+                {selectedClientsWithEmail.length === 1 ? "" : "s"} selected
+              </p>
+              {filterSummary && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Source filters: {filterSummary}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email-segment-name">Segment Name</Label>
+              <Input
+                id="email-segment-name"
+                value={segmentName}
+                onChange={(event) => setSegmentName(event.target.value)}
+                placeholder="e.g., Vaccine Follow-up Segment"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email-segment-description">Description</Label>
+              <Textarea
+                id="email-segment-description"
+                value={segmentDescription}
+                onChange={(event) => setSegmentDescription(event.target.value)}
+                placeholder="What this segment is for"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSegmentDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateEmailSegment}
+              disabled={!segmentName.trim() || selectedClientsWithEmail.length === 0}
+            >
+              Create Email Segment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -45,6 +45,7 @@ export interface ClientFilters {
   petStatus: string[];
 
   // Health
+  vaccineExpired: TriState;
   vaccineExpiryDays: DayRange | null;
 
   // Services
@@ -76,6 +77,7 @@ const DEFAULT_FILTERS: ClientFilters = {
   petColor: "",
   petEnergyLevel: "any",
   petStatus: [],
+  vaccineExpired: "any",
   vaccineExpiryDays: null,
   services: [],
   hasActiveBooking: "any",
@@ -144,6 +146,7 @@ export function useClientFilters() {
     if (filters.petColor) count++;
     if (filters.petEnergyLevel !== "any") count++;
     if (filters.petStatus.length > 0) count++;
+    if (filters.vaccineExpired !== "any") count++;
     if (filters.vaccineExpiryDays !== null) count++;
     if (filters.services.length > 0) count++;
     if (filters.hasActiveBooking !== "any") count++;
@@ -322,6 +325,30 @@ export function useClientFilters() {
           );
           if (filters.hasActiveBooking === "yes" && !hasActive) return false;
           if (filters.hasActiveBooking === "no" && hasActive) return false;
+        }
+
+        // Vaccine expired/missing
+        if (filters.vaccineExpired !== "any") {
+          const petIds = client.pets.map((p) => p.id);
+          const records = vaccinationRecords.filter((v) =>
+            petIds.includes(v.petId),
+          );
+          const now = Date.now();
+
+          const hasExpiredVaccine = records.some(
+            (record) => new Date(record.expiryDate).getTime() < now,
+          );
+          const hasMissingVaccineRecord =
+            petIds.length > 0 &&
+            petIds.some(
+              (petId) => !records.some((record) => record.petId === petId),
+            );
+          const hasExpiredOrMissing = hasExpiredVaccine || hasMissingVaccineRecord;
+
+          if (filters.vaccineExpired === "yes" && !hasExpiredOrMissing)
+            return false;
+          if (filters.vaccineExpired === "no" && hasExpiredOrMissing)
+            return false;
         }
 
         // Last Visit (day range)

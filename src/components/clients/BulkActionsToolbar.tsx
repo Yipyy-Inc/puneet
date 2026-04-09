@@ -29,12 +29,14 @@ interface BulkActionsToolbarProps {
   selectedCount: number;
   onDeselect: () => void;
   onExport: () => void;
+  onCreateEmailSegment?: () => void;
 }
 
 export function BulkActionsToolbar({
   selectedCount,
   onDeselect,
   onExport,
+  onCreateEmailSegment,
 }: BulkActionsToolbarProps) {
   if (selectedCount === 0) return null;
 
@@ -140,10 +142,19 @@ export function BulkActionsToolbar({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={() => toast.info("Create segment from selection")}
+            onClick={() =>
+              confirm("Create email segment", () => {
+                if (onCreateEmailSegment) {
+                  onCreateEmailSegment();
+                  return;
+                }
+
+                toast.info("Create segment from selection");
+              })
+            }
           >
             <Users className="size-4" />
-            Create Marketing Segment
+            Create Email Segment
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => toast.info("Send campaign to selection")}
