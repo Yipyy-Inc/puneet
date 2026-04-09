@@ -20,6 +20,7 @@ export interface DayRange {
 export interface ClientFilters {
   // Client Info
   status: string[]; // multi-select: "active", "inactive"
+  preferredLanguages: string[]; // multi-select: "en", "fr", etc.
   hasAddress: TriState;
   hasEmergencyContact: TriState;
 
@@ -56,6 +57,7 @@ export interface ClientFilters {
 
 const DEFAULT_FILTERS: ClientFilters = {
   status: [],
+  preferredLanguages: [],
   hasAddress: "any",
   hasEmergencyContact: "any",
   hasPets: "any",
@@ -96,7 +98,13 @@ export function useClientFilters() {
 
   const toggleArrayItem = useCallback(
     (
-      key: "status" | "petTypes" | "services" | "petCoatType" | "petStatus",
+      key:
+        | "status"
+        | "preferredLanguages"
+        | "petTypes"
+        | "services"
+        | "petCoatType"
+        | "petStatus",
       item: string,
     ) => {
       setFilters((prev) => {
@@ -119,6 +127,7 @@ export function useClientFilters() {
   const activeCount = useMemo(() => {
     let count = 0;
     if (filters.status.length > 0) count++;
+    if (filters.preferredLanguages.length > 0) count++;
     if (filters.hasAddress !== "any") count++;
     if (filters.hasEmergencyContact !== "any") count++;
     if (filters.hasPets !== "any") count++;
@@ -151,6 +160,18 @@ export function useClientFilters() {
           !filters.status.includes(client.status)
         )
           return false;
+
+        // Preferred Language
+        if (filters.preferredLanguages.length > 0) {
+          const clientPreferredLanguage =
+            client.preferredLanguage?.trim().toLowerCase() ?? "";
+          const hasMatch = filters.preferredLanguages.some(
+            (languageCode) =>
+              languageCode.trim().toLowerCase() === clientPreferredLanguage,
+          );
+
+          if (!hasMatch) return false;
+        }
 
         // Has Address
         if (filters.hasAddress === "yes" && !client.address?.street)

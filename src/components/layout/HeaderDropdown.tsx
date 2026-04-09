@@ -31,6 +31,10 @@ export function HeaderDropdown() {
     [languageSettings],
   );
 
+  if (availableLocales.length <= 1) {
+    return null;
+  }
+
   const switchLocale = (newLocale: AppLocale) => {
     if (!availableLocales.includes(newLocale)) return;
     setClientLocaleCookie(newLocale);
