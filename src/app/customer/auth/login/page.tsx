@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ import { getErrorMessage } from "@/lib/errors";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const facilityParam = searchParams.get("facility");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -80,13 +82,22 @@ export default function LoginPage() {
         // Link Google account to existing customer if not already linked
         await linkGoogleAccount(googleUser);
         toast.success("Signed in successfully!");
+        router.push("/customer/dashboard");
       } else {
-        // Create new account with Google
-        await createAccountWithGoogle(googleUser);
-        toast.success("Account created and signed in!");
-      }
+        // New users must complete signup so they can select preferred language.
+        const signupParams = new URLSearchParams({
+          email: googleUser.email,
+          from: "google",
+        });
 
-      router.push("/customer/dashboard");
+        if (facilityParam) {
+          signupParams.set("facility", facilityParam);
+        }
+
+        toast.info("Please finish signup and choose your preferred language.");
+        router.push(`/customer/auth/signup?${signupParams.toString()}`);
+        return;
+      }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error) || "Failed to sign in with Google");
     } finally {
@@ -114,11 +125,6 @@ export default function LoginPage() {
 
   const linkGoogleAccount = async (_googleUser: unknown) => {
     // TODO: API call to link Google account
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-  };
-
-  const createAccountWithGoogle = async (_googleUser: unknown) => {
-    // TODO: API call to create account with Google
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
@@ -255,7 +261,11 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-center text-sm">
             Don&apos;t have an account?{" "}
             <Link
-              href="/customer/auth/signup"
+              href={
+                facilityParam
+                  ? `/customer/auth/signup?facility=${encodeURIComponent(facilityParam)}`
+                  : "/customer/auth/signup"
+              }
               className="text-primary font-medium hover:underline"
             >
               Sign up
