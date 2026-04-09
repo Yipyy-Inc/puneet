@@ -8,6 +8,10 @@ import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClientFilters } from "@/hooks/use-client-filters";
 import {
+  CUSTOMER_LANGUAGE_OPTIONS,
+  getCustomerLanguageLabel,
+} from "@/lib/language-settings";
+import {
   TriToggle,
   CheckGroup,
   TextFilter,
@@ -57,6 +61,11 @@ export function ActiveFilterChips({
     chips.push({
       label: `Status: ${filters.status.join(", ")}`,
       onRemove: () => setFilter("status", []),
+    });
+  if (filters.preferredLanguages.length > 0)
+    chips.push({
+      label: `Language: ${filters.preferredLanguages.map((code) => getCustomerLanguageLabel(code)).join(", ")}`,
+      onRemove: () => setFilter("preferredLanguages", []),
     });
   if (filters.hasAddress !== "any")
     chips.push({
@@ -224,7 +233,13 @@ export function ClientFiltersInline({
   filters: ClientFilters;
   setFilter: <K extends keyof ClientFilters>(k: K, v: ClientFilters[K]) => void;
   toggleArrayItem: (
-    key: "status" | "petTypes" | "services" | "petCoatType" | "petStatus",
+    key:
+      | "status"
+      | "preferredLanguages"
+      | "petTypes"
+      | "services"
+      | "petCoatType"
+      | "petStatus",
     item: string,
   ) => void;
 }) {
@@ -244,20 +259,30 @@ export function ClientFiltersInline({
       categoryId: string;
       categoryLabel: string;
       key: string;
+      searchText: string;
       element: React.ReactNode;
     }[] = [];
+
+    const preferredLanguageOptions = CUSTOMER_LANGUAGE_OPTIONS.map((option) => ({
+      value: option.code,
+      label: getCustomerLanguageLabel(option.code),
+    }));
 
     const add = (
       label: string,
       catId: string,
       catLabel: string,
       element: React.ReactNode,
+      searchTerms: string[] = [],
     ) => {
       entries.push({
         label,
         categoryId: catId,
         categoryLabel: catLabel,
         key: `${catId}-${label}`,
+        searchText: [label, catLabel, ...searchTerms]
+          .join(" ")
+          .toLowerCase(),
         element,
       });
     };
@@ -290,6 +315,21 @@ export function ClientFiltersInline({
         onChange={() => {}}
         comingSoon
       />,
+    );
+    add(
+      "Preferred language",
+      "account",
+      "Account Status",
+      <CheckGroup
+        label="Preferred language"
+        options={preferredLanguageOptions}
+        selected={filters.preferredLanguages}
+        onToggle={(v) => toggleArrayItem("preferredLanguages", v)}
+      />,
+      preferredLanguageOptions.flatMap((option) => [
+        option.label,
+        option.value,
+      ]),
     );
     add(
       "Blocked from booking",
@@ -344,6 +384,21 @@ export function ClientFiltersInline({
         value={filters.hasEmergencyContact}
         onChange={(v) => setFilter("hasEmergencyContact", v)}
       />,
+    );
+    add(
+      "Preferred language",
+      "profile",
+      "Client Profile",
+      <CheckGroup
+        label="Preferred language"
+        options={preferredLanguageOptions}
+        selected={filters.preferredLanguages}
+        onToggle={(v) => toggleArrayItem("preferredLanguages", v)}
+      />,
+      preferredLanguageOptions.flatMap((option) => [
+        option.label,
+        option.value,
+      ]),
     );
     add(
       "Marketing consent",
@@ -1126,9 +1181,7 @@ export function ClientFiltersInline({
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
     const q = searchQuery.toLowerCase();
-    const matched = filterRegistry.filter((f) =>
-      f.label.toLowerCase().includes(q),
-    );
+    const matched = filterRegistry.filter((f) => f.searchText.includes(q));
     const groups: {
       categoryId: string;
       categoryLabel: string;
