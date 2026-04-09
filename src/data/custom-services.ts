@@ -3,6 +3,9 @@ import type {
   CustomServiceCategory,
   FacilityResource,
   PricingModelType,
+  CustomServiceWorkflowQuestionnaire,
+  CustomServiceWorkflowResourceType,
+  CustomServiceTaskTemplateQuestionnaireItem,
 } from "@/types/facility";
 
 // ========================================
@@ -155,6 +158,174 @@ export function getCategoryMeta(
   return CUSTOM_SERVICE_CATEGORIES_META.find((c) => c.id === categoryId);
 }
 
+export const CUSTOM_SERVICE_ADDON_LIBRARY: Array<{
+  id: string;
+  name: string;
+}> = [
+  { id: "towel-service", name: "Towel Service" },
+  { id: "premium-shampoo-rinse", name: "Premium Shampoo Rinse" },
+  { id: "blueberry-facial", name: "Blueberry Facial" },
+  { id: "nail-trim", name: "Nail Trim" },
+  { id: "tooth-brushing", name: "Tooth Brushing" },
+];
+
+function toHexColor(color: string): string {
+  if (color.startsWith("#")) return color;
+  return COLOR_HEX_MAP[color] ?? "#3b82f6";
+}
+
+function inferResourceType(module: CustomServiceModule): CustomServiceWorkflowResourceType {
+  if (module.category === "transport") return "van";
+  if (module.category === "stay_based") return "room";
+
+  if (module.capacity?.resources?.length) {
+    const firstType = module.capacity.resources[0].type.toLowerCase();
+    if (firstType.includes("pool")) return "pool";
+    if (firstType.includes("room")) return "room";
+    if (firstType.includes("van") || firstType.includes("vehicle")) return "van";
+    if (firstType.includes("yard")) return "yard";
+    if (firstType.includes("equip")) return "equipment";
+  }
+
+  return "other";
+}
+
+function inferTaskTemplates(module: CustomServiceModule): CustomServiceTaskTemplateQuestionnaireItem[] {
+  return (module.staffAssignment.taskGeneration ?? []).map((taskKey, index) => ({
+    id: `${module.id}-template-${taskKey}-${index}`,
+    taskName:
+      taskKey === "setup"
+        ? `${module.name} setup`
+        : taskKey === "cleanup"
+          ? `${module.name} cleanup`
+          : `${module.name} execution`,
+    taskType: taskKey === "cleanup" ? "cleanup" : "care",
+    timingRule:
+      taskKey === "setup"
+        ? "before_start"
+        : taskKey === "cleanup"
+          ? "after_check_out"
+          : "at_check_in",
+    offsetMinutes: taskKey === "setup" ? 15 : taskKey === "cleanup" ? 15 : 0,
+    assignedStaffRole:
+      module.staffAssignment.requiredRole === "custom"
+        ? (module.staffAssignment.customRoleName ?? "custom")
+        : module.staffAssignment.requiredRole,
+    requiresCompletionNote: taskKey !== "execution",
+    requiresPhotoProof: false,
+  }));
+}
+
+export function createDefaultCustomServiceWorkflowQuestionnaire(
+  overrides?: Partial<CustomServiceWorkflowQuestionnaire>,
+): CustomServiceWorkflowQuestionnaire {
+  return {
+    appearsOnCalendar: true,
+    calendarColor: "#3b82f6",
+    calendarCardDisplayMode: "full-block",
+    requiresTimeSlots: true,
+    requiresResource: false,
+    resourceType: "other",
+    resourceIds: [],
+    requiresCheckInOut: true,
+    generatesTasks: false,
+    taskTemplates: [],
+    allowsAddOns: true,
+    allowedAddOnIds: [],
+    bookableOnline: true,
+    onlineLeadTimeHours: undefined,
+    onlineCapacityLimit: undefined,
+    affectsCapacityHeatmap: true,
+    capacityCeilingPerHour: undefined,
+    questionnaireCompleted: false,
+    questionnaireCompletedAt: undefined,
+    ...overrides,
+  };
+}
+
+export function getModuleWorkflowQuestionnaire(
+  module: CustomServiceModule,
+): CustomServiceWorkflowQuestionnaire {
+  const inferred = createDefaultCustomServiceWorkflowQuestionnaire({
+    appearsOnCalendar: module.calendar.enabled,
+    calendarColor: toHexColor(module.iconColor),
+    calendarCardDisplayMode: "full-block",
+    requiresTimeSlots: module.calendar.enabled,
+    requiresResource:
+      module.calendar.assignedTo === "resource" ||
+      module.calendar.assignedTo === "room" ||
+      module.calendar.assignedTo === "combination",
+    resourceType: inferResourceType(module),
+    resourceIds: module.calendar.assignedResourceIds ?? [],
+    requiresCheckInOut: module.checkInOut.enabled,
+    generatesTasks: (module.staffAssignment.taskGeneration ?? []).length > 0,
+    taskTemplates: inferTaskTemplates(module),
+    allowsAddOns: module.category !== "addon_only",
+    allowedAddOnIds: [],
+    bookableOnline: module.onlineBooking.enabled,
+    onlineLeadTimeHours: module.onlineBooking.cancellationPolicy.hoursBeforeBooking,
+    onlineCapacityLimit: module.capacity?.maxPerSlot,
+    affectsCapacityHeatmap:
+      module.capacity?.enabled ?? module.calendar.maxSimultaneousBookings > 0,
+    capacityCeilingPerHour: module.capacity?.maxPerSlot,
+    questionnaireCompleted: true,
+  });
+
+  if (!module.workflow) {
+    return inferred;
+  }
+
+  return {
+    ...inferred,
+    ...module.workflow,
+    resourceIds: module.workflow.resourceIds ?? inferred.resourceIds,
+    taskTemplates: module.workflow.taskTemplates ?? inferred.taskTemplates,
+    allowedAddOnIds: module.workflow.allowedAddOnIds ?? inferred.allowedAddOnIds,
+  };
+}
+
+export function normalizeCustomServiceModule(
+  module: CustomServiceModule,
+): CustomServiceModule {
+  const workflow = getModuleWorkflowQuestionnaire(module);
+
+  return {
+    ...module,
+    calendar: {
+      ...module.calendar,
+      enabled: workflow.appearsOnCalendar,
+      assignedResourceIds: workflow.requiresResource
+        ? workflow.resourceIds
+        : module.calendar.assignedResourceIds,
+    },
+    checkInOut: {
+      ...module.checkInOut,
+      enabled: workflow.requiresCheckInOut,
+    },
+    onlineBooking: {
+      ...module.onlineBooking,
+      enabled: workflow.bookableOnline,
+    },
+    capacity: {
+      enabled: workflow.affectsCapacityHeatmap,
+      maxPerSlot: workflow.capacityCeilingPerHour ?? module.capacity?.maxPerSlot ?? 1,
+      slotDurationMinutes: module.capacity?.slotDurationMinutes ?? 60,
+      resources: module.capacity?.resources ?? [],
+      waitlistEnabled: module.capacity?.waitlistEnabled ?? false,
+      maxWaitlist: module.capacity?.maxWaitlist ?? 0,
+      autoPromote: module.capacity?.autoPromote ?? false,
+      notifyOnAvailability: module.capacity?.notifyOnAvailability ?? false,
+    },
+    staffAssignment: {
+      ...module.staffAssignment,
+      taskGeneration: workflow.generatesTasks
+        ? module.staffAssignment.taskGeneration
+        : [],
+    },
+    workflow,
+  };
+}
+
 // ========================================
 // FACTORY FUNCTION
 // ========================================
@@ -225,6 +396,19 @@ export function createDefaultCustomServiceModule(
     showInSidebar: true,
     sidebarPosition: 100,
     dependencies: [],
+    workflow: createDefaultCustomServiceWorkflowQuestionnaire({
+      appearsOnCalendar: true,
+      requiresTimeSlots: true,
+      requiresResource: false,
+      resourceIds: [],
+      requiresCheckInOut: true,
+      generatesTasks: false,
+      allowsAddOns: true,
+      allowedAddOnIds: [],
+      bookableOnline: true,
+      affectsCapacityHeatmap: true,
+      questionnaireCompleted: false,
+    }),
     status: "draft",
     createdAt: now,
     updatedAt: now,
@@ -450,6 +634,62 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       autoPromote: true,
       notifyOnAvailability: true,
     },
+    workflow: createDefaultCustomServiceWorkflowQuestionnaire({
+      appearsOnCalendar: true,
+      calendarColor: "#06b6d4",
+      calendarCardDisplayMode: "full-block",
+      requiresTimeSlots: true,
+      requiresResource: true,
+      resourceType: "pool",
+      resourceIds: ["res-pool-1"],
+      requiresCheckInOut: true,
+      generatesTasks: true,
+      taskTemplates: [
+        {
+          id: "yoda-setup",
+          taskName: "Pool prep",
+          taskType: "care",
+          timingRule: "before_start",
+          offsetMinutes: 30,
+          assignedStaffRole: "pool_staff",
+          requiresCompletionNote: true,
+          requiresPhotoProof: false,
+        },
+        {
+          id: "yoda-towel-ready",
+          taskName: "Towel ready",
+          taskType: "care",
+          timingRule: "before_start",
+          offsetMinutes: 15,
+          assignedStaffRole: "pool_staff",
+          requiresCompletionNote: false,
+          requiresPhotoProof: false,
+        },
+        {
+          id: "yoda-rinse-dry",
+          taskName: "Rinse and dry",
+          taskType: "cleanup",
+          timingRule: "after_check_out",
+          offsetMinutes: 0,
+          assignedStaffRole: "groomer",
+          requiresCompletionNote: true,
+          requiresPhotoProof: true,
+        },
+      ],
+      allowsAddOns: true,
+      allowedAddOnIds: [
+        "towel-service",
+        "premium-shampoo-rinse",
+        "blueberry-facial",
+      ],
+      bookableOnline: true,
+      onlineLeadTimeHours: 24,
+      onlineCapacityLimit: 2,
+      affectsCapacityHeatmap: true,
+      capacityCeilingPerHour: 2,
+      questionnaireCompleted: true,
+      questionnaireCompletedAt: "2024-09-15T10:00:00Z",
+    }),
     status: "active",
     createdAt: "2024-09-15T10:00:00Z",
     updatedAt: "2024-11-20T14:30:00Z",
@@ -594,6 +834,48 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
       autoPromote: false,
       notifyOnAvailability: true,
     },
+    workflow: createDefaultCustomServiceWorkflowQuestionnaire({
+      appearsOnCalendar: true,
+      calendarColor: "#22c55e",
+      calendarCardDisplayMode: "compact-block",
+      requiresTimeSlots: true,
+      requiresResource: true,
+      resourceType: "van",
+      resourceIds: ["res-van-1", "res-van-2"],
+      requiresCheckInOut: true,
+      generatesTasks: true,
+      taskTemplates: [
+        {
+          id: "express-route-check",
+          taskName: "Route readiness check",
+          taskType: "care",
+          timingRule: "before_start",
+          offsetMinutes: 20,
+          assignedStaffRole: "driver",
+          requiresCompletionNote: true,
+          requiresPhotoProof: false,
+        },
+        {
+          id: "express-trip-complete",
+          taskName: "Trip completion log",
+          taskType: "cleanup",
+          timingRule: "after_check_out",
+          offsetMinutes: 10,
+          assignedStaffRole: "driver",
+          requiresCompletionNote: true,
+          requiresPhotoProof: false,
+        },
+      ],
+      allowsAddOns: false,
+      allowedAddOnIds: [],
+      bookableOnline: true,
+      onlineLeadTimeHours: 24,
+      onlineCapacityLimit: 6,
+      affectsCapacityHeatmap: true,
+      capacityCeilingPerHour: 6,
+      questionnaireCompleted: true,
+      questionnaireCompletedAt: "2024-10-01T09:00:00Z",
+    }),
     status: "active",
     createdAt: "2024-10-01T09:00:00Z",
     updatedAt: "2024-12-05T11:00:00Z",
@@ -659,6 +941,38 @@ export const defaultCustomServiceModules: CustomServiceModule[] = [
     showInSidebar: true,
     sidebarPosition: 30,
     dependencies: [],
+    workflow: createDefaultCustomServiceWorkflowQuestionnaire({
+      appearsOnCalendar: true,
+      calendarColor: "#ec4899",
+      calendarCardDisplayMode: "full-block",
+      requiresTimeSlots: true,
+      requiresResource: true,
+      resourceType: "room",
+      resourceIds: ["res-party-room"],
+      requiresCheckInOut: true,
+      generatesTasks: true,
+      taskTemplates: [
+        {
+          id: "party-setup",
+          taskName: "Party room setup",
+          taskType: "care",
+          timingRule: "before_start",
+          offsetMinutes: 30,
+          assignedStaffRole: "party_host",
+          requiresCompletionNote: true,
+          requiresPhotoProof: false,
+        },
+      ],
+      allowsAddOns: true,
+      allowedAddOnIds: ["towel-service", "blueberry-facial"],
+      bookableOnline: true,
+      onlineLeadTimeHours: 48,
+      onlineCapacityLimit: 1,
+      affectsCapacityHeatmap: true,
+      capacityCeilingPerHour: 1,
+      questionnaireCompleted: true,
+      questionnaireCompletedAt: "2024-11-10T08:00:00Z",
+    }),
     status: "draft",
     createdAt: "2024-11-10T08:00:00Z",
     updatedAt: "2024-11-10T08:00:00Z",

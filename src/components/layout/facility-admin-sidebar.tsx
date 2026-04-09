@@ -8,6 +8,7 @@ import {
   Users,
   PawPrint,
   Calendar,
+  CalendarDays,
   CalendarClock,
   UserCheck,
   Package,
@@ -66,6 +67,12 @@ export function FacilitySidebar() {
             title: "Dashboard",
             url: "/facility/dashboard",
             icon: Home,
+            disabled: false,
+          },
+          {
+            title: "Calendar",
+            url: "/facility/dashboard/calendar",
+            icon: CalendarDays,
             disabled: false,
           },
           {

@@ -28,6 +28,7 @@ import type { CustomServiceModule } from "@/types/facility";
 import { cn } from "@/lib/utils";
 
 import { getCategoryMeta, PRICING_MODEL_LABELS } from "@/data/custom-services";
+import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 
 interface CustomServiceModuleCardProps {
   module: CustomServiceModule;
@@ -51,6 +52,7 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
 }: CustomServiceModuleCardProps) {
   const router = useRouter();
   const catMeta = getCategoryMeta(module.category);
+  const workflow = getModuleWorkflowQuestionnaire(module);
 
   const handleEdit = useCallback(() => {
     if (onEdit) {
@@ -157,6 +159,14 @@ export const CustomServiceModuleCard = memo(function CustomServiceModuleCard({
               className="border-blue-200 bg-blue-50 text-xs text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
             >
               Online
+            </Badge>
+          )}
+          {!workflow.questionnaireCompleted && (
+            <Badge
+              variant="outline"
+              className="border-amber-200 bg-amber-50 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+            >
+              Setup Required
             </Badge>
           )}
           {facilityName && (

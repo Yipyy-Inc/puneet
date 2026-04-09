@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -109,11 +110,16 @@ export default function CustomServiceLayout({
 
   const handleConfirmToggle = () => {
     if (pendingEnabled !== null) {
-      setModuleStatus(
+      const result = setModuleStatus(
         serviceModule.id,
         pendingEnabled ? "active" : "disabled",
         !pendingEnabled ? disableReason : undefined,
       );
+      if (!result.ok) {
+        toast.error(result.reason ?? "Unable to update module status");
+        return;
+      }
+      toast.success(pendingEnabled ? "Service enabled" : "Service disabled");
     }
     setModalOpen(false);
     setPendingEnabled(null);

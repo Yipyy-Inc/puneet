@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import {
+  getModuleWorkflowQuestionnaire,
   getCategoryMeta,
   getGradientStyle,
   PRICING_MODEL_LABELS,
@@ -74,6 +75,7 @@ export function WizardReviewPanel({
 }: WizardReviewPanelProps) {
   const gradientStyle = getGradientStyle(data.iconColor, data.iconColorTo);
   const categoryMeta = getCategoryMeta(data.category);
+  const workflow = getModuleWorkflowQuestionnaire(data);
 
   return (
     <div className="space-y-6">
@@ -122,8 +124,55 @@ export function WizardReviewPanel({
       {/* Calendar */}
       <div className="space-y-1">
         <SectionHeader
-          title="Calendar & Availability"
+          title="Workflow Questionnaire"
           stepIndex={1}
+          onEdit={onEditStep}
+        />
+        <Separator />
+        <Row label="Completed">
+          <BooleanIcon value={workflow.questionnaireCompleted} />
+        </Row>
+        <Row label="Calendar">
+          {workflow.appearsOnCalendar ? "Visible" : "Hidden"}
+        </Row>
+        <Row label="Time slots">
+          {workflow.requiresTimeSlots ? "Required" : "Open/day-based"}
+        </Row>
+        <Row label="Resource">
+          {workflow.requiresResource
+            ? `${workflow.resourceType ?? "Resource"} (${workflow.resourceIds.length})`
+            : "Not required"}
+        </Row>
+        <Row label="Check-in/out">
+          {workflow.requiresCheckInOut ? "Required" : "Not required"}
+        </Row>
+        <Row label="Task templates">
+          {workflow.generatesTasks
+            ? `${workflow.taskTemplates.length} template(s)`
+            : "Disabled"}
+        </Row>
+        <Row label="Add-ons">
+          {workflow.allowsAddOns
+            ? `${workflow.allowedAddOnIds.length} selected`
+            : "Disabled"}
+        </Row>
+        <Row label="Online booking">
+          {workflow.bookableOnline
+            ? `Enabled${workflow.onlineLeadTimeHours ? ` (${workflow.onlineLeadTimeHours}h lead)` : ""}`
+            : "Internal only"}
+        </Row>
+        <Row label="Capacity/heatmap">
+          {workflow.affectsCapacityHeatmap
+            ? `Enabled${workflow.capacityCeilingPerHour ? ` (${workflow.capacityCeilingPerHour}/hour)` : ""}`
+            : "Excluded"}
+        </Row>
+      </div>
+
+      {/* Calendar */}
+      <div className="space-y-1">
+        <SectionHeader
+          title="Calendar & Availability"
+          stepIndex={2}
           onEdit={onEditStep}
         />
         <Separator />
@@ -158,7 +207,7 @@ export function WizardReviewPanel({
       <div className="space-y-1">
         <SectionHeader
           title="Check-In / Check-Out"
-          stepIndex={2}
+          stepIndex={3}
           onEdit={onEditStep}
         />
         <Separator />
@@ -182,7 +231,7 @@ export function WizardReviewPanel({
 
       {/* Stay-Based */}
       <div className="space-y-1">
-        <SectionHeader title="Stay-Based" stepIndex={3} onEdit={onEditStep} />
+        <SectionHeader title="Stay-Based" stepIndex={4} onEdit={onEditStep} />
         <Separator />
         <Row label="Enabled">
           <BooleanIcon value={data.stayBased.enabled} />
@@ -206,7 +255,7 @@ export function WizardReviewPanel({
       <div className="space-y-1">
         <SectionHeader
           title="Online Booking"
-          stepIndex={4}
+          stepIndex={5}
           onEdit={onEditStep}
         />
         <Separator />
@@ -243,7 +292,7 @@ export function WizardReviewPanel({
 
       {/* Pricing */}
       <div className="space-y-1">
-        <SectionHeader title="Pricing" stepIndex={5} onEdit={onEditStep} />
+        <SectionHeader title="Pricing" stepIndex={6} onEdit={onEditStep} />
         <Separator />
         <Row label="Model">
           {PRICING_MODEL_LABELS[data.pricing.model] ?? data.pricing.model}
@@ -274,7 +323,7 @@ export function WizardReviewPanel({
       <div className="space-y-1">
         <SectionHeader
           title="Staff Assignment"
-          stepIndex={6}
+          stepIndex={7}
           onEdit={onEditStep}
         />
         <Separator />

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   AlertTriangle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -192,14 +193,24 @@ export default function CustomServicesListPage() {
     (module: CustomServiceModule) => {
       const next: CustomServiceStatus =
         module.status === "active" ? "disabled" : "active";
-      setModuleStatus(module.id, next);
+      const result = setModuleStatus(module.id, next);
+      if (!result.ok) {
+        toast.error(result.reason ?? "Unable to change module status");
+        return;
+      }
+      toast.success(next === "active" ? "Module activated" : "Module disabled");
     },
     [setModuleStatus],
   );
 
   const handleArchive = useCallback(
     (id: string) => {
-      setModuleStatus(id, "archived");
+      const result = setModuleStatus(id, "archived");
+      if (!result.ok) {
+        toast.error(result.reason ?? "Unable to archive module");
+        return;
+      }
+      toast.success("Module archived");
     },
     [setModuleStatus],
   );

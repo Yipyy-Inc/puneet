@@ -40,6 +40,27 @@ export function BreedCombobox({
   const popular = getPopularBreeds(species);
   const all = getBreedsBySpecies(species).filter((b) => !b.popular);
 
+  const handleListWheel: React.WheelEventHandler<HTMLElement> = (event) => {
+    const list = event.currentTarget;
+    const canScroll = list.scrollHeight > list.clientHeight;
+    if (!canScroll) return;
+
+    const delta = event.deltaY;
+    const nextScrollTop = list.scrollTop + delta;
+    const atTop = list.scrollTop <= 0;
+    const atBottom =
+      list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+
+    if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+      return;
+    }
+
+    // In dialog + popover stacks, default wheel behavior can be intercepted.
+    // Apply list scrolling directly so users can use mouse wheel/trackpad naturally.
+    event.preventDefault();
+    list.scrollTop = nextScrollTop;
+  };
+
   // If already in manual mode, show a text input + switch-back button
   if (manualMode) {
     return (
@@ -90,7 +111,7 @@ export function BreedCombobox({
           <PopoverContent className="w-[300px] p-0" align="start">
             <Command>
               <CommandInput placeholder="Search breed..." />
-              <CommandList>
+              <CommandList onWheelCapture={handleListWheel}>
                 <CommandEmpty>
                   No breed found — click &quot;Type manually&quot; below.
                 </CommandEmpty>

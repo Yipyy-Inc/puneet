@@ -917,6 +917,62 @@ export interface YipyyGoCustomSection {
 }
 
 // ============================================================================
+// Custom Service Workflow Questionnaire (Task 10)
+// ============================================================================
+
+export type CustomServiceCalendarCardDisplayMode =
+  | "full-block"
+  | "compact-block"
+  | "icon-only";
+
+export type CustomServiceWorkflowResourceType =
+  | "room"
+  | "pool"
+  | "van"
+  | "equipment"
+  | "yard"
+  | "other"
+  | "custom";
+
+export type CustomServiceTaskTemplateTimingRule =
+  | "before_start"
+  | "at_check_in"
+  | "after_check_out";
+
+export interface CustomServiceTaskTemplateQuestionnaireItem {
+  id: string;
+  taskName: string;
+  taskType: "feeding" | "medication" | "activity" | "care" | "cleanup";
+  timingRule: CustomServiceTaskTemplateTimingRule;
+  offsetMinutes: number;
+  assignedStaffRole: string;
+  requiresCompletionNote: boolean;
+  requiresPhotoProof: boolean;
+}
+
+export interface CustomServiceWorkflowQuestionnaire {
+  appearsOnCalendar: boolean;
+  calendarColor: string;
+  calendarCardDisplayMode: CustomServiceCalendarCardDisplayMode;
+  requiresTimeSlots: boolean;
+  requiresResource: boolean;
+  resourceType?: CustomServiceWorkflowResourceType;
+  resourceIds: string[];
+  requiresCheckInOut: boolean;
+  generatesTasks: boolean;
+  taskTemplates: CustomServiceTaskTemplateQuestionnaireItem[];
+  allowsAddOns: boolean;
+  allowedAddOnIds: string[];
+  bookableOnline: boolean;
+  onlineLeadTimeHours?: number;
+  onlineCapacityLimit?: number;
+  affectsCapacityHeatmap: boolean;
+  capacityCeilingPerHour?: number;
+  questionnaireCompleted: boolean;
+  questionnaireCompletedAt?: string;
+}
+
+// ============================================================================
 // Custom Service Module (complex — kept as interface)
 // ============================================================================
 
@@ -1039,6 +1095,10 @@ export interface CustomServiceModule {
     autoPromote: boolean;
     notifyOnAvailability: boolean;
   };
+
+  // Structured setup questionnaire answers that drive behavior across calendar,
+  // booking, tasks, resources, portal, and reporting.
+  workflow?: CustomServiceWorkflowQuestionnaire;
 
   status: CustomServiceStatus;
   disableReason?: string;
