@@ -153,6 +153,14 @@ export function ActiveFilterChips({
       label: `Pet status: ${filters.petStatus.join(", ")}`,
       onRemove: () => setFilter("petStatus", []),
     });
+  if (filters.vaccineExpired !== "any")
+    chips.push({
+      label:
+        filters.vaccineExpired === "yes"
+          ? "Vaccine: expired or missing"
+          : "Vaccine: up to date",
+      onRemove: () => setFilter("vaccineExpired", "any"),
+    });
   if (filters.services.length > 0)
     chips.push({
       label: `Service: ${filters.services.join(", ")}`,
@@ -706,9 +714,8 @@ export function ClientFiltersInline({
       "Health & Safety",
       <TriToggle
         label="Vaccine expired"
-        value="any"
-        onChange={() => {}}
-        comingSoon
+        value={filters.vaccineExpired}
+        onChange={(v) => setFilter("vaccineExpired", v)}
       />,
     );
     add(

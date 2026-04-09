@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ import type { ColumnDef } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import {
   emailTemplates,
-  customerSegments,
   campaigns,
   loyaltySettings,
   customerLoyaltyData,
@@ -54,8 +53,15 @@ import { ReferralConfigModal } from "@/components/marketing/ReferralConfigModal"
 import { QuickReplyModal } from "@/components/marketing/QuickReplyModal";
 import { TemplatePreviewPanel } from "@/components/shared/TemplatePreviewPanel";
 import { quickReplyTemplates } from "@/data/quick-replies";
+import {
+  getMarketingCustomerSegments,
+  subscribeToMarketingSegments,
+} from "@/lib/marketing-segments";
 
 export default function MarketingPage() {
+  const [segmentsData, setSegmentsData] = useState<CustomerSegment[]>(() =>
+    getMarketingCustomerSegments(),
+  );
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showSegmentModal, setShowSegmentModal] = useState(false);
   const [showCampaignModal, setShowCampaignModal] = useState(false);
@@ -75,6 +81,13 @@ export default function MarketingPage() {
   >(null);
   const [selectedSegment, setSelectedSegment] =
     useState<CustomerSegment | null>(null);
+
+  useEffect(() => {
+    setSegmentsData(getMarketingCustomerSegments());
+    return subscribeToMarketingSegments(() => {
+      setSegmentsData(getMarketingCustomerSegments());
+    });
+  }, []);
 
   // Campaign analytics
   const sentCampaigns = campaigns.filter((c) => c.status === "sent");
@@ -751,7 +764,7 @@ export default function MarketingPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      const csv = customerSegments
+                      const csv = segmentsData
                         .map(
                           (s) =>
                             `${s.name},${s.customerCount},${s.description}`,
@@ -786,7 +799,7 @@ export default function MarketingPage() {
             <CardContent>
               <DataTable
                 columns={segmentColumns}
-                data={customerSegments}
+                data={segmentsData}
                 searchColumn="name"
                 searchPlaceholder="Search segments..."
               />
@@ -1072,6 +1085,7 @@ export default function MarketingPage() {
         <DialogContent className="max-h-[90vh] min-w-5xl overflow-y-auto">
           <CampaignBuilderModal
             campaign={selectedCampaign}
+            segments={segmentsData}
             onClose={() => {
               setShowCampaignModal(false);
               setSelectedCampaign(null);
