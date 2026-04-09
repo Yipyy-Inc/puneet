@@ -108,6 +108,7 @@ interface ClientForm {
   emergencyName: string;
   emergencyRelationship: string;
   emergencyPhone: string;
+  emergencyEmail: string;
   contactMethod: string;
   language: string;
   vetName: string;
@@ -137,11 +138,50 @@ const DEFAULT_CLIENT: ClientForm = {
   emergencyName: "",
   emergencyRelationship: "",
   emergencyPhone: "",
+  emergencyEmail: "",
   contactMethod: "sms",
   language: "en",
   vetName: "",
   vetPhone: "",
 };
+
+const PHONE_MIN_DIGITS = 10;
+const PHONE_MAX_DIGITS = 15;
+
+function normalizePhoneInput(value: string): string {
+  const allowedCharacters = value.replace(/[^\d+()\-\s]/g, "");
+  let digitsCount = 0;
+  let result = "";
+
+  for (const char of allowedCharacters) {
+    if (/\d/.test(char)) {
+      if (digitsCount >= PHONE_MAX_DIGITS) {
+        continue;
+      }
+
+      digitsCount += 1;
+      result += char;
+      continue;
+    }
+
+    if (char === "+") {
+      if (result.length === 0 && !result.includes("+")) {
+        result += char;
+      }
+
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
+}
+
+function isValidPhoneNumber(value: string): boolean {
+  const digits = value.replace(/\D/g, "").length;
+  return digits >= PHONE_MIN_DIGITS && digits <= PHONE_MAX_DIGITS;
+}
 
 const DEFAULT_VACCINES: VaccineEntry[] = [
   { name: "Rabies", dateAdministered: "", expiryDate: "" },
@@ -228,11 +268,13 @@ function Field({
   label,
   required,
   error,
+  reserveErrorSpace,
   children,
 }: {
   label: string;
   required?: boolean;
   error?: string;
+  reserveErrorSpace?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -242,10 +284,16 @@ function Field({
         {required && <span className="text-destructive ml-0.5">*</span>}
       </Label>
       {children}
-      {error && (
-        <p className="text-destructive flex items-center gap-1 text-xs">
-          <AlertTriangle className="size-3" />
-          {error}
+      {(error || reserveErrorSpace) && (
+        <p
+          className={cn(
+            "text-destructive flex items-center gap-1 text-xs leading-tight",
+            error ? "visible" : "invisible h-4",
+          )}
+          aria-live="polite"
+        >
+          <AlertTriangle className="size-3 shrink-0" />
+          {error || " "}
         </p>
       )}
     </div>
@@ -266,9 +314,7 @@ export function CreateClientModal({
   const customerLanguageOptions = getEnabledCustomerLanguageOptions(
     languageSettings,
   );
-  const showPreferredLanguageField =
-    languageSettings.customerLanguagePreferenceEnabled &&
-    customerLanguageOptions.length > 0;
+  const showPreferredLanguageField = customerLanguageOptions.length > 0;
   const fallbackPreferredLanguage =
     customerLanguageOptions[0]?.code ?? DEFAULT_CLIENT.language;
 
@@ -280,9 +326,10 @@ export function CreateClientModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Step 1: Client
-  const [client, setClient] = useState<ClientForm>(
-    initialDraft.client ?? DEFAULT_CLIENT,
-  );
+  const [client, setClient] = useState<ClientForm>({
+    ...DEFAULT_CLIENT,
+    ...(initialDraft.client ?? {}),
+  });
   const selectedPreferredLanguage = showPreferredLanguageField
     ? customerLanguageOptions.some((option) => option.code === client.language)
       ? client.language
@@ -326,6 +373,8 @@ export function CreateClientModal({
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.email))
         e.email = "Invalid email format";
       if (!client.phone.trim()) e.phone = "Phone number is required";
+      else if (!isValidPhoneNumber(client.phone))
+        e.phone = "Use 10-15 digits";
       if (!client.street.trim()) e.street = "Street address is required";
       if (!client.city.trim()) e.city = "City is required";
       if (!client.state.trim()) e.state = "Province/State is required";
@@ -334,6 +383,18 @@ export function CreateClientModal({
         e.emergencyName = "Emergency contact is required";
       if (!client.emergencyPhone.trim())
         e.emergencyPhone = "Emergency phone is required";
+      else if (!isValidPhoneNumber(client.emergencyPhone))
+        e.emergencyPhone = "Use 10-15 digits";
+      if (
+        client.emergencyEmail.trim() &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.emergencyEmail)
+      ) {
+        e.emergencyEmail = "Invalid email format";
+      }
+    }
+
+    if (s === 3 && client.vetPhone.trim() && !isValidPhoneNumber(client.vetPhone)) {
+      e.vetPhone = "Use 10-15 digits";
     }
 
     if (s === 2 && pets.length === 0) {
@@ -398,7 +459,7 @@ export function CreateClientModal({
         name: client.emergencyName,
         relationship: client.emergencyRelationship,
         phone: client.emergencyPhone,
-        email: "",
+        email: client.emergencyEmail.trim(),
       },
       pets: pets.map((p) => ({
         name: p.name,
@@ -499,7 +560,7 @@ export function CreateClientModal({
 
         {/* ── Step 1: Client Information ── */}
         {step === 1 && (
-          <div className="animate-in fade-in space-y-4 py-2 duration-200">
+          <div className="animate-in fade-in space-y-3 py-2 duration-200">
             <div className="grid grid-cols-2 gap-4">
               <Field label="Full Name" required error={errors.name}>
                 <Input
@@ -522,7 +583,9 @@ export function CreateClientModal({
                 <Input
                   type="tel"
                   value={client.phone}
-                  onChange={(e) => updateClient("phone", e.target.value)}
+                  onChange={(e) =>
+                    updateClient("phone", normalizePhoneInput(e.target.value))
+                  }
                   placeholder="123-456-7890"
                 />
               </Field>
@@ -582,7 +645,7 @@ export function CreateClientModal({
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Emergency Contact
             </p>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Field label="Name" required error={errors.emergencyName}>
                 <Input
                   value={client.emergencyName}
@@ -606,9 +669,25 @@ export function CreateClientModal({
                   type="tel"
                   value={client.emergencyPhone}
                   onChange={(e) =>
-                    updateClient("emergencyPhone", e.target.value)
+                    updateClient(
+                      "emergencyPhone",
+                      normalizePhoneInput(e.target.value),
+                    )
                   }
                   placeholder="123-456-7891"
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="Email (Optional)" error={errors.emergencyEmail}>
+                <Input
+                  type="email"
+                  value={client.emergencyEmail}
+                  onChange={(e) =>
+                    updateClient("emergencyEmail", e.target.value)
+                  }
+                  placeholder="jane.doe@example.com"
                 />
               </Field>
             </div>
@@ -683,7 +762,8 @@ export function CreateClientModal({
 
             <div className="space-y-4 rounded-lg border p-4">
               <p className="text-sm font-semibold">Add a Pet</p>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Pet Name" required error={errors.petName}>
                   <Input
                     value={petForm.name}
@@ -720,7 +800,12 @@ export function CreateClientModal({
                 />
               </Field>
 
-              <div className="grid grid-cols-4 gap-4">
+              <Separator />
+              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Core Details
+              </p>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field
                   label="Date of Birth"
                   required
@@ -732,22 +817,24 @@ export function CreateClientModal({
                     onChange={(e) => updatePet("dateOfBirth", e.target.value)}
                     max={new Date().toISOString().split("T")[0]}
                   />
-                  {petForm.dateOfBirth && (
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Age: {calculatePetAge(petForm.dateOfBirth).display}
-                    </p>
-                  )}
                 </Field>
                 <Field label="Weight (lbs)" required error={errors.petWeight}>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={petForm.weight}
-                    onChange={(e) => updatePet("weight", e.target.value)}
-                    placeholder="25"
-                  />
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={petForm.weight}
+                      onChange={(e) => updatePet("weight", e.target.value)}
+                      placeholder="25"
+                      className="pr-10"
+                    />
+                    <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs">
+                      lbs
+                    </span>
+                  </div>
                 </Field>
+
                 <Field label="Sex" required error={errors.petSex}>
                   <Select
                     value={petForm.sex}
@@ -762,6 +849,7 @@ export function CreateClientModal({
                     </SelectContent>
                   </Select>
                 </Field>
+
                 <Field
                   label="Spayed/Neutered"
                   required
@@ -782,7 +870,18 @@ export function CreateClientModal({
                 </Field>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {petForm.dateOfBirth && (
+                <p className="text-muted-foreground text-xs">
+                  Pet age: {calculatePetAge(petForm.dateOfBirth).display}
+                </p>
+              )}
+
+              <Separator />
+              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Identifiers
+              </p>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Color / Markings">
                   <Input
                     value={petForm.color}
@@ -917,11 +1016,13 @@ export function CreateClientModal({
                   placeholder="Dr. Smith"
                 />
               </Field>
-              <Field label="Vet Phone">
+              <Field label="Vet Phone" error={errors.vetPhone}>
                 <Input
                   type="tel"
                   value={client.vetPhone}
-                  onChange={(e) => updateClient("vetPhone", e.target.value)}
+                  onChange={(e) =>
+                    updateClient("vetPhone", normalizePhoneInput(e.target.value))
+                  }
                   placeholder="123-456-7890"
                 />
               </Field>
@@ -1133,6 +1234,7 @@ export function CreateClientModal({
               <p className="text-muted-foreground mt-1 text-xs">
                 Emergency: {client.emergencyName} (
                 {client.emergencyRelationship}) · {client.emergencyPhone}
+                {client.emergencyEmail ? ` · ${client.emergencyEmail}` : ""}
               </p>
             </div>
 
