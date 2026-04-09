@@ -1,9 +1,31 @@
 export type AppLocale = "en" | "fr";
 
+export interface CustomerLanguageOption {
+  code: string;
+  label: string;
+}
+
+export const CUSTOMER_LANGUAGE_OPTIONS: CustomerLanguageOption[] = [
+  { code: "en", label: "English" },
+  { code: "fr", label: "Francais" },
+  { code: "es", label: "Spanish" },
+  { code: "de", label: "German" },
+  { code: "pt", label: "Portuguese" },
+  { code: "ar", label: "Arabic" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+];
+
+const CUSTOMER_LANGUAGE_CODE_SET = new Set(
+  CUSTOMER_LANGUAGE_OPTIONS.map((option) => option.code),
+);
+
 export interface AppLanguageSettings {
   primaryLocale: AppLocale;
   secondaryLocale: AppLocale;
   secondaryEnabled: boolean;
+  customerLanguagePreferenceEnabled: boolean;
+  customerSupportedLanguages: string[];
 }
 
 export const APP_LANGUAGE_SETTINGS_STORAGE_KEY = "settings-language";
@@ -16,11 +38,24 @@ export const DEFAULT_APP_LANGUAGE_SETTINGS: AppLanguageSettings = {
   primaryLocale: "en",
   secondaryLocale: "fr",
   secondaryEnabled: true,
+  customerLanguagePreferenceEnabled: false,
+  customerSupportedLanguages: ["en", "fr"],
 };
 
 function normalizeLocale(value: unknown, fallback: AppLocale): AppLocale {
   if (value === "en" || value === "fr") return value;
   return fallback;
+}
+
+function normalizeCustomerLanguageCodes(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+
+  const normalized = input
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => CUSTOMER_LANGUAGE_CODE_SET.has(value));
+
+  return Array.from(new Set(normalized));
 }
 
 export function normalizeLanguageSettings(
@@ -40,6 +75,17 @@ export function normalizeLanguageSettings(
     secondaryLocale = fallbackSecondary;
   }
 
+  const normalizedCustomerLanguages = normalizeCustomerLanguageCodes(
+    input?.customerSupportedLanguages,
+  );
+  const fallbackCustomerLanguages = Array.from(
+    new Set(
+      input?.secondaryEnabled === false
+        ? [primaryLocale]
+        : [primaryLocale, secondaryLocale],
+    ),
+  );
+
   return {
     primaryLocale,
     secondaryLocale,
@@ -47,7 +93,45 @@ export function normalizeLanguageSettings(
       typeof input?.secondaryEnabled === "boolean"
         ? input.secondaryEnabled
         : DEFAULT_APP_LANGUAGE_SETTINGS.secondaryEnabled,
+    customerLanguagePreferenceEnabled:
+      typeof input?.customerLanguagePreferenceEnabled === "boolean"
+        ? input.customerLanguagePreferenceEnabled
+        : DEFAULT_APP_LANGUAGE_SETTINGS.customerLanguagePreferenceEnabled,
+    customerSupportedLanguages:
+      normalizedCustomerLanguages.length > 0
+        ? normalizedCustomerLanguages
+        : fallbackCustomerLanguages,
   };
+}
+
+export function getCustomerLanguageLabel(languageCode: string): string {
+  const normalizedCode = languageCode.trim().toLowerCase();
+  const option = CUSTOMER_LANGUAGE_OPTIONS.find(
+    (entry) => entry.code === normalizedCode,
+  );
+
+  return option?.label ?? languageCode.toUpperCase();
+}
+
+export function getEnabledCustomerLanguageOptions(
+  settings: AppLanguageSettings,
+): CustomerLanguageOption[] {
+  const enabledCodes = new Set(
+    settings.customerSupportedLanguages.map((code) => code.toLowerCase()),
+  );
+
+  return CUSTOMER_LANGUAGE_OPTIONS.filter((option) =>
+    enabledCodes.has(option.code),
+  );
+}
+
+export function isCustomerLanguageEnabled(
+  languageCode: string,
+  settings: AppLanguageSettings,
+): boolean {
+  return settings.customerSupportedLanguages
+    .map((code) => code.toLowerCase())
+    .includes(languageCode.toLowerCase());
 }
 
 export function getEnabledLocales(

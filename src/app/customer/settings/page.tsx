@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useSettings } from "@/hooks/use-settings";
 import { clients } from "@/data/clients";
+import { getEnabledCustomerLanguageOptions } from "@/lib/language-settings";
 import {
   Card,
   CardContent,
@@ -42,6 +44,7 @@ const MOCK_CUSTOMER_ID = 15;
 
 export default function CustomerSettingsPage() {
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
+  const { languageSettings } = useSettings();
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -74,6 +77,27 @@ export default function CustomerSettingsPage() {
     },
   });
 
+  const customerLanguageOptions = useMemo(
+    () => getEnabledCustomerLanguageOptions(languageSettings),
+    [languageSettings],
+  );
+  const defaultNotificationLanguage = useMemo(() => {
+    const customerPreferredLanguage = customer?.preferredLanguage
+      ?.trim()
+      .toLowerCase();
+
+    if (
+      customerPreferredLanguage &&
+      customerLanguageOptions.some(
+        (option) => option.code === customerPreferredLanguage,
+      )
+    ) {
+      return customerPreferredLanguage;
+    }
+
+    return customerLanguageOptions[0]?.code ?? languageSettings.primaryLocale;
+  }, [customer, customerLanguageOptions, languageSettings.primaryLocale]);
+
   const [notificationPreferences, setNotificationPreferences] = useState({
     // Email notifications
     emailBookingConfirmations: true,
@@ -101,8 +125,15 @@ export default function CustomerSettingsPage() {
     quietHoursStart: "21:00",
     quietHoursEnd: "07:00",
     // Language preference
-    language: "en",
+    language: defaultNotificationLanguage,
   });
+
+  const selectedNotificationLanguage =
+    customerLanguageOptions.some(
+      (option) => option.code === notificationPreferences.language,
+    )
+      ? notificationPreferences.language
+      : defaultNotificationLanguage;
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -149,9 +180,14 @@ export default function CustomerSettingsPage() {
     setIsSaving(true);
 
     try {
+      const normalizedNotificationPreferences = {
+        ...notificationPreferences,
+        language: selectedNotificationLanguage,
+      };
+
       // TODO: Replace with actual API call
       // This should update the customer profile and sync to all facilities
-      await updateCustomerProfile(profileData, notificationPreferences);
+      await updateCustomerProfile(profileData, normalizedNotificationPreferences);
       setIsEditing(false);
       toast.success(
         "Profile updated successfully! Changes will reflect on the facility side.",
@@ -1091,7 +1127,7 @@ export default function CustomerSettingsPage() {
                 <div className="max-w-xs space-y-2">
                   <Label htmlFor="language">Language</Label>
                   <Select
-                    value={notificationPreferences.language}
+                    value={selectedNotificationLanguage}
                     onValueChange={(value) =>
                       setNotificationPreferences({
                         ...notificationPreferences,
@@ -1104,12 +1140,16 @@ export default function CustomerSettingsPage() {
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="de">Deutsch</SelectItem>
+                      {customerLanguageOptions.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-muted-foreground text-xs">
+                    Language options are based on your facility settings.
+                  </p>
                 </div>
               </div>
             </div>

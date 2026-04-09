@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import type { Message } from "@/types/communications";
 
 // ── Quick-send links (staff can send these into chat) ────────────────
@@ -341,6 +342,10 @@ export function ClientContextPanel({
   const infoTitle = isCustomerMode ? "Facility Info" : "Client Info";
   const facilityWebsite = isCustomerMode ? facilityContact?.website : undefined;
   const profileButtonLabel = isCustomerMode ? "View Website" : "View Profile";
+  const preferredLanguageLabel =
+    !isCustomerMode && client?.preferredLanguage
+      ? getCustomerLanguageLabel(client.preferredLanguage)
+      : null;
   const stats = isCustomerMode
     ? [
         { n: upcoming.length, label: "Upcoming" },
@@ -403,6 +408,14 @@ export function ClientContextPanel({
           <h3 className="mt-3 text-base font-bold text-slate-800">
             {profileName}
           </h3>
+          {preferredLanguageLabel && (
+            <Badge
+              variant="outline"
+              className="mt-2 border-indigo-200 bg-indigo-50 text-[10px] font-semibold text-indigo-700"
+            >
+              {preferredLanguageLabel}
+            </Badge>
+          )}
 
           {/* Contact row */}
           <div className="mt-2 flex flex-col items-center gap-1 text-xs text-slate-400">

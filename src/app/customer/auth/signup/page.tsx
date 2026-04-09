@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+import { clients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -16,15 +26,95 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  getEnabledCustomerLanguageOptions,
+  getCustomerLanguageLabel,
+  setClientLocaleCookie,
+  type AppLocale,
+} from "@/lib/language-settings";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { getErrorMessage } from "@/lib/errors";
+
+const SIGNUP_PREFERRED_LANGUAGE_STORAGE_KEY =
+  "customer-signup-preferred-language-by-email";
+
+function savePreferredLanguageForEmail(
+  email: string,
+  languageCode: string | undefined,
+): void {
+  if (typeof window === "undefined") return;
+  if (!languageCode) return;
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return;
+
+  let existing: Record<string, string> = {};
+
+  try {
+    const raw = window.localStorage.getItem(
+      SIGNUP_PREFERRED_LANGUAGE_STORAGE_KEY,
+    );
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === "object") {
+        existing = parsed as Record<string, string>;
+      }
+    }
+  } catch {
+    existing = {};
+  }
+
+  existing[normalizedEmail] = languageCode;
+  window.localStorage.setItem(
+    SIGNUP_PREFERRED_LANGUAGE_STORAGE_KEY,
+    JSON.stringify(existing),
+  );
+}
+
+function applyAccountLocale(languageCode: string | undefined): void {
+  if (!languageCode) return;
+  if (languageCode !== "en" && languageCode !== "fr") return;
+
+  setClientLocaleCookie(languageCode as AppLocale);
+}
 
 export default function SignUpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { languageSettings } = useSettings();
   const fromEstimate = searchParams.get("from") === "estimate";
   const estimateToken = searchParams.get("token");
   const prefilledEmail = searchParams.get("email") ?? "";
+  const facilityParam = searchParams.get("facility");
+
+  const targetFacilityName = useMemo(() => {
+    if (!facilityParam) {
+      return facilities.find((facility) => facility.status === "active")?.name;
+    }
+
+    const numericId = Number(facilityParam);
+    if (!Number.isNaN(numericId)) {
+      return facilities.find((facility) => facility.id === numericId)?.name;
+    }
+
+    const normalizedFacility = facilityParam.trim().toLowerCase();
+    return facilities.find(
+      (facility) => facility.name.trim().toLowerCase() === normalizedFacility,
+    )?.name;
+  }, [facilityParam]);
+
+  const customerLanguageOptions = useMemo(
+    () => getEnabledCustomerLanguageOptions(languageSettings),
+    [languageSettings],
+  );
+  const preferredLanguageEnabledByFacility =
+    languageSettings.customerLanguagePreferenceEnabled &&
+    customerLanguageOptions.length > 0;
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const showPreferredLanguageField =
+    hasHydrated && preferredLanguageEnabledByFacility;
+  const defaultPreferredLanguage =
+    customerLanguageOptions[0]?.code ?? languageSettings.primaryLocale;
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -34,8 +124,33 @@ export default function SignUpPage() {
     email: prefilledEmail,
     password: "",
     confirmPassword: "",
+    preferredLanguage: defaultPreferredLanguage,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!preferredLanguageEnabledByFacility) return;
+
+    const selectedIsValid = customerLanguageOptions.some(
+      (option) => option.code === formData.preferredLanguage,
+    );
+
+    if (selectedIsValid) return;
+
+    setFormData((current) => ({
+      ...current,
+      preferredLanguage: defaultPreferredLanguage,
+    }));
+  }, [
+    customerLanguageOptions,
+    defaultPreferredLanguage,
+    formData.preferredLanguage,
+    preferredLanguageEnabledByFacility,
+  ]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -60,6 +175,17 @@ export default function SignUpPage() {
       newErrors.confirmPassword = "Please confirm your password";
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (preferredLanguageEnabledByFacility) {
+      const selectedIsValid = customerLanguageOptions.some(
+        (option) => option.code === formData.preferredLanguage,
+      );
+
+      if (!selectedIsValid) {
+        newErrors.preferredLanguage =
+          "Please choose a preferred language";
+      }
     }
 
     setErrors(newErrors);
@@ -87,10 +213,32 @@ export default function SignUpPage() {
 
       if (existingCustomer) {
         await linkAccount(formData.email, formData.password);
+        savePreferredLanguageForEmail(
+          formData.email,
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
+        applyAccountLocale(
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
         toast.success("Account connected successfully!");
         router.push(redirectTo);
       } else {
         await createAccount(formData);
+        savePreferredLanguageForEmail(
+          formData.email,
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
+        applyAccountLocale(
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
         toast.success("Account created successfully!");
         router.push(redirectTo);
       }
@@ -115,10 +263,37 @@ export default function SignUpPage() {
       if (existingCustomer) {
         // Link Google account to existing customer
         await linkGoogleAccount(googleUser);
+        savePreferredLanguageForEmail(
+          googleUser.email,
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
+        applyAccountLocale(
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
         toast.success("Account connected successfully!");
       } else {
         // Create new account with Google
-        await createAccountWithGoogle(googleUser);
+        await createAccountWithGoogle(
+          googleUser,
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
+        savePreferredLanguageForEmail(
+          googleUser.email,
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
+        applyAccountLocale(
+          preferredLanguageEnabledByFacility
+            ? formData.preferredLanguage
+            : undefined,
+        );
         toast.success("Account created successfully!");
       }
 
@@ -142,8 +317,44 @@ export default function SignUpPage() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
-  const createAccount = async (_data: typeof formData) => {
+  const createAccount = async (data: typeof formData) => {
     // TODO: API call to create account
+    const existingByEmail = clients.some(
+      (client) =>
+        client.email.trim().toLowerCase() === data.email.trim().toLowerCase(),
+    );
+
+    if (!existingByEmail) {
+      const maxId = clients.reduce(
+        (max, client) => Math.max(max, client.id),
+        0,
+      );
+
+      clients.push({
+        id: maxId + 1,
+        name: data.name.trim(),
+        email: data.email.trim(),
+        phone: "",
+        preferredLanguage: data.preferredLanguage,
+        status: "active",
+        facility: targetFacilityName ?? "Example Pet Care Facility",
+        address: {
+          street: "",
+          city: "",
+          state: "",
+          zip: "",
+          country: "",
+        },
+        emergencyContact: {
+          name: "",
+          relationship: "",
+          phone: "",
+          email: "",
+        },
+        pets: [],
+      });
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
@@ -158,8 +369,47 @@ export default function SignUpPage() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
-  const createAccountWithGoogle = async (_googleUser: unknown) => {
+  const createAccountWithGoogle = async (
+    googleUser: { email: string; name: string },
+    preferredLanguage?: string,
+  ) => {
     // TODO: API call to create account with Google
+    const existingByEmail = clients.some(
+      (client) =>
+        client.email.trim().toLowerCase() === googleUser.email.toLowerCase(),
+    );
+
+    if (!existingByEmail) {
+      const maxId = clients.reduce(
+        (max, client) => Math.max(max, client.id),
+        0,
+      );
+
+      clients.push({
+        id: maxId + 1,
+        name: googleUser.name,
+        email: googleUser.email,
+        phone: "",
+        preferredLanguage,
+        status: "active",
+        facility: targetFacilityName ?? "Example Pet Care Facility",
+        address: {
+          street: "",
+          city: "",
+          state: "",
+          zip: "",
+          country: "",
+        },
+        emergencyContact: {
+          name: "",
+          relationship: "",
+          phone: "",
+          email: "",
+        },
+        pets: [],
+      });
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
@@ -267,6 +517,38 @@ export default function SignUpPage() {
                 <p className="text-destructive text-sm">{errors.email}</p>
               )}
             </div>
+
+            {showPreferredLanguageField && (
+              <div className="space-y-2">
+                <Label htmlFor="preferredLanguage">Preferred Language</Label>
+                <Select
+                  value={formData.preferredLanguage}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, preferredLanguage: value })
+                  }
+                >
+                  <SelectTrigger id="preferredLanguage">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerLanguageOptions.map((option) => (
+                      <SelectItem key={option.code} value={option.code}>
+                        {getCustomerLanguageLabel(option.code)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  Facility staff will use this language for messages when
+                  available.
+                </p>
+                {errors.preferredLanguage && (
+                  <p className="text-destructive text-sm">
+                    {errors.preferredLanguage}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

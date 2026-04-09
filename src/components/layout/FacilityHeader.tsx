@@ -57,6 +57,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     name: string;
     email: string;
     phone?: string;
+    preferredLanguage?: string;
     status: string;
     facility: string;
     address: {

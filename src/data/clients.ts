@@ -6,6 +6,7 @@ export const clients: Client[] = [
     name: "Alice Johnson",
     email: "alice@example.com",
     phone: "123-456-7890",
+    preferredLanguage: "fr",
     status: "active",
     facility: "Example Pet Care Facility",
     imageUrl: "/people/person-1.jpg",
@@ -138,6 +139,7 @@ export const clients: Client[] = [
     name: "Bob Smith",
     email: "bob@example.com",
     phone: "098-765-4321",
+    preferredLanguage: "en",
     status: "active",
     facility: "Example Pet Care Facility",
     imageUrl: "/people/person-2.jpg",
@@ -207,6 +209,7 @@ export const clients: Client[] = [
     id: 17,
     name: "Charlie Brown",
     email: "charlie@example.com",
+    preferredLanguage: "es",
     status: "inactive",
     facility: "Paws & Play Daycare",
     address: {
@@ -228,6 +231,7 @@ export const clients: Client[] = [
     name: "Diana Prince",
     email: "diana@example.com",
     phone: "111-222-3333",
+    preferredLanguage: "en",
     status: "active",
     facility: "Furry Friends Grooming",
     address: {
@@ -269,6 +273,7 @@ export const clients: Client[] = [
     id: 19,
     name: "Eve Adams",
     email: "eve@example.com",
+    preferredLanguage: "es",
     status: "active",
     facility: "Furry Friends Grooming",
     address: {
@@ -330,6 +335,7 @@ export const clients: Client[] = [
     name: "Frank Miller",
     email: "frank@example.com",
     phone: "444-555-6666",
+    preferredLanguage: "fr",
     status: "active",
     facility: "Example Pet Care Facility",
     address: {
@@ -350,6 +356,7 @@ export const clients: Client[] = [
     id: 21,
     name: "Grace Lee",
     email: "grace@example.com",
+    preferredLanguage: "en",
     status: "inactive",
     facility: "Example Pet Care Facility",
     address: {
@@ -392,6 +399,7 @@ export const clients: Client[] = [
     name: "Henry Wilson",
     email: "henry@example.com",
     phone: "777-888-9999",
+    preferredLanguage: "fr",
     status: "active",
     facility: "Example Pet Care Facility",
     address: {
@@ -413,6 +421,7 @@ export const clients: Client[] = [
     name: "Ivy Chen",
     email: "ivy@example.com",
     phone: "000-111-2222",
+    preferredLanguage: "zh",
     status: "active",
     facility: "Pet Paradise Vet",
     address: {
@@ -454,6 +463,7 @@ export const clients: Client[] = [
     id: 24,
     name: "Jack Davis",
     email: "jack@example.com",
+    preferredLanguage: "en",
     status: "active",
     facility: "Pet Paradise Vet",
     address: {
@@ -476,6 +486,7 @@ export const clients: Client[] = [
     name: "Karen Taylor",
     email: "karen@example.com",
     phone: "333-444-5555",
+    preferredLanguage: "de",
     status: "inactive",
     facility: "Pet Paradise Vet",
     address: {
@@ -517,6 +528,7 @@ export const clients: Client[] = [
     name: "Liam Garcia",
     email: "liam@example.com",
     phone: "666-777-8888",
+    preferredLanguage: "es",
     status: "active",
     facility: "Whisker Wonderland",
     address: {
@@ -577,6 +589,7 @@ export const clients: Client[] = [
     id: 27,
     name: "Mia Rodriguez",
     email: "mia@example.com",
+    preferredLanguage: "es",
     status: "active",
     facility: "Whisker Wonderland",
     address: {
@@ -618,6 +631,7 @@ export const clients: Client[] = [
     name: "John Doe",
     email: "john@example.com",
     phone: "123-456-7890",
+    preferredLanguage: "fr",
     status: "active",
     facility: "Example Pet Care Facility",
     address: {
@@ -791,6 +805,7 @@ export const clients: Client[] = [
     name: "Jane Smith",
     email: "jane@example.com",
     phone: "098-765-4321",
+    preferredLanguage: "en",
     status: "active",
     facility: "Example Pet Care Facility",
     address: {

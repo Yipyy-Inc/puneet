@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { MessageBubble, DateSeparator } from "./MessageBubble";
 import { ComposeBar } from "./ComposeBar";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import {
   getReminderHistoryForCustomer,
   ReminderHistoryPanel,
@@ -69,7 +70,9 @@ export function ConversationThread({
 }) {
   const isCustomerMode = mode === "customer";
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<ReminderTab>("conversation");
+  const [tabsByThreadId, setTabsByThreadId] = useState<
+    Record<string, ReminderTab>
+  >({});
 
   const threadMessages = useMemo(() => {
     if (!threadId) return [];
@@ -118,6 +121,10 @@ export function ConversationThread({
         | undefined) ||
       "Typically responds within 2 hours"
     : (client?.phone ?? client?.email ?? "Active now");
+  const preferredLanguageLabel =
+    !isCustomerMode && client?.preferredLanguage
+      ? getCustomerLanguageLabel(client.preferredLanguage)
+      : null;
 
   const channels = [...new Set(threadMessages.map((message) => message.type))];
 
@@ -136,9 +143,17 @@ export function ConversationThread({
     });
   }, [chatMessages.length]);
 
-  useEffect(() => {
-    setActiveTab("conversation");
-  }, [threadId]);
+  const reminderHistory = useMemo(
+    () =>
+      getReminderHistoryForCustomer({
+        messages,
+        counterpartyId,
+        isCustomerMode,
+      }),
+    [counterpartyId, isCustomerMode, messages],
+  );
+
+  const activeTab = threadId ? tabsByThreadId[threadId] ?? "conversation" : "conversation";
 
   if (!threadId) {
     return (
@@ -191,16 +206,6 @@ export function ConversationThread({
             ? "Email"
             : "Chat"
         : `${channels.length} channels`;
-
-  const reminderHistory = useMemo(
-    () =>
-      getReminderHistoryForCustomer({
-        messages,
-        counterpartyId,
-        isCustomerMode,
-      }),
-    [counterpartyId, isCustomerMode, messages],
-  );
 
   const conversationPanel = (
     <>
@@ -302,6 +307,7 @@ export function ConversationThread({
         mode={mode}
         clientName={counterpartyName}
         lastMessage={threadMessages[threadMessages.length - 1]?.body}
+        preferredLanguageLabel={preferredLanguageLabel ?? undefined}
       />
     </>
   );
@@ -330,6 +336,14 @@ export function ConversationThread({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
+              {preferredLanguageLabel && (
+                <Badge
+                  variant="outline"
+                  className="border-indigo-200 bg-indigo-50 text-[9px] text-indigo-700"
+                >
+                  {preferredLanguageLabel}
+                </Badge>
+              )}
               <Badge
                 variant="outline"
                 className="border-slate-200 text-[9px] text-slate-400"
@@ -404,7 +418,14 @@ export function ConversationThread({
 
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as ReminderTab)}
+        onValueChange={(value) => {
+          if (!threadId) return;
+
+          setTabsByThreadId((current) => ({
+            ...current,
+            [threadId]: value as ReminderTab,
+          }));
+        }}
         className="flex min-h-0 flex-1 flex-col gap-0"
       >
         <TabsList className="border-b border-slate-200 bg-white px-4">

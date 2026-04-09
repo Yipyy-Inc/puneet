@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input";
 import { MessageSquare, Mail, Phone, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSettings } from "@/hooks/use-settings";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 
 export default function ClientMessagesPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { languageSettings } = useSettings();
   const { id } = use(params);
   const clientId = parseInt(id, 10);
   const client = clients.find((c) => c.id === clientId);
@@ -23,6 +26,16 @@ export default function ClientMessagesPage({
   const [now] = useState(() => Date.now());
 
   if (!client) return null;
+
+  const preferredLanguageLabel = client.preferredLanguage
+    ? getCustomerLanguageLabel(client.preferredLanguage)
+    : null;
+  const canCommunicateInPreferredLanguage =
+    !!client.preferredLanguage &&
+    languageSettings.customerLanguagePreferenceEnabled &&
+    languageSettings.customerSupportedLanguages.includes(
+      client.preferredLanguage,
+    );
 
   const messages = clientCommunications
     .filter((c) => c.clientId === clientId)
@@ -68,15 +81,39 @@ export default function ClientMessagesPage({
       <h2 className="text-lg font-semibold">Messages</h2>
 
       {/* Quick send */}
+      {preferredLanguageLabel && (
+        <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-2 text-xs text-indigo-900">
+          <Badge
+            variant="outline"
+            className="h-5 border-indigo-200 bg-white text-[10px] font-semibold text-indigo-700"
+          >
+            {preferredLanguageLabel}
+          </Badge>
+          <span>
+            {canCommunicateInPreferredLanguage
+              ? `Preferred language enabled. Use ${preferredLanguageLabel} for customer communication when possible.`
+              : `Preferred language is ${preferredLanguageLabel}. Enable this language in facility settings to support multilingual communication.`}
+          </span>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Input
           value={quickMsg}
           onChange={(e) => setQuickMsg(e.target.value)}
-          placeholder={`Message ${client.name}...`}
+          placeholder={
+            canCommunicateInPreferredLanguage
+              ? `Message ${client.name} in ${preferredLanguageLabel}...`
+              : `Message ${client.name}...`
+          }
           className="flex-1"
           onKeyDown={(e) => {
             if (e.key === "Enter" && quickMsg.trim()) {
-              toast.success(`Message sent to ${client.name}`);
+              toast.success(
+                canCommunicateInPreferredLanguage
+                  ? `Message sent to ${client.name} (${preferredLanguageLabel})`
+                  : `Message sent to ${client.name}`,
+              );
               setQuickMsg("");
             }
           }}
@@ -84,7 +121,11 @@ export default function ClientMessagesPage({
         <Button
           onClick={() => {
             if (quickMsg.trim()) {
-              toast.success(`Message sent to ${client.name}`);
+              toast.success(
+                canCommunicateInPreferredLanguage
+                  ? `Message sent to ${client.name} (${preferredLanguageLabel})`
+                  : `Message sent to ${client.name}`,
+              );
               setQuickMsg("");
             }
           }}

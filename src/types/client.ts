@@ -68,6 +68,7 @@ export const clientSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   phone: z.string().optional(),
+  preferredLanguage: z.string().optional(),
   status: z.string(),
   facility: z.string(),
   imageUrl: z.string().optional(),
@@ -105,6 +106,7 @@ export const signupFormSchema = z
       .email("Please enter a valid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
+    preferredLanguage: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

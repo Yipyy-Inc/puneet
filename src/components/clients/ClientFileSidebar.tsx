@@ -25,6 +25,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getCustomerLanguageLabel } from "@/lib/language-settings";
 import { bookings } from "@/data/bookings";
 import type { Client } from "@/types/client";
 
@@ -245,6 +246,14 @@ export function ClientFileSidebar({
             >
               {client.status}
             </Badge>
+            {client.preferredLanguage && (
+              <Badge
+                variant="outline"
+                className="h-5 border-indigo-200 bg-indigo-50 px-2 text-[10px] font-medium text-indigo-700"
+              >
+                {getCustomerLanguageLabel(client.preferredLanguage)}
+              </Badge>
+            )}
             {client.membership?.status === "active" && (
               <Badge
                 variant="outline"

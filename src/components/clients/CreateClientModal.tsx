@@ -40,6 +40,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePetAge } from "@/lib/pet-utils";
+import { useSettings } from "@/hooks/use-settings";
+import {
+  getCustomerLanguageLabel,
+  getEnabledCustomerLanguageOptions,
+} from "@/lib/language-settings";
 
 // ========================================
 // Types
@@ -133,7 +138,7 @@ const DEFAULT_CLIENT: ClientForm = {
   emergencyRelationship: "",
   emergencyPhone: "",
   contactMethod: "sms",
-  language: "English",
+  language: "en",
   vetName: "",
   vetPhone: "",
 };
@@ -184,6 +189,7 @@ interface CreateClientModalProps {
     name: string;
     email: string;
     phone?: string;
+    preferredLanguage?: string;
     status: string;
     facility: string;
     address: {
@@ -256,6 +262,16 @@ export function CreateClientModal({
   onSave,
   facilityName,
 }: CreateClientModalProps) {
+  const { languageSettings } = useSettings();
+  const customerLanguageOptions = getEnabledCustomerLanguageOptions(
+    languageSettings,
+  );
+  const showPreferredLanguageField =
+    languageSettings.customerLanguagePreferenceEnabled &&
+    customerLanguageOptions.length > 0;
+  const fallbackPreferredLanguage =
+    customerLanguageOptions[0]?.code ?? DEFAULT_CLIENT.language;
+
   const [initialDraft] = useState<CreateClientDraft>(() =>
     loadCreateClientDraft(),
   );
@@ -267,6 +283,11 @@ export function CreateClientModal({
   const [client, setClient] = useState<ClientForm>(
     initialDraft.client ?? DEFAULT_CLIENT,
   );
+  const selectedPreferredLanguage = showPreferredLanguageField
+    ? customerLanguageOptions.some((option) => option.code === client.language)
+      ? client.language
+      : fallbackPreferredLanguage
+    : DEFAULT_CLIENT.language;
 
   // Step 2: Pets
   const [petForm, setPetForm] = useState<PetForm>({ ...EMPTY_PET });
@@ -361,6 +382,9 @@ export function CreateClientModal({
       name: client.name.trim(),
       email: client.email.trim(),
       phone: client.phone.trim(),
+      preferredLanguage: showPreferredLanguageField
+        ? selectedPreferredLanguage
+        : undefined,
       status: "active",
       facility: facilityName,
       address: {
@@ -589,23 +613,27 @@ export function CreateClientModal({
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Language">
-                <Select
-                  value={client.language}
-                  onValueChange={(v) => updateClient("language", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="English">English</SelectItem>
-                    <SelectItem value="French">French</SelectItem>
-                    <SelectItem value="Spanish">Spanish</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
+            {showPreferredLanguageField && (
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Preferred Language">
+                  <Select
+                    value={selectedPreferredLanguage}
+                    onValueChange={(v) => updateClient("language", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customerLanguageOptions.map((option) => (
+                        <SelectItem key={option.code} value={option.code}>
+                          {getCustomerLanguageLabel(option.code)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            )}
           </div>
         )}
 
@@ -1097,6 +1125,11 @@ export function CreateClientModal({
               <p className="text-muted-foreground text-xs">
                 {client.street}, {client.city}, {client.state} {client.zip}
               </p>
+              {showPreferredLanguageField && (
+                <p className="text-muted-foreground text-xs">
+                  Preferred language: {getCustomerLanguageLabel(selectedPreferredLanguage)}
+                </p>
+              )}
               <p className="text-muted-foreground mt-1 text-xs">
                 Emergency: {client.emergencyName} (
                 {client.emergencyRelationship}) · {client.emergencyPhone}
