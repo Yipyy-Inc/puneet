@@ -14,6 +14,8 @@ import type {
   FacilityResource,
 } from "@/types/facility";
 import {
+  getModuleWorkflowQuestionnaire,
+  normalizeCustomServiceModule,
   defaultCustomServiceModules,
   defaultFacilityResources,
 } from "@/data/custom-services";
@@ -35,7 +37,7 @@ interface CustomServicesContextValue {
     id: string,
     status: CustomServiceStatus,
     reason?: string,
-  ) => void;
+  ) => { ok: boolean; reason?: string };
   // Resource CRUD
   addResource: (resource: FacilityResource) => void;
   updateResource: (id: string, updates: Partial<FacilityResource>) => void;
@@ -77,7 +79,9 @@ function loadStored<T>(key: string, fallback: T): T {
 export function CustomServicesProvider({ children }: { children: ReactNode }) {
   // Lazy-initialize from localStorage to avoid SSR flash
   const [modules, setModules] = useState<CustomServiceModule[]>(() =>
-    loadStored(MODULES_KEY, defaultCustomServiceModules),
+    loadStored(MODULES_KEY, defaultCustomServiceModules).map(
+      normalizeCustomServiceModule,
+    ),
   );
   const [resources, setResources] = useState<FacilityResource[]>(() =>
     loadStored(RESOURCES_KEY, defaultFacilityResources),
@@ -121,7 +125,7 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
 
   const addModule = useCallback(
     (module: CustomServiceModule) => {
-      persistModules((prev) => [...prev, module]);
+      persistModules((prev) => [...prev, normalizeCustomServiceModule(module)]);
     },
     [persistModules],
   );
@@ -131,7 +135,11 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
       persistModules((prev) =>
         prev.map((m) =>
           m.id === id
-            ? { ...m, ...updates, updatedAt: new Date().toISOString() }
+            ? normalizeCustomServiceModule({
+                ...m,
+                ...updates,
+                updatedAt: new Date().toISOString(),
+              })
             : m,
         ),
       );
@@ -166,31 +174,60 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
         name: `${source.name} (Copy)`,
         slug,
         status: "draft",
+        workflow: source.workflow
+          ? {
+              ...source.workflow,
+              questionnaireCompleted: false,
+              questionnaireCompletedAt: undefined,
+            }
+          : source.workflow,
         createdAt: now,
         updatedAt: now,
       };
-      persistModules((prev) => [...prev, duplicate]);
-      return duplicate;
+      const normalized = normalizeCustomServiceModule(duplicate);
+      persistModules((prev) => [...prev, normalized]);
+      return normalized;
     },
     [modules, persistModules],
   );
 
   const setModuleStatus = useCallback(
     (id: string, status: CustomServiceStatus, reason?: string) => {
+      const target = modules.find((module) => module.id === id);
+      if (!target) {
+        return {
+          ok: false,
+          reason: "Module not found",
+        };
+      }
+
+      if (status === "active") {
+        const workflow = getModuleWorkflowQuestionnaire(target);
+        if (!workflow.questionnaireCompleted) {
+          return {
+            ok: false,
+            reason:
+              "Complete the custom service setup questionnaire before activation.",
+          };
+        }
+      }
+
       persistModules((prev) =>
         prev.map((m) =>
           m.id === id
-            ? {
+            ? normalizeCustomServiceModule({
                 ...m,
                 status,
                 disableReason: status === "disabled" ? reason : undefined,
                 updatedAt: new Date().toISOString(),
-              }
+              })
             : m,
         ),
       );
+
+      return { ok: true };
     },
-    [persistModules],
+    [modules, persistModules],
   );
 
   // --- Resource CRUD ---
@@ -239,7 +276,9 @@ export function CustomServicesProvider({ children }: { children: ReactNode }) {
   // --- Reset ---
 
   const resetCustomServices = useCallback(() => {
-    persistModules(() => defaultCustomServiceModules);
+    persistModules(() =>
+      defaultCustomServiceModules.map(normalizeCustomServiceModule),
+    );
     persistResources(() => defaultFacilityResources);
   }, [persistModules, persistResources]);
 

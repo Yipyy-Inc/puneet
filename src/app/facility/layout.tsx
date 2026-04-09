@@ -17,6 +17,7 @@ import { FacilityNotificationsDropdown } from "@/components/facility/FacilityNot
 import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPanel";
 import { CallingButton } from "@/components/layout/CallingButton";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
+import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
 
 export default async function FacilityLayout({
   children,
@@ -60,6 +61,7 @@ export default async function FacilityLayout({
               </div>
             </header>
             <main className="flex-1">{children}</main>
+            <FacilityMobileBottomNav />
             <footer className="text-muted-foreground flex items-center justify-center border-t px-4 py-3 text-xs">
               © 2026 Yipyy. All rights reserved.
             </footer>

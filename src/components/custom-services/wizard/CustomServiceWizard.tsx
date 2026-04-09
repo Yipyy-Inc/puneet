@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Stepper,
   StepperContent,
@@ -16,6 +17,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { BasicInfoStep } from "./steps/BasicInfoStep";
+import { WorkflowQuestionnaireStep } from "./steps/WorkflowQuestionnaireStep";
 import { CalendarAvailabilityStep } from "./steps/CalendarAvailabilityStep";
 import { CheckInOutStep } from "./steps/CheckInOutStep";
 import { StayBasedStep } from "./steps/StayBasedStep";
@@ -27,7 +29,10 @@ import { EligibilityStep } from "./steps/EligibilityStep";
 import { CareInstructionsStep } from "./steps/CareInstructionsStep";
 import { WizardReviewPanel } from "./WizardReviewPanel";
 import { useCustomServices } from "@/hooks/use-custom-services";
-import { createDefaultCustomServiceModule } from "@/data/custom-services";
+import {
+  createDefaultCustomServiceModule,
+  getModuleWorkflowQuestionnaire,
+} from "@/data/custom-services";
 import type { CustomServiceModule } from "@/types/facility";
 
 // ========================================
@@ -36,6 +41,11 @@ import type { CustomServiceModule } from "@/types/facility";
 
 const WIZARD_STEPS: Step[] = [
   { id: "basic", title: "Basic Info", description: "Name & category" },
+  {
+    id: "workflow",
+    title: "Workflow Setup",
+    description: "Required questionnaire",
+  },
   { id: "calendar", title: "Calendar", description: "Scheduling" },
   { id: "checkin", title: "Check-In/Out", description: "Arrival tracking" },
   { id: "stay", title: "Stay-Based", description: "Multi-day stays" },
@@ -65,6 +75,11 @@ const STEP_DETAILS: { title: string; description: string }[] = [
     title: "Basic Information",
     description:
       "Give your service a name, choose a category, pick an icon, and add a public description.",
+  },
+  {
+    title: "Required Workflow Questionnaire",
+    description:
+      "Answer the 8 required setup questions. These responses automatically configure how the service behaves across calendar, booking, tasks, resources, online booking, and reporting.",
   },
   {
     title: "Calendar & Availability",
@@ -168,6 +183,9 @@ export function CustomServiceWizard({
     if (step === 0) {
       return formData.name.trim().length > 0 && formData.slug.length > 0;
     }
+    if (step === 1) {
+      return getModuleWorkflowQuestionnaire(formData).questionnaireCompleted;
+    }
     return true;
   };
 
@@ -188,6 +206,13 @@ export function CustomServiceWizard({
   };
 
   const handleSave = async () => {
+    const workflow = getModuleWorkflowQuestionnaire(formData);
+    if (!workflow.questionnaireCompleted) {
+      setCurrentStep(1);
+      toast.error("Complete the workflow questionnaire before saving.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const now = new Date().toISOString();
@@ -251,37 +276,44 @@ export function CustomServiceWizard({
                 />
               )}
               {currentStep === 1 && (
-                <CalendarAvailabilityStep
+                <WorkflowQuestionnaireStep
                   data={formData}
                   resources={resources}
                   onChange={handleChange}
                 />
               )}
               {currentStep === 2 && (
-                <CheckInOutStep data={formData} onChange={handleChange} />
+                <CalendarAvailabilityStep
+                  data={formData}
+                  resources={resources}
+                  onChange={handleChange}
+                />
               )}
               {currentStep === 3 && (
-                <StayBasedStep data={formData} onChange={handleChange} />
+                <CheckInOutStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 4 && (
-                <OnlineBookingStep data={formData} onChange={handleChange} />
+                <StayBasedStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 5 && (
-                <PricingStep data={formData} onChange={handleChange} />
+                <OnlineBookingStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 6 && (
-                <StaffAssignmentStep data={formData} onChange={handleChange} />
+                <PricingStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 7 && (
-                <YipyyGoConfigStep data={formData} onChange={handleChange} />
+                <StaffAssignmentStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 8 && (
-                <EligibilityStep data={formData} onChange={handleChange} />
+                <YipyyGoConfigStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 9 && (
-                <CareInstructionsStep data={formData} onChange={handleChange} />
+                <EligibilityStep data={formData} onChange={handleChange} />
               )}
               {currentStep === 10 && (
+                <CareInstructionsStep data={formData} onChange={handleChange} />
+              )}
+              {currentStep === 11 && (
                 <WizardReviewPanel
                   data={formData}
                   onEditStep={handleEditStep}
