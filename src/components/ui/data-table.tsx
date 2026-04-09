@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search } from "lucide-react";
+import { useUiText } from "@/hooks/use-ui-text";
 
 export interface ColumnDef<T> {
   accessorKey: string;
@@ -41,6 +42,7 @@ export function DataTable<T extends object>({
   itemsPerPage = 50,
   onRowClick,
 }: DataTableProps<T>) {
+  const { t } = useUiText();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Get nested value from object
@@ -76,7 +78,7 @@ export function DataTable<T extends object>({
         <div className="relative max-w-sm">
           <Search className="text-muted-foreground absolute top-2.5 left-2 size-4" />
           <Input
-            placeholder={searchPlaceholder}
+            placeholder={t(searchPlaceholder)}
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -103,7 +105,7 @@ export function DataTable<T extends object>({
                   colSpan={columns.length}
                   className="text-muted-foreground py-8 text-center"
                 >
-                  No data found
+                  {t("No data found")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -141,7 +143,7 @@ export function DataTable<T extends object>({
       {/* Results count */}
       {searchTerm && (
         <div className="text-muted-foreground text-sm">
-          Showing {filteredData.length} of {data.length} results
+          {t("Showing")} {filteredData.length} {t("of")} {data.length} {t("results")}
         </div>
       )}
     </div>

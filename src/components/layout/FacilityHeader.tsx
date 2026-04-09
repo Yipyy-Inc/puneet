@@ -27,6 +27,7 @@ import type { NewBooking, Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
 import { CreateClientModal } from "@/components/clients/CreateClientModal";
+import { useUiText } from "@/hooks/use-ui-text";
 
 interface FacilityHeaderProps {
   facilityId?: number;
@@ -34,6 +35,7 @@ interface FacilityHeaderProps {
 
 export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
   const { openBookingModal } = useBookingModal();
+  const { t } = useUiText();
 
   // Modal states
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
@@ -75,7 +77,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
     // For now, just show a success message
     // In a real app, this would save to the database
     toast.success(`Client ${newClient.name} created`, {
-      description: "New client has been added successfully.",
+      description: t("New client has been added successfully."),
     });
     setIsCreateClientModalOpen(false);
   };
@@ -113,7 +115,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
         onClick: () => {
           setBookings((prev) => prev.filter((b) => b.id !== bookingWithId.id));
           toast.info("Booking undone", {
-            description: `Booking #${bookingWithId.id} has been removed.`,
+            description: `Booking #${bookingWithId.id} ${t("has been removed.")}`,
           });
         },
       },
@@ -123,13 +125,13 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
 
   const handleCreateWaitlist = () => {
     toast.info("Waitlist feature coming soon", {
-      description: "This feature is not yet implemented.",
+      description: t("This feature is not yet implemented."),
     });
   };
 
   const handleQuickDaycareCheckIn = () => {
     toast.info("Quick daycare check-in feature coming soon", {
-      description: "This feature is not yet implemented.",
+      description: t("This feature is not yet implemented."),
     });
   };
 
@@ -145,20 +147,20 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
                   variant="ghost"
                   size="icon"
                   className="size-10 rounded-xl"
-                  aria-label="Create"
+                  aria-label={t("Create")}
                 >
                   <Plus className="text-muted-foreground size-5" />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent side="bottom" align="center">
-              Create
+              {t("Create")}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => setIsCreateClientModalOpen(true)}>
               <User className="mr-2 size-4" />
-              New Client
+              {t("New Client")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
@@ -171,7 +173,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               }
             >
               <Calendar className="mr-2 size-4" />
-              New Booking
+              {t("New Booking")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -180,7 +182,7 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               }}
             >
               <ShoppingBag className="mr-2 size-4" />
-              Retail Sale
+              {t("Retail Sale")}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -194,11 +196,11 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
               }}
             >
               <FileText className="mr-2 size-4" />
-              New Estimate
+              {t("New Estimate")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleQuickDaycareCheckIn}>
               <Zap className="mr-2 size-4" />
-              Quick Daycare Check-in
+              {t("Quick Daycare Check-in")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

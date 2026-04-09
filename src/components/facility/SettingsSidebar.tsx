@@ -31,6 +31,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useUiText } from "@/hooks/use-ui-text";
 
 export interface SettingsSection {
   id: string;
@@ -131,6 +132,7 @@ export function SettingsSidebar({
   activeSection,
   onSectionChange,
 }: SettingsSidebarProps) {
+  const { t } = useUiText();
   const { modules } = useCustomServices();
   const activeModules = modules.filter((m) => m.status === "active");
 
@@ -157,7 +159,7 @@ export function SettingsSidebar({
       {groups.map((group) => (
         <Collapsible key={group.label} defaultOpen>
           <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold tracking-wider uppercase">
-            {group.label}
+            {t(group.label)}
             <ChevronDown className="size-3" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -177,7 +179,7 @@ export function SettingsSidebar({
                     )}
                   >
                     <Icon className="size-4" />
-                    {section.label}
+                    {t(section.label)}
                   </button>
                 );
               })}

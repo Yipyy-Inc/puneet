@@ -25,6 +25,16 @@ import {
   moduleAddons,
   facilityHolidays,
 } from "@/data/settings";
+import {
+  APP_LANGUAGE_SETTINGS_STORAGE_KEY,
+  DEFAULT_APP_LANGUAGE_SETTINGS,
+  getClientCookieValue,
+  normalizeLanguageSettings,
+  persistLanguageSettingsCookies,
+  resolveLocaleForSettings,
+  type AppLanguageSettings,
+} from "@/lib/language-settings";
+import { dispatchAppLanguageChanged } from "@/hooks/use-app-locale";
 import type {
   ModuleConfig,
   EvaluationConfig,
@@ -69,6 +79,7 @@ interface SettingsContextValue {
   addons: ModuleAddon[];
   weatherRules: WeatherWarningRule[];
   holidays: Array<{ month: number; day: number; name: string }>;
+  languageSettings: AppLanguageSettings;
   updateDaycare: (config: ModuleConfig) => void;
   updateBoarding: (config: ModuleConfig) => void;
   updateGrooming: (config: ModuleConfig) => void;
@@ -90,6 +101,7 @@ interface SettingsContextValue {
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
   updateWeatherRules: (rules: WeatherWarningRule[]) => void;
+  updateLanguageSettings: (settings: AppLanguageSettings) => void;
   resetModules: () => void;
 }
 
@@ -178,6 +190,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       loadStored("settings-profile", businessProfile),
       businessProfile,
     ),
+  );
+  const [languageSettings, setLanguageSettings] = useState<AppLanguageSettings>(
+    () =>
+      normalizeLanguageSettings(
+        loadStored(APP_LANGUAGE_SETTINGS_STORAGE_KEY, DEFAULT_APP_LANGUAGE_SETTINGS),
+      ),
   );
   const [rules, setRules] = useState<BookingRules>(() =>
     loadStored("settings-rules", bookingRules),
@@ -270,6 +288,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setProfile(normalizedProfile);
     localStorage.setItem("settings-profile", JSON.stringify(normalizedProfile));
   };
+  const updateLanguageSettings = (settings: AppLanguageSettings) => {
+    const normalizedSettings = normalizeLanguageSettings(settings);
+
+    setLanguageSettings(normalizedSettings);
+    localStorage.setItem(
+      APP_LANGUAGE_SETTINGS_STORAGE_KEY,
+      JSON.stringify(normalizedSettings),
+    );
+    persistLanguageSettingsCookies(normalizedSettings);
+
+    const currentLocale =
+      getClientCookieValue("NEXT_LOCALE") ?? normalizedSettings.primaryLocale;
+    const resolvedLocale = resolveLocaleForSettings(
+      currentLocale,
+      normalizedSettings,
+    );
+    const oneYearSeconds = 60 * 60 * 24 * 365;
+    document.cookie = `NEXT_LOCALE=${resolvedLocale}; path=/; max-age=${oneYearSeconds}`;
+    dispatchAppLanguageChanged();
+  };
   const updateRules = (rules: BookingRules) => {
     setRules(rules);
     localStorage.setItem("settings-rules", JSON.stringify(rules));
@@ -358,6 +396,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
     setWeatherRulesData(defaultWeatherRules);
+    setLanguageSettings(DEFAULT_APP_LANGUAGE_SETTINGS);
+    persistLanguageSettingsCookies(DEFAULT_APP_LANGUAGE_SETTINGS);
+    const oneYearSeconds = 60 * 60 * 24 * 365;
+    document.cookie = `NEXT_LOCALE=${DEFAULT_APP_LANGUAGE_SETTINGS.primaryLocale}; path=/; max-age=${oneYearSeconds}`;
+    dispatchAppLanguageChanged();
     localStorage.removeItem("settings-daycare");
     localStorage.removeItem("settings-boarding");
     localStorage.removeItem("settings-grooming");
@@ -379,6 +422,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
     localStorage.removeItem("settings-weather-rules");
+    localStorage.removeItem(APP_LANGUAGE_SETTINGS_STORAGE_KEY);
   };
 
   return (
@@ -406,6 +450,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         addons,
         weatherRules: weatherRulesData,
         holidays: facilityHolidays,
+        languageSettings,
         updateDaycare,
         updateBoarding,
         updateGrooming,
@@ -427,6 +472,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateIntegrations,
         updateAddons,
         updateWeatherRules,
+        updateLanguageSettings,
         resetModules,
       }}
     >

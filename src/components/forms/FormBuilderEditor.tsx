@@ -71,6 +71,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { FormPhase2Settings } from "@/components/forms/FormPhase2Settings";
 import { VariableRichInput } from "@/components/forms/VariableRichInput";
+import { useSettings } from "@/hooks/use-settings";
 import {
   resolveTemplate,
   getMockPreviewData,
@@ -402,6 +403,7 @@ export function FormBuilderEditor({
   templateId,
   onSave,
 }: FormBuilderEditorProps) {
+  const { languageSettings } = useSettings();
   const existing = initialFormId ? getFormById(initialFormId) : null;
   const template = templateId ? getTemplateById(templateId) : null;
 
@@ -480,6 +482,9 @@ export function FormBuilderEditor({
   const [i18nEnabled, setI18nEnabled] = useState(false);
   const [esignEnabled, setEsignEnabled] = useState(false);
   const [paymentBlockEnabled, setPaymentBlockEnabled] = useState(false);
+  const i18nEnabledForForm = languageSettings.secondaryEnabled
+    ? i18nEnabled
+    : false;
   const versionHistory = existing ? getFormVersionHistory(existing.id) : [];
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
@@ -1529,8 +1534,15 @@ export function FormBuilderEditor({
           questions={questions}
           scoring={scoringConfig}
           onScoringChange={setScoringConfig}
-          i18nEnabled={i18nEnabled}
-          onI18nEnabledChange={setI18nEnabled}
+          i18nEnabled={i18nEnabledForForm}
+          secondaryLanguageEnabled={languageSettings.secondaryEnabled}
+          onI18nEnabledChange={(enabled) => {
+            if (!languageSettings.secondaryEnabled) {
+              setI18nEnabled(false);
+              return;
+            }
+            setI18nEnabled(enabled);
+          }}
           onQuestionI18nChange={(qId, locale, label) => {
             setQuestions((prev) =>
               prev.map((q) =>

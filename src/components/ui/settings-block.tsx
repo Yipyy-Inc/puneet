@@ -4,6 +4,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Save, Edit } from "lucide-react";
+import { useUiText } from "@/hooks/use-ui-text";
 
 export function SettingsBlock<T>({
   title,
@@ -22,6 +23,7 @@ export function SettingsBlock<T>({
     setLocalData: (d: T) => void,
   ) => ReactNode;
 }) {
+  const { t } = useUiText();
   const [mounted, setMounted] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [localData, setLocalData] = useState(data);
@@ -64,16 +66,16 @@ export function SettingsBlock<T>({
             <div className="flex gap-2">
               <Button onClick={handleSave}>
                 <Save className="mr-2 size-4" />
-                Save
+                {t("Save")}
               </Button>
               <Button variant="outline" onClick={handleCancel}>
-                Cancel
+                {t("Cancel")}
               </Button>
             </div>
           ) : (
             <Button onClick={() => setIsEditing(true)}>
               <Edit className="mr-2 size-4" />
-              Edit
+              {t("Edit")}
             </Button>
           )}
         </div>
