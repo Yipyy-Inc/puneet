@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { facilityConfig } from "@/data/facility-config";
-import type { FeedingScheduleItem } from "@/types/booking";
+import type { FeedingScheduleItem, FoodUnit } from "@/types/booking";
 
 interface PetOption {
   id: number;
@@ -46,6 +46,61 @@ const FEEDING_UNITS = opts.units;
 const FEEDING_INSTRUCTIONS = opts.instructions;
 const ALLERGY_PRESETS = opts.allergyPresets;
 
+function toFoodUnit(unit: string): FoodUnit {
+  const normalized = unit.trim().toLowerCase();
+  switch (normalized) {
+    case "scoop":
+      return "scoop";
+    case "cup":
+    case "cups":
+      return "cups";
+    case "oz":
+      return "oz";
+    case "tbsp":
+      return "tbsp";
+    case "gram":
+    case "grams":
+      return "grams";
+    default:
+      return "other";
+  }
+}
+
+function toUnitLabel(unit?: string): string {
+  const normalized = unit?.trim().toLowerCase();
+  switch (normalized) {
+    case "scoop":
+      return "Scoop";
+    case "cup":
+    case "cups":
+      return "Cup";
+    case "oz":
+      return "Oz";
+    case "tbsp":
+      return "Tbsp";
+    case "grams":
+    case "gram":
+      return "Grams";
+    case "other":
+      return "Other";
+    default:
+      return "Cup";
+  }
+}
+
+function deriveSharedUnitLabel(
+  occasions: FeedingScheduleItem["occasions"],
+): string | undefined {
+  const units = new Set(
+    occasions
+      .map((occasion) => occasion.components[0]?.unit)
+      .filter((value): value is FoodUnit => Boolean(value)),
+  );
+
+  if (units.size !== 1) return undefined;
+  return toUnitLabel(Array.from(units)[0]);
+}
+
 function makeId() {
   return `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -68,6 +123,9 @@ export function SimpleFeedingForm({
   selectedPets,
 }: SimpleFeedingFormProps) {
   const [customAllergyInput, setCustomAllergyInput] = useState("");
+  const [customInstructionInputs, setCustomInstructionInputs] = useState<
+    Record<string, string>
+  >({});
   const [otherFoodInputs, setOtherFoodInputs] = useState<
     Record<string, string>
   >({});
@@ -206,6 +264,41 @@ export function SimpleFeedingForm({
     });
   };
 
+  const updateMealUnit = (
+    item: FeedingScheduleItem,
+    occId: string,
+    unitLabel: string,
+  ) => {
+    const nextUnit = toFoodUnit(unitLabel);
+    const nextOccasions = item.occasions.map((o) =>
+      o.id === occId
+        ? {
+            ...o,
+            components:
+              o.components.length > 0
+                ? o.components.map((c, i) =>
+                    i === 0 ? { ...c, unit: nextUnit } : c,
+                  )
+                : [
+                    {
+                      id: makeId(),
+                      type: "kibble" as const,
+                      name: "",
+                      amount: "1",
+                      unit: nextUnit,
+                    },
+                  ],
+          }
+        : o,
+    );
+
+    saveItem({
+      ...item,
+      occasions: nextOccasions,
+      feedingUnit: deriveSharedUnitLabel(nextOccasions),
+    });
+  };
+
   const toggleAllergy = (item: FeedingScheduleItem, a: string) => {
     const current = item.allergies ?? [];
     const next = current.includes(a)
@@ -277,6 +370,7 @@ export function SimpleFeedingForm({
               const foodName = comp?.name || "";
               const isOther = foodName === "Other";
               const otherVal = otherFoodInputs[occ.id] ?? "";
+              const activeUnit = toUnitLabel(comp?.unit || item.feedingUnit);
 
               return (
                 <div key={occ.id} className="rounded-xl border p-3">
@@ -384,12 +478,10 @@ export function SimpleFeedingForm({
                           <button
                             key={u}
                             type="button"
-                            onClick={() =>
-                              saveItem({ ...item, feedingUnit: u })
-                            }
+                            onClick={() => updateMealUnit(item, occ.id, u)}
                             className={cn(
                               "h-full px-2 text-[11px] font-medium transition-colors",
-                              (item.feedingUnit || "Cup") === u
+                              activeUnit === u
                                 ? "bg-orange-500 text-white"
                                 : "text-slate-500 hover:bg-slate-100",
                             )}
@@ -435,6 +527,54 @@ export function SimpleFeedingForm({
                 </button>
               );
             })}
+
+            {!FEEDING_INSTRUCTIONS.includes(item.feedingInstruction ?? "") &&
+              item.feedingInstruction && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    saveItem({
+                      ...item,
+                      feedingInstruction: undefined,
+                    })
+                  }
+                  className="flex items-center gap-1 rounded-lg border-2 border-orange-400 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700"
+                >
+                  {item.feedingInstruction}
+                  <X className="size-3" />
+                </button>
+              )}
+
+            <form
+              className="flex items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const customValue =
+                  customInstructionInputs[item.id]?.trim() ?? "";
+                if (!customValue) return;
+
+                saveItem({
+                  ...item,
+                  feedingInstruction: customValue,
+                });
+                setCustomInstructionInputs((prev) => ({
+                  ...prev,
+                  [item.id]: "",
+                }));
+              }}
+            >
+              <Input
+                value={customInstructionInputs[item.id] ?? ""}
+                onChange={(e) =>
+                  setCustomInstructionInputs((prev) => ({
+                    ...prev,
+                    [item.id]: e.target.value,
+                  }))
+                }
+                placeholder="+ Other"
+                className="h-8 w-24 text-xs"
+              />
+            </form>
           </div>
         </div>
 

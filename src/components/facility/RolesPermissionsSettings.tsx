@@ -1,12 +1,20 @@
 "use client";
 
-import { type ElementType, useMemo, useState } from "react";
+import { type ElementType, useEffect, useMemo, useState } from "react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import {
+  CheckCheck,
   RotateCcw,
   Search,
   Shield,
@@ -112,21 +120,45 @@ function cloneRolePermissionMap(source: RolePermissionMap): RolePermissionMap {
 
 export function RolesPermissionsSettings() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeRole, setActiveRole] = useState<FacilityRole>("manager");
+  const [openStudioCategories, setOpenStudioCategories] = useState<string[]>(
+    [],
+  );
   const [permissionsByRole, setPermissionsByRole] = useState<RolePermissionMap>(
     () => buildStoredRolePermissionMap(),
   );
 
-  const totalPermissionKeys = useMemo(() => {
-    return Object.values(PERMISSION_CATEGORIES).reduce(
-      (total, permissions) => total + permissions.length,
-      0,
-    );
+  const allPermissionKeys = useMemo(() => {
+    const seen = new Set<Permission>();
+    const ordered: Permission[] = [];
+
+    for (const permissions of Object.values(
+      PERMISSION_CATEGORIES,
+    ) as Permission[][]) {
+      for (const permission of permissions) {
+        if (seen.has(permission)) continue;
+        seen.add(permission);
+        ordered.push(permission);
+      }
+    }
+
+    return ordered;
   }, []);
+
+  const totalPermissionKeys = allPermissionKeys.length;
 
   const totalEnabled = useMemo(() => {
     return ALL_FACILITY_ROLES.reduce((total, role) => {
       return total + permissionsByRole[role].size;
     }, 0);
+  }, [permissionsByRole]);
+
+  const roleGrantCounts = useMemo(() => {
+    const counts = {} as Record<FacilityRole, number>;
+    for (const role of ALL_FACILITY_ROLES) {
+      counts[role] = permissionsByRole[role].size;
+    }
+    return counts;
   }, [permissionsByRole]);
 
   const filteredCategories = useMemo(() => {
@@ -155,6 +187,50 @@ export function RolesPermissionsSettings() {
       })
       .filter((entry) => entry.permissions.length > 0);
   }, [searchQuery]);
+
+  const activeRoleCoverage =
+    totalPermissionKeys === 0
+      ? 0
+      : Math.round((roleGrantCounts[activeRole] / totalPermissionKeys) * 100);
+
+  useEffect(() => {
+    const hasQuery = searchQuery.trim().length > 0;
+    const studioValues = filteredCategories.map(
+      ({ category }) => `studio:${category}`,
+    );
+
+    if (hasQuery) {
+      setOpenStudioCategories(studioValues);
+      return;
+    }
+
+    setOpenStudioCategories((current) => {
+      const kept = current.filter((value) => studioValues.includes(value));
+      return kept;
+    });
+  }, [searchQuery, filteredCategories]);
+
+  const applyRolePermissionBatch = (
+    role: FacilityRole,
+    permissions: Permission[],
+    granted: boolean,
+  ) => {
+    for (const permission of permissions) {
+      updateRolePermission(role, permission, granted);
+    }
+
+    setPermissionsByRole((current) => {
+      const next = cloneRolePermissionMap(current);
+      for (const permission of permissions) {
+        if (granted) {
+          next[role].add(permission);
+        } else {
+          next[role].delete(permission);
+        }
+      }
+      return next;
+    });
+  };
 
   const handlePermissionChange = (
     role: FacilityRole,
@@ -190,213 +266,372 @@ export function RolesPermissionsSettings() {
   };
 
   return (
-    <Card className="border-slate-200/80 bg-white shadow-[0_18px_44px_-26px_rgba(15,23,42,0.35)]">
-      <CardHeader className="space-y-4 border-b border-slate-200/70 pb-5">
+    <Card className="relative overflow-hidden border-slate-200/80 bg-white shadow-[0_20px_54px_-28px_rgba(15,23,42,0.45)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_42%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.1),transparent_38%)]" />
+
+      <CardHeader className="relative space-y-5 border-b border-slate-200/70 pb-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="max-w-3xl">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Shield className="size-4 text-slate-600" />
+            <CardTitle className="flex items-center gap-2 text-base text-slate-900">
+              <span className="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white shadow-sm">
+                <Shield className="size-4 text-slate-700" />
+              </span>
               Roles & Permissions
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
-              Configure role-based access for every Yipyy capability with an
-              enterprise-grade security matrix.
+              Configure access by role with a clear studio workflow and
+              category-level controls.
             </p>
           </div>
+
           <Button variant="outline" size="sm" onClick={handleResetAll}>
             <RotateCcw className="mr-1.5 size-3.5" />
             Reset all
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">{ALL_FACILITY_ROLES.length} roles</Badge>
-          <Badge variant="outline">
-            {Object.keys(PERMISSION_CATEGORIES).length} categories
-          </Badge>
-          <Badge variant="outline">{totalPermissionKeys} permissions</Badge>
-          <Badge variant="outline">{totalEnabled} active grants</Badge>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+            <p className="text-muted-foreground text-xs font-medium">
+              Roles
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {ALL_FACILITY_ROLES.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+            <p className="text-muted-foreground text-xs font-medium">
+              Categories
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {Object.keys(PERMISSION_CATEGORIES).length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+            <p className="text-muted-foreground text-xs font-medium">
+              Permissions
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {totalPermissionKeys}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+            <p className="text-muted-foreground text-xs font-medium">
+              Active Grants
+            </p>
+            <p className="mt-1 text-xl font-semibold text-slate-900">
+              {totalEnabled}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {ALL_FACILITY_ROLES.map((role) => {
-            const Icon = ROLE_VISUALS[role].icon;
-            return (
-              <span
-                key={role}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium backdrop-blur-sm",
-                  ROLE_VISUALS[role].chipClassName,
-                )}
-              >
-                <Icon
-                  className={cn("size-3.5", ROLE_VISUALS[role].iconClassName)}
-                />
-                {FACILITY_ROLE_LABELS[role]}
-              </span>
-            );
-          })}
-        </div>
-
-        <div className="relative max-w-sm">
+        <div className="relative w-full max-w-md">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
           <Input
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="h-9 pl-8"
+            className="h-9 border-slate-200 bg-white/90 pl-8"
             placeholder="Search categories or permissions"
           />
         </div>
       </CardHeader>
 
-      <CardContent className="relative space-y-5 pt-5">
+      <CardContent className="relative pt-5">
         {filteredCategories.length === 0 ? (
-          <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
+          <div className="text-muted-foreground rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm">
             No matching permission categories found.
           </div>
         ) : (
-          filteredCategories.map(({ category, permissions }) => (
-            <div
-              key={category}
-              className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.7)] backdrop-blur-sm transition-all hover:border-slate-300 hover:shadow-[0_18px_34px_-24px_rgba(15,23,42,0.65)]"
-            >
-              <div className="flex items-center justify-between border-b bg-linear-to-r from-slate-50 via-white to-slate-100/70 px-4 py-2.5">
-                <p className="text-sm font-semibold">{category}</p>
-                <Badge variant="secondary" className="text-xs">
-                  {permissions.length} permissions
-                </Badge>
+          <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <div className="space-y-2.5">
+              {ALL_FACILITY_ROLES.map((role) => {
+                const Icon = ROLE_VISUALS[role].icon;
+                const granted = roleGrantCounts[role];
+                const coverage =
+                  totalPermissionKeys === 0
+                    ? 0
+                    : Math.round((granted / totalPermissionKeys) * 100);
+                const active = role === activeRole;
+
+                return (
+                  <div
+                    key={role}
+                    className={cn(
+                      "rounded-2xl border bg-white/90 p-3 shadow-sm transition-all",
+                      active
+                        ? "border-slate-900/20 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.75)]"
+                        : "border-slate-200 hover:border-slate-300",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setActiveRole(role)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn(
+                              "flex size-8 items-center justify-center rounded-lg border",
+                              ROLE_VISUALS[role].iconWrapClassName,
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "size-4",
+                                ROLE_VISUALS[role].iconClassName,
+                              )}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {FACILITY_ROLE_LABELS[role]}
+                            </p>
+                            <p className="text-muted-foreground text-[11px]">
+                              {FACILITY_ROLE_DESCRIPTIONS[role]}
+                            </p>
+                          </div>
+                        </div>
+                        {active && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="mt-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-medium text-slate-600">
+                          <span>{granted} granted</span>
+                          <span>{coverage}% coverage</span>
+                        </div>
+                        <Progress value={coverage} className="h-1.5" />
+                      </div>
+                    </button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 h-7 w-full justify-center text-xs"
+                      onClick={() => handleResetRole(role)}
+                    >
+                      Reset role defaults
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-xl border",
+                        ROLE_VISUALS[activeRole].iconWrapClassName,
+                      )}
+                    >
+                      {(() => {
+                        const Icon = ROLE_VISUALS[activeRole].icon;
+                        return (
+                          <Icon
+                            className={cn(
+                              "size-5",
+                              ROLE_VISUALS[activeRole].iconClassName,
+                            )}
+                          />
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">
+                        Role
+                      </p>
+                      <p className="text-lg font-semibold text-slate-900">
+                        {FACILITY_ROLE_LABELS[activeRole]}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {FACILITY_ROLE_DESCRIPTIONS[activeRole]}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        applyRolePermissionBatch(activeRole, allPermissionKeys, true);
+                        toast.success(
+                          `${FACILITY_ROLE_LABELS[activeRole]} granted all permissions`,
+                        );
+                      }}
+                    >
+                      <CheckCheck className="mr-1.5 size-3.5" />
+                      Grant all
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        applyRolePermissionBatch(activeRole, allPermissionKeys, false);
+                        toast.success(
+                          `${FACILITY_ROLE_LABELS[activeRole]} permissions cleared`,
+                        );
+                      }}
+                    >
+                      Clear all
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResetRole(activeRole)}
+                    >
+                      <RotateCcw className="mr-1.5 size-3.5" />
+                      Reset role
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-muted-foreground text-[11px]">Granted</p>
+                    <p className="text-base font-semibold text-slate-900">
+                      {roleGrantCounts[activeRole]}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-muted-foreground text-[11px]">Coverage</p>
+                    <p className="text-base font-semibold text-slate-900">
+                      {activeRoleCoverage}%
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-muted-foreground text-[11px]">Search matches</p>
+                    <p className="text-base font-semibold text-slate-900">
+                      {filteredCategories.length} categories
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] text-sm">
-                  <thead>
-                    <tr className="border-b bg-slate-50/70">
-                      <th className="text-muted-foreground w-[320px] px-4 py-2 text-left text-xs font-semibold tracking-wide uppercase">
-                        Permission
-                      </th>
-                      {ALL_FACILITY_ROLES.map((role) => {
-                        const Icon = ROLE_VISUALS[role].icon;
+              <Accordion
+                type="multiple"
+                value={openStudioCategories}
+                onValueChange={setOpenStudioCategories}
+                className="space-y-3"
+              >
+                {filteredCategories.map(({ category, permissions }) => {
+                  const enabledInCategory = permissions.filter((permission) =>
+                    permissionsByRole[activeRole].has(permission),
+                  ).length;
+                  const coverage =
+                    permissions.length === 0
+                      ? 0
+                      : Math.round((enabledInCategory / permissions.length) * 100);
+                  const itemValue = `studio:${category}`;
 
-                        return (
-                          <th
-                            key={role}
-                            className="px-3 py-2 text-center text-[11px] font-semibold"
+                  return (
+                    <AccordionItem
+                      key={category}
+                      value={itemValue}
+                      className="overflow-hidden rounded-2xl border border-slate-200/85 bg-white shadow-[0_14px_28px_-24px_rgba(15,23,42,0.7)]"
+                    >
+                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                        <div className="flex w-full items-center justify-between gap-2 pr-2">
+                          <div className="min-w-0 text-left">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {category}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {enabledInCategory} of {permissions.length} enabled
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {coverage}%
+                          </Badge>
+                        </div>
+                      </AccordionTrigger>
+
+                      <AccordionContent className="pb-0">
+                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-2.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              applyRolePermissionBatch(activeRole, permissions, true);
+                              toast.success(
+                                `${FACILITY_ROLE_LABELS[activeRole]} granted all in ${category}`,
+                              );
+                            }}
                           >
-                            <div className="flex flex-col items-center gap-1">
+                            Grant all
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              applyRolePermissionBatch(activeRole, permissions, false);
+                              toast.success(
+                                `${FACILITY_ROLE_LABELS[activeRole]} cleared in ${category}`,
+                              );
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+
+                        <div className="grid gap-2 p-3">
+                          {permissions.map((permission) => {
+                            const checked = permissionsByRole[activeRole].has(permission);
+
+                            return (
                               <div
-                                className={cn(
-                                  "flex size-6 items-center justify-center rounded-md border",
-                                  ROLE_VISUALS[role].iconWrapClassName,
-                                )}
+                                key={permission}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 transition-colors hover:border-slate-300"
                               >
-                                <Icon
-                                  className={cn(
-                                    "size-3.5",
-                                    ROLE_VISUALS[role].iconClassName,
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-slate-900">
+                                    {PERMISSION_LABELS[permission]}
+                                  </p>
+                                  <p className="text-muted-foreground truncate text-[11px]">
+                                    {permission}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {checked && (
+                                    <Badge
+                                      variant="outline"
+                                      className="hidden border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700 sm:inline-flex"
+                                    >
+                                      Allowed
+                                    </Badge>
                                   )}
-                                />
-                              </div>
-                              <span>{FACILITY_ROLE_LABELS[role]}</span>
-                              <span className="text-muted-foreground text-[10px] font-normal">
-                                {permissionsByRole[role].size} granted
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 px-1.5 text-[10px]"
-                                onClick={() => handleResetRole(role)}
-                              >
-                                Reset
-                              </Button>
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {permissions.map((permission) => (
-                      <tr
-                        key={permission}
-                        className="group border-b transition-colors last:border-0 hover:bg-slate-50/70"
-                      >
-                        <td className="px-4 py-2.5 align-middle">
-                          <p className="font-medium">
-                            {PERMISSION_LABELS[permission]}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 text-xs">
-                            {permission}
-                          </p>
-                        </td>
-                        {ALL_FACILITY_ROLES.map((role) => {
-                          const checked =
-                            permissionsByRole[role].has(permission);
-                          return (
-                            <td
-                              key={`${permission}-${role}`}
-                              className="px-3 py-2.5 text-center align-middle"
-                            >
-                              <div className="flex justify-center">
-                                <div className="rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm transition-all group-hover:border-slate-300 group-hover:shadow">
                                   <Switch
                                     checked={checked}
                                     onCheckedChange={(next) =>
-                                      handlePermissionChange(
-                                        role,
-                                        permission,
-                                        next,
-                                      )
+                                      handlePermissionChange(activeRole, permission, next)
                                     }
-                                    aria-label={`${FACILITY_ROLE_LABELS[role]} can ${PERMISSION_LABELS[permission]}`}
+                                    aria-label={`${FACILITY_ROLE_LABELS[activeRole]} can ${PERMISSION_LABELS[permission]}`}
                                   />
                                 </div>
                               </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                            );
+                          })}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
             </div>
-          ))
+          </div>
         )}
-
-        <div className="grid gap-2 rounded-xl border border-dashed border-slate-300/90 bg-slate-50/55 p-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ALL_FACILITY_ROLES.map((role) => {
-            const Icon = ROLE_VISUALS[role].icon;
-
-            return (
-              <div
-                key={role}
-                className="rounded-xl border border-slate-200/85 bg-white/85 p-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow"
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-md border",
-                      ROLE_VISUALS[role].iconWrapClassName,
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        "size-3.5",
-                        ROLE_VISUALS[role].iconClassName,
-                      )}
-                    />
-                  </div>
-                  <p className="text-sm font-medium">
-                    {FACILITY_ROLE_LABELS[role]}
-                  </p>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {FACILITY_ROLE_DESCRIPTIONS[role]}
-                </p>
-              </div>
-            );
-          })}
-        </div>
       </CardContent>
     </Card>
   );

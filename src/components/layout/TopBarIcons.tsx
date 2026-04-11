@@ -157,7 +157,7 @@ function IconButton({
 
 export function TopBarIcons({
   navigate,
-  messagesHref = "/facility/dashboard/communications",
+  messagesHref = "/facility/dashboard/messaging",
   onQuickCreate,
   quickCreateClickTargetId,
   pollIntervalMs = 45_000,
