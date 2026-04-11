@@ -122,6 +122,27 @@ function fmtTime(t: string) {
   }
 }
 
+function formatFoodUnitLabel(unit: string): string {
+  switch (unit.trim().toLowerCase()) {
+    case "scoop":
+      return "Scoop";
+    case "cup":
+    case "cups":
+      return "Cup";
+    case "oz":
+      return "Oz";
+    case "tbsp":
+      return "Tbsp";
+    case "gram":
+    case "grams":
+      return "Grams";
+    case "other":
+      return "Other";
+    default:
+      return unit;
+  }
+}
+
 function fmtDateLong(d: Date | string) {
   const date = typeof d === "string" ? new Date(d + "T00:00:00") : d;
   return date.toLocaleDateString("en-US", {
@@ -553,46 +574,69 @@ export function ConfirmStep({
               }
             />
             {feedingSchedule.length > 0 ? (
-              feedingSchedule.map((item, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  {item.occasions.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {item.occasions.map((occ) => (
-                        <span
-                          key={occ.id}
-                          className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700"
-                        >
-                          {occ.label} · {fmtTime(occ.time)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {(item.feedingUnit || item.feedingInstruction) && (
-                    <div className="flex flex-wrap gap-1">
-                      {item.feedingUnit && (
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                          {item.feedingUnit}
-                        </span>
-                      )}
-                      {item.feedingInstruction && (
-                        <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-                          {item.feedingInstruction}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {item.allergies && item.allergies.length > 0 && (
-                    <p className="text-[11px] text-red-600">
-                      Allergies: {item.allergies.join(", ")}
-                    </p>
-                  )}
-                  {item.notes && (
-                    <p className="text-muted-foreground text-[11px] italic">
-                      {item.notes}
-                    </p>
-                  )}
-                </div>
-              ))
+              feedingSchedule.map((item, idx) => {
+                const unitsFromOccasions = Array.from(
+                  new Set(
+                    item.occasions.reduce<string[]>((labels, occasion) => {
+                      const unit = occasion.components[0]?.unit;
+                      if (unit) {
+                        labels.push(formatFoodUnitLabel(unit));
+                      }
+                      return labels;
+                    }, []),
+                  ),
+                );
+                const unitLabels =
+                  unitsFromOccasions.length > 0
+                    ? unitsFromOccasions
+                    : item.feedingUnit
+                      ? [formatFoodUnitLabel(item.feedingUnit)]
+                      : [];
+
+                return (
+                  <div key={idx} className="space-y-1.5">
+                    {item.occasions.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {item.occasions.map((occ) => (
+                          <span
+                            key={occ.id}
+                            className="rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700"
+                          >
+                            {occ.label} · {fmtTime(occ.time)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {(unitLabels.length > 0 || item.feedingInstruction) && (
+                      <div className="flex flex-wrap gap-1">
+                        {unitLabels.map((unitLabel) => (
+                          <span
+                            key={unitLabel}
+                            className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+                          >
+                            {unitLabel}
+                          </span>
+                        ))}
+                        {item.feedingInstruction && (
+                          <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                            {item.feedingInstruction}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {item.allergies && item.allergies.length > 0 && (
+                      <p className="text-[11px] text-red-600">
+                        Allergies: {item.allergies.join(", ")}
+                      </p>
+                    )}
+                    {item.notes && (
+                      <p className="text-muted-foreground text-[11px] italic">
+                        {item.notes}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               /* #1 — empty state */
               <p className="text-muted-foreground flex items-center gap-1 text-xs">

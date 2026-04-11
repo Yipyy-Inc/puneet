@@ -1,113 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Calendar,
-  Scissors,
-  Dog,
-  Home,
-  GraduationCap,
-  ChevronDown,
-} from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
-import { facilityConfig } from "@/data/facility-config";
-import Link from "next/link";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { clients } from "@/data/clients";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+const MOCK_CUSTOMER_ID = 15;
 
 export function QuickBookButton() {
-  const { selectedFacility: _selectedFacility } = useCustomerFacility();
-  const [open, setOpen] = useState(false);
+  const { selectedFacility } = useCustomerFacility();
+  const { openBookingModal } = useBookingModal();
+  const router = useRouter();
 
-  // Check which services are enabled
-  const services = {
-    grooming: facilityConfig.services.grooming?.enabled ?? false,
-    daycare: facilityConfig.services.daycare?.enabled ?? false,
-    boarding: facilityConfig.services.boarding?.enabled ?? false,
-    training: true, // TODO: Check from facility config
+  const customer = useMemo(
+    () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
+    [],
+  );
+
+  const handleOpenBookingWizard = () => {
+    if (!selectedFacility || !customer) {
+      toast.error("Unable to open booking wizard right now.");
+      return;
+    }
+
+    openBookingModal({
+      clients: [customer],
+      facilityId: selectedFacility.id,
+      facilityName: selectedFacility.name,
+      preSelectedClientId: customer.id,
+      onCreateBooking: () => {
+        toast.success("Booking created successfully!");
+        router.push("/customer/bookings");
+      },
+    });
   };
 
-  const enabledServices = Object.entries(services)
-    .filter(([_, enabled]) => enabled)
-    .map(([service]) => service);
-
-  if (enabledServices.length === 0) {
-    return null;
-  }
-
-  const serviceLinks: Record<
-    string,
-    { href: string; icon: typeof Calendar; label: string }
-  > = {
-    grooming: {
-      href: "/customer/bookings?service=grooming",
-      icon: Scissors,
-      label: "Grooming",
-    },
-    daycare: {
-      href: "/customer/bookings?service=daycare",
-      icon: Dog,
-      label: "Daycare",
-    },
-    boarding: {
-      href: "/customer/bookings?service=boarding",
-      icon: Home,
-      label: "Boarding",
-    },
-    training: {
-      href: "/customer/training",
-      icon: GraduationCap,
-      label: "Training",
-    },
-  };
-
-  // If only one service, show direct button
-  if (enabledServices.length === 1) {
-    const service = enabledServices[0];
-    const serviceInfo = serviceLinks[service];
-    if (!serviceInfo) return null;
-
-    const Icon = serviceInfo.icon;
-    return (
-      <Button asChild className="gap-2">
-        <Link href={serviceInfo.href}>
-          <Icon className="size-4" />
-          <span>Book {serviceInfo.label}</span>
-        </Link>
-      </Button>
-    );
-  }
-
-  // Multiple services - show dropdown
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button className="gap-2">
-          <Calendar className="size-4" />
-          <span>Book a Service</span>
-          <ChevronDown className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {enabledServices.map((service) => {
-          const serviceInfo = serviceLinks[service];
-          if (!serviceInfo) return null;
-          const Icon = serviceInfo.icon;
-          return (
-            <DropdownMenuItem key={service} asChild>
-              <Link href={serviceInfo.href} className="cursor-pointer">
-                <Icon className="mr-2 size-4" />
-                {serviceInfo.label}
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      className="gap-2"
+      onClick={handleOpenBookingWizard}
+      disabled={!selectedFacility || !customer}
+    >
+      <Calendar className="size-4" />
+      <span>Book a Service</span>
+    </Button>
   );
 }
