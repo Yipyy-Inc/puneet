@@ -57,10 +57,10 @@ export function OperationsCalendarContent({
       <CardHeader className="pb-4 bg-white/40 border-b border-slate-100/60 backdrop-blur-md relative z-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-3.5 text-xl font-bold tracking-tight">
-            <div className="flex items-center justify-center p-2.5 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-[14px] ring-1 ring-inset ring-indigo-500/20 text-indigo-600 shadow-inner animate-in zoom-in-50 duration-500 delay-200 backdrop-blur-sm">
+            <div className="flex items-center justify-center p-2.5 bg-sky-50 rounded-[14px] ring-1 ring-inset ring-sky-200/70 text-sky-600 shadow-inner animate-in zoom-in-50 duration-500 delay-200 backdrop-blur-sm">
               <CalendarClock className="size-5" />
             </div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-800 drop-shadow-sm">
+            <span className="text-slate-900 drop-shadow-sm">
               Client Schedule
             </span>
           </CardTitle>
@@ -85,19 +85,17 @@ export function OperationsCalendarContent({
       <CardContent className="p-0 transition-all duration-500 ease-in-out bg-[#fdfdfd]/80">
         {visibleEvents.length === 0 ? (
           <div className="relative flex min-h-[450px] flex-col items-center justify-center overflow-hidden p-8 animate-in fade-in zoom-in-95 duration-500">
-            {/* Ambient background glows for empty state */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-100/40 rounded-full blur-[64px] pointer-events-none"></div>
-            <div className="absolute top-1/2 left-1/2 translate-x-10 -translate-y-10 w-48 h-48 bg-purple-100/30 rounded-full blur-[48px] pointer-events-none"></div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-slate-100/60 rounded-full blur-[64px] pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col items-center space-y-6">
-              <div className="flex items-center justify-center p-5 bg-gradient-to-br from-white to-slate-50/50 rounded-full shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] ring-1 ring-slate-200/50 animate-bounce duration-1000">
-                <div className="p-3 bg-indigo-50 rounded-full text-indigo-400 shadow-inner">
+              <div className="flex items-center justify-center p-5 bg-white rounded-full shadow-[0_4px_24px_-8px_rgba(0,0,0,0.08)] ring-1 ring-slate-200/50 animate-bounce duration-1000">
+                <div className="p-3 bg-sky-50 rounded-full text-sky-500 shadow-inner">
                   <CalendarClock className="size-8 stroke-[1.5]" />
                 </div>
               </div>
               
               <div className="text-center space-y-2.5 max-w-sm">
-                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-500 tracking-tight">Your schedule is clear</h3>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Your schedule is clear</h3>
                 <p className="text-[15px] font-medium text-slate-500 leading-relaxed drop-shadow-sm">
                   You're perfectly caught up. Select a different date or add a new luxury appointment above to get started.
                 </p>

@@ -9,18 +9,12 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
-import {
-  type OperationsCalendarView,
-  formatDateKey,
-} from "@/lib/operations-calendar";
+import type { OperationsCalendarView } from "@/lib/operations-calendar";
 
 interface OperationsCalendarToolbarProps {
   view: OperationsCalendarView;
   onViewChange: (view: OperationsCalendarView) => void;
-  anchorDate: Date;
-  onDateChange: (date: string | "") => void;
   onToday: () => void;
   onStep: (direction: -1 | 1) => void;
   rangeLabel: string;
@@ -35,8 +29,6 @@ interface OperationsCalendarToolbarProps {
 export function OperationsCalendarToolbar({
   view,
   onViewChange,
-  anchorDate,
-  onDateChange,
   onToday,
   onStep,
   rangeLabel,
@@ -55,8 +47,7 @@ export function OperationsCalendarToolbar({
 
   return (
     <div className="relative animate-in slide-in-from-top-4 fade-in duration-700 ease-out z-10 w-full mb-2">
-      {/* Luxurious subtle glow effect behind the toolbar */}
-      <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-sky-100/50 via-indigo-100/40 to-purple-100/50 blur-xl opacity-70 pointer-events-none"></div>
+      <div className="absolute -inset-1 rounded-[2rem] bg-slate-100/70 blur-xl opacity-60 pointer-events-none"></div>
       
       <div className="relative rounded-[1.5rem] border border-white/80 bg-white/70 backdrop-blur-xl p-3 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] ring-1 ring-slate-900/5 transition-all">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-2">
@@ -94,17 +85,8 @@ export function OperationsCalendarToolbar({
               </Button>
             </div>
 
-            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 delay-150">
-              <div className="relative">
-                <DatePicker
-                  value={formatDateKey(anchorDate)}
-                  onValueChange={onDateChange}
-                  className="w-[160px] h-9 rounded-full bg-white border-slate-200/60 shadow-sm hover:border-indigo-200 focus-visible:ring-indigo-100 focus-visible:border-indigo-400 transition-all font-medium text-slate-700"
-                />
-              </div>
-              <div className="text-[15px] font-semibold text-slate-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 hidden sm:block">
-                {rangeLabel}
-              </div>
+            <div className="text-[15px] font-semibold text-slate-800 tracking-tight hidden sm:block animate-in fade-in slide-in-from-left-4 duration-500 delay-150">
+              {rangeLabel}
             </div>
           </div>
 
