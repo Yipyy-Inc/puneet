@@ -34,6 +34,25 @@ function parseISODateString(value: string | undefined | null): Date | null {
   return dt;
 }
 
+function parseTypedDateInput(value: string): Date | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return parseISODateString(`${y}-${pad2(Number(m))}-${pad2(Number(d))}`);
+  }
+
+  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const [, m, d, y] = slashMatch;
+    return parseISODateString(`${y}-${pad2(Number(m))}-${pad2(Number(d))}`);
+  }
+
+  return null;
+}
+
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -54,6 +73,14 @@ export interface DatePickerProps {
   max?: ISODateString;
   disabled?: boolean;
   className?: string;
+  popoverAlign?: "start" | "center" | "end";
+  popoverAlignOffset?: number;
+  popoverSide?: "top" | "right" | "bottom" | "left";
+  popoverSideOffset?: number;
+  popoverAvoidCollisions?: boolean;
+  popoverClassName?: string;
+  calendarClassName?: string;
+  showQuickPresets?: boolean;
 }
 
 export function DatePicker({
@@ -66,12 +93,50 @@ export function DatePicker({
   max,
   disabled,
   className,
+  popoverAlign = "start",
+  popoverAlignOffset,
+  popoverSide = "bottom",
+  popoverSideOffset,
+  popoverAvoidCollisions,
+  popoverClassName,
+  calendarClassName,
+  showQuickPresets = true,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const [manualDateInput, setManualDateInput] = React.useState(value ?? "");
+  const [manualInputError, setManualInputError] = React.useState("");
+  const [isNarrowViewport, setIsNarrowViewport] = React.useState(false);
 
   const selectedDate = React.useMemo(() => parseISODateString(value), [value]);
   const minDate = React.useMemo(() => parseISODateString(min), [min]);
   const maxDate = React.useMemo(() => parseISODateString(max), [max]);
+
+  React.useEffect(() => {
+    setManualDateInput(value ?? "");
+    setManualInputError("");
+  }, [open, value]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+    const syncViewport = () => setIsNarrowViewport(mediaQuery.matches);
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  const effectivePopoverAlign = isNarrowViewport ? "center" : popoverAlign;
+  const effectivePopoverAlignOffset = isNarrowViewport ? 0 : popoverAlignOffset;
+  const effectivePopoverSide = isNarrowViewport ? "bottom" : popoverSide;
+  const effectivePopoverSideOffset = isNarrowViewport ? 8 : popoverSideOffset;
+  const effectivePopoverAvoidCollisions = isNarrowViewport
+    ? true
+    : popoverAvoidCollisions;
 
   const withinLimits = React.useCallback(
     (date: Date) => {
@@ -101,6 +166,30 @@ export function DatePicker({
       return;
     }
     onValueChange(toISODateString(dates[0]));
+    setOpen(false);
+  };
+
+  const applyManualDate = () => {
+    const typedDate = parseTypedDateInput(manualDateInput);
+    if (!typedDate) {
+      setManualInputError("Use YYYY-MM-DD or MM/DD/YYYY");
+      return;
+    }
+
+    if (!withinLimits(typedDate)) {
+      if (minDate && typedDate < startOfDay(minDate)) {
+        setManualInputError(`Date must be on or after ${toISODateString(minDate)}`);
+        return;
+      }
+
+      if (maxDate && typedDate > startOfDay(maxDate)) {
+        setManualInputError(`Date must be on or before ${toISODateString(maxDate)}`);
+        return;
+      }
+    }
+
+    setManualInputError("");
+    onValueChange(toISODateString(typedDate));
     setOpen(false);
   };
 
@@ -139,8 +228,17 @@ export function DatePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        align="start"
-        className="w-[380px] overflow-hidden border-slate-200 p-0"
+        align={effectivePopoverAlign}
+        alignOffset={effectivePopoverAlignOffset}
+        side={effectivePopoverSide}
+        sideOffset={effectivePopoverSideOffset}
+        avoidCollisions={effectivePopoverAvoidCollisions}
+        className={cn(
+          "w-[380px] max-w-[calc(100vw-1rem)] overflow-hidden border-slate-200 p-0 max-sm:w-[calc(100vw-1rem)]",
+          popoverClassName,
+          isNarrowViewport &&
+            "!w-[min(92vw,340px)] !max-w-[calc(100vw-1rem)]",
+        )}
       >
         <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-indigo-50 px-3 py-2.5">
           <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
@@ -152,21 +250,73 @@ export function DatePicker({
         </div>
 
         <div className="space-y-2.5 p-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {quickPresets.map((preset) => (
+          <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
+            <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
+              Type Date
+            </p>
+            <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                value={manualDateInput}
+                onChange={(event) => {
+                  setManualDateInput(event.target.value);
+                  if (manualInputError) {
+                    setManualInputError("");
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyManualDate();
+                  }
+                }}
+                placeholder="YYYY-MM-DD or MM/DD/YYYY"
+                className={cn(
+                  "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
+                  "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
+                  manualInputError.length > 0
+                    ? "border-rose-300 text-rose-700"
+                    : "border-slate-200 text-slate-700",
+                )}
+                aria-label="Type date manually"
+              />
               <Button
-                key={preset.label}
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={!withinLimits(preset.date)}
-                className="h-7 rounded-full border-slate-200 bg-white text-[11px] text-slate-700 hover:bg-sky-50 hover:text-sky-700"
-                onClick={() => handleQuickSelect(preset.date)}
+                className="h-8 border-slate-200 bg-white px-3 text-xs"
+                onClick={applyManualDate}
               >
-                {preset.label}
+                Apply
               </Button>
-            ))}
+            </div>
+            <p
+              className={cn(
+                "mt-1 text-[10px]",
+                manualInputError.length > 0 ? "text-rose-600" : "text-slate-500",
+              )}
+            >
+              {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
+            </p>
           </div>
+
+          {showQuickPresets && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {quickPresets.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!withinLimits(preset.date)}
+                  className="h-7 rounded-full border-slate-200 bg-white text-[11px] text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                  onClick={() => handleQuickSelect(preset.date)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          )}
 
           <DateSelectionCalendar
             mode="single"
@@ -176,7 +326,10 @@ export function DatePicker({
             minDate={minDate ?? undefined}
             maxDate={maxDate ?? undefined}
             initialMonth={selectedDate ?? new Date()}
-            className="rounded-lg border border-slate-200/80 bg-white p-2"
+            className={cn(
+              "rounded-lg border border-slate-200/80 bg-white p-2",
+              calendarClassName,
+            )}
           />
 
           <div className="flex items-center justify-end gap-2 pt-1">
