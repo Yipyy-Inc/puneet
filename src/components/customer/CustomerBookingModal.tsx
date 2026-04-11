@@ -65,8 +65,6 @@ import {
   Bed,
   Receipt,
   Info,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   MapPin,
   Users,
@@ -182,7 +180,7 @@ export function CustomerBookingModal({
   open = true,
   onOpenChange,
   asPage = false,
-  onCancel: _onCancel,
+  onCancel,
   existingBooking,
   onBookingCreated,
 }: CustomerBookingModalProps) {
@@ -952,6 +950,14 @@ export function CustomerBookingModal({
     }
   };
 
+  const handleCancel = () => {
+    if (asPage) {
+      onCancel?.();
+      return;
+    }
+    onOpenChange?.(false);
+  };
+
   const handleSubmit = async () => {
     if (!selectedFacility || !customer) return;
 
@@ -1344,47 +1350,7 @@ export function CustomerBookingModal({
       onOpenChange={onOpenChange}
       existingBooking={existingBooking}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col px-6">
-        {/* Back à gauche, Next à droite — cercles, légèrement plus petits, grossissent au hover */}
-        <div className="absolute top-1/2 -left-20 z-10 -translate-y-1/2">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex h-16 w-16 items-center justify-center gap-1 rounded-full p-0 transition-transform duration-200 hover:scale-110 disabled:hover:scale-100"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-          >
-            <ChevronLeft className="size-5 shrink-0" />
-            <span className="text-xs">Back</span>
-          </Button>
-        </div>
-        <div className="absolute top-1/2 -right-20 z-10 -translate-y-1/2">
-          {currentStep < STEPS.length - 1 ? (
-            <Button
-              size="lg"
-              className="flex h-16 w-16 items-center justify-center gap-1 rounded-full p-0 transition-transform duration-200 hover:scale-110"
-              onClick={handleNext}
-              disabled={!canProceed}
-            >
-              <span className="text-xs">Next</span>
-              <ChevronRight className="size-5 shrink-0" />
-            </Button>
-          ) : (
-            <Button
-              size="lg"
-              className="flex h-16 w-16 items-center justify-center rounded-full p-0 transition-transform duration-200 hover:scale-110"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <Loader2 className="size-5 animate-spin" />
-              ) : (
-                "OK"
-              )}
-            </Button>
-          )}
-        </div>
-
+      <div className="flex min-h-0 flex-1 flex-col px-6">
         {/* Stepper */}
         <div className="mb-6 shrink-0">
           <Stepper
@@ -1394,7 +1360,7 @@ export function CustomerBookingModal({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="min-h-0 flex-1 pr-4">
             <div className="space-y-6 pb-4">
               {/* Step 1: Pet Selection */}
               {currentStep === 0 && (
@@ -4011,6 +3977,42 @@ export function CustomerBookingModal({
               )}
             </div>
           </ScrollArea>
+        </div>
+
+        <div className="bg-background flex shrink-0 items-center justify-between border-t py-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 0}
+          >
+            Previous
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            {currentStep < STEPS.length - 1 ? (
+              <Button type="button" onClick={handleNext} disabled={!canProceed}>
+                Next
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !canProceed}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Booking"
+                )}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Details modal: room or grooming package — photos + notes */}

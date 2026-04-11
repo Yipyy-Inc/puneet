@@ -2074,21 +2074,21 @@ export function BookingModal({
           </div>
 
           {/* Main Content Area */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-scroll">
-            <ScrollArea className="flex-1">
-              <div className="bg-background border-b p-4">
-                <h2 className="text-lg font-semibold">
-                  {displayedSteps[currentStep]?.title}
-                </h2>
-                {displayedSteps[currentStep]?.id === "details" &&
-                  (selectedService === "daycare" ||
-                    selectedService === "boarding" ||
-                    selectedService === "evaluation") && (
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {currentSubSteps[currentSubStep]?.title}
-                    </p>
-                  )}
-              </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="bg-background border-b p-4">
+              <h2 className="text-lg font-semibold">
+                {displayedSteps[currentStep]?.title}
+              </h2>
+              {displayedSteps[currentStep]?.id === "details" &&
+                (selectedService === "daycare" ||
+                  selectedService === "boarding" ||
+                  selectedService === "evaluation") && (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {currentSubSteps[currentSubStep]?.title}
+                  </p>
+                )}
+            </div>
+            <ScrollArea className="min-h-0 flex-1">
               <div className="p-6">
                 {displayedSteps[currentStep]?.id === "service" && (
                   <ServiceStep
