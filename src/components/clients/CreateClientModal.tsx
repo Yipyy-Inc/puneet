@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { DatePicker } from "@/components/ui/date-picker";
 import { BreedCombobox } from "@/components/shared/BreedCombobox";
 import {
   Plus,
@@ -201,6 +202,7 @@ type CreateClientDraft = {
   step?: number;
   client?: ClientForm;
   pets?: PetForm[];
+  petForm?: PetForm;
 };
 
 function loadCreateClientDraft(): CreateClientDraft {
@@ -337,7 +339,10 @@ export function CreateClientModal({
     : DEFAULT_CLIENT.language;
 
   // Step 2: Pets
-  const [petForm, setPetForm] = useState<PetForm>({ ...EMPTY_PET });
+  const [petForm, setPetForm] = useState<PetForm>({
+    ...EMPTY_PET,
+    ...(initialDraft.petForm ?? {}),
+  });
   const [pets, setPets] = useState<PetForm[]>(initialDraft.pets ?? []);
 
   // Step 4: Vaccines
@@ -354,14 +359,14 @@ export function CreateClientModal({
       try {
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ client, pets, step }),
+          JSON.stringify({ client, pets, petForm, step }),
         );
       } catch {
         /* ignore */
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [client, pets, step, open]);
+  }, [client, pets, petForm, step, open]);
 
   // Validation
   const validateStep = (s: number): boolean => {
@@ -424,18 +429,45 @@ export function CreateClientModal({
     return Object.keys(e).length === 0;
   };
 
+  const hasPetDraftData = (): boolean => {
+    return (Object.keys(EMPTY_PET) as Array<keyof PetForm>).some((key) => {
+      return petForm[key].trim() !== EMPTY_PET[key].trim();
+    });
+  };
+
+  const addPetFromDraft = (): boolean => {
+    if (!validatePet()) {
+      return false;
+    }
+
+    setPets((previous) => [...previous, petForm]);
+    setPetForm({ ...EMPTY_PET });
+    setErrors({});
+    return true;
+  };
+
   const handleNext = () => {
+    if (step === 2 && pets.length === 0) {
+      if (!hasPetDraftData()) {
+        setErrors({ pets: "At least one pet is required" });
+        return;
+      }
+
+      if (!addPetFromDraft()) {
+        return;
+      }
+
+      setStep(3);
+      return;
+    }
+
     if (validateStep(step)) setStep(step + 1);
   };
 
   const handleBack = () => setStep(step - 1);
 
   const handleAddPet = () => {
-    if (validatePet()) {
-      setPets([...pets, petForm]);
-      setPetForm({ ...EMPTY_PET });
-      setErrors({});
-    }
+    addPetFromDraft();
   };
 
   const handleSubmit = () => {
@@ -806,18 +838,30 @@ export function CreateClientModal({
               </p>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field
-                  label="Date of Birth"
-                  required
-                  error={errors.petDateOfBirth}
-                >
-                  <Input
-                    type="date"
-                    value={petForm.dateOfBirth}
-                    onChange={(e) => updatePet("dateOfBirth", e.target.value)}
-                    max={new Date().toISOString().split("T")[0]}
-                  />
-                </Field>
+                <div className="md:col-span-2">
+                  <div className="mx-auto w-full max-w-sm">
+                    <Field
+                      label="Date of Birth"
+                      required
+                      error={errors.petDateOfBirth}
+                    >
+                      <DatePicker
+                        value={petForm.dateOfBirth}
+                        onValueChange={(next) => updatePet("dateOfBirth", next)}
+                        max={new Date().toISOString().split("T")[0]}
+                        placeholder="Select date of birth"
+                        popoverAlign="start"
+                        popoverAlignOffset={-420}
+                        popoverSide="left"
+                        popoverSideOffset={44}
+                        popoverAvoidCollisions={false}
+                        popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                        calendarClassName="p-1"
+                        showQuickPresets={false}
+                      />
+                    </Field>
+                  </div>
+                </div>
                 <Field label="Weight (lbs)" required error={errors.petWeight}>
                   <div className="relative">
                     <Input
@@ -1008,7 +1052,7 @@ export function CreateClientModal({
             <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Veterinarian
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Vet Name">
                 <Input
                   value={client.vetName}
@@ -1041,35 +1085,47 @@ export function CreateClientModal({
             {vaccines.map((v, i) => (
               <div key={v.name} className="rounded-lg border p-3">
                 <p className="mb-2 text-sm font-medium">{v.name}</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <Field label="Date Administered">
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={v.dateAdministered}
-                      onChange={(e) =>
+                      onValueChange={(next) =>
                         setVaccines((prev) =>
                           prev.map((vv, ii) =>
-                            ii === i
-                              ? { ...vv, dateAdministered: e.target.value }
-                              : vv,
+                            ii === i ? { ...vv, dateAdministered: next } : vv,
                           ),
                         )
                       }
+                      popoverAlign="start"
+                      popoverAlignOffset={-420}
+                      popoverSide="left"
+                      popoverSideOffset={44}
+                      popoverAvoidCollisions={false}
+                      popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                      calendarClassName="p-1"
+                      showQuickPresets={false}
+                      placeholder="Select date"
                     />
                   </Field>
                   <Field label="Expiry Date">
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={v.expiryDate}
-                      onChange={(e) =>
+                      onValueChange={(next) =>
                         setVaccines((prev) =>
                           prev.map((vv, ii) =>
-                            ii === i
-                              ? { ...vv, expiryDate: e.target.value }
-                              : vv,
+                            ii === i ? { ...vv, expiryDate: next } : vv,
                           ),
                         )
                       }
+                      popoverAlign="start"
+                      popoverAlignOffset={-420}
+                      popoverSide="left"
+                      popoverSideOffset={44}
+                      popoverAvoidCollisions={false}
+                      popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                      calendarClassName="p-1"
+                      showQuickPresets={false}
+                      placeholder="Select date"
                     />
                   </Field>
                 </div>

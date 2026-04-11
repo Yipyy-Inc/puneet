@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -120,6 +120,21 @@ const DAYS_OF_WEEK_FULL = [
   "Saturday",
 ];
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 // Helper to format date without timezone issues
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
@@ -190,6 +205,11 @@ export function DateSelectionCalendar({
     () => initialMonth ?? new Date(),
   );
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!initialMonth) return;
+    setCurrentMonth(initialMonth);
+  }, [initialMonth]);
 
   // Compute effective default times
   const effectiveDefaultCheckInTime =
@@ -383,22 +403,109 @@ export function DateSelectionCalendar({
     [currentMonth],
   );
 
+  const minYear = effectiveMinDate
+    ? effectiveMinDate.getFullYear()
+    : new Date().getFullYear() - 40;
+  const maxYear = effectiveMaxDate
+    ? effectiveMaxDate.getFullYear()
+    : new Date().getFullYear() + 10;
+
+  const yearOptions = useMemo(() => {
+    const start = Math.min(minYear, maxYear, currentMonth.getFullYear());
+    const end = Math.max(minYear, maxYear, currentMonth.getFullYear());
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [currentMonth, maxYear, minYear]);
+
+  const isMonthWithinBounds = (year: number, month: number): boolean => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+
+    if (effectiveMinDate && lastDayOfMonth < effectiveMinDate) {
+      return false;
+    }
+
+    if (effectiveMaxDate && firstDayOfMonth > effectiveMaxDate) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const clampMonthForYear = (year: number, month: number) => {
+    let nextMonth = month;
+
+    if (effectiveMinDate && year === effectiveMinDate.getFullYear()) {
+      nextMonth = Math.max(nextMonth, effectiveMinDate.getMonth());
+    }
+
+    if (effectiveMaxDate && year === effectiveMaxDate.getFullYear()) {
+      nextMonth = Math.min(nextMonth, effectiveMaxDate.getMonth());
+    }
+
+    return Math.max(0, Math.min(11, nextMonth));
+  };
+
   // Navigation
   const handlePrevMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1),
+    const previousMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() - 1,
+      1,
     );
+    if (!isMonthWithinBounds(previousMonth.getFullYear(), previousMonth.getMonth())) {
+      return;
+    }
+    setCurrentMonth(previousMonth);
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1),
+    const nextMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth() + 1,
+      1,
     );
+    if (!isMonthWithinBounds(nextMonth.getFullYear(), nextMonth.getMonth())) {
+      return;
+    }
+    setCurrentMonth(nextMonth);
   };
 
   const handleToday = () => {
     setCurrentMonth(new Date());
   };
+
+  const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedYear = Number(event.target.value);
+    const clampedMonth = clampMonthForYear(selectedYear, currentMonth.getMonth());
+    setCurrentMonth(new Date(selectedYear, clampedMonth, 1));
+  };
+
+  const handleMonthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedMonth = Number(event.target.value);
+    if (!isMonthWithinBounds(currentMonth.getFullYear(), selectedMonth)) {
+      return;
+    }
+    setCurrentMonth(new Date(currentMonth.getFullYear(), selectedMonth, 1));
+  };
+
+  const previousMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() - 1,
+    1,
+  );
+  const nextMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() + 1,
+    1,
+  );
+  const canGoToPreviousMonth = isMonthWithinBounds(
+    previousMonth.getFullYear(),
+    previousMonth.getMonth(),
+  );
+  const canGoToNextMonth = isMonthWithinBounds(
+    nextMonth.getFullYear(),
+    nextMonth.getMonth(),
+  );
 
   // Selection handlers
   const handleDateClick = (date: Date) => {
@@ -722,7 +829,7 @@ export function DateSelectionCalendar({
           {mode !== "recurring" && (
             <>
               {/* Calendar Header - overlaid on calendar */}
-              <div className="bg-background/95 absolute top-2 right-2 left-2 z-10 flex items-center justify-between rounded-md px-2 py-1 shadow-sm backdrop-blur-sm">
+              <div className="bg-background/95 absolute top-2 right-2 left-2 z-10 flex flex-wrap items-center justify-between gap-1.5 rounded-md px-2 py-1 shadow-sm backdrop-blur-sm">
                 <div className="flex items-center gap-0.5">
                   <Button
                     type="button"
@@ -730,6 +837,7 @@ export function DateSelectionCalendar({
                     size="icon"
                     className="size-6"
                     onClick={handlePrevMonth}
+                    disabled={!canGoToPreviousMonth}
                   >
                     <ChevronLeft className="size-3" />
                   </Button>
@@ -739,19 +847,42 @@ export function DateSelectionCalendar({
                     size="icon"
                     className="size-6"
                     onClick={handleNextMonth}
+                    disabled={!canGoToNextMonth}
                   >
                     <ChevronRight className="size-3" />
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <CalendarIcon className="text-muted-foreground size-3" />
-                  <span className="text-xs font-semibold">
-                    {currentMonth.toLocaleDateString("en-US", {
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </span>
+                  <select
+                    value={currentMonth.getFullYear()}
+                    onChange={handleYearChange}
+                    className="bg-background h-7 rounded-md border border-slate-200 px-2 text-[11px] font-medium"
+                    aria-label="Select year"
+                  >
+                    {yearOptions.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={currentMonth.getMonth()}
+                    onChange={handleMonthChange}
+                    className="bg-background h-7 rounded-md border border-slate-200 px-2 text-[11px] font-medium"
+                    aria-label="Select month"
+                  >
+                    {MONTH_NAMES.map((monthLabel, monthIndex) => (
+                      <option
+                        key={monthLabel}
+                        value={monthIndex}
+                        disabled={!isMonthWithinBounds(currentMonth.getFullYear(), monthIndex)}
+                      >
+                        {monthLabel}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <Button
