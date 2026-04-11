@@ -2,43 +2,21 @@
 
 import type { ReactNode } from "react";
 import {
-  BarChart3,
   ChevronLeft,
   ChevronRight,
   Filter,
-  Layers,
-  LayoutPanelTop,
   Search,
-  Settings2,
-  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  type CalendarVisualConfig,
-  type CalendarAxisMode,
-  type OperationsCalendarSavedView,
   type OperationsCalendarView,
-  CALENDAR_ZOOM_OPTIONS,
-  OPERATIONS_CALENDAR_VIEWS,
   formatDateKey,
 } from "@/lib/operations-calendar";
 
 interface OperationsCalendarToolbarProps {
-  axisMode: CalendarAxisMode;
-  onAxisModeChange: (mode: CalendarAxisMode) => void;
-  resourceTypeOptions: Array<{ value: string; label: string }>;
-  selectedResourceType: string;
-  onSelectedResourceTypeChange: (value: string) => void;
   view: OperationsCalendarView;
   onViewChange: (view: OperationsCalendarView) => void;
   anchorDate: Date;
@@ -50,32 +28,11 @@ interface OperationsCalendarToolbarProps {
   onSearchTermChange: (next: string) => void;
   showFilters: boolean;
   onToggleFilters: () => void;
-  showConfig: boolean;
-  onToggleConfig: () => void;
-  canConfigureCalendar: boolean;
-  reportsOpen: boolean;
-  onToggleReports: () => void;
   activeFilterCount: number;
-  showCompletedTasks: boolean;
-  onToggleShowCompletedTasks: () => void;
   newEventMenu?: ReactNode;
-  visualConfig: CalendarVisualConfig;
-  onZoomChange: (zoomLevel: CalendarVisualConfig["zoomLevel"]) => void;
-  selectedSavedViewId: string;
-  savedViews: OperationsCalendarSavedView[];
-  onSelectSavedView: (savedViewId: string) => void;
-  onSavePersonalView: () => void;
-  onSaveFacilityView: () => void;
-  canCreateFacilityViews: boolean;
-  onDeleteSavedView: (savedViewId: string) => void;
 }
 
 export function OperationsCalendarToolbar({
-  axisMode,
-  onAxisModeChange,
-  resourceTypeOptions,
-  selectedResourceType,
-  onSelectedResourceTypeChange,
   view,
   onViewChange,
   anchorDate,
@@ -87,201 +44,126 @@ export function OperationsCalendarToolbar({
   onSearchTermChange,
   showFilters,
   onToggleFilters,
-  showConfig,
-  onToggleConfig,
-  canConfigureCalendar,
-  reportsOpen,
-  onToggleReports,
   activeFilterCount,
-  showCompletedTasks,
-  onToggleShowCompletedTasks,
   newEventMenu,
-  visualConfig,
-  onZoomChange,
-  selectedSavedViewId,
-  savedViews,
-  onSelectSavedView,
-  onSavePersonalView,
-  onSaveFacilityView,
-  canCreateFacilityViews,
-  onDeleteSavedView,
 }: OperationsCalendarToolbarProps) {
-  return (
-    <div className="from-background to-muted/20 rounded-xl border border-slate-200 bg-linear-to-r p-4 shadow-xs">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onToday}>
-            Today
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onStep(-1)}
-            aria-label="Go to previous period"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => onStep(1)}
-            aria-label="Go to next period"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <DatePicker
-            value={formatDateKey(anchorDate)}
-            onValueChange={onDateChange}
-            className="w-[168px]"
-          />
-          <div className="pl-1 text-sm font-medium text-slate-700">{rangeLabel}</div>
-        </div>
+  const simplifiedViews: Array<{ value: OperationsCalendarView; label: string }> = [
+    { value: "day", label: "Day" },
+    { value: "week", label: "Week" },
+    { value: "month", label: "Month" },
+  ];
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-full min-w-56 max-w-80">
-            <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-            <Input
-              value={searchTerm}
-              onChange={(event) => onSearchTermChange(event.target.value)}
-              placeholder="Search pet, customer, booking ID, confirmation..."
-              className="pl-8"
-            />
+  return (
+    <div className="relative animate-in slide-in-from-top-4 fade-in duration-700 ease-out z-10 w-full mb-2">
+      {/* Luxurious subtle glow effect behind the toolbar */}
+      <div className="absolute -inset-1 rounded-[2rem] bg-gradient-to-r from-sky-100/50 via-indigo-100/40 to-purple-100/50 blur-xl opacity-70 pointer-events-none"></div>
+      
+      <div className="relative rounded-[1.5rem] border border-white/80 bg-white/70 backdrop-blur-xl p-3 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)] ring-1 ring-slate-900/5 transition-all">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between px-2">
+          
+          {/* Left Side: Date Navigation */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onToday} 
+              className="rounded-full px-5 h-9 bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 border-slate-200/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95 font-medium"
+            >
+              Today
+            </Button>
+            
+            <div className="flex items-center rounded-full bg-slate-50/80 p-0.5 border border-slate-100 shadow-inner">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onStep(-1)}
+                aria-label="Go to previous period"
+                className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all active:scale-95"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <div className="w-[1px] h-3.5 bg-slate-200/80 mx-0.5 rounded-full"></div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onStep(1)}
+                aria-label="Go to next period"
+                className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all active:scale-95"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 delay-150">
+              <div className="relative">
+                <DatePicker
+                  value={formatDateKey(anchorDate)}
+                  onValueChange={onDateChange}
+                  className="w-[160px] h-9 rounded-full bg-white border-slate-200/60 shadow-sm hover:border-indigo-200 focus-visible:ring-indigo-100 focus-visible:border-indigo-400 transition-all font-medium text-slate-700"
+                />
+              </div>
+              <div className="text-[15px] font-semibold text-slate-800 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-500 hidden sm:block">
+                {rangeLabel}
+              </div>
+            </div>
           </div>
 
-          <Button
-            variant={showFilters ? "default" : "outline"}
-            onClick={onToggleFilters}
-            className="gap-2"
-          >
-            <Filter className="size-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge className="ml-1 rounded-full">{activeFilterCount}</Badge>
-            )}
-          </Button>
+          {/* Right Side: Actions & Search */}
+          <div className="flex flex-wrap items-center justify-end gap-3 lg:flex-1">
+            <div className="relative w-full sm:max-w-[280px] group flex-1 transition-all">
+              <Search className="absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => onSearchTermChange(event.target.value)}
+                placeholder="Search..."
+                className="h-10 pl-10 w-full rounded-full bg-slate-50/50 border-slate-200/60 shadow-inner focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-indigo-500/10 focus-visible:border-indigo-400 transition-all duration-300 font-medium placeholder:text-slate-400 placeholder:font-normal"
+              />
+            </div>
 
-          <Button
-            variant={showCompletedTasks ? "outline" : "default"}
-            onClick={onToggleShowCompletedTasks}
-            className="gap-2"
-          >
-            Completed tasks
-          </Button>
+            <Button
+              variant={showFilters ? "default" : "outline"}
+              onClick={onToggleFilters}
+              className={`gap-2 h-10 rounded-full px-5 transition-all duration-300 border shadow-sm ${
+                showFilters 
+                  ? 'bg-slate-900 hover:bg-slate-800 text-white border-slate-800 shadow-slate-900/20' 
+                  : 'bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 border-slate-200/60 hover:border-slate-300 hover:shadow-md'
+              }`}
+            >
+              <Filter className={`size-4 ${showFilters ? 'text-slate-300' : 'text-slate-400'}`} />
+              <span className="font-medium">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="flex items-center justify-center h-5 min-w-5 px-1.5 ml-1 text-[11px] font-bold rounded-full bg-indigo-500 text-white shadow-inner">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
 
-          <Button
-            variant={showConfig ? "default" : "outline"}
-            onClick={onToggleConfig}
-            className="gap-2"
-            disabled={!canConfigureCalendar}
-          >
-            <Settings2 className="size-4" />
-            Calendar Config
-          </Button>
-
-          <Button
-            variant={reportsOpen ? "default" : "outline"}
-            onClick={onToggleReports}
-            className="gap-2"
-          >
-            <BarChart3 className="size-4" />
-            Reports
-          </Button>
-
-          {newEventMenu}
+            <div className="transition-transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-300">
+              {newEventMenu}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {OPERATIONS_CALENDAR_VIEWS.map((mode) => (
-          <Button
-            key={mode.value}
-            size="sm"
-            variant={view === mode.value ? "default" : "outline"}
-            onClick={() => onViewChange(mode.value)}
-          >
-            {mode.label}
-          </Button>
-        ))}
-        <Select value={visualConfig.zoomLevel} onValueChange={onZoomChange}>
-          <SelectTrigger className="h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CALENDAR_ZOOM_OPTIONS.map((zoom) => (
-              <SelectItem key={zoom.value} value={zoom.value}>
-                {zoom.label}
-              </SelectItem>
+        {/* Bottom Section: Tabs */}
+        <div className="mt-3 px-2 flex animate-in fade-in duration-500 delay-300">
+          <div className="p-1 bg-slate-100/60 rounded-full flex items-center shadow-inner border border-slate-200/40">
+            {simplifiedViews.map((mode) => (
+              <Button
+                key={mode.value}
+                size="sm"
+                variant="ghost"
+                onClick={() => onViewChange(mode.value)}
+                className={`h-8 rounded-full px-6 text-[13px] transition-all duration-300 ${
+                  view === mode.value 
+                    ? "bg-white text-indigo-600 shadow-[0_2px_12px_rgba(0,0,0,0.06)] font-semibold" 
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50 font-medium"
+                }`}
+              >
+                {mode.label}
+              </Button>
             ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={axisMode}
-          onValueChange={(value) => onAxisModeChange(value as CalendarAxisMode)}
-        >
-          <SelectTrigger className="h-8 min-w-36">
-            <LayoutPanelTop className="mr-1 size-3.5" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="master">Master</SelectItem>
-            <SelectItem value="resource">Resource</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {axisMode === "resource" && (
-          <Select
-            value={selectedResourceType}
-            onValueChange={onSelectedResourceTypeChange}
-          >
-            <SelectTrigger className="h-8 min-w-44">
-              <SelectValue placeholder="Select resource" />
-            </SelectTrigger>
-            <SelectContent>
-              {resourceTypeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white/90 p-2">
-        <Layers className="text-muted-foreground size-4" />
-        <Select value={selectedSavedViewId} onValueChange={onSelectSavedView}>
-          <SelectTrigger className="h-8 min-w-56">
-            <SelectValue placeholder="Saved views" />
-          </SelectTrigger>
-          <SelectContent>
-            {savedViews.map((savedView) => (
-              <SelectItem key={savedView.id} value={savedView.id}>
-                {savedView.name} {savedView.scope === "facility" ? "(Facility)" : "(Personal)"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button variant="outline" size="sm" onClick={onSavePersonalView}>
-          Save Personal View
-        </Button>
-        {canCreateFacilityViews && (
-          <Button variant="outline" size="sm" onClick={onSaveFacilityView}>
-            Save Facility View
-          </Button>
-        )}
-        {selectedSavedViewId && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1"
-            onClick={() => onDeleteSavedView(selectedSavedViewId)}
-          >
-            <Trash2 className="size-3.5" />
-            Delete
-          </Button>
-        )}
+          </div>
+        </div>
       </div>
     </div>
   );

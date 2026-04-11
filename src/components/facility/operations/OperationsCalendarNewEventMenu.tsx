@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookPlus,
   CalendarClock,
@@ -45,12 +45,15 @@ export interface NewEventSeed {
 
 interface CustomEventDraft {
   title: string;
+  details: string;
   date: string;
   startTime: string;
   durationMinutes: number;
   allDay: boolean;
   recurrence: NonNullable<ManualFacilityEvent["recurrence"]>;
   notes: string;
+  linkedCustomerName: string;
+  linkedPetName: string;
   assignedStaff: string;
   location: string;
   visibility: NonNullable<ManualFacilityEvent["visibility"]>;
@@ -74,6 +77,7 @@ interface OperationsCalendarNewEventMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   seed: NewEventSeed;
+  quickCreateNonce?: number;
   canCreateCustomEvent: boolean;
   canCreateBlockTime: boolean;
   canCreateBooking: boolean;
@@ -90,6 +94,7 @@ export function OperationsCalendarNewEventMenu({
   open,
   onOpenChange,
   seed,
+  quickCreateNonce,
   canCreateCustomEvent,
   canCreateBlockTime,
   canCreateBooking,
@@ -106,12 +111,15 @@ export function OperationsCalendarNewEventMenu({
 
   const [customDraft, setCustomDraft] = useState<CustomEventDraft>({
     title: "",
+    details: "",
     date: seed.date,
     startTime: seed.time,
     durationMinutes: 30,
     allDay: false,
     recurrence: "none",
     notes: "",
+    linkedCustomerName: "",
+    linkedPetName: "",
     assignedStaff: "",
     location: "",
     visibility: "all-staff",
@@ -133,17 +141,63 @@ export function OperationsCalendarNewEventMenu({
     return ["Unassigned", ...staffOptions.filter((name) => name !== "Unassigned")];
   }, [staffOptions]);
 
+  useEffect(() => {
+    if (!quickCreateNonce) return;
+
+    if (canCreateCustomEvent) {
+      setCustomDraft((previous) => ({
+        ...previous,
+        title: "",
+        details: "",
+        date: seed.date,
+        startTime: seed.time,
+        durationMinutes: 30,
+        notes: "",
+        linkedCustomerName: "",
+        linkedPetName: "",
+        assignedStaff: "",
+        location: "",
+      }));
+      setBlockDraft((previous) => ({
+        ...previous,
+        title: "",
+        date: seed.date,
+        startTime: seed.time,
+        endTime: shiftTime(seed.time, 60),
+        resource: "",
+        staff: "",
+      }));
+      setMode("custom-event");
+      setDialogOpen(true);
+      onOpenChange(false);
+      return;
+    }
+
+    onOpenChange(true);
+  }, [canCreateCustomEvent, onOpenChange, quickCreateNonce, seed.date, seed.time]);
+
   const openDialog = (nextMode: Exclude<CreateMode, null>) => {
     setCustomDraft((previous) => ({
       ...previous,
+      title: "",
+      details: "",
       date: seed.date,
       startTime: seed.time,
+      durationMinutes: 30,
+      notes: "",
+      linkedCustomerName: "",
+      linkedPetName: "",
+      assignedStaff: "",
+      location: "",
     }));
     setBlockDraft((previous) => ({
       ...previous,
+      title: "",
       date: seed.date,
       startTime: seed.time,
       endTime: shiftTime(seed.time, 60),
+      resource: "",
+      staff: "",
     }));
     setMode(nextMode);
     setDialogOpen(true);
@@ -164,6 +218,7 @@ export function OperationsCalendarNewEventMenu({
       id: `custom-${Date.now()}`,
       kind: "custom-event",
       title: customDraft.title.trim(),
+      details: customDraft.details.trim() || undefined,
       subtype: "custom-event",
       start: `${customDraft.date}T${startTime}:00`,
       end: `${customDraft.date}T${endTime}:00`,
@@ -171,7 +226,9 @@ export function OperationsCalendarNewEventMenu({
       location: customDraft.location || "Facility",
       staff: customDraft.assignedStaff || "Unassigned",
       status: "Scheduled",
-      notes: customDraft.notes,
+      notes: customDraft.notes.trim() || undefined,
+      linkedCustomerName: customDraft.linkedCustomerName.trim() || undefined,
+      linkedPetName: customDraft.linkedPetName.trim() || undefined,
       recurrence: customDraft.recurrence,
       visibility: customDraft.visibility,
       visibleRoles:
@@ -213,49 +270,65 @@ export function OperationsCalendarNewEventMenu({
     setMode(null);
   };
 
+  const customOnlyMode =
+    canCreateCustomEvent &&
+    !canCreateBlockTime &&
+    !canCreateBooking &&
+    !canRecoverDeleted;
+
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={onOpenChange}>
-        <DropdownMenuTrigger asChild>
-          <Button className="gap-2">
-            <CalendarPlus className="size-4" />
-            + New
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64">
-          <DropdownMenuLabel>Create</DropdownMenuLabel>
-          {canCreateCustomEvent && (
-            <DropdownMenuItem className="gap-2" onSelect={() => openDialog("custom-event")}>
-              <CalendarClock className="size-4 text-slate-600" />
-              Custom event
-            </DropdownMenuItem>
-          )}
-          {canCreateBlockTime && (
-            <DropdownMenuItem className="gap-2" onSelect={() => openDialog("block-time")}>
-              <ShieldMinus className="size-4 text-rose-600" />
-              Block time
-            </DropdownMenuItem>
-          )}
-          {canCreateBooking && (
-            <DropdownMenuItem
-              className="gap-2"
-              onSelect={() => onCreateBookingShortcut(seed)}
-            >
-              <BookPlus className="size-4 text-emerald-600" />
-              Create booking
-            </DropdownMenuItem>
-          )}
-          {canRecoverDeleted && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2" onSelect={onRecoverDeleted}>
-                <Lock className="size-4 text-slate-600" />
-                Recover last deleted event
+      {customOnlyMode ? (
+        <Button 
+          className="gap-2 h-10 rounded-full px-6 font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 border-0 hover:shadow-indigo-500/40 transition-all duration-300" 
+          onClick={() => openDialog("custom-event")}
+        >
+          <CalendarPlus className="size-4" />
+          New Event
+        </Button>
+      ) : (
+        <DropdownMenu open={open} onOpenChange={onOpenChange}>
+          <DropdownMenuTrigger asChild>
+            <Button className="gap-2 h-10 rounded-full px-6 font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 border-0 hover:shadow-indigo-500/40 transition-all duration-300">
+              <CalendarPlus className="size-4" />
+              New
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Create</DropdownMenuLabel>
+            {canCreateCustomEvent && (
+              <DropdownMenuItem className="gap-2" onSelect={() => openDialog("custom-event")}>
+                <CalendarClock className="size-4 text-slate-600" />
+                Custom event
               </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            )}
+            {canCreateBlockTime && (
+              <DropdownMenuItem className="gap-2" onSelect={() => openDialog("block-time")}>
+                <ShieldMinus className="size-4 text-rose-600" />
+                Block time
+              </DropdownMenuItem>
+            )}
+            {canCreateBooking && (
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => onCreateBookingShortcut(seed)}
+              >
+                <BookPlus className="size-4 text-emerald-600" />
+                Create booking
+              </DropdownMenuItem>
+            )}
+            {canRecoverDeleted && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2" onSelect={onRecoverDeleted}>
+                  <Lock className="size-4 text-slate-600" />
+                  Recover last deleted event
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -277,7 +350,19 @@ export function OperationsCalendarNewEventMenu({
                       title: event.target.value,
                     }))
                   }
-                  placeholder="Title"
+                  placeholder="Name"
+                  className="md:col-span-2"
+                />
+
+                <Input
+                  value={customDraft.details}
+                  onChange={(event) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      details: event.target.value,
+                    }))
+                  }
+                  placeholder="Details"
                   className="md:col-span-2"
                 />
 
@@ -304,6 +389,49 @@ export function OperationsCalendarNewEventMenu({
                   disabled={customDraft.allDay}
                 />
 
+                <Select
+                  value={customDraft.assignedStaff || "Unassigned"}
+                  onValueChange={(value) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      assignedStaff: value === "Unassigned" ? "" : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Assign staff" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffOptionsWithEmpty.map((staff) => (
+                      <SelectItem key={staff} value={staff}>
+                        {staff}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  value={customDraft.linkedCustomerName}
+                  onChange={(event) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      linkedCustomerName: event.target.value,
+                    }))
+                  }
+                  placeholder="Customer (optional)"
+                />
+
+                <Input
+                  value={customDraft.linkedPetName}
+                  onChange={(event) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      linkedPetName: event.target.value,
+                    }))
+                  }
+                  placeholder="Pet (optional)"
+                />
+
                 <Input
                   type="number"
                   min={15}
@@ -317,6 +445,18 @@ export function OperationsCalendarNewEventMenu({
                   }
                   placeholder="Duration (minutes)"
                   disabled={customDraft.allDay}
+                />
+
+                <Textarea
+                  value={customDraft.notes}
+                  onChange={(event) =>
+                    setCustomDraft((previous) => ({
+                      ...previous,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="min-h-24 md:col-span-2"
+                  placeholder="Notes"
                 />
 
                 <Select
@@ -349,29 +489,8 @@ export function OperationsCalendarNewEventMenu({
                       location: event.target.value,
                     }))
                   }
-                  placeholder="Resource / location"
+                  placeholder="Location (optional)"
                 />
-
-                <Select
-                  value={customDraft.assignedStaff || "Unassigned"}
-                  onValueChange={(value) =>
-                    setCustomDraft((previous) => ({
-                      ...previous,
-                      assignedStaff: value === "Unassigned" ? "" : value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Assign staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffOptionsWithEmpty.map((staff) => (
-                      <SelectItem key={staff} value={staff}>
-                        {staff}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
 
                 <Select
                   value={customDraft.visibility}
@@ -432,17 +551,6 @@ export function OperationsCalendarNewEventMenu({
                   </div>
                 )}
 
-                <Textarea
-                  value={customDraft.notes}
-                  onChange={(event) =>
-                    setCustomDraft((previous) => ({
-                      ...previous,
-                      notes: event.target.value,
-                    }))
-                  }
-                  className="min-h-24 md:col-span-2"
-                  placeholder="Notes (supports basic formatting like **bold** and line breaks)"
-                />
               </div>
 
               <DialogFooter>

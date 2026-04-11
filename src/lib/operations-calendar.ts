@@ -99,6 +99,7 @@ export interface CalendarAddOn {
 export interface ManualFacilityEvent {
   id: string;
   title: string;
+  details?: string;
   subtype:
     | "blocked-time"
     | "staff-meeting"
@@ -114,6 +115,8 @@ export interface ManualFacilityEvent {
   staff: string;
   status: string;
   notes?: string;
+  linkedCustomerName?: string;
+  linkedPetName?: string;
   recurrence?:
     | "none"
     | "daily"
@@ -162,6 +165,8 @@ export interface OperationsCalendarEvent {
   bookingRawStatus?: string;
   petNames: string[];
   customerName?: string;
+  details?: string;
+  notes?: string;
   bookingId?: number;
   confirmationNumber?: string;
   parentEventId?: string;
@@ -1070,8 +1075,8 @@ function buildFacilityEvents(
         end,
         allDay: event.allDay,
         status: event.status,
-        service: "Facility",
-        module: "Facility",
+        service: event.kind === "custom-event" ? "Custom Event" : "Facility",
+        module: event.kind === "custom-event" ? "Custom Event" : "Facility",
         staff: event.staff,
         staffRole,
         roleGroup,
@@ -1084,7 +1089,10 @@ function buildFacilityEvents(
         recurrence: event.recurrence,
         visibility: event.visibility,
         deletedAt: event.deletedAt,
-        petNames: [],
+        petNames: event.linkedPetName ? [event.linkedPetName] : [],
+        customerName: event.linkedCustomerName,
+        details: event.details,
+        notes: event.notes,
         petTags: [],
         customerTags: [],
         bookingTags: [],
@@ -1479,82 +1487,14 @@ export function filterEvents(
   searchTerm: string,
 ): OperationsCalendarEvent[] {
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const selectedModules = filters.modules.length > 0 ? filters.modules : filters.services;
+  const selectedModules = filters.modules;
 
   return events.filter((event) => {
-    if (!filters.showRetailPos && event.type === "retail-pos") {
-      return false;
-    }
-
-    if (!filters.showCompletedTasks && event.type === "task" && event.status === "Completed") {
-      return false;
-    }
-
-    if (filters.types.length > 0 && !filters.types.includes(event.type)) {
-      return false;
-    }
-
     if (
       selectedModules.length > 0 &&
       !selectedModules.includes(event.module) &&
       !selectedModules.includes(event.service)
     ) {
-      return false;
-    }
-
-    if (filters.taskTypes.length > 0 && event.taskType) {
-      if (!filters.taskTypes.includes(event.taskType)) {
-        return false;
-      }
-    }
-
-    if (filters.staff.length > 0 && !filters.staff.includes(event.staff)) {
-      return false;
-    }
-
-    if (filters.staffRoles.length > 0) {
-      const roleMatch =
-        (event.staffRole && filters.staffRoles.includes(event.staffRole)) ||
-        (event.roleGroup &&
-          filters.staffRoles.includes(ROLE_GROUP_LABELS[event.roleGroup] ?? event.roleGroup));
-      if (!roleMatch) {
-        return false;
-      }
-    }
-
-    if (filters.locations.length > 0 && !filters.locations.includes(event.location)) {
-      return false;
-    }
-
-    if (filters.statuses.length > 0 && !filters.statuses.includes(event.status)) {
-      return false;
-    }
-
-    if (
-      filters.bookingStatuses.length > 0 &&
-      event.type === "booking" &&
-      !filters.bookingStatuses.includes(event.status)
-    ) {
-      return false;
-    }
-
-    if (
-      filters.taskStatuses.length > 0 &&
-      event.type === "task" &&
-      !filters.taskStatuses.includes(event.status)
-    ) {
-      return false;
-    }
-
-    if (filters.unassignedOnly && !event.unassigned) {
-      return false;
-    }
-
-    if (!matchesTagLogic(filters.petTags, event.petTags, filters.tagLogic)) {
-      return false;
-    }
-
-    if (!matchesTagLogic(filters.customerTags, event.customerTags, filters.tagLogic)) {
       return false;
     }
 
@@ -1572,6 +1512,8 @@ export function filterEvents(
       event.status,
       event.petNames.join(" "),
       event.customerName ?? "",
+      event.details ?? "",
+      event.notes ?? "",
       String(event.bookingId ?? ""),
       event.confirmationNumber ?? "",
       event.petTags.join(" "),
@@ -1598,7 +1540,13 @@ export function deriveFilterOptions(
   customModules: CustomServiceModule[] = [],
 ): OperationsCalendarFilterOptions {
   const types = Array.from(new Set(events.map((event) => event.type))).sort();
-  const modulesFromEvents = Array.from(new Set(events.map((event) => event.module)));
+  const modulesFromEvents = Array.from(
+    new Set(
+      events
+        .filter((event) => event.type === "booking" || event.type === "add-on")
+        .map((event) => event.module),
+    ),
+  );
   const dynamicCustomModules = customModules.map((module) => module.name);
 
   const taskTypes = Array.from(

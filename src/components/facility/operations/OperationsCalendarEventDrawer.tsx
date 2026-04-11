@@ -906,7 +906,10 @@ function FacilityEventDrawerContent({
   canManageCustomEvents: boolean;
 }) {
   const [title, setTitle] = useState(event.title);
-  const [notes, setNotes] = useState("");
+  const [details, setDetails] = useState(event.details ?? "");
+  const [customerName, setCustomerName] = useState(event.customerName ?? "");
+  const [petName, setPetName] = useState(event.petNames[0] ?? "");
+  const [notes, setNotes] = useState(event.notes ?? "");
   const canEdit =
     canManageCustomEvents &&
     (isManagerOrAdminRole(userRole) || event.createdByRole === userRole);
@@ -928,8 +931,28 @@ function FacilityEventDrawerContent({
         <DetailRow label="Time" value={`${event.start.toLocaleString()} - ${event.end.toLocaleString()}`} />
         <DetailRow label="Location" value={event.location} />
         <DetailRow label="Staff" value={event.staff} />
+        <DetailRow label="Customer" value={customerName || "Not linked"} />
+        <DetailRow label="Pet" value={petName || "Not linked"} />
 
         <Input value={title} onChange={(eventInput) => setTitle(eventInput.target.value)} disabled={!canEdit} />
+        <Input
+          value={details}
+          onChange={(eventInput) => setDetails(eventInput.target.value)}
+          disabled={!canEdit}
+          placeholder="Details"
+        />
+        <Input
+          value={customerName}
+          onChange={(eventInput) => setCustomerName(eventInput.target.value)}
+          disabled={!canEdit}
+          placeholder="Customer"
+        />
+        <Input
+          value={petName}
+          onChange={(eventInput) => setPetName(eventInput.target.value)}
+          disabled={!canEdit}
+          placeholder="Pet"
+        />
         <Textarea value={notes} onChange={(eventInput) => setNotes(eventInput.target.value)} disabled={!canEdit} />
 
         {canEdit && (
@@ -944,7 +967,10 @@ function FacilityEventDrawerContent({
                 if (!recurrenceScope) return;
                 onUpdateManualEvent(event.sourceId, {
                   title,
+                  details,
                   notes,
+                  linkedCustomerName: customerName,
+                  linkedPetName: petName,
                 });
               }}
             >
