@@ -37,22 +37,7 @@ export function isManagerOrAdmin(role: string): boolean {
 }
 
 export function activeFiltersCount(filters: OperationsCalendarFilters): number {
-  return (
-    filters.types.length +
-    filters.modules.length +
-    filters.taskTypes.length +
-    filters.staff.length +
-    filters.staffRoles.length +
-    filters.locations.length +
-    filters.statuses.length +
-    filters.bookingStatuses.length +
-    filters.taskStatuses.length +
-    filters.petTags.length +
-    filters.customerTags.length +
-    (filters.unassignedOnly ? 1 : 0) +
-    (filters.showRetailPos ? 1 : 0) +
-    (filters.showCompletedTasks ? 0 : 1)
-  );
+  return new Set(filters.modules).size;
 }
 
 export function canAccessSavedView(

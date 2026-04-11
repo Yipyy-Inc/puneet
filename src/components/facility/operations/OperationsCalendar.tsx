@@ -543,11 +543,7 @@ export function OperationsCalendar() {
   const [visibilityRoles, setVisibilityRoles] = useState<string[]>([]);
 
   const [axisMode, setAxisMode] = useState<CalendarAxisMode>(() => {
-    const incoming = searchParams.get("axis");
-    if (incoming === "master" || incoming === "resource") return incoming;
-    if (typeof window === "undefined") return "master";
-    const stored = localStorage.getItem(CALENDAR_AXIS_KEY);
-    return stored === "resource" ? "resource" : "master";
+    return "master";
   });
 
   const [selectedResourceType, setSelectedResourceType] = useState<string>(() => {
@@ -558,12 +554,15 @@ export function OperationsCalendar() {
   });
 
   const [showReports, setShowReports] = useState<boolean>(() => {
-    return searchParams.get("reports") === "open";
+    return false;
   });
 
   const [view, setView] = useState<OperationsCalendarView>(() => {
     const incoming = searchParams.get("view");
-    return isCalendarView(incoming) ? incoming : "week";
+    if (incoming === "day" || incoming === "week" || incoming === "month") {
+      return incoming;
+    }
+    return "week";
   });
 
   const [anchorDate, setAnchorDate] = useState<Date>(() => {
@@ -576,22 +575,7 @@ export function OperationsCalendar() {
 
   const [filters, setFilters] = useState<OperationsCalendarFilters>(() => ({
     ...OPERATIONS_CALENDAR_EMPTY_FILTERS,
-    types: parseCsv(searchParams.get("types")),
     modules: parseCsv(searchParams.get("modules") ?? searchParams.get("services")),
-    services: parseCsv(searchParams.get("services")),
-    taskTypes: parseCsv(searchParams.get("taskTypes")),
-    staff: parseCsv(searchParams.get("staff")),
-    staffRoles: parseCsv(searchParams.get("staffRoles")),
-    locations: parseCsv(searchParams.get("locations")),
-    statuses: parseCsv(searchParams.get("statuses")),
-    bookingStatuses: parseCsv(searchParams.get("bookingStatuses")),
-    taskStatuses: parseCsv(searchParams.get("taskStatuses")),
-    petTags: parseCsv(searchParams.get("petTags")),
-    customerTags: parseCsv(searchParams.get("customerTags")),
-    unassignedOnly: searchParams.get("unassigned") === "1",
-    showRetailPos: searchParams.get("retail") === "1",
-    showCompletedTasks: searchParams.get("completed") !== "0",
-    tagLogic: searchParams.get("tagLogic") === "or" ? "or" : "and",
   }));
 
   const [visualConfig, setVisualConfig] = useState<CalendarVisualConfig>(() => {
@@ -647,7 +631,7 @@ export function OperationsCalendar() {
   });
 
   const [showConfig, setShowConfig] = useState<boolean>(() => {
-    return searchParams.get("config") === "open";
+    return false;
   });
 
   const [showEventCreator, setShowEventCreator] = useState(false);
@@ -666,6 +650,7 @@ export function OperationsCalendar() {
     date: formatDateKey(new Date()),
     time: "09:00",
   });
+  const [quickCreateNonce, setQuickCreateNonce] = useState(0);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -864,16 +849,18 @@ export function OperationsCalendar() {
 
   const filteredEvents = useMemo(
     () =>
-      axisMode === "resource"
-        ? searchFilteredEvents.filter((event) => {
-            if (!event.resourceType || !event.resource) return false;
-            return (
-              event.resourceType.toLowerCase() ===
-              selectedResourceType.toLowerCase()
-            );
-          })
-        : searchFilteredEvents,
-    [axisMode, searchFilteredEvents, selectedResourceType],
+      searchFilteredEvents.filter((event) => {
+        if (event.type === "booking" || event.type === "add-on") {
+          return true;
+        }
+
+        if (event.type === "facility-event") {
+          return event.service === "Custom Event";
+        }
+
+        return false;
+      }),
+    [searchFilteredEvents],
   );
 
   const selectedResourceOption = useMemo(
@@ -919,42 +906,12 @@ export function OperationsCalendar() {
     const params = new URLSearchParams();
     params.set("view", view);
     params.set("date", formatDateKey(anchorDate));
-    params.set("axis", axisMode);
-
-    if (axisMode === "resource") {
-      params.set("resourceType", selectedResourceType);
-    }
 
     if (searchTerm.trim().length > 0) {
       params.set("search", searchTerm.trim());
     }
 
-    const entries: Array<[
-      | "types"
-      | "modules"
-      | "taskTypes"
-      | "staff"
-      | "staffRoles"
-      | "locations"
-      | "statuses"
-      | "bookingStatuses"
-      | "taskStatuses"
-      | "petTags"
-      | "customerTags",
-      string,
-    ]> = [
-      ["types", "types"],
-      ["modules", "modules"],
-      ["taskTypes", "taskTypes"],
-      ["staff", "staff"],
-      ["staffRoles", "staffRoles"],
-      ["locations", "locations"],
-      ["statuses", "statuses"],
-      ["bookingStatuses", "bookingStatuses"],
-      ["taskStatuses", "taskStatuses"],
-      ["petTags", "petTags"],
-      ["customerTags", "customerTags"],
-    ];
+    const entries: Array<["modules", string]> = [["modules", "modules"]];
 
     for (const [group, queryKey] of entries) {
       const values = filters[group];
@@ -963,32 +920,8 @@ export function OperationsCalendar() {
       }
     }
 
-    if (filters.unassignedOnly) {
-      params.set("unassigned", "1");
-    }
-
-    if (filters.showRetailPos) {
-      params.set("retail", "1");
-    }
-
-    if (!filters.showCompletedTasks) {
-      params.set("completed", "0");
-    }
-
-    if (filters.tagLogic === "or") {
-      params.set("tagLogic", "or");
-    }
-
     if (showFilters) {
       params.set("filters", "open");
-    }
-
-    if (showConfig) {
-      params.set("config", "open");
-    }
-
-    if (showReports) {
-      params.set("reports", "open");
     }
 
     params.set("colorMode", visualConfig.colorMode);
@@ -999,16 +932,12 @@ export function OperationsCalendar() {
 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [
-    axisMode,
     anchorDate,
     filters,
     pathname,
     router,
     searchTerm,
-    selectedResourceType,
-    showConfig,
     showFilters,
-    showReports,
     view,
     visualConfig,
   ]);
@@ -1637,7 +1566,7 @@ export function OperationsCalendar() {
     toast.success(`Exported ${scope} report`);
   };
 
-  const updateFilterGroup = (group: keyof OperationsCalendarFilters, value: string) => {
+  const updateFilterGroup = (group: "modules", value: string) => {
     setFilters((previous) => {
       const selected = previous[group] as string[];
       const nextValues = selected.includes(value)
@@ -1849,11 +1778,18 @@ export function OperationsCalendar() {
     const savedView = availableSavedViews.find((candidate) => candidate.id === savedViewId);
     if (!savedView) return;
 
-    setView(savedView.view);
+    setView(
+      savedView.view === "day" || savedView.view === "week" || savedView.view === "month"
+        ? savedView.view
+        : "week",
+    );
     setSearchTerm(savedView.searchTerm);
     setFilters({
       ...OPERATIONS_CALENDAR_EMPTY_FILTERS,
-      ...savedView.filters,
+      modules:
+        savedView.filters.modules.length > 0
+          ? savedView.filters.modules
+          : savedView.filters.services,
     });
     setVisualConfig({
       ...DEFAULT_VISUAL_CONFIG,
@@ -1890,6 +1826,11 @@ export function OperationsCalendar() {
   };
 
   const openEventDrawer = (event: OperationsCalendarEvent) => {
+    if ((event.type === "booking" || event.type === "add-on") && event.bookingId) {
+      router.push(`/facility/dashboard/bookings?bookingId=${event.bookingId}`);
+      return;
+    }
+
     setSelectedEventId(event.id);
     setDrawerOpen(true);
 
@@ -2496,7 +2437,7 @@ export function OperationsCalendar() {
       date: formatDateKey(slot),
       time: `${`${slot.getHours()}`.padStart(2, "0")}:${`${slot.getMinutes()}`.padStart(2, "0")}`,
     });
-    setNewEventMenuOpen(true);
+    setQuickCreateNonce((current) => current + 1);
   };
 
   const onCreateBookingShortcut = (seed: NewEventSeed) => {
@@ -2570,13 +2511,8 @@ export function OperationsCalendar() {
   const rangeLabel = formatRangeLabel(anchorDate, view);
 
   return (
-    <div className="flex-1 space-y-4 p-4 pt-5 md:p-6">
+    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8 bg-slate-50 min-h-[calc(100vh-4rem)] animate-in fade-in duration-700 ease-in-out">
       <OperationsCalendarToolbar
-        axisMode={axisMode}
-        onAxisModeChange={setAxisMode}
-        resourceTypeOptions={resourceTypeOptions}
-        selectedResourceType={selectedResourceType}
-        onSelectedResourceTypeChange={setSelectedResourceType}
         view={view}
         onViewChange={setView}
         anchorDate={anchorDate}
@@ -2590,42 +2526,17 @@ export function OperationsCalendar() {
         onSearchTermChange={setSearchTerm}
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((previous) => !previous)}
-        showConfig={showConfig}
-        onToggleConfig={() => {
-          if (!permissions.canConfigureCalendar) {
-            toast.error("Only admins can update calendar configuration");
-            return;
-          }
-          setShowConfig((previous) => !previous);
-        }}
-        canConfigureCalendar={permissions.canConfigureCalendar}
-        reportsOpen={showReports}
-        onToggleReports={() => {
-          if (!permissions.canViewAudit) {
-            toast.error("Manager or admin access is required for reports");
-            return;
-          }
-          setShowReports((previous) => !previous);
-        }}
         activeFilterCount={activeCount}
-        showCompletedTasks={filters.showCompletedTasks}
-        onToggleShowCompletedTasks={() =>
-          setFilters((previous) => ({
-            ...previous,
-            showCompletedTasks: !previous.showCompletedTasks,
-          }))
-        }
         newEventMenu={
           <OperationsCalendarNewEventMenu
             open={newEventMenuOpen}
             onOpenChange={setNewEventMenuOpen}
             seed={newEventSeed}
+            quickCreateNonce={quickCreateNonce}
             canCreateCustomEvent={permissions.canCreateCustomEvents}
-            canCreateBlockTime={permissions.canCreateBlockTime}
-            canCreateBooking={canCreateBookingShortcut}
-            canRecoverDeleted={
-              permissions.canRecoverDeletedEvents && recoverableDeletedEvents.length > 0
-            }
+            canCreateBlockTime={false}
+            canCreateBooking={false}
+            canRecoverDeleted={false}
             staffOptions={staffOptions}
             roleOptions={roleOptions}
             onCreateBookingShortcut={onCreateBookingShortcut}
@@ -2634,62 +2545,6 @@ export function OperationsCalendar() {
             onRecoverDeleted={recoverLastDeletedEvent}
           />
         }
-        visualConfig={visualConfig}
-        onZoomChange={(zoomLevel) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            zoomLevel,
-          }))
-        }
-        selectedSavedViewId={selectedSavedViewId}
-        savedViews={availableSavedViews}
-        onSelectSavedView={applySavedView}
-        onSavePersonalView={() => saveCurrentView("personal")}
-        onSaveFacilityView={() => saveCurrentView("facility")}
-        canCreateFacilityViews={canCreateFacilityViews}
-        onDeleteSavedView={deleteSavedView}
-      />
-
-      <OperationsCalendarConfigPanel
-        open={showConfig}
-        visualConfig={visualConfig}
-        onColorModeChange={(value) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            colorMode: value,
-          }))
-        }
-        onColorStyleChange={(value) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            colorStyle: value,
-          }))
-        }
-        onAddOnDisplayModeChange={(value) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            addOnDisplayMode: value,
-          }))
-        }
-        onZoomLevelChange={(value) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            zoomLevel: value,
-          }))
-        }
-        onCompletedTaskDecorationChange={(value) =>
-          setVisualConfig((previous) => ({
-            ...previous,
-            completedTaskDecoration: value,
-          }))
-        }
-        onToggleCardField={toggleCardField}
-        showEventCreator={showEventCreator}
-        onToggleEventCreator={() => setShowEventCreator((previous) => !previous)}
-        manualEventDraft={manualEventDraft}
-        onManualEventDraftChange={setManualEventDraft}
-        onCreateManualEvent={createManualFacilityEvent}
-        onClose={() => setShowConfig(false)}
       />
 
       <OperationsCalendarFiltersPanel
@@ -2697,45 +2552,8 @@ export function OperationsCalendar() {
         filters={filters}
         filterOptions={filterOptions}
         onToggleGroupValue={updateFilterGroup}
-        onUnassignedOnlyChange={(checked) =>
-          setFilters((previous) => ({
-            ...previous,
-            unassignedOnly: checked,
-          }))
-        }
-        onShowRetailPosChange={(checked) =>
-          setFilters((previous) => ({
-            ...previous,
-            showRetailPos: checked,
-          }))
-        }
-        onShowCompletedTasksChange={(checked) =>
-          setFilters((previous) => ({
-            ...previous,
-            showCompletedTasks: checked,
-          }))
-        }
-        onTagLogicChange={(logic) =>
-          setFilters((previous) => ({
-            ...previous,
-            tagLogic: logic,
-          }))
-        }
         onClearAll={clearAllFilters}
         onClose={() => setShowFilters(false)}
-      />
-
-      <OperationsCalendarReportsPanel
-        open={showReports}
-        canViewReports={permissions.canViewAudit}
-        dailySummary={reportDailySummary}
-        taskCompletionMetrics={reportTaskCompletionMetrics}
-        overdueSummary={reportOverdueSummary}
-        serviceUtilization={reportServiceUtilization}
-        resourceUtilization={reportResourceUtilization}
-        auditEntries={calendarAuditLog}
-        onExportReport={onExportReport}
-        onClose={() => setShowReports(false)}
       />
 
       <OperationsCalendarContent
