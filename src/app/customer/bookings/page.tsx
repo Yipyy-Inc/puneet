@@ -47,6 +47,8 @@ import {
 import { TagList } from "@/components/shared/TagList";
 import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { getNotesForEntity } from "@/data/tags-notes";
+import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
+import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -76,6 +78,11 @@ export default function CustomerBookingsPage() {
   // Get customer data
   const customer = useMemo(
     () => clients.find((c) => c.id === MOCK_CUSTOMER_ID),
+    [],
+  );
+
+  const myUnfinishedBookings = useMemo(
+    () => getUnfinishedBookingsForCustomer(MOCK_CUSTOMER_ID),
     [],
   );
 
@@ -264,7 +271,7 @@ export default function CustomerBookingsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
@@ -292,6 +299,25 @@ export default function CustomerBookingsPage() {
               <p className="text-muted-foreground text-xs">Past bookings</p>
             </CardContent>
           </Card>
+
+          {myUnfinishedBookings.length > 0 && (
+            <Card className="border-amber-200 dark:border-amber-800">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Unfinished
+                </CardTitle>
+                <Clock className="size-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">
+                  {myUnfinishedBookings.length}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Incomplete reservations
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Bookings Table */}
@@ -310,6 +336,14 @@ export default function CustomerBookingsPage() {
                 </TabsTrigger>
                 <TabsTrigger value="past">
                   Past ({pastBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="unfinished" className="relative">
+                  Unfinished
+                  {myUnfinishedBookings.length > 0 && (
+                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                      {myUnfinishedBookings.length}
+                    </span>
+                  )}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming" className="space-y-4">
@@ -639,6 +673,9 @@ export default function CustomerBookingsPage() {
                     </p>
                   </div>
                 )}
+              </TabsContent>
+              <TabsContent value="unfinished" className="space-y-4">
+                <CustomerUnfinishedBookings bookings={myUnfinishedBookings} />
               </TabsContent>
             </Tabs>
           </CardContent>
