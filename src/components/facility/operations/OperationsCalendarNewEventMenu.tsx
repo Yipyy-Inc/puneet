@@ -276,11 +276,14 @@ export function OperationsCalendarNewEventMenu({
     !canCreateBooking &&
     !canRecoverDeleted;
 
+  const yipyyPrimaryButtonClass =
+    "gap-2 h-10 rounded-full px-6 font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-900/15 border border-sky-700/30 transition-all duration-300";
+
   return (
     <>
       {customOnlyMode ? (
         <Button 
-          className="gap-2 h-10 rounded-full px-6 font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 border-0 hover:shadow-indigo-500/40 transition-all duration-300" 
+          className={yipyyPrimaryButtonClass}
           onClick={() => openDialog("custom-event")}
         >
           <CalendarPlus className="size-4" />
@@ -289,7 +292,7 @@ export function OperationsCalendarNewEventMenu({
       ) : (
         <DropdownMenu open={open} onOpenChange={onOpenChange}>
           <DropdownMenuTrigger asChild>
-            <Button className="gap-2 h-10 rounded-full px-6 font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white shadow-lg shadow-indigo-500/25 border-0 hover:shadow-indigo-500/40 transition-all duration-300">
+            <Button className={yipyyPrimaryButtonClass}>
               <CalendarPlus className="size-4" />
               New
             </Button>

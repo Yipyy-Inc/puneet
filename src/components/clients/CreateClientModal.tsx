@@ -93,7 +93,6 @@ const EMPTY_PET: PetForm = {
 
 interface VaccineEntry {
   name: string;
-  dateAdministered: string;
   expiryDate: string;
 }
 
@@ -185,9 +184,9 @@ function isValidPhoneNumber(value: string): boolean {
 }
 
 const DEFAULT_VACCINES: VaccineEntry[] = [
-  { name: "Rabies", dateAdministered: "", expiryDate: "" },
-  { name: "DHPP", dateAdministered: "", expiryDate: "" },
-  { name: "Bordetella", dateAdministered: "", expiryDate: "" },
+  { name: "Rabies", expiryDate: "" },
+  { name: "DHPP", expiryDate: "" },
+  { name: "Bordetella", expiryDate: "" },
 ];
 
 const DEFAULT_AGREEMENTS = {
@@ -312,6 +311,11 @@ export function CreateClientModal({
   onSave,
   facilityName,
 }: CreateClientModalProps) {
+  const WIZARD_LOCKED_DATE_POPOVER_CLASS =
+    "w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]";
+  const WIZARD_LOCKED_DATE_ANCHOR_CLASS =
+    "left-[calc(50%-462px)] top-[174px]";
+
   const { languageSettings } = useSettings();
   const customerLanguageOptions = getEnabledCustomerLanguageOptions(
     languageSettings,
@@ -850,12 +854,8 @@ export function CreateClientModal({
                         onValueChange={(next) => updatePet("dateOfBirth", next)}
                         max={new Date().toISOString().split("T")[0]}
                         placeholder="Select date of birth"
-                        popoverAlign="start"
-                        popoverAlignOffset={-420}
-                        popoverSide="left"
-                        popoverSideOffset={44}
-                        popoverAvoidCollisions={false}
-                        popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                        popoverClassName={WIZARD_LOCKED_DATE_POPOVER_CLASS}
+                        desktopFixedAnchorClassName={WIZARD_LOCKED_DATE_ANCHOR_CLASS}
                         calendarClassName="p-1"
                         showQuickPresets={false}
                       />
@@ -1078,35 +1078,14 @@ export function CreateClientModal({
         {step === 4 && (
           <div className="animate-in fade-in space-y-4 py-2 duration-200">
             <p className="text-muted-foreground text-sm">
-              Vaccination records. You can skip and add later, but bookings may
-              be blocked until vaccines are verified.
+              Vaccine expiry dates. You can skip and add later, but bookings may
+              be blocked until expiry information is verified.
             </p>
 
             {vaccines.map((v, i) => (
               <div key={v.name} className="rounded-lg border p-3">
                 <p className="mb-2 text-sm font-medium">{v.name}</p>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <Field label="Date Administered">
-                    <DatePicker
-                      value={v.dateAdministered}
-                      onValueChange={(next) =>
-                        setVaccines((prev) =>
-                          prev.map((vv, ii) =>
-                            ii === i ? { ...vv, dateAdministered: next } : vv,
-                          ),
-                        )
-                      }
-                      popoverAlign="start"
-                      popoverAlignOffset={-420}
-                      popoverSide="left"
-                      popoverSideOffset={44}
-                      popoverAvoidCollisions={false}
-                      popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
-                      calendarClassName="p-1"
-                      showQuickPresets={false}
-                      placeholder="Select date"
-                    />
-                  </Field>
+                <div className="grid grid-cols-1 gap-3">
                   <Field label="Expiry Date">
                     <DatePicker
                       value={v.expiryDate}
@@ -1117,12 +1096,8 @@ export function CreateClientModal({
                           ),
                         )
                       }
-                      popoverAlign="start"
-                      popoverAlignOffset={-420}
-                      popoverSide="left"
-                      popoverSideOffset={44}
-                      popoverAvoidCollisions={false}
-                      popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                      popoverClassName={WIZARD_LOCKED_DATE_POPOVER_CLASS}
+                      desktopFixedAnchorClassName={WIZARD_LOCKED_DATE_ANCHOR_CLASS}
                       calendarClassName="p-1"
                       showQuickPresets={false}
                       placeholder="Select date"
@@ -1138,7 +1113,7 @@ export function CreateClientModal({
               onClick={() =>
                 setVaccines([
                   ...vaccines,
-                  { name: "Other", dateAdministered: "", expiryDate: "" },
+                  { name: "Other", expiryDate: "" },
                 ])
               }
             >
@@ -1338,14 +1313,13 @@ export function CreateClientModal({
                   Edit
                 </Button>
               </div>
-              {vaccines.filter((v) => v.dateAdministered).length > 0 ? (
+              {vaccines.filter((v) => v.expiryDate).length > 0 ? (
                 vaccines
-                  .filter((v) => v.dateAdministered)
+                  .filter((v) => v.expiryDate)
                   .map((v) => (
                     <p key={v.name} className="text-xs">
                       <span className="font-medium">{v.name}</span>:{" "}
-                      {v.dateAdministered}
-                      {v.expiryDate && ` → ${v.expiryDate}`}
+                      Expires {v.expiryDate}
                     </p>
                   ))
               ) : (

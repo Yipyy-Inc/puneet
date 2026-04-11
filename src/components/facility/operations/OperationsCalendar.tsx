@@ -51,6 +51,7 @@ import {
   OperationsCalendarNewEventMenu,
 } from "@/components/facility/operations/OperationsCalendarNewEventMenu";
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
+import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
@@ -2511,73 +2512,84 @@ export function OperationsCalendar() {
   const rangeLabel = formatRangeLabel(anchorDate, view);
 
   return (
-    <div className="flex-1 space-y-6 p-4 pt-6 md:p-8 bg-slate-50 min-h-[calc(100vh-4rem)] animate-in fade-in duration-700 ease-in-out">
-      <OperationsCalendarToolbar
-        view={view}
-        onViewChange={setView}
+    <div className="flex bg-slate-50 min-h-[calc(100vh-4rem)] animate-in fade-in duration-700 ease-in-out">
+      {/* Left sidebar: mini calendar + stats */}
+      <OperationsCalendarSidePanel
         anchorDate={anchorDate}
-        onDateChange={onDateChange}
-        onToday={setToday}
-        onStep={(direction) =>
-          setAnchorDate((current) => stepAnchorDate(current, view, direction))
-        }
-        rangeLabel={rangeLabel}
-        searchTerm={searchTerm}
-        onSearchTermChange={setSearchTerm}
-        showFilters={showFilters}
-        onToggleFilters={() => setShowFilters((previous) => !previous)}
-        activeFilterCount={activeCount}
-        newEventMenu={
-          <OperationsCalendarNewEventMenu
-            open={newEventMenuOpen}
-            onOpenChange={setNewEventMenuOpen}
-            seed={newEventSeed}
-            quickCreateNonce={quickCreateNonce}
-            canCreateCustomEvent={permissions.canCreateCustomEvents}
-            canCreateBlockTime={false}
-            canCreateBooking={false}
-            canRecoverDeleted={false}
-            staffOptions={staffOptions}
-            roleOptions={roleOptions}
-            onCreateBookingShortcut={onCreateBookingShortcut}
-            onCreateCustomEvent={appendCustomEvent}
-            onCreateBlockTime={appendBlockTime}
-            onRecoverDeleted={recoverLastDeletedEvent}
-          />
-        }
-      />
-
-      <OperationsCalendarFiltersPanel
-        open={showFilters}
-        filters={filters}
-        filterOptions={filterOptions}
-        onToggleGroupValue={updateFilterGroup}
-        onClearAll={clearAllFilters}
-        onClose={() => setShowFilters(false)}
-      />
-
-      <OperationsCalendarContent
-        axisMode={axisMode}
-        resourceTypeLabel={selectedResourceOption?.label}
-        resourceResources={
-          selectedResourceOption
-            ? selectedResourceOption.resources.map((resource) => ({
-                ...resource,
-                type: selectedResourceOption.type,
-              }))
-            : []
-        }
         view={view}
-        anchorDate={anchorDate}
-        days={days}
+        allEvents={allEvents}
         visibleEvents={visibleEvents}
-        activeFilterCount={activeCount}
-        timelineRef={timelineRef}
-        renderSettings={renderSettings}
-        onClearAllFilters={clearAllFilters}
-        onEventClick={openEventDrawer}
-        onSlotCreate={onSlotCreate}
+        serviceColorMap={serviceColorMap}
+        onDateChange={onDateChange}
       />
+
+      {/* Main calendar area */}
+      <div className="flex-1 min-w-0 flex flex-col space-y-4 p-4 pt-6 md:p-6 overflow-auto">
+        <OperationsCalendarToolbar
+          view={view}
+          onViewChange={setView}
+          onToday={setToday}
+          onStep={(direction) =>
+            setAnchorDate((current) => stepAnchorDate(current, view, direction))
+          }
+          rangeLabel={rangeLabel}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((previous) => !previous)}
+          activeFilterCount={activeCount}
+          newEventMenu={
+            <OperationsCalendarNewEventMenu
+              open={newEventMenuOpen}
+              onOpenChange={setNewEventMenuOpen}
+              seed={newEventSeed}
+              quickCreateNonce={quickCreateNonce}
+              canCreateCustomEvent={permissions.canCreateCustomEvents}
+              canCreateBlockTime={false}
+              canCreateBooking={false}
+              canRecoverDeleted={false}
+              staffOptions={staffOptions}
+              roleOptions={roleOptions}
+              onCreateBookingShortcut={onCreateBookingShortcut}
+              onCreateCustomEvent={appendCustomEvent}
+              onCreateBlockTime={appendBlockTime}
+              onRecoverDeleted={recoverLastDeletedEvent}
+            />
+          }
+        />
+
+        <OperationsCalendarFiltersPanel
+          open={showFilters}
+          filters={filters}
+          filterOptions={filterOptions}
+          onToggleGroupValue={updateFilterGroup}
+          onClearAll={clearAllFilters}
+          onClose={() => setShowFilters(false)}
+        />
+
+        <OperationsCalendarContent
+          axisMode={axisMode}
+          resourceTypeLabel={selectedResourceOption?.label}
+          resourceResources={
+            selectedResourceOption
+              ? selectedResourceOption.resources.map((resource) => ({
+                  ...resource,
+                  type: selectedResourceOption.type,
+                }))
+              : []
+          }
+          view={view}
+          anchorDate={anchorDate}
+          days={days}
+          visibleEvents={visibleEvents}
+          activeFilterCount={activeCount}
+          timelineRef={timelineRef}
+          renderSettings={renderSettings}
+          onClearAllFilters={clearAllFilters}
+          onEventClick={openEventDrawer}
+          onSlotCreate={onSlotCreate}
+        />
+      </div>
 
       <OperationsCalendarEventDrawer
         open={drawerOpen && Boolean(selectedEvent)}

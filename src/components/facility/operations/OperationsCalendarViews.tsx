@@ -1,10 +1,27 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useState } from "react";
+import type { CSSProperties, RefObject } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import {
+  Clock,
+  ExternalLink,
+  FileText,
+  Hash,
+  MapPin,
+  PawPrint,
+  User,
+  Users,
+} from "lucide-react";
 import {
   type CalendarVisualConfig,
   type FilterOption,
@@ -18,6 +35,7 @@ import {
   getZoomEventLimit,
   hexToRgba,
   isCurrentMonthDay,
+  isSameDay,
   resolveEventColor,
 } from "@/lib/operations-calendar";
 
@@ -28,7 +46,7 @@ export interface EventRenderSettings {
 
 function eventDurationLabel(event: OperationsCalendarEvent): string {
   if (event.allDay) return "All day";
-  return `${formatTimeLabel(event.start)} - ${formatTimeLabel(event.end)}`;
+  return `${formatTimeLabel(event.start)} – ${formatTimeLabel(event.end)}`;
 }
 
 function eventHoverSummary(
@@ -50,45 +68,17 @@ function eventHoverSummary(
     .join("\n");
 }
 
-function getCardInlineStyle(
-  event: OperationsCalendarEvent,
-  renderSettings: EventRenderSettings,
-): React.CSSProperties {
-  if (event.type === "task" && event.status === "Completed") {
-    return {
-      backgroundColor: "rgba(100, 116, 139, 0.12)",
-      borderColor: "rgba(100, 116, 139, 0.35)",
-      borderLeftWidth: 4,
-      borderLeftColor: "#94a3b8",
-    };
+function getStatusBadgeStyle(status: string, type: string) {
+  if (type === "task") {
+    if (status === "Completed") return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+    if (status === "Overdue") return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
+    return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
   }
-
-  if (event.type === "task" && event.status === "Overdue") {
-    return {
-      backgroundColor: "rgba(239, 68, 68, 0.12)",
-      borderColor: "rgba(239, 68, 68, 0.35)",
-      borderLeftWidth: 4,
-      borderLeftColor: "#ef4444",
-    };
-  }
-
-  const color = resolveEventColor(
-    event,
-    renderSettings.visualConfig.colorMode,
-    renderSettings.serviceColorMap,
-  );
-
-  if (renderSettings.visualConfig.colorStyle === "full-background") {
-    return {
-      backgroundColor: hexToRgba(color, 0.14),
-      borderColor: hexToRgba(color, 0.35),
-    };
-  }
-
-  return {
-    borderLeftWidth: 4,
-    borderLeftColor: color,
-  };
+  if (status === "Cancelled") return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
+  if (status === "Confirmed") return "bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-100";
+  if (status === "Checked In" || status === "checked-in") return "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100";
+  if (status === "Checked Out" || status === "checked-out") return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
+  return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
 }
 
 export function EventChip({
@@ -100,39 +90,198 @@ export function EventChip({
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const petLabel = formatPetLabel(event.petNames) || event.title;
-  const customerLabel = event.customerName || "No customer linked";
-  const serviceLabel = event.service || "Service not specified";
   const timeLabel = eventDurationLabel(event);
   const isCompletedTask = event.type === "task" && event.status === "Completed";
   const isOverdueTask = event.type === "task" && event.status === "Overdue";
   const isCancelledBooking = event.type === "booking" && event.status === "Cancelled";
 
+  const accentColor = resolveEventColor(
+    event,
+    renderSettings.visualConfig.colorMode,
+    renderSettings.serviceColorMap,
+  );
+
+  // No left-border stripe — use tinted background + colored dot
+  const chipStyle: CSSProperties = isCompletedTask
+    ? { backgroundColor: "rgba(100,116,139,0.07)", borderColor: "rgba(100,116,139,0.18)" }
+    : isOverdueTask
+    ? { backgroundColor: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.28)" }
+    : {
+        backgroundColor: hexToRgba(accentColor, 0.09),
+        borderColor: hexToRgba(accentColor, 0.25),
+      };
+
+  const serviceLabel = event.service ?? (event.type === "task" ? "Task" : "Booking");
+
   return (
-    <button
-      type="button"
-      data-calendar-event-chip
-      style={getCardInlineStyle(event, renderSettings)}
-      onClick={() => onEventClick?.(event)}
-      title={eventHoverSummary(event, petLabel, customerLabel)}
-      className={cn(
-        "hover:border-primary/40 hover:bg-primary/5 block w-full rounded-lg border border-slate-200 bg-white/90 p-2 text-left transition",
-        event.isSubEvent &&
-          "ml-4 border-dashed bg-indigo-50/40 before:mr-1 before:inline-block before:text-indigo-500 before:content-['↳']",
-        isCompletedTask && "border-slate-300 bg-slate-100/80 text-slate-600",
-        isOverdueTask && "border-red-300 bg-red-50",
-        isCancelledBooking && "opacity-70",
-      )}
-    >
-      <div className="space-y-1">
-        <p className={cn("line-clamp-1 text-xs font-semibold text-slate-900", isCancelledBooking && "line-through")}>
-          {petLabel}
-        </p>
-        <p className="line-clamp-1 text-[11px] text-slate-700">{serviceLabel}</p>
-        <p className="line-clamp-1 text-[11px] text-slate-600">{customerLabel}</p>
-        <p className="text-[11px] text-slate-600">{timeLabel}</p>
-      </div>
-    </button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          data-calendar-event-chip
+          style={chipStyle}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
+          title={eventHoverSummary(event, petLabel, event.customerName ?? "No customer linked")}
+          className={cn(
+            "group relative block w-full rounded-xl border px-2.5 py-2 text-left",
+            "transition-all duration-200 hover:scale-[1.015] active:scale-[0.98]",
+            "overflow-hidden cursor-pointer",
+            event.isSubEvent && "ml-3 border-dashed opacity-80",
+            isCancelledBooking && "opacity-50",
+          )}
+        >
+          {/* Hover glow overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
+            style={{ boxShadow: `inset 0 0 0 1px ${hexToRgba(accentColor, 0.35)}` }}
+          />
+
+          {/* Top row: colored dot + pet name */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className="size-2 shrink-0 rounded-full ring-1 ring-white/80"
+              style={{
+                backgroundColor: accentColor,
+                boxShadow: `0 0 5px ${hexToRgba(accentColor, 0.55)}`,
+              }}
+            />
+            <p
+              className={cn(
+                "truncate text-[11px] font-bold leading-tight text-slate-900",
+                isCancelledBooking && "line-through",
+                isCompletedTask && "text-slate-400",
+              )}
+            >
+              {petLabel}
+            </p>
+          </div>
+
+          {/* Bottom row: service badge + time */}
+          <div className="flex items-center gap-1.5 mt-1 pl-3.5 min-w-0">
+            <span
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
+              style={{
+                backgroundColor: hexToRgba(accentColor, 0.15),
+                color: accentColor,
+              }}
+            >
+              {serviceLabel.length > 12 ? serviceLabel.slice(0, 12) + "…" : serviceLabel}
+            </span>
+            {!event.allDay && (
+              <span className="truncate text-[10px] font-medium text-slate-400 leading-tight">
+                {timeLabel}
+              </span>
+            )}
+          </div>
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        className="w-72 p-0 shadow-2xl border-0 overflow-hidden rounded-2xl z-50"
+        side="right"
+        align="start"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="p-4 pb-3"
+          style={{
+            backgroundColor: hexToRgba(accentColor, 0.08),
+            borderBottom: `1px solid ${hexToRgba(accentColor, 0.15)}`,
+          }}
+        >
+          <div className="flex items-start gap-3">
+            {/* Pet avatar */}
+            <div
+              className="flex size-12 shrink-0 items-center justify-center rounded-xl shadow-md border-2 border-white"
+              style={{ backgroundColor: hexToRgba(accentColor, 0.18) }}
+            >
+              <PawPrint className="size-5" style={{ color: accentColor }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-900 text-sm leading-tight truncate">
+                {petLabel}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{event.service}</p>
+              <Badge
+                className={cn(
+                  "mt-1.5 text-[10px] px-2 py-0 font-semibold border",
+                  getStatusBadgeStyle(event.status, event.type),
+                )}
+              >
+                {event.status}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Detail rows */}
+        <div className="bg-white px-4 pb-3 space-y-2 pt-3">
+          {!event.allDay && (
+            <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
+              <Clock className="size-3.5 shrink-0 text-slate-400" />
+              <span>{timeLabel}</span>
+            </div>
+          )}
+          {event.customerName && (
+            <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
+              <User className="size-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{event.customerName}</span>
+            </div>
+          )}
+          {event.staff && (
+            <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
+              <Users className="size-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{event.staff}</span>
+            </div>
+          )}
+          {event.location && (
+            <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
+              <MapPin className="size-3.5 shrink-0 text-slate-400" />
+              <span className="truncate">{event.location}</span>
+            </div>
+          )}
+          {event.bookingId && (
+            <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
+              <Hash className="size-3.5 shrink-0 text-slate-400" />
+              <span>Booking #{event.bookingId}</span>
+            </div>
+          )}
+          {event.notes && (
+            <div className="flex items-start gap-2.5 text-[12px] text-slate-600 mt-1">
+              <FileText className="size-3.5 shrink-0 text-slate-400 mt-0.5" />
+              <span className="line-clamp-2">{event.notes}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="bg-white border-t border-slate-100 p-3 flex gap-2">
+          {event.href && (
+            <Link
+              href={event.href}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-95"
+              style={{ backgroundColor: accentColor }}
+              onClick={() => setOpen(false)}
+            >
+              Full Details
+              <ExternalLink className="size-3" />
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onEventClick?.(event); }}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-100 transition-colors whitespace-nowrap"
+          >
+            Open Panel
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -147,20 +296,18 @@ export function FilterSection({
   selectedValues: string[];
   onToggle: (value: string) => void;
 }) {
-  if (options.length === 0) {
-    return null;
-  }
+  if (options.length === 0) return null;
 
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-white/90 p-3">
-      <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">{title}</h3>
+    <div className="space-y-2 rounded-xl border border-slate-200/70 bg-white/90 p-3 shadow-sm">
+      <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{title}</h3>
       <div className="grid gap-1.5 sm:grid-cols-2">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
           return (
             <label
               key={option.value}
-              className="hover:bg-muted/40 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
             >
               <Checkbox checked={checked} onCheckedChange={() => onToggle(option.value)} />
               <span className="text-xs text-slate-700">{option.label}</span>
@@ -187,43 +334,70 @@ export function DayTimeline({
   onEventClick?: (event: OperationsCalendarEvent) => void;
   onSlotCreate?: (slot: Date) => void;
 }) {
-  const hours = Array.from({ length: 24 }, (_, index) => index);
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7);
   const slotHeight = getTimelineSlotHeight(renderSettings.visualConfig.zoomLevel);
+  const now = new Date();
+  const todayView = isSameDay(day, now);
+  const nowHour = now.getHours();
+  const nowMinutePercent = (now.getMinutes() / 60) * 100;
 
   return (
     <div
       ref={timelineRef}
-      className="max-h-[700px] overflow-y-auto rounded-xl border border-slate-200 bg-white"
+      className="max-h-[700px] overflow-y-auto rounded-2xl border border-slate-200/60 bg-white shadow-sm"
     >
-      {hours.map((hour) => {
+      {hours.map((hour, idx) => {
         const slotStart = new Date(day);
         slotStart.setHours(hour, 0, 0, 0);
         const slotEnd = addMinutes(slotStart, 60);
         const slotEvents = events.filter(
-          (event) => event.start < slotEnd && event.end > slotStart,
+          (ev) => ev.start < slotEnd && ev.end > slotStart,
         );
+        const isCurrentHour = todayView && nowHour === hour;
 
         return (
-          <div key={hour} className="grid grid-cols-[72px_1fr] border-b border-slate-100 last:border-b-0">
-            <div className="border-r border-slate-100 px-3 py-4 text-xs font-medium text-slate-500">
+          <div
+            key={hour}
+            className={cn(
+              "relative grid grid-cols-[72px_1fr] border-b border-slate-100 last:border-b-0",
+              idx % 2 === 0 ? "bg-white" : "bg-slate-50/40",
+              isCurrentHour && "bg-sky-50/40",
+            )}
+          >
+            <div
+              className={cn(
+                "border-r border-slate-100 px-3 py-4 text-xs font-semibold",
+                isCurrentHour ? "text-sky-600" : "text-slate-400",
+              )}
+            >
               {slotStart.toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
               })}
             </div>
             <div
-              className="space-y-2 p-2.5"
+              className="space-y-1.5 p-2 relative"
               style={{ minHeight: slotHeight }}
-              onClick={(clickEvent) => {
-                const target = clickEvent.target as HTMLElement;
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
                 if (target.closest("[data-calendar-event-chip]")) return;
                 onSlotCreate?.(slotStart);
               }}
             >
-              {slotEvents.map((event) => (
+              {/* Live current-time indicator */}
+              {isCurrentHour && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 flex items-center z-10"
+                  style={{ top: `${nowMinutePercent}%` }}
+                >
+                  <div className="size-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_2px_rgba(244,63,94,0.4)] -ml-1.5 shrink-0" />
+                  <div className="flex-1 h-px bg-rose-400/70" />
+                </div>
+              )}
+              {slotEvents.map((ev) => (
                 <EventChip
-                  key={`${event.id}-${hour}`}
-                  event={event}
+                  key={`${ev.id}-${hour}`}
+                  event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
                 />
@@ -254,58 +428,103 @@ export function DayColumns({
   onSlotCreate?: (slot: Date) => void;
 }) {
   const visibleLimit = getZoomEventLimit(renderSettings.visualConfig.zoomLevel);
+  const today = new Date();
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
+    <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-7">
       {days.map((day) => {
         const dayEvents = getEventsForDay(events, day);
         const visibleEvents = dayEvents.slice(0, visibleLimit);
         const overflowCount = Math.max(0, dayEvents.length - visibleEvents.length);
+        const isToday = isSameDay(day, today);
+        const inCurrentMonth =
+          !showMonthMask || !anchorDate || isCurrentMonthDay(day, anchorDate);
 
         return (
-          <Card
+          <div
             key={formatDateKey(day)}
             className={cn(
-              "border-slate-200 bg-white/90",
-              showMonthMask &&
-                anchorDate &&
-                !isCurrentMonthDay(day, anchorDate) &&
-                "bg-slate-50/70",
+              "group relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-200",
+              "hover:shadow-lg hover:-translate-y-0.5",
+              inCurrentMonth
+                ? "bg-white border-slate-200/60 shadow-sm"
+                : "bg-slate-50/60 border-slate-100/80",
+              isToday && "ring-2 ring-sky-400/40 shadow-sky-100/60 shadow-md border-sky-200/60",
             )}
           >
-            <CardHeader className="space-y-1 p-3 pb-2">
-              <CardTitle className="text-sm text-slate-800">
+            {/* Day header */}
+            <div
+              className={cn(
+                "flex items-center justify-between px-3 py-2 border-b cursor-pointer",
+                isToday
+                  ? "bg-sky-600 border-sky-700/30"
+                  : inCurrentMonth
+                  ? "bg-slate-50 border-slate-100"
+                  : "bg-slate-50/60 border-slate-100/60",
+              )}
+              onClick={() => {
+                const slot = new Date(day);
+                slot.setHours(9, 0, 0, 0);
+                onSlotCreate?.(slot);
+              }}
+            >
+              <span
+                className={cn(
+                  "text-[11px] font-bold tracking-tight",
+                  isToday ? "text-white" : inCurrentMonth ? "text-slate-700" : "text-slate-400",
+                )}
+              >
                 {day.toLocaleDateString("en-US", {
                   weekday: days.length >= 14 ? "short" : "long",
                   month: "short",
                   day: "numeric",
                 })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent
-              className="space-y-2 p-3 pt-0"
-              onClick={(clickEvent) => {
-                const target = clickEvent.target as HTMLElement;
+              </span>
+              {dayEvents.length > 0 && (
+                <span
+                  className={cn(
+                    "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                    isToday
+                      ? "bg-white/20 text-white"
+                      : "bg-indigo-100 text-indigo-600",
+                  )}
+                >
+                  {dayEvents.length}
+                </span>
+              )}
+            </div>
+
+            {/* Events area */}
+            <div
+              className="flex-1 space-y-1.5 p-2"
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
                 if (target.closest("[data-calendar-event-chip]")) return;
                 const slot = new Date(day);
                 slot.setHours(9, 0, 0, 0);
                 onSlotCreate?.(slot);
               }}
             >
-              {visibleEvents.map((event) => (
+              {visibleEvents.map((ev) => (
                 <EventChip
-                  key={event.id}
-                  event={event}
+                  key={ev.id}
+                  event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
                 />
               ))}
               {overflowCount > 0 && (
-                <p className="text-xs font-medium text-slate-500">+{overflowCount} more events</p>
+                <p className="text-[10px] font-semibold text-indigo-400 pl-2 pt-0.5">
+                  +{overflowCount} more
+                </p>
               )}
-              {dayEvents.length === 0 && <p className="text-xs text-slate-400">No events</p>}
-            </CardContent>
-          </Card>
+              {dayEvents.length === 0 && (
+                <p className="text-[10px] text-slate-300 text-center py-3 select-none">
+                  No events
+                </p>
+              )}
+            </div>
+          </div>
         );
       })}
     </div>
@@ -327,7 +546,7 @@ export function ResourceColumnsView({
 }) {
   if (resources.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center text-sm text-slate-400">
         No resources are configured for this resource calendar type.
       </div>
     );
@@ -338,60 +557,59 @@ export function ResourceColumnsView({
       {resources.map((resource) => {
         const laneEvents = events
           .filter(
-            (event) =>
-              (event.resourceId && event.resourceId === resource.id) ||
-              event.resource === resource.name,
+            (ev) =>
+              (ev.resourceId && ev.resourceId === resource.id) ||
+              ev.resource === resource.name,
           )
-          .sort((first, second) => first.start.getTime() - second.start.getTime());
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
 
         let conflictCount = 0;
-        for (let index = 0; index < laneEvents.length; index += 1) {
-          const current = laneEvents[index];
-          const hasOverlap = laneEvents.some(
-            (candidate, candidateIndex) =>
-              candidateIndex > index &&
-              current.start < candidate.end &&
-              current.end > candidate.start,
-          );
-          if (hasOverlap) conflictCount += 1;
+        for (let i = 0; i < laneEvents.length; i++) {
+          const cur = laneEvents[i];
+          if (laneEvents.some((c, ci) => ci > i && cur.start < c.end && cur.end > c.start)) {
+            conflictCount++;
+          }
         }
 
         return (
-          <Card key={resource.id} className="border-slate-200 bg-white/90">
-            <CardHeader className="space-y-1 p-3 pb-2">
-              <CardTitle className="flex items-center justify-between text-sm text-slate-800">
-                <span className="line-clamp-1">{resource.name}</span>
-                <Badge variant="outline" className="text-[10px] font-normal">
-                  {resource.type}
-                </Badge>
-              </CardTitle>
-              {conflictCount > 0 && (
-                <p className="text-xs text-rose-600">{conflictCount} conflict window(s)</p>
-              )}
-            </CardHeader>
-            <CardContent
-              className="space-y-2 p-3 pt-0"
-              onClick={(clickEvent) => {
-                const target = clickEvent.target as HTMLElement;
+          <div
+            key={resource.id}
+            className="flex flex-col rounded-2xl border border-slate-200/60 bg-white shadow-sm overflow-hidden hover:shadow-md transition-all duration-200"
+          >
+            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50 border-b border-slate-100">
+              <span className="text-sm font-bold text-slate-800 line-clamp-1">{resource.name}</span>
+              <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                {resource.type}
+              </Badge>
+            </div>
+            {conflictCount > 0 && (
+              <div className="px-3 py-1 bg-rose-50 border-b border-rose-100">
+                <p className="text-[11px] text-rose-600 font-medium">⚠ {conflictCount} conflict(s)</p>
+              </div>
+            )}
+            <div
+              className="flex-1 space-y-1.5 p-2"
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
                 if (target.closest("[data-calendar-event-chip]")) return;
                 const seed = new Date();
                 seed.setMinutes(0, 0, 0);
                 onSlotCreate?.(seed);
               }}
             >
-              {laneEvents.map((event) => (
+              {laneEvents.map((ev) => (
                 <EventChip
-                  key={event.id}
-                  event={event}
+                  key={ev.id}
+                  event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
                 />
               ))}
               {laneEvents.length === 0 && (
-                <p className="text-xs text-slate-400">No events assigned</p>
+                <p className="text-[10px] text-slate-300 text-center py-3">No events assigned</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
     </div>
@@ -413,33 +631,31 @@ export function ListView({
     <div className="space-y-4">
       {days.map((day) => {
         const dayEvents = getEventsForDay(events, day);
-        if (dayEvents.length === 0) {
-          return null;
-        }
+        if (dayEvents.length === 0) return null;
 
         return (
-          <Card key={formatDateKey(day)} className="border-slate-200 bg-white/90">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base text-slate-900">
+          <div key={formatDateKey(day)} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+            <div className="bg-slate-50 border-b border-slate-100 px-4 py-3">
+              <h3 className="text-sm font-bold text-slate-800">
                 {day.toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "short",
                   day: "numeric",
                   year: "numeric",
                 })}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {dayEvents.map((event) => (
+              </h3>
+            </div>
+            <div className="space-y-1.5 p-3">
+              {dayEvents.map((ev) => (
                 <EventChip
-                  key={event.id}
-                  event={event}
+                  key={ev.id}
+                  event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
                 />
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
     </div>

@@ -6,6 +6,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -81,6 +82,7 @@ export interface DatePickerProps {
   popoverClassName?: string;
   calendarClassName?: string;
   showQuickPresets?: boolean;
+  desktopFixedAnchorClassName?: string;
 }
 
 export function DatePicker({
@@ -101,6 +103,7 @@ export function DatePicker({
   popoverClassName,
   calendarClassName,
   showQuickPresets = true,
+  desktopFixedAnchorClassName,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const [manualDateInput, setManualDateInput] = React.useState(value ?? "");
@@ -130,13 +133,34 @@ export function DatePicker({
     };
   }, []);
 
-  const effectivePopoverAlign = isNarrowViewport ? "center" : popoverAlign;
-  const effectivePopoverAlignOffset = isNarrowViewport ? 0 : popoverAlignOffset;
-  const effectivePopoverSide = isNarrowViewport ? "bottom" : popoverSide;
-  const effectivePopoverSideOffset = isNarrowViewport ? 8 : popoverSideOffset;
-  const effectivePopoverAvoidCollisions = isNarrowViewport
-    ? true
-    : popoverAvoidCollisions;
+  const useDesktopFixedAnchor =
+    !isNarrowViewport && !!desktopFixedAnchorClassName;
+
+  const effectivePopoverAlign = useDesktopFixedAnchor
+    ? "start"
+    : isNarrowViewport
+      ? "center"
+      : popoverAlign;
+  const effectivePopoverAlignOffset = useDesktopFixedAnchor
+    ? 0
+    : isNarrowViewport
+      ? 0
+      : popoverAlignOffset;
+  const effectivePopoverSide = useDesktopFixedAnchor
+    ? "bottom"
+    : isNarrowViewport
+      ? "bottom"
+      : popoverSide;
+  const effectivePopoverSideOffset = useDesktopFixedAnchor
+    ? 0
+    : isNarrowViewport
+      ? 8
+      : popoverSideOffset;
+  const effectivePopoverAvoidCollisions = useDesktopFixedAnchor
+    ? false
+    : isNarrowViewport
+      ? true
+      : popoverAvoidCollisions;
 
   const withinLimits = React.useCallback(
     (date: Date) => {
@@ -209,6 +233,18 @@ export function DatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
+      {useDesktopFixedAnchor && (
+        <PopoverAnchor asChild>
+          <div
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none fixed z-[60] h-0 w-0",
+              desktopFixedAnchorClassName,
+            )}
+          />
+        </PopoverAnchor>
+      )}
+
       <PopoverTrigger asChild>
         <Button
           id={id}
