@@ -44,11 +44,12 @@ import { resolveIcon } from "@/lib/service-registry";
 export function FacilitySidebar() {
   const isMounted = useHydrated();
   const { activeModules } = useCustomServices();
+  const sidebarModules = isMounted ? activeModules : [];
 
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
     // Build custom service sidebar items from active modules that have showInSidebar
-    const customServiceItems = activeModules
+    const customServiceItems = sidebarModules
       .filter((m) => m.showInSidebar)
       .sort((a, b) => a.sidebarPosition - b.sidebarPosition)
       .map((m) => ({
@@ -66,6 +67,12 @@ export function FacilitySidebar() {
             title: "Dashboard",
             url: "/facility/dashboard",
             icon: Home,
+            disabled: false,
+          },
+          {
+            title: "Calendar",
+            url: "/facility/dashboard/calendar",
+            icon: Calendar,
             disabled: false,
           },
           {
@@ -331,7 +338,7 @@ export function FacilitySidebar() {
 
     // Since permission system is removed, always show all items
     return allMenuSections;
-  }, [activeModules]);
+  }, [sidebarModules]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic

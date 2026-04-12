@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, Grid3X3, Home } from "lucide-react";
+import { CalendarDays, ClipboardList, Grid3X3, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
@@ -15,6 +15,11 @@ const NAV_ITEMS = [
     label: "Kennel",
     href: "/facility/dashboard/kennel-view",
     icon: Grid3X3,
+  },
+  {
+    label: "Calendar",
+    href: "/facility/dashboard/calendar",
+    icon: CalendarDays,
   },
   {
     label: "Tasks",
@@ -35,7 +40,7 @@ export function FacilityMobileBottomNav() {
 
   return (
     <nav className="fixed right-0 bottom-14 left-0 z-[45] border-t border-slate-200 bg-white/95 px-2 py-1.5 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
-      <ul className="grid grid-cols-3 gap-1">
+      <ul className="grid grid-cols-4 gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item.href);

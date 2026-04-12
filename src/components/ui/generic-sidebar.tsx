@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useUiText } from "@/hooks/use-ui-text";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 export interface MenuItem {
   title: string;
@@ -58,6 +59,8 @@ export function GenericSidebar({
 }: GenericSidebarProps) {
   const { state } = useSidebar();
   const pathname = usePathname();
+  const isHydrated = useHydrated();
+  const effectivePathname = isHydrated ? pathname : "";
   const isExpanded = state === "expanded";
   const { t } = useUiText();
 
@@ -85,7 +88,9 @@ export function GenericSidebar({
     menuSections.forEach((section) => {
       if (!section.label) return; // Skip standalone sections
       // Don't collapse sections that have active items
-      const hasActiveItem = section.items.some((item) => pathname === item.url);
+      const hasActiveItem = section.items.some(
+        (item) => effectivePathname === item.url,
+      );
       newState[section.label] = hasActiveItem ? false : newBulkCollapsed;
     });
     setCollapsedSections(newState);
@@ -182,11 +187,11 @@ export function GenericSidebar({
       >
         {filteredMenuSections.map((section, index) => {
           const hasActiveItem = section.items.some(
-            (item) => pathname === item.url,
+            (item) => effectivePathname === item.url,
           );
           const isOpen = section.label ? getSectionOpenState(section) : true; // Standalone always open
           const activeItem = section.items.find(
-            (item) => pathname === item.url,
+            (item) => effectivePathname === item.url,
           );
 
           // When sidebar is collapsed, only show items (no sections)
@@ -199,7 +204,7 @@ export function GenericSidebar({
                 <SidebarGroupContent>
                   <SidebarMenu className="gap-0.5">
                     {section.items.map((item) => {
-                      const isActive = pathname === item.url;
+                      const isActive = effectivePathname === item.url;
                         const itemLabel = t(item.title);
                       return (
                         <SidebarMenuItem key={item.title}>
@@ -288,7 +293,7 @@ export function GenericSidebar({
                     <SidebarGroupContent>
                       <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {
-                          const isActive = pathname === item.url;
+                          const isActive = effectivePathname === item.url;
                           const itemLabel = t(item.title);
                           return (
                             <SidebarMenuItem key={item.title}>
@@ -372,7 +377,7 @@ export function GenericSidebar({
                 <SidebarGroupContent>
                   <SidebarMenu className="gap-0.5">
                     {section.items.map((item) => {
-                      const isActive = pathname === item.url;
+                      const isActive = effectivePathname === item.url;
                       const itemLabel = t(item.title);
                       return (
                         <SidebarMenuItem key={item.title}>
