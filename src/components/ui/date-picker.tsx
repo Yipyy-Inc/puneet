@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export interface DatePickerProps {
   calendarClassName?: string;
   showQuickPresets?: boolean;
   showManualInput?: boolean;
+  displayMode?: "popover" | "dialog";
   desktopFixedAnchorClassName?: string;
 }
 
@@ -105,6 +107,7 @@ export function DatePicker({
   calendarClassName,
   showQuickPresets = true,
   showManualInput = true,
+  displayMode = "popover",
   desktopFixedAnchorClassName,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -136,7 +139,9 @@ export function DatePicker({
   }, []);
 
   const useDesktopFixedAnchor =
-    !isNarrowViewport && !!desktopFixedAnchorClassName;
+    displayMode === "popover" &&
+    !isNarrowViewport &&
+    !!desktopFixedAnchorClassName;
 
   const effectivePopoverAlign = useDesktopFixedAnchor
     ? "start"
@@ -233,6 +238,191 @@ export function DatePicker({
     { label: "In 7 Days", date: startOfDay(addDays(new Date(), 7)) },
   ];
 
+  const triggerButton = (
+    <Button
+      id={id}
+      type="button"
+      variant="outline"
+      autoFocus={autoFocus}
+      disabled={disabled}
+      className={cn(
+        "h-9 w-full justify-between border-slate-200 bg-white/90 px-3 text-left font-normal text-slate-900 shadow-xs hover:bg-slate-50",
+        !displayValue && "text-muted-foreground",
+        className,
+      )}
+    >
+      <span className="truncate">{displayValue || placeholder}</span>
+      <CalendarIcon className="ml-2 size-4 text-sky-600" />
+    </Button>
+  );
+
+  const calendarPanel = (
+    <>
+      <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-indigo-50 px-3 py-2.5">
+        <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
+          Choose Date
+        </p>
+        <p className="mt-0.5 text-sm font-medium text-slate-700">
+          {displayValue || "No date selected"}
+        </p>
+      </div>
+
+      <div className="space-y-2.5 p-3">
+        {showManualInput && (
+          <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
+            <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
+              Type Date
+            </p>
+            <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                value={manualDateInput}
+                onChange={(event) => {
+                  setManualDateInput(event.target.value);
+                  if (manualInputError) {
+                    setManualInputError("");
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    applyManualDate();
+                  }
+                }}
+                placeholder="YYYY-MM-DD or MM/DD/YYYY"
+                className={cn(
+                  "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
+                  "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
+                  manualInputError.length > 0
+                    ? "border-rose-300 text-rose-700"
+                    : "border-slate-200 text-slate-700",
+                )}
+                aria-label="Type date manually"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 border-slate-200 bg-white px-3 text-xs"
+                onClick={applyManualDate}
+              >
+                Apply
+              </Button>
+            </div>
+            <p
+              className={cn(
+                "mt-1 text-[10px]",
+                manualInputError.length > 0
+                  ? "text-rose-600"
+                  : "text-slate-500",
+              )}
+            >
+              {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
+            </p>
+          </div>
+        )}
+
+        {showQuickPresets && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {quickPresets.map((preset) => (
+              <Button
+                key={preset.label}
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!withinLimits(preset.date)}
+                className="h-7 rounded-full border-slate-200 bg-white text-[11px] text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                onClick={() => handleQuickSelect(preset.date)}
+              >
+                {preset.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        <DateSelectionCalendar
+          mode="single"
+          selectedDates={selectedDate ? [selectedDate] : []}
+          onSelectionChange={handleSelectionChange}
+          showTimeSelection={false}
+          minDate={minDate ?? undefined}
+          maxDate={maxDate ?? undefined}
+          initialMonth={selectedDate ?? new Date()}
+          className={cn(
+            "rounded-lg border border-slate-200/80 bg-white p-2",
+            calendarClassName,
+          )}
+        />
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setOpen(false)}
+          >
+            Close
+          </Button>
+          {(value ?? "").length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 border-slate-200 bg-white text-xs"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  if (displayMode === "dialog") {
+    return (
+      <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+        <DialogPrimitive.Trigger asChild>{triggerButton}</DialogPrimitive.Trigger>
+
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay
+            className={cn(
+              "fixed inset-0 z-[70] bg-black/55 backdrop-blur-[1px]",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 duration-300",
+            )}
+          />
+
+          <DialogPrimitive.Content
+            className={cn(
+              "fixed left-1/2 top-1/2 z-[71] -translate-x-1/2 -translate-y-1/2",
+              "w-[380px] max-w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto",
+              "rounded-xl border border-slate-200 bg-white p-0",
+              "shadow-[0_32px_80px_-12px_rgba(0,0,0,0.45)]",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
+              "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
+              "data-[state=open]:slide-in-from-bottom-3 duration-200 ease-out",
+              popoverClassName,
+              isNarrowViewport &&
+                "!w-[min(92vw,340px)] !max-w-[calc(100vw-1rem)]",
+            )}
+          >
+            <DialogPrimitive.Title className="sr-only">
+              Select date
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description className="sr-only">
+              Choose a date from the calendar.
+            </DialogPrimitive.Description>
+
+            {calendarPanel}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+    );
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {useDesktopFixedAnchor && (
@@ -248,21 +438,7 @@ export function DatePicker({
       )}
 
       <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          autoFocus={autoFocus}
-          disabled={disabled}
-          className={cn(
-            "h-9 w-full justify-between border-slate-200 bg-white/90 px-3 text-left font-normal text-slate-900 shadow-xs hover:bg-slate-50",
-            !displayValue && "text-muted-foreground",
-            className,
-          )}
-        >
-          <span className="truncate">{displayValue || placeholder}</span>
-          <CalendarIcon className="ml-2 size-4 text-sky-600" />
-        </Button>
+        {triggerButton}
       </PopoverTrigger>
 
       <PopoverContent
@@ -278,125 +454,7 @@ export function DatePicker({
             "!w-[min(92vw,340px)] !max-w-[calc(100vw-1rem)]",
         )}
       >
-        <div className="border-b border-slate-200 bg-linear-to-r from-sky-50 via-white to-indigo-50 px-3 py-2.5">
-          <p className="text-[11px] font-semibold tracking-wider text-sky-700 uppercase">
-            Choose Date
-          </p>
-          <p className="mt-0.5 text-sm font-medium text-slate-700">
-            {displayValue || "No date selected"}
-          </p>
-        </div>
-
-        <div className="space-y-2.5 p-3">
-          {showManualInput && (
-            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
-              <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
-                Type Date
-              </p>
-              <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  type="text"
-                  value={manualDateInput}
-                  onChange={(event) => {
-                    setManualDateInput(event.target.value);
-                    if (manualInputError) {
-                      setManualInputError("");
-                    }
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      applyManualDate();
-                    }
-                  }}
-                  placeholder="YYYY-MM-DD or MM/DD/YYYY"
-                  className={cn(
-                    "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
-                    "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
-                    manualInputError.length > 0
-                      ? "border-rose-300 text-rose-700"
-                      : "border-slate-200 text-slate-700",
-                  )}
-                  aria-label="Type date manually"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-slate-200 bg-white px-3 text-xs"
-                  onClick={applyManualDate}
-                >
-                  Apply
-                </Button>
-              </div>
-              <p
-                className={cn(
-                  "mt-1 text-[10px]",
-                  manualInputError.length > 0
-                    ? "text-rose-600"
-                    : "text-slate-500",
-                )}
-              >
-                {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
-              </p>
-            </div>
-          )}
-
-          {showQuickPresets && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {quickPresets.map((preset) => (
-                <Button
-                  key={preset.label}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!withinLimits(preset.date)}
-                  className="h-7 rounded-full border-slate-200 bg-white text-[11px] text-slate-700 hover:bg-sky-50 hover:text-sky-700"
-                  onClick={() => handleQuickSelect(preset.date)}
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-          )}
-
-          <DateSelectionCalendar
-            mode="single"
-            selectedDates={selectedDate ? [selectedDate] : []}
-            onSelectionChange={handleSelectionChange}
-            showTimeSelection={false}
-            minDate={minDate ?? undefined}
-            maxDate={maxDate ?? undefined}
-            initialMonth={selectedDate ?? new Date()}
-            className={cn(
-              "rounded-lg border border-slate-200/80 bg-white p-2",
-              calendarClassName,
-            )}
-          />
-
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setOpen(false)}
-            >
-              Close
-            </Button>
-            {(value ?? "").length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 border-slate-200 bg-white text-xs"
-                onClick={handleClear}
-              >
-                Clear
-              </Button>
-            )}
-          </div>
-        </div>
+        {calendarPanel}
       </PopoverContent>
     </Popover>
   );

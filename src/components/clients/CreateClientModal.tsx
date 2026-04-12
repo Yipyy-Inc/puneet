@@ -311,11 +311,6 @@ export function CreateClientModal({
   onSave,
   facilityName,
 }: CreateClientModalProps) {
-  const WIZARD_LOCKED_DATE_POPOVER_CLASS =
-    "w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]";
-  const WIZARD_LOCKED_DATE_ANCHOR_CLASS =
-    "left-[calc(50%-462px)] top-[174px]";
-
   const { languageSettings } = useSettings();
   const customerLanguageOptions = getEnabledCustomerLanguageOptions(
     languageSettings,
@@ -854,8 +849,8 @@ export function CreateClientModal({
                         onValueChange={(next) => updatePet("dateOfBirth", next)}
                         max={new Date().toISOString().split("T")[0]}
                         placeholder="Select date of birth"
-                        popoverClassName={WIZARD_LOCKED_DATE_POPOVER_CLASS}
-                        desktopFixedAnchorClassName={WIZARD_LOCKED_DATE_ANCHOR_CLASS}
+                        displayMode="dialog"
+                        popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
                         calendarClassName="p-1"
                         showQuickPresets={false}
                       />
@@ -1096,8 +1091,8 @@ export function CreateClientModal({
                           ),
                         )
                       }
-                      popoverClassName={WIZARD_LOCKED_DATE_POPOVER_CLASS}
-                      desktopFixedAnchorClassName={WIZARD_LOCKED_DATE_ANCHOR_CLASS}
+                      displayMode="dialog"
+                      popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
                       calendarClassName="p-1"
                       showQuickPresets={false}
                       showManualInput={false}

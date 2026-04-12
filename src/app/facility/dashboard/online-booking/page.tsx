@@ -3,11 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CalendarClock, Clock } from "lucide-react";
+import { CalendarClock, Clock, ShoppingCart } from "lucide-react";
 
 import { type BookingRequest } from "@/data/booking-requests";
+import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,8 +73,18 @@ export default function OnlineBookingPage() {
     [facilityRequests],
   );
 
+  const unfinishedBookings = React.useMemo(
+    () => getUnfinishedBookingsForFacility(facilityId),
+    [facilityId],
+  );
+
+  const abandonedCount = React.useMemo(
+    () => unfinishedBookings.filter((b) => b.status === "abandoned").length,
+    [unfinishedBookings],
+  );
+
   const [activeTab, setActiveTab] = React.useState<
-    "requests" | "waitlist" | "settings"
+    "requests" | "waitlist" | "unfinished" | "settings"
   >("requests");
   const [selected, setSelected] = React.useState<BookingRequest | null>(null);
 
@@ -206,7 +218,7 @@ export default function OnlineBookingPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Booking Requests</h2>
         <p className="text-muted-foreground">
-          Manage incoming requests &amp; waiting list
+          Manage incoming requests, waiting list, and unfinished bookings
         </p>
       </div>
 
@@ -214,7 +226,7 @@ export default function OnlineBookingPage() {
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as typeof activeTab)}
       >
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="requests" className="flex items-center gap-2">
             Booking requests
             <Badge
@@ -228,6 +240,13 @@ export default function OnlineBookingPage() {
             Waiting list
             <Badge variant="secondary" className="ml-1">
               {waitlisted.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="unfinished" className="flex items-center gap-2">
+            <ShoppingCart className="size-3.5" />
+            Unfinished
+            <Badge variant={abandonedCount > 0 ? "warning" : "secondary"} className="ml-1">
+              {abandonedCount}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value="settings">Setting</TabsTrigger>
@@ -336,6 +355,10 @@ export default function OnlineBookingPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="unfinished" className="mt-4">
+          <UnfinishedBookingsTable data={unfinishedBookings} />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-4">
