@@ -82,6 +82,7 @@ export interface DatePickerProps {
   popoverClassName?: string;
   calendarClassName?: string;
   showQuickPresets?: boolean;
+  showManualInput?: boolean;
   desktopFixedAnchorClassName?: string;
 }
 
@@ -103,6 +104,7 @@ export function DatePicker({
   popoverClassName,
   calendarClassName,
   showQuickPresets = true,
+  showManualInput = true,
   desktopFixedAnchorClassName,
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -286,55 +288,59 @@ export function DatePicker({
         </div>
 
         <div className="space-y-2.5 p-3">
-          <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
-            <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
-              Type Date
-            </p>
-            <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                type="text"
-                value={manualDateInput}
-                onChange={(event) => {
-                  setManualDateInput(event.target.value);
-                  if (manualInputError) {
-                    setManualInputError("");
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    applyManualDate();
-                  }
-                }}
-                placeholder="YYYY-MM-DD or MM/DD/YYYY"
+          {showManualInput && (
+            <div className="rounded-md border border-slate-200 bg-slate-50/60 p-2.5">
+              <p className="text-[11px] font-semibold tracking-wide text-slate-600 uppercase">
+                Type Date
+              </p>
+              <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={manualDateInput}
+                  onChange={(event) => {
+                    setManualDateInput(event.target.value);
+                    if (manualInputError) {
+                      setManualInputError("");
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      applyManualDate();
+                    }
+                  }}
+                  placeholder="YYYY-MM-DD or MM/DD/YYYY"
+                  className={cn(
+                    "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
+                    "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
+                    manualInputError.length > 0
+                      ? "border-rose-300 text-rose-700"
+                      : "border-slate-200 text-slate-700",
+                  )}
+                  aria-label="Type date manually"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-slate-200 bg-white px-3 text-xs"
+                  onClick={applyManualDate}
+                >
+                  Apply
+                </Button>
+              </div>
+              <p
                 className={cn(
-                  "h-8 flex-1 rounded-md border bg-white px-2.5 text-xs outline-none",
-                  "focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-200",
+                  "mt-1 text-[10px]",
                   manualInputError.length > 0
-                    ? "border-rose-300 text-rose-700"
-                    : "border-slate-200 text-slate-700",
+                    ? "text-rose-600"
+                    : "text-slate-500",
                 )}
-                aria-label="Type date manually"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 border-slate-200 bg-white px-3 text-xs"
-                onClick={applyManualDate}
               >
-                Apply
-              </Button>
+                {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
+              </p>
             </div>
-            <p
-              className={cn(
-                "mt-1 text-[10px]",
-                manualInputError.length > 0 ? "text-rose-600" : "text-slate-500",
-              )}
-            >
-              {manualInputError || "Format: YYYY-MM-DD or MM/DD/YYYY"}
-            </p>
-          </div>
+          )}
 
           {showQuickPresets && (
             <div className="flex flex-wrap items-center gap-1.5">

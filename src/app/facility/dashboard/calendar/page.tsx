@@ -1,5 +1,5 @@
-import { OperationsCalendar } from "@/components/facility/operations/OperationsCalendar";
+import { redirect } from "next/navigation";
 
 export default function FacilityOperationsCalendarPage() {
-  return <OperationsCalendar />;
+  redirect("/facility/dashboard/bookings");
 }

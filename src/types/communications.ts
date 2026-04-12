@@ -58,6 +58,7 @@ export const automationTriggerEnum = z.enum([
   "form_submitted",
   "form_incomplete_by_deadline",
   "form_red_flag_answer",
+  "booking_abandoned",
 ]);
 
 export const automationRuleSchema = z.object({

@@ -14,14 +14,6 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { BookingModal } from "@/components/modals/BookingModal";
-import { GenericCalendar, CalendarItem } from "@/components/ui/GenericCalendar";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { RefundBookingModal } from "@/components/bookings/modals/RefundBookingModal";
@@ -48,6 +40,7 @@ import { TagList } from "@/components/shared/TagList";
 import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
 import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
+import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -175,7 +168,6 @@ export default function FacilityBookingsPage() {
 
   const unfinishedBookings = getUnfinishedBookingsForFacility(facilityId);
 
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(
@@ -189,7 +181,8 @@ export default function FacilityBookingsPage() {
   );
 
   const [activeTab, setActiveTab] = useState("all");
-  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+  const [filterStart, setFilterStart] = useState<Date | null>(null);
+  const [filterEnd, setFilterEnd] = useState<Date | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem("booking_requests_schedule_draft");
@@ -227,7 +220,6 @@ export default function FacilityBookingsPage() {
         paymentStatus: "pending",
         specialRequests: `Scheduled from request ${draft.requestId}`,
       } as Booking);
-      setViewMode("calendar");
     } finally {
       localStorage.removeItem("booking_requests_schedule_draft");
     }
@@ -535,19 +527,37 @@ export default function FacilityBookingsPage() {
     },
   ];
 
+  // Convert a Date to a YYYY-MM-DD string without timezone shift
+  const toDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  // Keep bookings whose date range overlaps the selected filter range
+  const applyDateFilter = (list: Booking[]) => {
+    if (!filterStart) return list;
+    const startStr = toDateStr(filterStart);
+    const endStr = filterEnd ? toDateStr(filterEnd) : startStr;
+    return list.filter((b) => b.startDate <= endStr && b.endDate >= startStr);
+  };
+
   const getDataForTab = () => {
+    let base: Booking[];
     switch (activeTab) {
       case "today":
-        return todayBookings;
+        base = todayBookings;
+        break;
       case "upcoming":
-        return upcomingBookings;
+        base = upcomingBookings;
+        break;
       case "past":
-        return pastBookings;
+        base = pastBookings;
+        break;
       case "pending":
-        return pendingBookings;
+        base = pendingBookings;
+        break;
       default:
-        return allBookings;
+        base = allBookings;
     }
+    return applyDateFilter(base);
   };
 
   const handleCancelBooking = (
@@ -713,17 +723,15 @@ export default function FacilityBookingsPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
           <p className="text-muted-foreground text-sm">{facility.name}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "calendar" ? "default" : "outline"}
-            size="sm"
-            onClick={() =>
-              setViewMode(viewMode === "calendar" ? "table" : "calendar")
-            }
-          >
-            <CalendarDays className="mr-2 size-4" />
-            {viewMode === "calendar" ? "Table View" : "Calendar View"}
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <BookingDateRangeFilter
+            rangeStart={filterStart}
+            rangeEnd={filterEnd}
+            onChange={(start, end) => {
+              setFilterStart(start);
+              setFilterEnd(end);
+            }}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -790,45 +798,8 @@ export default function FacilityBookingsPage() {
         />
       </div>
 
-      {/* Calendar or Table View */}
-      {viewMode === "calendar" ? (
-        <GenericCalendar<Booking & CalendarItem>
-          items={facilityBookings.map((booking) => ({
-            ...booking,
-            date: booking.startDate,
-          }))}
-          config={{
-            onItemClick: (booking) => setSelectedBooking(booking),
-            getItemColor: (booking) => {
-              const colors: Record<string, string> = {
-                daycare: "bg-blue-200 dark:bg-blue-900/40",
-                boarding: "bg-purple-200 dark:bg-purple-900/40",
-                grooming: "bg-pink-200 dark:bg-pink-900/40",
-                vet: "bg-green-200 dark:bg-green-900/40",
-              };
-              return colors[booking.service] || "bg-gray-200";
-            },
-            getItemBorderColor: (booking) => {
-              const colors: Record<string, string> = {
-                pending: "border-amber-300",
-                confirmed: "border-blue-300",
-                completed: "border-green-300",
-                cancelled: "border-gray-300",
-              };
-              return colors[booking.status] || "border-gray-300";
-            },
-            legendItems: [
-              { color: "bg-blue-200", label: "Daycare" },
-              { color: "bg-purple-200", label: "Boarding" },
-              { color: "bg-pink-200", label: "Grooming" },
-              { color: "bg-green-200", label: "Vet" },
-            ],
-          }}
-          view="month"
-        />
-      ) : (
-        /* Tabs for filtering bookings */
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Table View */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-auto">
             <TabsTrigger value="all">
               All
@@ -909,7 +880,6 @@ export default function FacilityBookingsPage() {
           </TabsContent>
           )}
         </Tabs>
-      )}
 
       {/* Cancel Booking Modal */}
       {cancellingBooking && (
@@ -950,22 +920,6 @@ export default function FacilityBookingsPage() {
           onSave={handleSaveBooking}
         />
       )}
-
-      <Dialog
-        open={!!selectedBooking}
-        onOpenChange={() => setSelectedBooking(null)}
-      >
-        <DialogContent className="flex max-h-[90vh] min-w-5xl flex-col p-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Booking #{selectedBooking?.id} Details</DialogTitle>
-            </DialogHeader>
-            {selectedBooking && (
-              <BookingModal booking={selectedBooking as never} />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

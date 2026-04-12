@@ -1100,6 +1100,7 @@ export function CreateClientModal({
                       desktopFixedAnchorClassName={WIZARD_LOCKED_DATE_ANCHOR_CLASS}
                       calendarClassName="p-1"
                       showQuickPresets={false}
+                      showManualInput={false}
                       placeholder="Select date"
                     />
                   </Field>

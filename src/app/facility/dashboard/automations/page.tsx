@@ -15,6 +15,7 @@ import {
   DollarSign,
   FileText,
   Megaphone,
+  ShoppingCart,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { automationRules } from "@/data/communications-hub";
@@ -28,7 +29,13 @@ export default function AutomationsPage() {
     (typeof automationRules)[0] | null
   >(null);
   const [filterCategory, setFilterCategory] = useState<
-    "all" | "booking" | "reminder" | "payment" | "campaign" | "forms"
+    | "all"
+    | "booking"
+    | "reminder"
+    | "payment"
+    | "campaign"
+    | "forms"
+    | "recovery"
   >("all");
 
   // Format timestamp
@@ -65,6 +72,7 @@ export default function AutomationsPage() {
     ),
     payment: automationRules.filter((r) => r.trigger === "payment_received"),
     forms: automationRules.filter((r) => formTriggers.includes(r.trigger)),
+    recovery: automationRules.filter((r) => r.trigger === "booking_abandoned"),
     campaign: [] as typeof automationRules, // Placeholder for campaigns
   };
 
@@ -96,6 +104,9 @@ export default function AutomationsPage() {
     if (formTriggers.includes(trigger)) {
       return <FileText className="size-4" />;
     }
+    if (trigger === "booking_abandoned") {
+      return <ShoppingCart className="size-4" />;
+    }
     return <Zap className="size-4" />;
   };
 
@@ -120,6 +131,9 @@ export default function AutomationsPage() {
     }
     if (formTriggers.includes(trigger)) {
       return "Forms";
+    }
+    if (trigger === "booking_abandoned") {
+      return "Recovery";
     }
     return "Other";
   };
@@ -234,6 +248,13 @@ export default function AutomationsPage() {
           <TabsTrigger value="forms" onClick={() => setFilterCategory("forms")}>
             <FileText className="mr-2 size-4" />
             Forms
+          </TabsTrigger>
+          <TabsTrigger
+            value="recovery"
+            onClick={() => setFilterCategory("recovery")}
+          >
+            <ShoppingCart className="mr-2 size-4" />
+            Recovery
           </TabsTrigger>
           <TabsTrigger
             value="campaign"
@@ -625,6 +646,94 @@ export default function AutomationsPage() {
                               </span>
                             </span>
                           </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAutomationRule(rule);
+                            setShowAutomationModal(true);
+                          }}
+                        >
+                          <Settings className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Recovery Tab */}
+        <TabsContent value="recovery" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="size-5" />
+                Abandonment Recovery
+              </CardTitle>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Automated outreach for clients who started but didn't complete a
+                booking. Configure per-step templates in{" "}
+                <a
+                  href="/facility/dashboard/bookings"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Bookings → Unfinished → Recovery Settings
+                </a>
+                .
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {categorizedAutomations.recovery.length === 0 ? (
+                  <div className="text-muted-foreground py-8 text-center">
+                    <ShoppingCart className="mx-auto mb-4 size-12 opacity-50" />
+                    <p className="font-medium">No recovery automations yet</p>
+                    <p className="mt-1 text-sm">
+                      Go to{" "}
+                      <a
+                        href="/facility/dashboard/bookings"
+                        className="text-primary underline-offset-4 hover:underline"
+                      >
+                        Bookings → Unfinished tab → Recovery Settings
+                      </a>{" "}
+                      to set up per-step email and SMS recovery rules.
+                    </p>
+                  </div>
+                ) : (
+                  categorizedAutomations.recovery.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="hover:bg-muted/50 rounded-lg border p-4 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="mb-2 flex items-center gap-2">
+                            <ShoppingCart className="size-4 text-amber-500" />
+                            <span className="font-semibold">{rule.name}</span>
+                            <Badge
+                              variant={rule.enabled ? "default" : "secondary"}
+                            >
+                              {rule.enabled ? "Active" : "Inactive"}
+                            </Badge>
+                            <Badge variant="outline" className="capitalize">
+                              {rule.messageType === "both"
+                                ? "Email + SMS"
+                                : rule.messageType}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground text-sm">
+                            Trigger: Booking abandoned
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Sent {rule.stats.totalSent} times
+                            {rule.stats.lastTriggered && (
+                              <> · Last triggered {formatTimestamp(rule.stats.lastTriggered)}</>
+                            )}
+                          </p>
                         </div>
                         <Button
                           variant="ghost"

@@ -720,7 +720,6 @@ export function DateSelectionCalendar({
         type="button"
         onClick={() => handleDateClick(date)}
         onMouseEnter={() => setHoverDate(date)}
-        onMouseLeave={() => setHoverDate(null)}
         disabled={disabled || unavailable}
         title={
           disabledReason ??
@@ -729,7 +728,7 @@ export function DateSelectionCalendar({
             : undefined)
         }
         className={cn(
-          `relative m-2 aspect-square w-full rounded-full text-[10px] font-medium transition-all`,
+          `relative m-2 aspect-square w-full rounded-full text-[10px] font-medium transition-colors`,
           "hover:bg-accent hover:text-accent-foreground",
           "disabled:cursor-not-allowed disabled:opacity-40",
           // Selected state
@@ -909,7 +908,10 @@ export function DateSelectionCalendar({
                 </div>
 
                 {/* Date grid */}
-                <div className="space-y-0">
+                <div
+                  className="space-y-0"
+                  onMouseLeave={() => setHoverDate(null)}
+                >
                   {monthGrid.map((week, weekIndex) => (
                     <div key={weekIndex} className="grid grid-cols-7 gap-2">
                       {week.map((date, dateIndex) => (

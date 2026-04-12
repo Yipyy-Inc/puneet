@@ -40,7 +40,14 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     status: "contacted",
     lastContactedAt: "2026-04-09T11:00:00Z",
     estimatedValue: 85,
-    staffNotes: "Left a voicemail. Will try email next.",
+    notes: [
+      {
+        id: "note-ub002-1",
+        text: "Left a voicemail. Will try email next.",
+        createdAt: "2026-04-09T11:05:00Z",
+        staffName: "Sarah M.",
+      },
+    ],
   },
   {
     id: "ub-003",
@@ -58,7 +65,14 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     status: "recovered",
     lastContactedAt: "2026-04-08T18:00:00Z",
     estimatedValue: 55,
-    staffNotes: "Reached out via email — client booked a week later.",
+    notes: [
+      {
+        id: "note-ub003-1",
+        text: "Reached out via email — client booked a week later.",
+        createdAt: "2026-04-08T18:10:00Z",
+        staffName: "Sarah M.",
+      },
+    ],
   },
   {
     id: "ub-004",
@@ -139,7 +153,14 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     status: "recovered",
     lastContactedAt: "2026-04-09T19:00:00Z",
     estimatedValue: 55,
-    staffNotes: "Sent recovery email — client completed booking same day.",
+    notes: [
+      {
+        id: "note-ub008-1",
+        text: "Sent recovery email — client completed booking same day.",
+        createdAt: "2026-04-09T19:05:00Z",
+        staffName: "Staff",
+      },
+    ],
   },
   {
     id: "ub-009",
@@ -187,7 +208,14 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     status: "contacted",
     lastContactedAt: "2026-04-06T10:00:00Z",
     estimatedValue: 175,
-    staffNotes: "Sent an email with the intake forms link directly.",
+    notes: [
+      {
+        id: "note-ub011-1",
+        text: "Sent an email with the intake forms link directly.",
+        createdAt: "2026-04-06T10:15:00Z",
+        staffName: "Sarah M.",
+      },
+    ],
   },
   {
     id: "ub-012",

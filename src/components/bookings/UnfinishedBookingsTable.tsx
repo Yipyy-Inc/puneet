@@ -19,12 +19,15 @@ import {
   RefreshCw,
   ShoppingBag,
   Inbox,
+  Settings2,
 } from "lucide-react";
-import type { UnfinishedBooking, AbandonmentStep, UnfinishedBookingStatus } from "@/types/unfinished-booking";
+import type { UnfinishedBooking, UnfinishedBookingNote, AbandonmentStep, UnfinishedBookingStatus } from "@/types/unfinished-booking";
 import {
   ABANDONMENT_STEP_LABELS,
   UNFINISHED_STATUS_LABELS,
 } from "@/data/unfinished-bookings";
+import { AbandonmentRecoverySettings } from "@/components/bookings/AbandonmentRecoverySettings";
+import { UnfinishedBookingDetailSheet } from "@/components/bookings/UnfinishedBookingDetailSheet";
 
 interface Props {
   data: UnfinishedBooking[];
@@ -79,6 +82,10 @@ function formatShortDate(iso: string): string {
 
 export function UnfinishedBookingsTable({ data: initialData }: Props) {
   const [records, setRecords] = useState<UnfinishedBooking[]>(initialData);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selectedBooking = records.find((r) => r.id === selectedId) ?? null;
 
   const markAs = (id: string, status: UnfinishedBookingStatus) => {
     setRecords((prev) =>
@@ -109,6 +116,14 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
   const handleSendEmail = (record: UnfinishedBooking) => {
     toast.success(`Recovery email sent to ${record.clientEmail}`);
     markAs(record.id, "contacted");
+  };
+
+  const handleAddNote = (id: string, note: UnfinishedBookingNote) => {
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, notes: [...(r.notes ?? []), note] } : r,
+      ),
+    );
   };
 
   const columns: ColumnDef<UnfinishedBooking>[] = [
@@ -236,6 +251,12 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
           {r.lastContactedAt && (
             <span className="text-muted-foreground text-[10px]">
               Contacted {formatRelativeTime(r.lastContactedAt)}
+            </span>
+          )}
+          {(r.notes?.length ?? 0) > 0 && (
+            <span className="text-muted-foreground text-[10px] flex items-center gap-0.5">
+              <MessageSquare className="size-3" />
+              {r.notes!.length} note{r.notes!.length > 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -368,8 +389,25 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Mini summary strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Settings sheet */}
+      <AbandonmentRecoverySettings
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
+
+      {/* Detail sheet */}
+      <UnfinishedBookingDetailSheet
+        booking={selectedBooking}
+        onClose={() => setSelectedId(null)}
+        onMarkAs={markAs}
+        onAddNote={handleAddNote}
+        onSendEmail={handleSendEmail}
+        onSchedule={handleSchedule}
+      />
+
+      {/* Header row: summary strip + settings button */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border bg-card px-4 py-3">
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
             Abandoned
@@ -396,6 +434,18 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
             ${totalEstimated.toLocaleString()}
           </p>
         </div>
+        </div>
+
+        {/* Settings button */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Settings2 className="size-4" />
+          Recovery Settings
+        </Button>
       </div>
 
       {/* Recovery tip */}
@@ -416,6 +466,10 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
         searchKeys={["clientName", "clientEmail"] as never[]}
         searchPlaceholder="Search by name or email…"
         itemsPerPage={10}
+        onRowClick={(item) => {
+          const record = item as unknown as UnfinishedBooking;
+          setSelectedId(record.id);
+        }}
       />
     </div>
   );
