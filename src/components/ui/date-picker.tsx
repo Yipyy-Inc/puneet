@@ -106,7 +106,7 @@ export function DatePicker({
   popoverClassName,
   calendarClassName,
   showQuickPresets = true,
-  showManualInput = true,
+  showManualInput = false,
   displayMode = "popover",
   desktopFixedAnchorClassName,
 }: DatePickerProps) {
