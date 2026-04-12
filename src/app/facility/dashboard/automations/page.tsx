@@ -678,10 +678,10 @@ export default function AutomationsPage() {
                 Automated outreach for clients who started but didn't complete a
                 booking. Configure per-step templates in{" "}
                 <a
-                  href="/facility/dashboard/bookings"
+                  href="/facility/dashboard/online-booking"
                   className="text-primary underline-offset-4 hover:underline"
                 >
-                  Bookings → Unfinished → Recovery Settings
+                  Booking Requests → Unfinished → Recovery Settings
                 </a>
                 .
               </p>
@@ -695,10 +695,10 @@ export default function AutomationsPage() {
                     <p className="mt-1 text-sm">
                       Go to{" "}
                       <a
-                        href="/facility/dashboard/bookings"
+                        href="/facility/dashboard/online-booking"
                         className="text-primary underline-offset-4 hover:underline"
                       >
-                        Bookings → Unfinished tab → Recovery Settings
+                        Booking Requests → Unfinished tab → Recovery Settings
                       </a>{" "}
                       to set up per-step email and SMS recovery rules.
                     </p>

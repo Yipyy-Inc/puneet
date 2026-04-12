@@ -31,15 +31,12 @@ import {
   Hash,
   User,
   CircleDot,
-  ShoppingCart,
 } from "lucide-react";
 import { getYipyyGoConfig } from "@/data/yipyygo-config";
 import { getYipyyGoDisplayStatusForBooking } from "@/data/yipyygo-forms";
 import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
 import { getTagsByType, getNoteCount } from "@/data/tags-notes";
-import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
-import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
@@ -165,8 +162,6 @@ export default function FacilityBookingsPage() {
   const facilityBookings = bookings.filter(
     (booking) => booking.facilityId === facilityId,
   );
-
-  const unfinishedBookings = getUnfinishedBookingsForFacility(facilityId);
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
@@ -744,7 +739,7 @@ export default function FacilityBookingsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <ClickableStatCard
           title="All Bookings"
           value={totalBookings}
@@ -780,14 +775,6 @@ export default function FacilityBookingsPage() {
             setActiveTab(activeTab === "pending" ? "all" : "pending")
           }
           isActive={activeTab === "pending"}
-        />
-        <ClickableStatCard
-          title="Unfinished"
-          value={unfinishedBookings.filter((b) => b.status === "abandoned").length}
-          subtitle="Need follow-up"
-          icon={ShoppingCart}
-          onClick={() => setActiveTab("unfinished")}
-          isActive={activeTab === "unfinished"}
         />
         <ClickableStatCard
           title="Revenue"
@@ -831,22 +818,7 @@ export default function FacilityBookingsPage() {
                 {pendingBookings.length}
               </span>
             </TabsTrigger>
-            <TabsTrigger value="unfinished" className="relative">
-              <ShoppingCart className="mr-1.5 size-3.5" />
-              Unfinished
-              {unfinishedBookings.filter((b) => b.status === "abandoned").length > 0 && (
-                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                  {unfinishedBookings.filter((b) => b.status === "abandoned").length}
-                </span>
-              )}
-            </TabsTrigger>
           </TabsList>
-
-          {activeTab === "unfinished" ? (
-            <div className="mt-4">
-              <UnfinishedBookingsTable data={unfinishedBookings} />
-            </div>
-          ) : (
           <TabsContent value={activeTab} className="mt-4">
             {getDataForTab().length === 0 ? (
               <Card>
@@ -878,7 +850,6 @@ export default function FacilityBookingsPage() {
               />
             )}
           </TabsContent>
-          )}
         </Tabs>
 
       {/* Cancel Booking Modal */}
