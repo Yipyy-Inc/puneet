@@ -75,6 +75,11 @@ export function AutomationRuleModal({
       label: "Appointment Reminder",
       desc: "For grooming/training appointments",
     },
+    {
+      value: "booking_abandoned",
+      label: "Booking Abandoned",
+      desc: "When a client starts but doesn't finish a booking",
+    },
   ];
 
   const handleSave = () => {
