@@ -14,6 +14,7 @@ import {
   LogOut,
   FileText,
   DollarSign,
+  Building2,
 } from "lucide-react";
 
 const tabs = [
@@ -21,6 +22,11 @@ const tabs = [
     name: "Calendar",
     href: "/facility/dashboard/services/grooming",
     icon: Calendar,
+  },
+  {
+    name: "Stations",
+    href: "/facility/dashboard/services/grooming/stations",
+    icon: Building2,
   },
   {
     name: "Check-In",
