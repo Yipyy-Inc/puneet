@@ -344,6 +344,7 @@ export function DatePicker({
           mode="single"
           selectedDates={selectedDate ? [selectedDate] : []}
           onSelectionChange={handleSelectionChange}
+          enableAvailabilityRules={false}
           showTimeSelection={false}
           minDate={minDate ?? undefined}
           maxDate={maxDate ?? undefined}
