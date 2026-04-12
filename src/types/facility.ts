@@ -616,6 +616,32 @@ export const addOnPricingTypeEnum = z.enum([
 ]);
 export type AddOnPricingType = z.infer<typeof addOnPricingTypeEnum>;
 
+/**
+ * How this add-on is scheduled/applied during a stay or appointment.
+ * - quantity      → client chooses how many (no time slot needed)
+ * - time_slot     → staff/client books a specific time slot
+ * - per_stay_night→ auto-applied once per night (e.g. nightly video call)
+ * - grooming_linked → occurs alongside a grooming session in the same booking
+ */
+export const addOnSchedulingTypeEnum = z.enum([
+  "quantity",
+  "time_slot",
+  "per_stay_night",
+  "grooming_linked",
+]);
+export type AddOnSchedulingType = z.infer<typeof addOnSchedulingTypeEnum>;
+
+export const addOnCategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  colorCode: z.string().optional(),
+  sortOrder: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type AddOnCategory = z.infer<typeof addOnCategorySchema>;
+
 export const petTypeFilterSchema = z.object({
   types: z.array(z.string()).optional(),
   breeds: z.array(z.string()).optional(),
@@ -638,8 +664,12 @@ export const serviceAddOnSchema = z.object({
   maxQuantity: z.number().optional(),
   duration: z.number().optional(),
   taxRate: z.number().optional(),
+  taxable: z.boolean().optional(),
   applicableServices: z.array(z.string()),
+  /** Which facility location IDs this add-on is available at. Empty = all. */
+  locationIds: z.array(z.string()).optional(),
   requiresStaff: z.boolean().optional(),
+  schedulingType: addOnSchedulingTypeEnum.optional(),
   requiresScheduling: z.boolean(),
   generatesTask: z.boolean(),
   taskCategory: z.string().optional(),

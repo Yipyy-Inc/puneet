@@ -92,6 +92,7 @@ export interface CalendarAddOn {
     | "enrichment"
     | "nail-trim"
     | "yogurt"
+    | "video-call"
     | "custom";
   scheduledAt?: Date;
 }
@@ -610,6 +611,13 @@ function getAddOnIconKey(name: string): CalendarAddOn["iconKey"] {
   if (normalized.includes("enrich") || normalized.includes("play")) return "enrichment";
   if (normalized.includes("nail")) return "nail-trim";
   if (normalized.includes("yogurt")) return "yogurt";
+  if (
+    normalized.includes("video") ||
+    normalized.includes("call") ||
+    normalized.includes("cam") ||
+    normalized.includes("facetime")
+  )
+    return "video-call";
   return "custom";
 }
 
@@ -629,6 +637,16 @@ function inferAddOnScheduledAt(
     if (firstDose) {
       return toDateOrFallback(firstDose, addMinutes(bookingStart, 30));
     }
+  }
+
+  if (
+    normalized.includes("video") ||
+    normalized.includes("call") ||
+    normalized.includes("cam") ||
+    normalized.includes("facetime")
+  ) {
+    // Video calls scheduled at 10:00 AM on the check-in day
+    return makeDateTime(booking.startDate, "10:00");
   }
 
   if (
@@ -1198,17 +1216,127 @@ function buildAddOnSubEvents(
   });
 }
 
+// Services where the main "stay" block is hidden from the calendar.
+// Only their scheduled add-ons appear as discrete events.
+const STAY_SERVICES = new Set(["boarding", "daycare"]);
+
+/**
+ * Builds standalone calendar events for each scheduled add-on belonging to a
+ * boarding or daycare booking.  The parent stay block itself is intentionally
+ * excluded from the calendar so the view shows only actionable events.
+ */
+function buildStayAddOnCalendarEvents(
+  stayBookings: Booking[],
+  clients: Client[],
+  facilityId: number,
+): OperationsCalendarEvent[] {
+  const { petLookup } = buildClientLookups(clients);
+
+  return stayBookings
+    .filter((booking) => booking.facilityId === facilityId)
+    .flatMap((booking) => {
+      const primaryPetId = getPrimaryBookingPetId(booking.petId);
+      const petContext =
+        primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
+      const serviceLabel = normalizeServiceLabel(booking.service);
+      const bookingStart = makeDateTime(
+        booking.startDate,
+        booking.checkInTime ?? "09:00",
+      );
+
+      const addOnItems = [
+        ...(booking.invoice?.items ?? []),
+        ...(booking.invoice?.fees ?? []),
+      ].filter((item) => item.type === "addon");
+
+      if (addOnItems.length === 0) return [];
+
+      return addOnItems.map((item, index) => {
+        const scheduledAt =
+          inferAddOnScheduledAt(booking, item.name, index) ??
+          addMinutes(bookingStart, (index + 1) * 60);
+        const end = addMinutes(scheduledAt, 30);
+
+        // Use the add-on's assigned staff if present; fall back to "Unassigned".
+        // Facilities can set item.staffName when creating scheduled add-ons.
+        const assignedStaff = item.staffName ?? "Unassigned";
+        const staffRole = resolveStaffRole(assignedStaff);
+        const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
+
+        const addOnEntry: CalendarAddOn = {
+          id: `stay-addon-item-${booking.id}-${index}`,
+          name: item.name,
+          iconKey: getAddOnIconKey(item.name),
+          scheduledAt,
+        };
+
+        return {
+          id: `stay-addon-${booking.id}-${index}`,
+          sourceId: String(booking.id),
+          type: "add-on" as const,
+          subtype: getAddOnIconKey(item.name),
+          title: `${item.name} — ${petContext?.petName ?? "Pet"}`,
+          start: scheduledAt,
+          end,
+          allDay: false,
+          status: "Scheduled",
+          service: serviceLabel,
+          module: serviceLabel,
+          staff: assignedStaff,
+          staffRole,
+          roleGroup,
+          location: booking.kennel ?? "Front Desk",
+          resource: booking.kennel ?? "Front Desk",
+          resourceType: undefined,
+          unassigned: assignedStaff === "Unassigned",
+          petId: primaryPetId,
+          clientId: booking.clientId,
+          bookingRawStatus: booking.status,
+          petNames: petContext?.petName ? [petContext.petName] : [],
+          customerName: petContext?.ownerName,
+          bookingId: booking.id,
+          confirmationNumber: booking.invoice?.id,
+          parentEventId: `booking-${booking.id}`,
+          isSubEvent: true,
+          petTags: buildTagNames("pet", primaryPetId),
+          customerTags: buildTagNames("customer", booking.clientId),
+          bookingTags: buildTagNames("booking", booking.id),
+          addOns: [addOnEntry],
+          href: `/facility/dashboard/bookings?bookingId=${booking.id}`,
+        } satisfies OperationsCalendarEvent;
+      });
+    });
+}
+
 export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCalendarEvent[] {
+  // Split bookings: stay-type services (boarding/daycare) are hidden as full
+  // blocks; only their add-ons surface as discrete scheduled events.
+  const stayBookings = input.bookings.filter((b) =>
+    STAY_SERVICES.has(b.service.toLowerCase()),
+  );
+  const schedulableBookings = input.bookings.filter(
+    (b) => !STAY_SERVICES.has(b.service.toLowerCase()),
+  );
+
   const bookingEvents = [
-    ...buildBookingEvents(input.bookings, input.clients, input.facilityId),
+    ...buildBookingEvents(schedulableBookings, input.clients, input.facilityId),
+    // Evaluations still surface for ALL bookings (including boarding/daycare)
     ...buildEvaluationEvents(input.bookings, input.clients, input.facilityId),
     ...buildCustomServiceEvents(input.customServiceCheckIns, input.customModules),
   ];
 
+  // Add-on sub-events for schedulable services (respects nested/separate mode)
   const addOnSubEvents = buildAddOnSubEvents(
     bookingEvents,
     input.view,
     input.addOnDisplayMode,
+  );
+
+  // Stay add-ons always appear as standalone events regardless of display mode
+  const stayAddOnEvents = buildStayAddOnCalendarEvents(
+    stayBookings,
+    input.clients,
+    input.facilityId,
   );
 
   const taskEvents = buildTaskEvents(input.tasks);
@@ -1222,6 +1350,7 @@ export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCa
   return sortEvents([
     ...bookingEvents,
     ...addOnSubEvents,
+    ...stayAddOnEvents,
     ...taskEvents,
     ...facilityEvents,
     ...retailEvents,

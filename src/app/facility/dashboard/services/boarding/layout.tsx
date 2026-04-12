@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   Settings,
   FileText,
+  Building2,
 } from "lucide-react";
 
 const tabs = [
@@ -26,6 +27,11 @@ const tabs = [
     name: "Dashboard",
     href: "/facility/dashboard/services/boarding",
     icon: Bed,
+  },
+  {
+    name: "Rooms",
+    href: "/facility/dashboard/services/boarding/rooms",
+    icon: Building2,
   },
   {
     name: "Check-In/Out",

@@ -235,6 +235,12 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
+            title: "Add-Ons",
+            url: "/facility/dashboard/add-ons",
+            icon: Package,
+            disabled: false,
+          },
+          {
             title: "Services & Pricing",
             url: "/facility/services",
             icon: Tags,
