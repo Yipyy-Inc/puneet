@@ -6,6 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { TimeRangeSlider } from "@/components/ui/time-range-slider";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
@@ -92,6 +99,13 @@ export interface DateSelectionCalendarProps {
   /** Messages for disabled dates (key = YYYY-MM-DD). Shown when customer hovers over a blocked date. */
   disabledDateMessages?: Record<string, string>;
   unavailableDates?: Date[];
+
+  /**
+   * Enables appointment-specific availability logic (closed days, unavailable slots,
+   * holidays, and "Next available" hint). Set to false for generic date fields
+   * like birthday or vaccine expiry.
+   */
+  enableAvailabilityRules?: boolean;
 
   // Optional features
   showSummary?: boolean;
@@ -197,6 +211,7 @@ export function DateSelectionCalendar({
   disabledEndDates,
   disabledDateMessages,
   unavailableDates = [],
+  enableAvailabilityRules = true,
   holidays = [],
   className,
   initialMonth,
@@ -315,8 +330,8 @@ export function DateSelectionCalendar({
   const isDateDisabled = (date: Date): boolean => {
     if (effectiveMinDate && date < effectiveMinDate) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
-    if (facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
-    if (getHolidayName(date)) return true;
+    if (enableAvailabilityRules && facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
+    if (enableAvailabilityRules && getHolidayName(date)) return true;
     return effectiveDisabledDates.some((d) => isSameDay(d, date));
   };
 
@@ -326,10 +341,10 @@ export function DateSelectionCalendar({
     const userMsg = disabledDateMessages?.[formatDateString(date)];
     if (userMsg) return userMsg;
     // Holiday
-    const holiday = getHolidayName(date);
+    const holiday = enableAvailabilityRules ? getHolidayName(date) : null;
     if (holiday) return `Closed — ${holiday}`;
     // Facility closed
-    if (facilityHours && !getFacilityHoursForDate(date)?.isOpen)
+    if (enableAvailabilityRules && facilityHours && !getFacilityHoursForDate(date)?.isOpen)
       return "Facility closed";
     // Before minimum advance
     if (effectiveMinDate && date < effectiveMinDate)
@@ -341,6 +356,7 @@ export function DateSelectionCalendar({
   };
 
   const isDateUnavailable = (date: Date): boolean => {
+    if (!enableAvailabilityRules) return false;
     return unavailableDates.some((d) => isSameDay(d, date));
   };
 
@@ -474,14 +490,16 @@ export function DateSelectionCalendar({
     setCurrentMonth(new Date());
   };
 
-  const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedYear = Number(event.target.value);
+  const handleYearChange = (value: string) => {
+    const selectedYear = Number(value);
+    if (!Number.isFinite(selectedYear)) return;
     const clampedMonth = clampMonthForYear(selectedYear, currentMonth.getMonth());
     setCurrentMonth(new Date(selectedYear, clampedMonth, 1));
   };
 
-  const handleMonthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedMonth = Number(event.target.value);
+  const handleMonthChange = (value: string) => {
+    const selectedMonth = Number(value);
+    if (!Number.isFinite(selectedMonth)) return;
     if (!isMonthWithinBounds(currentMonth.getFullYear(), selectedMonth)) {
       return;
     }
@@ -854,34 +872,61 @@ export function DateSelectionCalendar({
 
                 <div className="flex items-center gap-1.5">
                   <CalendarIcon className="text-muted-foreground size-3" />
-                  <select
-                    value={currentMonth.getFullYear()}
-                    onChange={handleYearChange}
-                    className="bg-background h-7 rounded-md border border-slate-200 px-2 text-[11px] font-medium"
-                    aria-label="Select year"
+                  <Select
+                    value={String(currentMonth.getFullYear())}
+                    onValueChange={handleYearChange}
                   >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={currentMonth.getMonth()}
-                    onChange={handleMonthChange}
-                    className="bg-background h-7 rounded-md border border-slate-200 px-2 text-[11px] font-medium"
-                    aria-label="Select month"
+                    <SelectTrigger
+                      size="sm"
+                      className="bg-background h-7 w-[4.8rem] border-slate-200 px-2 text-[11px] font-medium"
+                      aria-label="Select year"
+                    >
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent
+                      align="start"
+                      className="z-[90] max-h-44 min-w-[4.8rem]"
+                    >
+                      {yearOptions.map((year) => (
+                        <SelectItem
+                          key={year}
+                          value={String(year)}
+                          className="text-xs"
+                        >
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={String(currentMonth.getMonth())}
+                    onValueChange={handleMonthChange}
                   >
-                    {MONTH_NAMES.map((monthLabel, monthIndex) => (
-                      <option
-                        key={monthLabel}
-                        value={monthIndex}
-                        disabled={!isMonthWithinBounds(currentMonth.getFullYear(), monthIndex)}
-                      >
-                        {monthLabel}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      size="sm"
+                      className="bg-background h-7 w-[6.8rem] border-slate-200 px-2 text-[11px] font-medium"
+                      aria-label="Select month"
+                    >
+                      <SelectValue placeholder="Month" />
+                    </SelectTrigger>
+                    <SelectContent
+                      align="start"
+                      className="z-[90] max-h-52 min-w-[6.8rem]"
+                    >
+                      {MONTH_NAMES.map((monthLabel, monthIndex) => (
+                        <SelectItem
+                          key={monthLabel}
+                          value={String(monthIndex)}
+                          disabled={
+                            !isMonthWithinBounds(currentMonth.getFullYear(), monthIndex)
+                          }
+                          className="text-xs"
+                        >
+                          {monthLabel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <Button
@@ -922,7 +967,8 @@ export function DateSelectionCalendar({
                 </div>
 
                 {/* #5 — Next available date hint */}
-                {mode === "single" &&
+                {enableAvailabilityRules &&
+                  mode === "single" &&
                   selectedDates.length === 0 &&
                   (() => {
                     const today = new Date();
