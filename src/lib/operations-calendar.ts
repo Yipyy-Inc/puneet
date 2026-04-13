@@ -1910,6 +1910,7 @@ export function findResourceConflict(
 export function buildServiceColorMap(
   customModules: CustomServiceModule[],
   colorOverrides?: CalendarColorOverrides,
+  builtInColorSettings?: Record<string, string>,
 ): Record<string, string> {
   const customMap: Record<string, string> = {};
 
@@ -1922,6 +1923,7 @@ export function buildServiceColorMap(
 
   return {
     ...BUILTIN_SERVICE_COLORS,
+    ...(builtInColorSettings ?? {}),
     ...customMap,
     ...(colorOverrides?.services ?? {}),
   };

@@ -21,6 +21,7 @@ import {
   GraduationCap,
   Puzzle,
   Package,
+  Palette,
   ChevronDown,
   CloudSun,
   Receipt,
@@ -63,6 +64,7 @@ const STATIC_GROUPS: SettingsGroup[] = [
       { id: "grooming", label: "Grooming", icon: Scissors },
       { id: "training", label: "Training", icon: GraduationCap },
       { id: "addons", label: "Add-Ons", icon: Package },
+      { id: "service-colors", label: "Service Colors", icon: Palette },
     ],
   },
   {
