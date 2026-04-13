@@ -4,7 +4,7 @@ import React from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Check, PawPrint, Bed } from "lucide-react";
+import { Check, PawPrint, Bed, X, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
@@ -17,6 +17,9 @@ import {
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { defaultServiceAddOns } from "@/data/service-addons";
+import { roomCategories, facilityRooms } from "@/data/rooms";
+import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
+import { bookings as allBookings } from "@/data/bookings";
 import type { ServiceAddOn } from "@/types/facility";
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
@@ -43,41 +46,8 @@ function getStoredAddOns(): ServiceAddOn[] {
   return defaultServiceAddOns;
 }
 
-const BOARDING_TYPES = [
-  {
-    id: "standard",
-    name: "Standard Room",
-    price: 45,
-    description: "Comfortable indoor kennel with bedding",
-    image: "/rooms/room-1.jpg",
-    totalRooms: 10,
-    bookedRooms: 7,
-    allowedPetTypes: ["Dog", "Cat"],
-    included: ["Bedding", "Daily feeding", "Potty breaks"],
-  },
-  {
-    id: "deluxe",
-    name: "Deluxe Suite",
-    price: 75,
-    description: "Spacious suite with play area and webcam",
-    image: "/rooms/room-2.jpg",
-    totalRooms: 5,
-    bookedRooms: 2,
-    allowedPetTypes: ["Dog", "Cat"],
-    included: ["Luxury bedding", "Play area", "Webcam access"],
-  },
-  {
-    id: "vip",
-    name: "VIP Suite",
-    price: 120,
-    description: "Luxury suite with private outdoor access",
-    image: "/rooms/room-3.jpg",
-    totalRooms: 3,
-    bookedRooms: 1,
-    allowedPetTypes: ["Dog", "Cat"],
-    included: ["Premium bedding", "Private outdoor run", "One-on-one time"],
-  },
-];
+// Boarding categories are rendered dynamically inside the component
+// with live availability via getBoardingCategoryAvailability()
 
 interface BoardingDetailsProps {
   currentSubStep: number;
@@ -286,325 +256,16 @@ export function BoardingDetails({
         )}
 
         {currentSubStep === 1 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">Select Room Type</h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Select a pet, then click a room type — or drag & drop pets into
-                room types
-              </p>
-            </div>
-
-            {!isStepAccessible(1) && (
-              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
-                <p className="text-muted-foreground">
-                  Please complete the Schedule step first
-                </p>
-              </div>
-            )}
-
-            {isStepAccessible(1) && (
-              <>
-                {/* Unassigned Pets */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Unassigned Pets</Label>
-                  <div className="bg-muted/20 flex min-h-14 flex-wrap gap-2 rounded-xl border border-dashed p-3">
-                    {selectedPets
-                      .filter(
-                        (pet) =>
-                          !roomAssignments.find((a) => a.petId === pet.id),
-                      )
-                      .map((pet) => (
-                        <div
-                          key={pet.id}
-                          draggable
-                          onDragStart={() => setDraggedPet(pet)}
-                          onDragEnd={() => setDraggedPet(null)}
-                          onClick={() =>
-                            setSelectedPet(
-                              selectedPet?.id === pet.id ? null : pet,
-                            )
-                          }
-                          onDoubleClick={() =>
-                            setSelectedPet(
-                              selectedPet?.id === pet.id ? null : pet,
-                            )
-                          }
-                          className={cn(
-                            "bg-background flex cursor-move items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all",
-                            selectedPet?.id === pet.id
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : "border-border hover:border-primary/50",
-                          )}
-                        >
-                          {/* #4 — pet initial avatar */}
-                          <div className="bg-primary/10 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                            {pet.name[0]}
-                          </div>
-                          <span className="text-sm font-medium">
-                            {pet.name}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            ({pet.type})
-                          </span>
-                        </div>
-                      ))}
-                    {selectedPets.filter(
-                      (pet) => !roomAssignments.find((a) => a.petId === pet.id),
-                    ).length === 0 && (
-                      <p className="text-muted-foreground py-1 text-sm">
-                        All pets assigned
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Rooms */}
-                <div className="grid grid-cols-2 gap-3">
-                  {BOARDING_TYPES.map((type) => {
-                    const availableRooms = type.totalRooms - type.bookedRooms;
-                    const assignedPets = selectedPets.filter((pet) =>
-                      roomAssignments.find(
-                        (a) => a.petId === pet.id && a.roomId === type.id,
-                      ),
-                    );
-                    const isDraggedPetAllowed = draggedPet
-                      ? type.allowedPetTypes.includes(draggedPet.type)
-                      : true;
-                    const isSelectedPetAllowed = selectedPet
-                      ? type.allowedPetTypes.includes(selectedPet.type)
-                      : true;
-                    const isPetAllowed =
-                      isDraggedPetAllowed && isSelectedPetAllowed;
-                    const isRoomFull = availableRooms <= 0;
-                    const isRoomDisabled = isRoomFull || !isPetAllowed;
-                    const hasAssigned = assignedPets.length > 0;
-                    const remaining = availableRooms - assignedPets.length;
-                    // #1 — reactive drag-over state
-                    const isDragOver =
-                      dragOverRoomId === type.id && !isRoomDisabled;
-                    // #2/#3 — invite state
-                    const showInvite =
-                      !isRoomDisabled &&
-                      !hasAssigned &&
-                      remaining > 0 &&
-                      ((draggedPet && isDraggedPetAllowed) ||
-                        (selectedPet && isSelectedPetAllowed));
-
-                    return (
-                      <div
-                        key={type.id}
-                        // #1 — reactive state
-                        onDragOver={(e) => {
-                          if (!isRoomDisabled) {
-                            e.preventDefault();
-                            setDragOverRoomId(type.id);
-                          }
-                        }}
-                        onDragLeave={() => setDragOverRoomId(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOverRoomId(null);
-                          if (
-                            draggedPet &&
-                            availableRooms > assignedPets.length &&
-                            isPetAllowed
-                          ) {
-                            setRoomAssignments([
-                              ...roomAssignments.filter(
-                                (a) => a.petId !== draggedPet.id,
-                              ),
-                              { petId: draggedPet.id, roomId: type.id },
-                            ]);
-                            if (!serviceType) {
-                              setServiceType(type.id);
-                            }
-                          }
-                        }}
-                        onClick={() => {
-                          const unassigned = selectedPets.filter(
-                            (pet) =>
-                              !roomAssignments.find((a) => a.petId === pet.id),
-                          );
-                          const petToAssign =
-                            selectedPet ??
-                            (selectedPets.length === 1
-                              ? selectedPets[0]
-                              : null) ??
-                            (unassigned.length === 1 ? unassigned[0] : null);
-
-                          if (
-                            petToAssign &&
-                            availableRooms > assignedPets.length &&
-                            type.allowedPetTypes.includes(petToAssign.type)
-                          ) {
-                            setRoomAssignments([
-                              ...roomAssignments.filter(
-                                (a) => a.petId !== petToAssign.id,
-                              ),
-                              { petId: petToAssign.id, roomId: type.id },
-                            ]);
-                            setSelectedPet(null);
-                            if (!serviceType) {
-                              setServiceType(type.id);
-                            }
-                          }
-                        }}
-                        className={cn(
-                          "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
-                          isRoomDisabled
-                            ? "cursor-not-allowed opacity-60"
-                            : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg",
-                          isDragOver && "ring-primary ring-2 ring-offset-2",
-                          hasAssigned
-                            ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
-                            : showInvite
-                              ? "border-primary/40 border-dashed"
-                              : "border-border hover:border-primary/40",
-                        )}
-                      >
-                        {/* Image area — #6: consistent unoptimized */}
-                        <div className="relative h-36 w-full overflow-hidden">
-                          {type.image ? (
-                            <Image
-                              src={type.image}
-                              alt={type.name}
-                              fill
-                              className={cn(
-                                "object-cover transition-transform duration-300",
-                                !isRoomDisabled && "group-hover:scale-105",
-                              )}
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="bg-muted flex size-full items-center justify-center">
-                              <PawPrint className="text-muted-foreground/30 size-12" />
-                            </div>
-                          )}
-
-                          {/* Price badge — top left */}
-                          <div className="bg-foreground/80 text-background absolute top-2.5 left-2.5 rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                            ${type.price}
-                            <span className="font-normal opacity-70">
-                              /night
-                            </span>
-                          </div>
-
-                          {/* Assigned pet count badge */}
-                          {hasAssigned && (
-                            <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-md">
-                              {assignedPets.length}
-                            </div>
-                          )}
-
-                          {/* Fully booked overlay */}
-                          {isRoomFull && (
-                            <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                              <span className="bg-destructive/10 text-destructive rounded-full border border-red-200 px-3 py-1 text-xs font-semibold">
-                                Fully Booked
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Pet type blocked overlay */}
-                          {draggedPet && !isDraggedPetAllowed && (
-                            <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                              <span className="text-muted-foreground text-xs font-semibold">
-                                Not allowed for {draggedPet.type}s
-                              </span>
-                            </div>
-                          )}
-                          {selectedPet &&
-                            !isSelectedPetAllowed &&
-                            !(draggedPet && !isDraggedPetAllowed) && (
-                              <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                                <span className="text-muted-foreground text-xs font-semibold">
-                                  Not allowed for {selectedPet.type}s
-                                </span>
-                              </div>
-                            )}
-                        </div>
-
-                        {/* Content strip */}
-                        <div className="p-3.5">
-                          <p className="text-sm/tight font-semibold">
-                            {type.name}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                            {type.description}
-                          </p>
-
-                          {/* #5 — included amenities */}
-                          {type.included.length > 0 && !hasAssigned && (
-                            <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                              {type.included.map((item) => (
-                                <span
-                                  key={item}
-                                  className="text-muted-foreground text-[10px]"
-                                >
-                                  · {item}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Assigned pets with #4 — avatars */}
-                          {hasAssigned && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {assignedPets.map((pet) => (
-                                <span
-                                  key={pet.id}
-                                  className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md py-0.5 pr-2 pl-1 text-[11px] font-medium"
-                                >
-                                  <span className="bg-primary/20 flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
-                                    {pet.name[0]}
-                                  </span>
-                                  {pet.name}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRoomAssignments(
-                                        roomAssignments.filter(
-                                          (a) => a.petId !== pet.id,
-                                        ),
-                                      );
-                                    }}
-                                    className="hover:text-destructive ml-0.5 transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Availability + pet types */}
-                          <div className="mt-2.5 flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              {type.allowedPetTypes.join(", ")}
-                            </span>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                remaining <= 0 && "text-destructive",
-                                remaining > 0 &&
-                                  remaining <= 2 &&
-                                  "text-orange-600",
-                                remaining > 2 && "text-emerald-600",
-                              )}
-                            >
-                              {remaining}/{type.totalRooms}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+          <BoardingRoomSelectionStep
+            isStepAccessible={isStepAccessible}
+            selectedPets={selectedPets}
+            roomAssignments={roomAssignments}
+            setRoomAssignments={setRoomAssignments}
+            serviceType={serviceType}
+            setServiceType={setServiceType}
+            boardingRangeStart={boardingRangeStart}
+            boardingRangeEnd={boardingRangeEnd}
+          />
         )}
 
         {currentSubStep === 2 && (
@@ -706,6 +367,373 @@ export function BoardingDetails({
 }
 
 // ============================================================================
+// Boarding Room Selection Sub-Step
+// ============================================================================
+
+interface BoardingRoomSelectionStepProps {
+  isStepAccessible: (step: number) => boolean;
+  selectedPets: Pet[];
+  roomAssignments: Array<{ petId: number; roomId: string }>;
+  setRoomAssignments: (assignments: Array<{ petId: number; roomId: string }>) => void;
+  serviceType: string;
+  setServiceType: (type: string) => void;
+  boardingRangeStart: Date | null;
+  boardingRangeEnd: Date | null;
+}
+
+function BoardingRoomSelectionStep({
+  isStepAccessible,
+  selectedPets,
+  roomAssignments,
+  setRoomAssignments,
+  setServiceType,
+  boardingRangeStart,
+  boardingRangeEnd,
+}: BoardingRoomSelectionStepProps) {
+  const [activePet, setActivePet] = React.useState<Pet | null>(null);
+  const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
+  const [dragOverCatId, setDragOverCatId] = React.useState<string | null>(null);
+
+  const startDate = boardingRangeStart?.toISOString().split("T")[0] ?? "";
+  const endDate = boardingRangeEnd?.toISOString().split("T")[0] ?? "";
+
+  // When checking eligibility, use the currently active (selected) pet, or first pet
+  const focusPet = activePet ?? selectedPets[0] ?? undefined;
+
+  const availability = React.useMemo(() => {
+    if (!startDate || !endDate) return [];
+    return getBoardingCategoryAvailability(
+      startDate,
+      endDate,
+      roomCategories,
+      facilityRooms,
+      allBookings,
+      focusPet,
+    );
+  }, [startDate, endDate, focusPet]);
+
+  function assignPet(pet: Pet, categoryId: string) {
+    const newAssignments = [
+      ...roomAssignments.filter((ra) => ra.petId !== pet.id),
+      { petId: pet.id, roomId: categoryId },
+    ];
+    setRoomAssignments(newAssignments);
+    setServiceType(categoryId);
+    setActivePet(null);
+    setDraggedPet(null);
+  }
+
+  function unassignPet(petId: number) {
+    setRoomAssignments(roomAssignments.filter((ra) => ra.petId !== petId));
+  }
+
+  if (!isStepAccessible(1)) {
+    return (
+      <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
+        <p className="text-muted-foreground">Please complete the previous steps first</p>
+      </div>
+    );
+  }
+
+  if (!startDate || !endDate) {
+    return (
+      <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
+        <p className="text-muted-foreground">Please select boarding dates first</p>
+      </div>
+    );
+  }
+
+  const allAssigned = selectedPets.every((p) =>
+    roomAssignments.some((ra) => ra.petId === p.id),
+  );
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100">
+          <Bed className="size-5 text-indigo-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold">Select Room Type</h3>
+          <p className="text-muted-foreground text-sm">
+            {selectedPets.length > 1
+              ? "Click a pet below, then click a room to assign it. You can also drag pets onto rooms."
+              : "Choose the room type for your pet's stay."}
+          </p>
+        </div>
+      </div>
+
+      {/* Pet chips */}
+      <div className="flex flex-wrap gap-2">
+        {selectedPets.map((pet) => {
+          const assignment = roomAssignments.find((ra) => ra.petId === pet.id);
+          const assignedCat = assignment
+            ? availability.find((a) => a.category.id === assignment.roomId)?.category
+            : null;
+          const isActive = activePet?.id === pet.id;
+
+          return (
+            <button
+              key={pet.id}
+              type="button"
+              draggable
+              onDragStart={() => {
+                setDraggedPet(pet);
+                setActivePet(pet);
+              }}
+              onDragEnd={() => setDraggedPet(null)}
+              onClick={() => setActivePet(isActive ? null : pet)}
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all",
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground shadow-md"
+                  : assignedCat
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                    : "border-border bg-card hover:border-primary/50",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-primary/10 text-primary",
+                )}
+              >
+                {pet.name[0]}
+              </span>
+              <span className="font-medium">{pet.name}</span>
+              {assignedCat && !isActive && (
+                <span className="text-[10px] opacity-70">· {assignedCat.name}</span>
+              )}
+              {assignment && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    unassignPet(pet.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.stopPropagation();
+                      unassignPet(pet.id);
+                    }
+                  }}
+                  className={cn(
+                    "ml-0.5 rounded-full p-0.5 transition-colors",
+                    isActive
+                      ? "hover:bg-white/20"
+                      : "text-muted-foreground hover:bg-red-100 hover:text-red-600",
+                  )}
+                >
+                  <X className="size-3" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active pet prompt */}
+      {activePet && (
+        <div className="border-primary/30 bg-primary/5 text-primary flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+          <span className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+            {activePet.name[0]}
+          </span>
+          <span>
+            Select a room for <strong>{activePet.name}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={() => setActivePet(null)}
+            className="ml-auto rounded p-0.5 hover:bg-black/5"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
+
+      {allAssigned && selectedPets.length > 0 && (
+        <div className="border-emerald-200 bg-emerald-50 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-emerald-700">
+          <Check className="size-4 shrink-0" />
+          All pets assigned — you can continue to the next step.
+        </div>
+      )}
+
+      {/* Room category cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {availability.map(
+          ({ category, totalActive, availableUnits, eligible, eligibilityMessage }) => {
+            const petsHere = roomAssignments
+              .filter((ra) => ra.roomId === category.id)
+              .map((ra) => selectedPets.find((p) => p.id === ra.petId))
+              .filter(Boolean) as Pet[];
+
+            const isFullyBooked = availableUnits === 0;
+            const isDragOver = dragOverCatId === category.id;
+            const canDrop =
+              !isFullyBooked && (eligible || !activePet) && (draggedPet || activePet);
+            const pct =
+              totalActive > 0
+                ? ((totalActive - availableUnits) / totalActive) * 100
+                : 0;
+
+            return (
+              <div
+                key={category.id}
+                onClick={() => {
+                  if (activePet && !isFullyBooked && eligible) {
+                    assignPet(activePet, category.id);
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOverCatId(category.id);
+                }}
+                onDragLeave={() => setDragOverCatId(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverCatId(null);
+                  if (draggedPet && !isFullyBooked && eligible) {
+                    assignPet(draggedPet, category.id);
+                  }
+                }}
+                className={cn(
+                  "group relative overflow-hidden rounded-2xl border-2 transition-all duration-200",
+                  activePet && !isFullyBooked && eligible
+                    ? "cursor-pointer"
+                    : activePet && (isFullyBooked || !eligible)
+                      ? "cursor-not-allowed"
+                      : "",
+                  isDragOver && canDrop
+                    ? "border-primary ring-primary/20 scale-[1.02] ring-2 ring-offset-2"
+                    : petsHere.length > 0
+                      ? "border-primary/70 shadow-md"
+                      : "border-border hover:border-primary/30 hover:shadow-sm",
+                  (isFullyBooked || (!eligible && activePet)) && "opacity-70",
+                )}
+              >
+                {/* Image area */}
+                <div className="relative h-36 w-full overflow-hidden bg-muted">
+                  {category.imageUrl ? (
+                    <Image
+                      src={category.imageUrl}
+                      alt={category.name}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex size-full items-center justify-center">
+                      <Bed className="text-muted-foreground/20 size-14" />
+                    </div>
+                  )}
+
+                  {/* Price badge */}
+                  {category.defaultBasePrice != null && (
+                    <div className="absolute top-2.5 left-2.5">
+                      <span className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
+                        ${category.defaultBasePrice}/night
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Assigned pet avatars */}
+                  {petsHere.length > 0 && (
+                    <div className="absolute top-2.5 right-2.5 flex gap-1">
+                      {petsHere.map((pet) => (
+                        <div
+                          key={pet.id}
+                          className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-bold shadow"
+                        >
+                          {pet.name[0]}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Fully booked overlay */}
+                  {isFullyBooked && (
+                    <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 shadow-sm">
+                        No rooms available
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Drop-zone highlight */}
+                  {isDragOver && canDrop && (
+                    <div className="border-primary/60 absolute inset-0 flex items-center justify-center border-4 border-dashed bg-white/20">
+                      <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-semibold shadow">
+                        Drop here
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card content */}
+                <div className="space-y-3 p-4">
+                  <div>
+                    <h4 className="font-semibold leading-tight">{category.name}</h4>
+                    {category.description && (
+                      <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                        {category.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Availability bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Availability</span>
+                      <span
+                        className={cn(
+                          "font-semibold tabular-nums",
+                          isFullyBooked
+                            ? "text-red-600"
+                            : availableUnits <= 1
+                              ? "text-orange-500"
+                              : "text-emerald-600",
+                        )}
+                      >
+                        {availableUnits} / {totalActive} rooms free
+                      </span>
+                    </div>
+                    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          pct >= 100
+                            ? "bg-red-500"
+                            : pct >= 70
+                              ? "bg-orange-400"
+                              : "bg-emerald-500",
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ineligibility notice (only when a pet is selected and it doesn't qualify) */}
+                  {!eligible && eligibilityMessage && activePet && (
+                    <div className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
+                      <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+                      <p className="text-[11px] text-amber-700">{eligibilityMessage}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          },
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Boarding Add-Ons Sub-Step (uses configured add-ons from settings)
 // ============================================================================
 
@@ -755,7 +783,7 @@ function BoardingAddOnsSubStep({
       )}
 
       {isStepAccessible(2) && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {boardingAddOns.map((service) => {
             const totalQuantity = extraServices
               .filter((es) => es.serviceId === service.id)

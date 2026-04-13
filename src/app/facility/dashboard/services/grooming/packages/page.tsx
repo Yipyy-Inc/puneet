@@ -36,6 +36,7 @@ import {
   Star,
   X,
 } from "lucide-react";
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,7 @@ export default function GroomingPackagesPage() {
     description: "",
     basePrice: 0,
     duration: 60,
+    color: "#ec4899",
     sizePricing: {
       small: 0,
       medium: 0,
@@ -113,6 +115,7 @@ export default function GroomingPackagesPage() {
       description: "",
       basePrice: 0,
       duration: 60,
+      color: "#ec4899",
       sizePricing: {
         small: 0,
         medium: 0,
@@ -142,6 +145,7 @@ export default function GroomingPackagesPage() {
       description: pkg.description,
       basePrice: pkg.basePrice,
       duration: pkg.duration,
+      color: pkg.color ?? "#ec4899",
       sizePricing: { ...pkg.sizePricing },
       includes: pkg.includes.join("\n"),
       isActive: pkg.isActive,
@@ -219,19 +223,25 @@ export default function GroomingPackagesPage() {
       icon: Package,
       defaultVisible: true,
       render: (pkg) => (
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{pkg.name}</span>
-            {pkg.isPopular && (
-              <Badge className="bg-yellow-100 text-yellow-700">
-                <Star className="mr-1 size-3 fill-yellow-500" />
-                Popular
-              </Badge>
-            )}
+        <div className="flex items-center gap-2">
+          <span
+            className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+            style={{ backgroundColor: (pkg.color as string) ?? "#ec4899" }}
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{pkg.name}</span>
+              {pkg.isPopular && (
+                <Badge className="bg-yellow-100 text-yellow-700">
+                  <Star className="mr-1 size-3 fill-yellow-500" />
+                  Popular
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground max-w-xs truncate text-sm">
+              {pkg.description}
+            </p>
           </div>
-          <p className="text-muted-foreground max-w-xs truncate text-sm">
-            {pkg.description}
-          </p>
         </div>
       ),
     },
@@ -570,6 +580,10 @@ export default function GroomingPackagesPage() {
                 rows={2}
               />
             </div>
+            <RateColorPicker
+              value={formData.color}
+              onChange={(hex) => setFormData({ ...formData, color: hex })}
+            />
             <div className="space-y-2">
               <Label>Pricing by Size</Label>
               <div className="grid grid-cols-4 gap-4">

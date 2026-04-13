@@ -224,6 +224,7 @@ export const trainingPackageSchema = z
     isActive: z.boolean(),
     popular: z.boolean().optional(),
     includes: z.array(z.string()),
+    color: z.string().optional(),
   })
   .catchall(z.unknown());
 

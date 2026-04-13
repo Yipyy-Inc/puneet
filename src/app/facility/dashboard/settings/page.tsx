@@ -46,7 +46,8 @@ import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
-import { ServiceColorSettings } from "@/components/facility/ServiceColorSettings";
+import { StatusColorSettings } from "@/components/facility/StatusColorSettings";
+import { ServiceColorCard } from "@/components/facility/ServiceColorCard";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -4876,6 +4877,7 @@ export default function SettingsPage() {
           {activeSection === "booking-statuses" && (
             <div className="space-y-6">
               <BookingStatusSettings />
+              <StatusColorSettings />
             </div>
           )}
 
@@ -4928,6 +4930,7 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+              <ServiceColorCard service="Boarding" />
             </div>
           )}
 
@@ -4950,6 +4953,7 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+              <ServiceColorCard service="Daycare" />
             </div>
           )}
 
@@ -4972,6 +4976,7 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+              <ServiceColorCard service="Grooming" />
             </div>
           )}
 
@@ -4994,6 +4999,7 @@ export default function SettingsPage() {
                   </Link>
                 </CardContent>
               </Card>
+              <ServiceColorCard service="Training" />
             </div>
           )}
 
@@ -5004,12 +5010,6 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Service Colors */}
-          {activeSection === "service-colors" && (
-            <div className="space-y-6">
-              <ServiceColorSettings />
-            </div>
-          )}
         </div>
       </div>
     </div>

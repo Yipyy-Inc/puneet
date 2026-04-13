@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { DollarSign, Clock, Edit, Trash2, Plus, Save, X } from "lucide-react";
 import { daycareRates, DaycareRate } from "@/data/daycare";
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 
 export default function DaycareRatesPage() {
   const [rates, setRates] = useState<DaycareRate[]>(daycareRates);
@@ -33,6 +34,7 @@ export default function DaycareRatesPage() {
     description: "",
     durationHours: 1,
     isActive: true,
+    color: "#0284c7",
     sizePricing: {
       small: 0,
       medium: 0,
@@ -50,6 +52,7 @@ export default function DaycareRatesPage() {
       description: "",
       durationHours: 1,
       isActive: true,
+      color: "#0284c7",
       sizePricing: {
         small: 0,
         medium: 0,
@@ -69,6 +72,7 @@ export default function DaycareRatesPage() {
       description: rate.description,
       durationHours: rate.durationHours,
       isActive: rate.isActive,
+      color: rate.color ?? "#0284c7",
       sizePricing: { ...rate.sizePricing },
     });
     setIsModalOpen(true);
@@ -123,8 +127,9 @@ export default function DaycareRatesPage() {
       defaultVisible: true,
       render: (item) => (
         <div className="flex items-center gap-2">
-          <div
-            className={`size-2 rounded-full ${item.isActive ? "bg-success" : `bg-muted`} `}
+          <span
+            className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+            style={{ backgroundColor: item.color ?? "#0284c7" }}
           />
           <span className="font-medium">{item.name}</span>
         </div>
@@ -283,13 +288,8 @@ export default function DaycareRatesPage() {
               className="relative overflow-hidden transition-shadow hover:shadow-md"
             >
               <div
-                className={`absolute top-0 right-0 left-0 h-1 ${
-                  rate.type === "full-day"
-                    ? "bg-primary"
-                    : rate.type === "half-day"
-                      ? "bg-secondary"
-                      : "bg-muted-foreground"
-                } `}
+                className="absolute top-0 right-0 left-0 h-1"
+                style={{ backgroundColor: rate.color ?? "#0284c7" }}
               />
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -499,6 +499,11 @@ export default function DaycareRatesPage() {
                 rows={2}
               />
             </div>
+
+            <RateColorPicker
+              value={formData.color}
+              onChange={(hex) => setFormData({ ...formData, color: hex })}
+            />
 
             <div className="space-y-2">
               <Label>Size-Based Pricing</Label>

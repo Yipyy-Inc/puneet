@@ -17,6 +17,7 @@ export interface TrainingCourseType {
   requiredVaccines: string[]; // Array of required vaccine names
   prerequisites: string[]; // Array of prerequisite course type IDs
   isActive: boolean; // Whether this course type is currently offered
+  color?: string; // Calendar/badge color for this course type
   // Course details for customer-facing information
   whatToBring?: string[]; // List of items to bring
   cancellationPolicy?: string; // Cancellation policy text

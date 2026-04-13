@@ -23,13 +23,9 @@ import {
   Hash, Clock, Repeat, Scissors, UserCheck, UserX,
   CheckCircle2, ChevronDown, ChevronUp,
 } from "lucide-react";
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const COLOR_SWATCHES = [
-  "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
-  "#f59e0b", "#a855f7", "#14b8a6", "#f97316", "#ef4444", "#64748b",
-];
 
 const PRICING_LABELS: Record<AddOnPricingType, string> = {
   flat: "Flat Fee", per_day: "Per Day", per_session: "Per Session", per_hour: "Per Hour",
@@ -164,29 +160,17 @@ export function AddOnFormDialog({ open, editing, categories, allServices, onClos
 
             {/* ── Basic Info ── */}
             <Section title="Basic Information">
-              {/* Color + Name row */}
-              <div className="flex items-start gap-3">
-                <div className="shrink-0 space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Color</Label>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex gap-1.5 flex-wrap w-24">
-                      {COLOR_SWATCHES.map((hex) => (
-                        <button key={hex} type="button"
-                          onClick={() => f("colorCode", hex)}
-                          className={cn("size-5 rounded-full border-2 transition-transform hover:scale-110",
-                            form.colorCode === hex ? "border-slate-900 scale-110" : "border-transparent")}
-                          style={{ backgroundColor: hex }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Name <span className="text-destructive">*</span></Label>
-                  <Input value={form.name} onChange={(e) => f("name", e.target.value)}
-                    placeholder="e.g. Daily Video Call" autoFocus />
-                </div>
+              {/* Name */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Name <span className="text-destructive">*</span></Label>
+                <Input value={form.name} onChange={(e) => f("name", e.target.value)}
+                  placeholder="e.g. Daily Video Call" autoFocus />
               </div>
+              {/* Color */}
+              <RateColorPicker
+                value={form.colorCode ?? "#3b82f6"}
+                onChange={(hex) => f("colorCode", hex)}
+              />
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Description <span className="text-destructive">*</span></Label>
                 <Textarea value={form.description} onChange={(e) => f("description", e.target.value)}

@@ -1788,13 +1788,13 @@ export function BookingModal({
         }
       }}
     >
-      <DialogContent className="flex h-[90vh] w-[95vw] min-w-7xl flex-col overflow-hidden p-0 [&>button]:hidden">
+      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 [&>button]:hidden sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border">
         <DialogTitle className="sr-only">
           {isEstimateMode ? "New Estimate" : "New Booking"}
         </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
-          <div className="bg-muted/30 flex w-80 flex-col border-r">
+          <div className="bg-muted/30 hidden w-80 flex-col border-r md:flex">
             {/* Title in Sidebar */}
             <div className="bg-background border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -2180,6 +2180,26 @@ export function BookingModal({
           {/* Main Content Area */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="bg-background border-b p-4">
+              {/* Mobile-only progress strip (sidebar is hidden on small screens) */}
+              <div className="mb-3 flex items-center gap-3 md:hidden">
+                <span className="text-muted-foreground shrink-0 text-[11px]">
+                  {currentStep + 1}/{displayedSteps.length}
+                </span>
+                <div className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-300",
+                      selectedService ? accent.progressBar : "bg-primary",
+                    )}
+                    style={{
+                      width: `${((currentStep + (canProceed ? 1 : 0)) / displayedSteps.length) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+                  ${(calculatePrice.total + (isEstimateMode ? 0 : tipAmount)).toFixed(2)}
+                </span>
+              </div>
               <h2 className="text-lg font-semibold">
                 {displayedSteps[currentStep]?.title}
               </h2>

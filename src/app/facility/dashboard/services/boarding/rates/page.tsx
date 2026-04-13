@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 import { DollarSign, Plus, Edit, Trash2 } from "lucide-react";
 import { boardingRates, BoardingRate } from "@/data/boarding";
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 
 export default function BoardingRatesPage() {
   const [rates, setRates] = useState<BoardingRate[]>(boardingRates);
@@ -30,6 +31,7 @@ export default function BoardingRatesPage() {
     description: "",
     basePrice: 0,
     isActive: true,
+    color: "#8b5cf6",
     sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
   });
 
@@ -44,6 +46,7 @@ export default function BoardingRatesPage() {
       description: "",
       basePrice: 0,
       isActive: true,
+      color: "#8b5cf6",
       sizePricing: { small: 0, medium: 0, large: 0, giant: 0 },
     });
     setIsRateModalOpen(true);
@@ -56,6 +59,7 @@ export default function BoardingRatesPage() {
       description: rate.description,
       basePrice: rate.basePrice,
       isActive: rate.isActive,
+      color: rate.color ?? "#8b5cf6",
       sizePricing: { ...rate.sizePricing },
     });
     setIsRateModalOpen(true);
@@ -98,11 +102,17 @@ export default function BoardingRatesPage() {
       label: "Rate Name",
       defaultVisible: true,
       render: (rate) => (
-        <div>
-          <p className="font-medium">{rate.name}</p>
-          <p className="text-muted-foreground max-w-[200px] truncate text-xs">
-            {rate.description}
-          </p>
+        <div className="flex items-center gap-2">
+          <span
+            className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+            style={{ backgroundColor: rate.color ?? "#8b5cf6" }}
+          />
+          <div>
+            <p className="font-medium">{rate.name}</p>
+            <p className="text-muted-foreground max-w-[200px] truncate text-xs">
+              {rate.description}
+            </p>
+          </div>
         </div>
       ),
     },
@@ -322,6 +332,10 @@ export default function BoardingRatesPage() {
                 placeholder="Describe what's included..."
               />
             </div>
+            <RateColorPicker
+              value={rateForm.color}
+              onChange={(hex) => setRateForm({ ...rateForm, color: hex })}
+            />
             <div className="space-y-2">
               <Label htmlFor="basePrice">Base Price (per night)</Label>
               <Input

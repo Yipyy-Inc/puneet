@@ -82,9 +82,22 @@ export const shiftStatusEnum = z.enum([
 ]);
 export type ShiftStatus = z.infer<typeof shiftStatusEnum>;
 
+// ─── Shift Recurrence ────────────────────────────────────────────────────────
+
+export const shiftRecurrenceSchema = z.object({
+  frequency: z.enum(["daily", "weekly", "biweekly", "monthly"]),
+  /** 0 = Sunday, 1 = Monday … 6 = Saturday — only used for weekly / biweekly */
+  daysOfWeek: z.array(z.number()).optional(),
+  endsOn: z.enum(["never", "date", "count"]),
+  endDate: z.string().optional(),
+  count: z.number().optional(),
+});
+export type ShiftRecurrence = z.infer<typeof shiftRecurrenceSchema>;
+
 export const scheduleShiftSchema = z.object({
   id: z.string(),
-  employeeId: z.string(),
+  /** undefined = unassigned / open shift */
+  employeeId: z.string().optional(),
   departmentId: z.string(),
   positionId: z.string(),
   date: z.string(),
@@ -94,6 +107,8 @@ export const scheduleShiftSchema = z.object({
   notes: z.string().optional(),
   status: shiftStatusEnum,
   color: z.string().optional(),
+  /** Links all shifts that belong to the same recurrence series */
+  recurrenceId: z.string().optional(),
 });
 export type ScheduleShift = z.infer<typeof scheduleShiftSchema>;
 
@@ -512,3 +527,32 @@ export const shiftOpportunityNotificationSettingsSchema = z.object({
 export type ShiftOpportunityNotificationSettings = z.infer<
   typeof shiftOpportunityNotificationSettingsSchema
 >;
+
+// ============================================================================
+// Holiday Rate
+// ============================================================================
+
+export const holidayRateSchema = z.object({
+  id: z.string(),
+  date: z.string(), // YYYY-MM-DD
+  name: z.string(),
+  multiplier: z.number(), // 1.5 = time and a half
+  departmentId: z.string().optional(), // undefined = all departments
+});
+export type HolidayRate = z.infer<typeof holidayRateSchema>;
+
+// ============================================================================
+// Time Clock Entry
+// ============================================================================
+
+export const timeClockEntrySchema = z.object({
+  id: z.string(),
+  shiftId: z.string(),
+  employeeId: z.string(),
+  date: z.string(),
+  clockedInAt: z.string().optional(),
+  clockedOutAt: z.string().optional(),
+  actualMinutes: z.number().optional(),
+  status: z.enum(["pending", "clocked_in", "clocked_out", "approved"]),
+});
+export type TimeClockEntry = z.infer<typeof timeClockEntrySchema>;
