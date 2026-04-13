@@ -13,6 +13,7 @@ import { Plus, Pencil, Trash2, Scissors, Droplets, Wind, Zap } from "lucide-reac
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { GroomingStation, GroomingStationType } from "@/types/rooms";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 
 // ── Station type config ────────────────────────────────────────────────────────
 
@@ -230,34 +231,51 @@ function StationCard({
   const { Icon, iconBg, iconColor } = sType;
   return (
     <div className={cn(
-      "group rounded-xl border bg-card p-4 transition-all hover:shadow-md",
+      "group rounded-xl border bg-card overflow-hidden transition-all hover:shadow-md",
       !station.active && "opacity-60",
     )}>
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className={cn("flex size-9 items-center justify-center rounded-lg", iconBg)}>
-          <Icon className={cn("size-4", iconColor)} />
+      {/* Station photo */}
+      {station.imageUrl ? (
+        <div className="aspect-[4/3] relative">
+          <img src={station.imageUrl} alt={station.name} className="absolute inset-0 size-full object-cover" />
+          <div className="absolute top-2 right-2">
+            <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75" />
+          </div>
+          <div className={cn("absolute top-2 left-2 flex size-7 items-center justify-center rounded-lg shadow-sm", iconBg)}>
+            <Icon className={cn("size-3.5", iconColor)} />
+          </div>
         </div>
-        <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75 -mt-0.5" />
-      </div>
-      <p className="font-semibold text-sm truncate">{station.name}</p>
-      <p className={cn("text-xs mt-0.5", station.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-        {station.active ? "Active" : "Inactive"}
-      </p>
-      {station.maxWeightLbs && (
-        <p className="text-[11px] text-muted-foreground mt-1">Max {station.maxWeightLbs} lbs</p>
+      ) : (
+        <div className="p-4 pb-0">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className={cn("flex size-9 items-center justify-center rounded-lg", iconBg)}>
+              <Icon className={cn("size-4", iconColor)} />
+            </div>
+            <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75 -mt-0.5" />
+          </div>
+        </div>
       )}
-      {station.staffNotes && (
-        <p className="text-[11px] text-muted-foreground mt-1 truncate" title={station.staffNotes}>
-          {station.staffNotes}
+      <div className="p-4 pt-2">
+        <p className="font-semibold text-sm truncate">{station.name}</p>
+        <p className={cn("text-xs mt-0.5", station.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+          {station.active ? "Active" : "Inactive"}
         </p>
-      )}
-      <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={onEdit}>
-          <Pencil className="size-3 mr-1" />Edit
-        </Button>
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive/70 hover:text-destructive" onClick={onDelete}>
-          <Trash2 className="size-3" />
-        </Button>
+        {station.maxWeightLbs && (
+          <p className="text-[11px] text-muted-foreground mt-1">Max {station.maxWeightLbs} lbs</p>
+        )}
+        {station.staffNotes && (
+          <p className="text-[11px] text-muted-foreground mt-1 truncate" title={station.staffNotes}>
+            {station.staffNotes}
+          </p>
+        )}
+        <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={onEdit}>
+            <Pencil className="size-3 mr-1" />Edit
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+            <Trash2 className="size-3" />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -321,6 +339,12 @@ function StationDialog({
               className="resize-none"
             />
           </div>
+          <RoomImageUpload
+            value={form.imageUrl}
+            onChange={(url) => setForm({ ...form, imageUrl: url })}
+            label="Station Photo"
+            compact
+          />
           <Separator />
           <div className="flex items-center gap-2.5">
             <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />

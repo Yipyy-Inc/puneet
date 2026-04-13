@@ -348,6 +348,12 @@ export default function PetDetailPage({
                   <Badge variant="secondary">
                     {pet.age} {pet.age === 1 ? "year" : "years"}
                   </Badge>
+                  {pet.petStatus === "deceased" && (
+                    <Badge variant="destructive">Deceased</Badge>
+                  )}
+                  {pet.petStatus === "inactive" && (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">Inactive</Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -393,6 +399,34 @@ export default function PetDetailPage({
             )}
           </div>
         </div>
+
+        {/* Deceased/Inactive Banner */}
+        {pet.petStatus === "deceased" && (
+          <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
+            <Heart className="size-5 text-red-500" />
+            <div>
+              <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                {pet.name} has been marked as deceased
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400">
+                This pet is no longer shown in active pet lists. Profile is preserved for records.
+              </p>
+            </div>
+          </div>
+        )}
+        {pet.petStatus === "inactive" && (
+          <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+            <AlertCircle className="size-5 text-amber-500" />
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                {pet.name} is currently inactive
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                This pet will not appear in booking or scheduling workflows.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tags + Notes */}
         <div className="flex items-center gap-2">
@@ -575,7 +609,7 @@ export default function PetDetailPage({
                         }
                       />
                     </div>
-                    <div className="col-span-2 space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="microchip">Microchip</Label>
                       <Input
                         id="microchip"
@@ -587,6 +621,24 @@ export default function PetDetailPage({
                           })
                         }
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="petStatus">Status</Label>
+                      <Select
+                        value={editedPet.petStatus || "active"}
+                        onValueChange={(value: "active" | "inactive" | "deceased") =>
+                          setEditedPet({ ...editedPet, petStatus: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="deceased">Deceased</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 ) : (
@@ -618,6 +670,25 @@ export default function PetDetailPage({
                       <p className="font-mono text-sm font-medium">
                         {pet.microchip}
                       </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Status</p>
+                      <Badge
+                        variant={
+                          pet.petStatus === "deceased"
+                            ? "destructive"
+                            : pet.petStatus === "inactive"
+                              ? "secondary"
+                              : "default"
+                        }
+                        className="mt-1"
+                      >
+                        {pet.petStatus === "deceased"
+                          ? "Deceased"
+                          : pet.petStatus === "inactive"
+                            ? "Inactive"
+                            : "Active"}
+                      </Badge>
                     </div>
                   </div>
                 )}

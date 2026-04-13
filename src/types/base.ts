@@ -209,3 +209,19 @@ export const missedDoseActionEnum = z.enum([
   "do_not_double",
 ]);
 export type MissedDoseAction = z.infer<typeof missedDoseActionEnum>;
+
+// ============================================================================
+// Medication "Given With" — what the owner uses to administer the medication
+// ============================================================================
+
+export const medGivenWithEnum = z.enum([
+  "pill_pocket",
+  "cheese",
+  "peanut_butter",
+  "wrapped_in_treat",
+  "mixed_in_food",
+  "by_hand",
+  "syringe",
+  "other",
+]);
+export type MedGivenWith = z.infer<typeof medGivenWithEnum>;

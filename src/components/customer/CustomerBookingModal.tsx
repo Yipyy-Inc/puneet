@@ -79,7 +79,10 @@ import type { Pet } from "@/types/pet";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { bookings as historicalBookings } from "@/data/bookings";
-import { facilityConfig } from "@/data/facility-config";
+import {
+  facilityConfig,
+  isApprovalRequired,
+} from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
 import { vaccinationRules, evaluationConfig } from "@/data/settings";
 import { getFormById } from "@/data/forms";
@@ -967,8 +970,9 @@ export function CustomerBookingModal({
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Check if facility requires approval or if requirements are incomplete (allow booking without forms)
-      const requiresApproval =
-        facilityConfig.bookingRules.approvalWorkflow?.enabled ?? false;
+      const requiresApproval = selectedService
+        ? isApprovalRequired(selectedService)
+        : false;
       const formsIncomplete =
         allowBookingWithoutForms &&
         !requiredFormsStatus.allComplete &&

@@ -389,6 +389,74 @@ export const messageTemplates: MessageTemplate[] = [
       "facility_name",
     ],
   },
+  // ---- Booking Request Templates ----
+  {
+    id: "tmpl-009",
+    name: "Booking Request Received",
+    type: "email",
+    subject: "Booking Request Received - {{pet_name}}",
+    body: "Hi {{customer_full_name}},\n\nWe've received your booking request for {{pet_name}}!\n\nService: {{service_name}}\nDate: {{booking_date}}\nTime: {{check_in_time}}\n\nOur team will review your request and respond within {{estimated_response_time}} hours.\n\nYou can check the status of your request anytime: {{booking_details_link}}\n\nBest regards,\n{{facility_name}}",
+    category: "confirmation",
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "service_name",
+      "booking_date",
+      "check_in_time",
+      "estimated_response_time",
+      "booking_details_link",
+      "facility_name",
+    ],
+  },
+  {
+    id: "tmpl-010",
+    name: "Booking Request Received (SMS)",
+    type: "sms",
+    body: "Hi {{customer_full_name}}! We've received your {{service_name}} request for {{pet_name}} on {{booking_date}}. We'll respond within {{estimated_response_time}} hours. - {{facility_name}}",
+    category: "confirmation",
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "service_name",
+      "booking_date",
+      "estimated_response_time",
+      "facility_name",
+    ],
+  },
+  {
+    id: "tmpl-011",
+    name: "Booking Request Approved",
+    type: "email",
+    subject: "Booking Approved - {{pet_name}}",
+    body: "Hi {{customer_full_name}},\n\nGreat news! Your booking request for {{pet_name}} has been approved by {{facility_name}}!\n\nService: {{service_name}}\nDate: {{booking_date}}\nTime: {{check_in_time}}\n\nView your booking: {{booking_details_link}}\n\nWe look forward to seeing you!\n\nBest regards,\n{{facility_name}}",
+    category: "confirmation",
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "service_name",
+      "booking_date",
+      "check_in_time",
+      "booking_details_link",
+      "facility_name",
+    ],
+  },
+  {
+    id: "tmpl-012",
+    name: "Booking Request Declined",
+    type: "email",
+    subject: "Booking Request Update - {{pet_name}}",
+    body: "Hi {{customer_full_name}},\n\nUnfortunately, we're unable to accommodate your booking request for {{pet_name}} on {{booking_date}}.\n\nService: {{service_name}}\n\nPlease feel free to reach out to us or try booking a different date.\n\nContact us: {{facility_phone}}\nBook again: {{portal_link}}\n\nBest regards,\n{{facility_name}}",
+    category: "update",
+    variables: [
+      "customer_full_name",
+      "pet_name",
+      "service_name",
+      "booking_date",
+      "facility_phone",
+      "portal_link",
+      "facility_name",
+    ],
+  },
 ];
 
 // ========================================
@@ -493,6 +561,51 @@ export const automationRules: AutomationRule[] = [
     stats: {
       totalSent: 78,
       lastTriggered: "2024-02-20T10:00:00Z",
+    },
+  },
+  // ---- Booking Request Automation Rules ----
+  {
+    id: "auto-008",
+    name: "Booking Request Received (Email)",
+    trigger: "booking_request_submitted" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-009",
+    stats: {
+      totalSent: 0,
+    },
+  },
+  {
+    id: "auto-009",
+    name: "Booking Request Received (SMS)",
+    trigger: "booking_request_submitted" as const,
+    enabled: true,
+    messageType: "sms" as const,
+    templateId: "tmpl-010",
+    stats: {
+      totalSent: 0,
+    },
+  },
+  {
+    id: "auto-010",
+    name: "Booking Request Approved",
+    trigger: "booking_request_approved" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-011",
+    stats: {
+      totalSent: 0,
+    },
+  },
+  {
+    id: "auto-011",
+    name: "Booking Request Declined",
+    trigger: "booking_request_declined" as const,
+    enabled: true,
+    messageType: "email" as const,
+    templateId: "tmpl-012",
+    stats: {
+      totalSent: 0,
     },
   },
   // ---- 7.2 Form Automation Rules ----

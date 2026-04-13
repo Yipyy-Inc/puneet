@@ -61,6 +61,9 @@ export default function AutomationsPage() {
     booking: automationRules.filter(
       (r) =>
         r.trigger === "booking_created" ||
+        r.trigger === "booking_request_submitted" ||
+        r.trigger === "booking_request_approved" ||
+        r.trigger === "booking_request_declined" ||
         r.trigger === "check_in" ||
         r.trigger === "check_out",
     ),
@@ -86,6 +89,9 @@ export default function AutomationsPage() {
   const getCategoryIcon = (trigger: string) => {
     if (
       trigger === "booking_created" ||
+      trigger === "booking_request_submitted" ||
+      trigger === "booking_request_approved" ||
+      trigger === "booking_request_declined" ||
       trigger === "check_in" ||
       trigger === "check_out"
     ) {
@@ -114,6 +120,9 @@ export default function AutomationsPage() {
   const getCategoryName = (trigger: string) => {
     if (
       trigger === "booking_created" ||
+      trigger === "booking_request_submitted" ||
+      trigger === "booking_request_approved" ||
+      trigger === "booking_request_declined" ||
       trigger === "check_in" ||
       trigger === "check_out"
     ) {

@@ -50,12 +50,15 @@ import {
   type NewEventSeed,
   OperationsCalendarNewEventMenu,
 } from "@/components/facility/operations/OperationsCalendarNewEventMenu";
+import { OperationsCalendarColorPanel } from "@/components/facility/operations/OperationsCalendarColorPanel";
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
 import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
+  type CalendarColorOverrides,
   type CalendarVisualConfig,
+  type CompletedAddOnEntry,
   type ManualFacilityEvent,
   type OperationsCalendarEvent,
   type OperationsCalendarFilters,
@@ -63,6 +66,7 @@ import {
   type OperationsCalendarSavedView,
   type OperationsCalendarView,
   DEFAULT_VISUAL_CONFIG,
+  EMPTY_COLOR_OVERRIDES,
   OPERATIONS_CALENDAR_EMPTY_FILTERS,
   buildServiceColorMap,
   buildUnifiedEvents,
@@ -89,6 +93,7 @@ const SAVED_VIEWS_KEY = `operations-calendar-saved-views-${FACILITY_ID}`;
 const MANUAL_EVENTS_KEY = `operations-calendar-manual-events-${FACILITY_ID}`;
 const CALENDAR_AXIS_KEY = `operations-calendar-axis-${FACILITY_ID}`;
 const CALENDAR_RESOURCE_TYPE_KEY = `operations-calendar-resource-type-${FACILITY_ID}`;
+const COLOR_OVERRIDES_KEY = `operations-calendar-color-overrides-${FACILITY_ID}`;
 
 interface TaskCompletionAuditEntry {
   id: string;
@@ -532,6 +537,7 @@ export function OperationsCalendar() {
   );
 
   const [taskCompletionAudit, setTaskCompletionAudit] = useState<TaskCompletionAuditEntry[]>([]);
+  const [completedAddOns, setCompletedAddOns] = useState<CompletedAddOnEntry[]>([]);
   const [overdueMeta, setOverdueMeta] = useState<Record<string, OverdueMeta>>({});
   const [managerAlerts, setManagerAlerts] = useState<ManagerAlert[]>([]);
   const [calendarAuditLog, setCalendarAuditLog] = useState<CalendarAuditEntry[]>([]);
@@ -635,6 +641,10 @@ export function OperationsCalendar() {
     return false;
   });
 
+  const [colorOverrides, setColorOverrides] = useState<CalendarColorOverrides>(() =>
+    loadStoredJson<CalendarColorOverrides>(COLOR_OVERRIDES_KEY, EMPTY_COLOR_OVERRIDES),
+  );
+
   const [showEventCreator, setShowEventCreator] = useState(false);
   const [manualEventDraft, setManualEventDraft] = useState(DEFAULT_DRAFT);
   const [manualFacilityEvents, setManualFacilityEvents] = useState<ManualFacilityEvent[]>(() =>
@@ -681,6 +691,10 @@ export function OperationsCalendar() {
   useEffect(() => {
     localStorage.setItem(VISUAL_CONFIG_KEY, JSON.stringify(visualConfig));
   }, [visualConfig]);
+
+  useEffect(() => {
+    localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(colorOverrides));
+  }, [colorOverrides]);
 
   useEffect(() => {
     localStorage.setItem(MANUAL_EVENTS_KEY, JSON.stringify(manualFacilityEvents));
@@ -745,6 +759,7 @@ export function OperationsCalendar() {
       view,
       addOnDisplayMode: visualConfig.addOnDisplayMode,
       manualFacilityEvents,
+      completedAddOns,
       viewerKey: userId,
       resources,
     });
@@ -753,6 +768,7 @@ export function OperationsCalendar() {
   }, [
     activeModules,
     bookingRecords,
+    completedAddOns,
     manualFacilityEvents,
     taskRecords,
     userId,
@@ -788,8 +804,8 @@ export function OperationsCalendar() {
   }, [filterOptions.staffRoles]);
 
   const serviceColorMap = useMemo(
-    () => buildServiceColorMap(activeModules),
-    [activeModules],
+    () => buildServiceColorMap(activeModules, colorOverrides),
+    [activeModules, colorOverrides],
   );
 
   const resourceCalendarOptions = useMemo<ResourceCalendarOption[]>(
@@ -1140,8 +1156,9 @@ export function OperationsCalendar() {
     () => ({
       visualConfig,
       serviceColorMap,
+      colorOverrides,
     }),
-    [serviceColorMap, visualConfig],
+    [colorOverrides, serviceColorMap, visualConfig],
   );
 
   const activeCount = activeFiltersCount(filters);
@@ -1826,19 +1843,63 @@ export function OperationsCalendar() {
     toast.success("Saved view deleted");
   };
 
-  const openEventDrawer = (event: OperationsCalendarEvent) => {
-    if ((event.type === "booking" || event.type === "add-on") && event.bookingId) {
-      router.push(`/facility/dashboard/bookings?bookingId=${event.bookingId}`);
+  const handleMarkEventComplete = (event: OperationsCalendarEvent) => {
+    // Task events — delegate to the existing task completion flow
+    if (event.type === "task" && event.taskId) {
+      markTaskComplete(event.taskId, { source: "calendar-drawer" });
       return;
     }
 
+    // Add-on events — find the matching add-on in bookingAddOnState and mark complete
+    if (event.type === "add-on" && event.bookingId) {
+      const addOnName = event.addOns[0]?.name ?? event.title.split("—")[0]?.trim();
+      if (!addOnName) return;
+
+      const addOns = bookingAddOnState[event.bookingId] ?? [];
+      const match = addOns.find(
+        (a) => a.name.toLowerCase() === addOnName.toLowerCase() && a.status !== "completed",
+      );
+
+      if (match) {
+        updateBookingAddOn(event.bookingId, match.id, { status: "completed" });
+      } else {
+        // Already completed or no match — still track it
+        setCompletedAddOns((prev) => [
+          ...prev.filter(
+            (e) => !(e.bookingId === event.bookingId && e.addOnName.toLowerCase() === addOnName.toLowerCase()),
+          ),
+          {
+            addOnName,
+            bookingId: event.bookingId!,
+            completedAt: new Date().toISOString(),
+            completedByName: userName,
+            completedByStaffId: userId,
+          },
+        ]);
+        toast.success(`${addOnName} marked complete`);
+      }
+    }
+  };
+
+  const openEventDrawer = (event: OperationsCalendarEvent) => {
     setSelectedEventId(event.id);
     setDrawerOpen(true);
 
-    if (event.type === "booking" && event.bookingId) {
+    // For add-on events, auto-navigate to the add-ons tab
+    if (event.type === "add-on" && event.bookingId) {
+      setBookingTabMemory((previous) => ({
+        ...previous,
+        [event.bookingId as number]: "addons",
+      }));
+    } else if (event.type === "booking" && event.bookingId) {
       setBookingTabMemory((previous) => ({
         ...previous,
         [event.bookingId as number]: previous[event.bookingId as number] ?? "summary",
+      }));
+    } else if (event.type === "task" && event.bookingId) {
+      setBookingTabMemory((previous) => ({
+        ...previous,
+        [event.bookingId as number]: "tasks",
       }));
     }
   };
@@ -2192,6 +2253,37 @@ export function OperationsCalendar() {
       return;
     }
 
+    // If the add-on is being marked completed, track the completion with
+    // timestamp and staff info so the calendar event turns grey.
+    if (updates.status === "completed") {
+      const addOnItem = bookingAddOnState[bookingId]?.find((item) => item.id === addOnId);
+      if (addOnItem) {
+        setCompletedAddOns((previous) => [
+          ...previous.filter(
+            (entry) => !(entry.bookingId === bookingId && entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()),
+          ),
+          {
+            addOnName: addOnItem.name,
+            bookingId,
+            completedAt: new Date().toISOString(),
+            completedByName: userName,
+            completedByStaffId: userId,
+          },
+        ]);
+        toast.success(`${addOnItem.name} marked complete`);
+      }
+    } else if (updates.status === "pending") {
+      // If reverting to pending, remove from completed tracking
+      const addOnItem = bookingAddOnState[bookingId]?.find((item) => item.id === addOnId);
+      if (addOnItem) {
+        setCompletedAddOns((previous) =>
+          previous.filter(
+            (entry) => !(entry.bookingId === bookingId && entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()),
+          ),
+        );
+      }
+    }
+
     setBookingAddOnState((previous) => ({
       ...previous,
       [bookingId]: (previous[bookingId] ?? []).map((item) =>
@@ -2206,7 +2298,7 @@ export function OperationsCalendar() {
 
     appendAuditEntry("booking_edited", {
       bookingId,
-      field: "addon-updated",
+      field: updates.status === "completed" ? "addon-completed" : "addon-updated",
       addOnId,
     });
   };
@@ -2538,6 +2630,13 @@ export function OperationsCalendar() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((previous) => !previous)}
           activeFilterCount={activeCount}
+          colorPanel={
+            <OperationsCalendarColorPanel
+              colorOverrides={colorOverrides}
+              onColorOverridesChange={setColorOverrides}
+              customServiceNames={activeModules.map((m) => m.name)}
+            />
+          }
           newEventMenu={
             <OperationsCalendarNewEventMenu
               open={newEventMenuOpen}
@@ -2587,6 +2686,7 @@ export function OperationsCalendar() {
           renderSettings={renderSettings}
           onClearAllFilters={clearAllFilters}
           onEventClick={openEventDrawer}
+          onMarkEventComplete={handleMarkEventComplete}
           onSlotCreate={onSlotCreate}
         />
       </div>

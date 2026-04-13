@@ -58,6 +58,10 @@ import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
+import {
+  facilityConfig,
+  isApprovalRequired,
+} from "@/data/facility-config";
 
 import type { Client } from "@/types/client";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
@@ -302,6 +306,14 @@ export function BookingModal({
     preSelectedService ?? "",
   );
   const accent = getServiceAccent(selectedService);
+  const approvalRequired = useMemo(() => {
+    if (!selectedService) return false;
+    // Built-in services: check facility config
+    if (isBuiltinService(selectedService)) return isApprovalRequired(selectedService);
+    // Custom services: check module's onlineBooking.approvalRequired
+    const mod = getModuleBySlug(selectedService);
+    return mod?.onlineBooking?.approvalRequired ?? false;
+  }, [selectedService, getModuleBySlug]);
   const handleServiceChange = (service: string) => {
     setSelectedService(service);
     if (service === "evaluation") {
@@ -378,17 +390,13 @@ export function BookingModal({
   const [tipAmount, setTipAmount] = useState(0);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
 
-  // Get current sub-steps based on selected service (estimate mode skips feeding/medication)
+  // Get current sub-steps based on selected service (estimate mode now includes feeding/medication for fee calculation)
   const currentSubSteps = useMemo(() => {
     if (selectedService === "daycare") {
-      return isEstimateMode
-        ? DAYCARE_SUB_STEPS.filter((s) => s.id <= 2)
-        : DAYCARE_SUB_STEPS;
+      return DAYCARE_SUB_STEPS;
     }
     if (selectedService === "boarding") {
-      return isEstimateMode
-        ? BOARDING_SUB_STEPS.filter((s) => s.id <= 2)
-        : BOARDING_SUB_STEPS;
+      return BOARDING_SUB_STEPS;
     }
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
     if (selectedService) {
@@ -752,7 +760,86 @@ export function BookingModal({
       actualCheckOutTime: checkOutTime,
     });
 
-    const subtotal = pricingComputation.total;
+    // ── Medication & feeding service fees ──────────────────────────
+    const sfConfig = facilityConfig.serviceFees;
+    let medicationFeeTotal = 0;
+    let feedingFeeTotal = 0;
+    const serviceFeeItems: Array<{ label: string; amount: number }> = [];
+
+    // Medication admin fee
+    if (
+      sfConfig.medication.adminFee.enabled &&
+      medications.length > 0 &&
+      sfConfig.medication.adminFee.applicableServices.includes(selectedService)
+    ) {
+      const scope = sfConfig.medication.adminFee.scope;
+      const amt = sfConfig.medication.adminFee.amount;
+      if (scope === "per_medication") {
+        medicationFeeTotal = amt * medications.length;
+      } else if (scope === "per_pet") {
+        const petCount = new Set(medications.map((m) => m.petId)).size || 1;
+        medicationFeeTotal = amt * petCount;
+      } else {
+        medicationFeeTotal = amt;
+      }
+      if (medicationFeeTotal > 0) {
+        serviceFeeItems.push({
+          label: sfConfig.medication.adminFee.label,
+          amount: medicationFeeTotal,
+        });
+      }
+    }
+
+    // Medication aid fee (facility-provided pill pockets, cheese, etc.)
+    if (sfConfig.medication.facilityProvides.enabled) {
+      for (const med of medications) {
+        if (med.facilityProvidesMedAid && med.facilityMedAidItem) {
+          const aidItem = sfConfig.medication.facilityProvides.items.find(
+            (i) => i.id === med.facilityMedAidItem,
+          );
+          if (aidItem && aidItem.fee > 0) {
+            medicationFeeTotal += aidItem.fee;
+            serviceFeeItems.push({
+              label: `${sfConfig.medication.facilityProvides.label}: ${aidItem.name}`,
+              amount: aidItem.fee,
+            });
+          }
+        }
+      }
+    }
+
+    // Feeding fee (daycare only — boarding is included)
+    if (
+      selectedService === "daycare" &&
+      sfConfig.feeding.daycare.enabled &&
+      feedingSchedule.length > 0 &&
+      feedingSchedule.some((f) => f.occasions.length > 0)
+    ) {
+      const scope = sfConfig.feeding.daycare.scope;
+      const amt = sfConfig.feeding.daycare.amount;
+      if (scope === "per_pet") {
+        const feedingPetCount =
+          new Set(feedingSchedule.filter((f) => f.occasions.length > 0).map((f) => f.petId)).size || 1;
+        feedingFeeTotal = amt * feedingPetCount;
+      } else if (scope === "per_meal") {
+        const totalMeals = feedingSchedule.reduce(
+          (sum, f) => sum + f.occasions.length,
+          0,
+        );
+        feedingFeeTotal = amt * totalMeals;
+      } else {
+        feedingFeeTotal = amt;
+      }
+      if (feedingFeeTotal > 0) {
+        serviceFeeItems.push({
+          label: sfConfig.feeding.daycare.label,
+          amount: feedingFeeTotal,
+        });
+      }
+    }
+
+    const subtotal =
+      pricingComputation.total + medicationFeeTotal + feedingFeeTotal;
     const taxRate = isEstimateMode ? estimateTaxRate : 0;
     const taxAmount = subtotal * taxRate;
     const total = subtotal + taxAmount;
@@ -767,6 +854,9 @@ export function BookingModal({
       taxAmount,
       total,
       effectiveExtraServices: pricingComputation.extraServices,
+      medicationFeeTotal,
+      feedingFeeTotal,
+      serviceFeeItems,
     };
   }, [
     selectedService,
@@ -796,6 +886,8 @@ export function BookingModal({
     isEstimateMode,
     isGuestEstimate,
     estimateTaxRate,
+    medications,
+    feedingSchedule,
   ]);
 
   // Check if service requires evaluation
@@ -1023,7 +1115,7 @@ export function BookingModal({
         selectedService === "boarding" && boardingDateTimes.length > 0
           ? boardingDateTimes[boardingDateTimes.length - 1].checkOutTime
           : checkOutTime,
-      status: "pending",
+      status: approvalRequired ? "request_submitted" : "pending",
       basePrice: calculatePrice.basePrice,
       discount: calculatePrice.discount,
       totalCost: calculatePrice.total,
@@ -2057,6 +2149,18 @@ export function BookingModal({
                     ).toFixed(2)}
                   </span>
                 </div>
+                {calculatePrice.medicationFeeTotal > 0 && (
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>Medication fees</span>
+                    <span>+${calculatePrice.medicationFeeTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                {calculatePrice.feedingFeeTotal > 0 && (
+                  <div className="text-muted-foreground flex justify-between text-xs">
+                    <span>Feeding fee</span>
+                    <span>+${calculatePrice.feedingFeeTotal.toFixed(2)}</span>
+                  </div>
+                )}
                 {tipAmount > 0 && (
                   <div className="text-muted-foreground flex justify-between text-xs">
                     <span>Incl. tip</span>
@@ -2384,7 +2488,11 @@ export function BookingModal({
                           : ""
                       }
                     >
-                      {isEstimateMode ? "Create Estimate" : "Create Booking"}
+                      {isEstimateMode
+                        ? "Create Estimate"
+                        : approvalRequired
+                          ? "Submit Request"
+                          : "Create Booking"}
                     </Button>
                   )}
                 </div>

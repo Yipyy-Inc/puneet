@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
+  Check,
   Clock,
   ExternalLink,
   FileText,
@@ -23,6 +24,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  type CalendarColorOverrides,
   type CalendarVisualConfig,
   type FilterOption,
   type OperationsCalendarEvent,
@@ -42,6 +44,7 @@ import {
 export interface EventRenderSettings {
   visualConfig: CalendarVisualConfig;
   serviceColorMap: Record<string, string>;
+  colorOverrides?: CalendarColorOverrides;
 }
 
 function eventDurationLabel(event: OperationsCalendarEvent): string {
@@ -69,7 +72,7 @@ function eventHoverSummary(
 }
 
 function getStatusBadgeStyle(status: string, type: string) {
-  if (type === "task") {
+  if (type === "task" || type === "add-on") {
     if (status === "Completed") return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
     if (status === "Overdue") return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
     return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
@@ -85,15 +88,19 @@ export function EventChip({
   event,
   renderSettings,
   onEventClick,
+  onMarkEventComplete,
 }: {
   event: OperationsCalendarEvent;
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
 }) {
   const [open, setOpen] = useState(false);
   const petLabel = formatPetLabel(event.petNames) || event.title;
   const timeLabel = eventDurationLabel(event);
   const isCompletedTask = event.type === "task" && event.status === "Completed";
+  const isCompletedAddOn = event.type === "add-on" && event.status === "Completed";
+  const isCompletedEvent = isCompletedTask || isCompletedAddOn;
   const isOverdueTask = event.type === "task" && event.status === "Overdue";
   const isCancelledBooking = event.type === "booking" && event.status === "Cancelled";
 
@@ -101,10 +108,11 @@ export function EventChip({
     event,
     renderSettings.visualConfig.colorMode,
     renderSettings.serviceColorMap,
+    renderSettings.colorOverrides,
   );
 
   // No left-border stripe — use tinted background + colored dot
-  const chipStyle: CSSProperties = isCompletedTask
+  const chipStyle: CSSProperties = isCompletedEvent
     ? { backgroundColor: "rgba(100,116,139,0.07)", borderColor: "rgba(100,116,139,0.18)" }
     : isOverdueTask
     ? { backgroundColor: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.28)" }
@@ -146,34 +154,44 @@ export function EventChip({
             <span
               className="size-2 shrink-0 rounded-full ring-1 ring-white/80"
               style={{
-                backgroundColor: accentColor,
-                boxShadow: `0 0 5px ${hexToRgba(accentColor, 0.55)}`,
+                backgroundColor: isCompletedEvent ? "#94a3b8" : accentColor,
+                boxShadow: isCompletedEvent ? "none" : `0 0 5px ${hexToRgba(accentColor, 0.55)}`,
               }}
             />
             <p
               className={cn(
                 "truncate text-[11px] font-bold leading-tight text-slate-900",
                 isCancelledBooking && "line-through",
-                isCompletedTask && "text-slate-400",
+                isCompletedEvent && "text-slate-400 line-through",
               )}
             >
               {petLabel}
             </p>
           </div>
 
-          {/* Bottom row: service badge + time */}
+          {/* Bottom row: service badge + time + completed indicator */}
           <div className="flex items-center gap-1.5 mt-1 pl-3.5 min-w-0">
-            <span
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
-              style={{
-                backgroundColor: hexToRgba(accentColor, 0.15),
-                color: accentColor,
-              }}
-            >
-              {serviceLabel.length > 12 ? serviceLabel.slice(0, 12) + "…" : serviceLabel}
-            </span>
+            {isCompletedEvent ? (
+              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none bg-slate-100 text-slate-400">
+                <Check className="size-2.5" />
+                Done
+              </span>
+            ) : (
+              <span
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
+                style={{
+                  backgroundColor: hexToRgba(accentColor, 0.15),
+                  color: accentColor,
+                }}
+              >
+                {serviceLabel.length > 12 ? serviceLabel.slice(0, 12) + "…" : serviceLabel}
+              </span>
+            )}
             {!event.allDay && (
-              <span className="truncate text-[10px] font-medium text-slate-400 leading-tight">
+              <span className={cn(
+                "truncate text-[10px] font-medium leading-tight",
+                isCompletedEvent ? "text-slate-300" : "text-slate-400",
+              )}>
                 {timeLabel}
               </span>
             )}
@@ -257,7 +275,42 @@ export function EventChip({
               <span className="line-clamp-2">{event.notes}</span>
             </div>
           )}
+          {event.completedAt && (
+            <div className="flex items-center gap-2.5 text-[12px] text-emerald-600 mt-1">
+              <Check className="size-3.5 shrink-0 text-emerald-500" />
+              <span>
+                Completed by {event.completedByName ?? "Staff"}{" "}
+                at {new Date(event.completedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Quick actions */}
+        {(event.type === "task" || event.type === "add-on") && !isCompletedEvent && onMarkEventComplete && (
+          <div className="bg-white border-t border-slate-100 px-4 py-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkEventComplete(event);
+                setOpen(false);
+              }}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
+            >
+              <Check className="size-3.5" />
+              Mark Complete
+            </button>
+          </div>
+        )}
+        {isCompletedEvent && (
+          <div className="bg-emerald-50 border-t border-emerald-100 px-4 py-2">
+            <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-emerald-600">
+              <Check className="size-3.5" />
+              Completed
+            </div>
+          </div>
+        )}
 
         {/* Footer actions */}
         <div className="bg-white border-t border-slate-100 p-3 flex gap-2">
@@ -325,6 +378,7 @@ export function DayTimeline({
   timelineRef,
   renderSettings,
   onEventClick,
+  onMarkEventComplete,
   onSlotCreate,
 }: {
   day: Date;
@@ -332,6 +386,7 @@ export function DayTimeline({
   timelineRef: RefObject<HTMLDivElement | null>;
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
   onSlotCreate?: (slot: Date) => void;
 }) {
   const hours = Array.from({ length: 15 }, (_, i) => i + 7);
@@ -400,6 +455,7 @@ export function DayTimeline({
                   event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
+                  onMarkEventComplete={onMarkEventComplete}
                 />
               ))}
             </div>
@@ -417,6 +473,7 @@ export function DayColumns({
   anchorDate,
   renderSettings,
   onEventClick,
+  onMarkEventComplete,
   onSlotCreate,
 }: {
   days: Date[];
@@ -425,6 +482,7 @@ export function DayColumns({
   anchorDate?: Date;
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
   onSlotCreate?: (slot: Date) => void;
 }) {
   const visibleLimit = getZoomEventLimit(renderSettings.visualConfig.zoomLevel);
@@ -511,6 +569,7 @@ export function DayColumns({
                   event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
+                  onMarkEventComplete={onMarkEventComplete}
                 />
               ))}
               {overflowCount > 0 && (
@@ -536,12 +595,14 @@ export function ResourceColumnsView({
   events,
   renderSettings,
   onEventClick,
+  onMarkEventComplete,
   onSlotCreate,
 }: {
   resources: Array<{ id: string; name: string; type: string }>;
   events: OperationsCalendarEvent[];
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
   onSlotCreate?: (slot: Date) => void;
 }) {
   if (resources.length === 0) {
@@ -603,6 +664,7 @@ export function ResourceColumnsView({
                   event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
+                  onMarkEventComplete={onMarkEventComplete}
                 />
               ))}
               {laneEvents.length === 0 && (
@@ -621,11 +683,13 @@ export function ListView({
   events,
   renderSettings,
   onEventClick,
+  onMarkEventComplete,
 }: {
   days: Date[];
   events: OperationsCalendarEvent[];
   renderSettings: EventRenderSettings;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -652,6 +716,7 @@ export function ListView({
                   event={ev}
                   renderSettings={renderSettings}
                   onEventClick={onEventClick}
+                  onMarkEventComplete={onMarkEventComplete}
                 />
               ))}
             </div>

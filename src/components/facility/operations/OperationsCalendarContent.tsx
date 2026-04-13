@@ -34,6 +34,7 @@ interface OperationsCalendarContentProps {
   renderSettings: EventRenderSettings;
   onClearAllFilters: () => void;
   onEventClick?: (event: OperationsCalendarEvent) => void;
+  onMarkEventComplete?: (event: OperationsCalendarEvent) => void;
   onSlotCreate?: (slot: Date) => void;
 }
 
@@ -50,6 +51,7 @@ export function OperationsCalendarContent({
   renderSettings,
   onClearAllFilters,
   onEventClick,
+  onMarkEventComplete,
   onSlotCreate,
 }: OperationsCalendarContentProps) {
   return (
@@ -121,6 +123,7 @@ export function OperationsCalendarContent({
                 events={visibleEvents}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
               />
             ) : (
@@ -132,6 +135,7 @@ export function OperationsCalendarContent({
                 timelineRef={timelineRef}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
               />
             )}
@@ -141,6 +145,7 @@ export function OperationsCalendarContent({
                 events={visibleEvents}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
               />
             )}
@@ -150,6 +155,7 @@ export function OperationsCalendarContent({
                 events={visibleEvents}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
               />
             )}
@@ -161,6 +167,7 @@ export function OperationsCalendarContent({
                 anchorDate={anchorDate}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
                 onSlotCreate={onSlotCreate}
               />
             )}
@@ -172,6 +179,7 @@ export function OperationsCalendarContent({
                 events={visibleEvents}
                 renderSettings={renderSettings}
                 onEventClick={onEventClick}
+                onMarkEventComplete={onMarkEventComplete}
               />
             )}
           </div>

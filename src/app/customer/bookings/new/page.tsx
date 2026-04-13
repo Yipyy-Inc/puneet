@@ -75,8 +75,14 @@ export default function NewBookingPage() {
           facilityName={selectedFacility.name}
           preSelectedClientId={customer.id}
           preSelectedService={preSelectedService}
-          onCreateBooking={() => {
-            toast.success("Booking created successfully!");
+          onCreateBooking={(booking) => {
+            if (booking.status === "request_submitted") {
+              toast.success(
+                "Booking request submitted! We'll review it and get back to you shortly.",
+              );
+            } else {
+              toast.success("Booking created successfully!");
+            }
             router.push("/customer/bookings");
           }}
         />

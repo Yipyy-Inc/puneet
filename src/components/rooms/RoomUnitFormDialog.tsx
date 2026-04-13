@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import type { FacilityRoom } from "@/types/rooms";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 
 function blank(categoryId: string, facilityId: number): FacilityRoom {
   return {
@@ -88,6 +89,14 @@ export function RoomUnitFormDialog({
               className="resize-none"
             />
           </div>
+
+          <RoomImageUpload
+            value={form.imageUrl}
+            onChange={(url) => setForm({ ...form, imageUrl: url })}
+            label="Room Photo"
+            hint="Photo of this specific room unit"
+            compact
+          />
 
           <div className="flex items-center gap-2.5">
             <Switch

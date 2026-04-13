@@ -183,6 +183,9 @@ export interface OperationsCalendarEvent {
   capacityCeilingPerHour?: number;
   onlineBookable?: boolean;
   deletedAt?: string;
+  completedAt?: string;
+  completedByName?: string;
+  completedByStaffId?: string;
   petTags: string[];
   customerTags: string[];
   bookingTags: string[];
@@ -247,6 +250,14 @@ export interface CalendarWindow {
   end: Date;
 }
 
+export interface CompletedAddOnEntry {
+  addOnName: string;
+  bookingId: number;
+  completedAt: string;
+  completedByName: string;
+  completedByStaffId: string;
+}
+
 interface BuildUnifiedEventsInput {
   bookings: Booking[];
   clients: Client[];
@@ -258,6 +269,7 @@ interface BuildUnifiedEventsInput {
   view: OperationsCalendarView;
   addOnDisplayMode: CalendarAddOnDisplayMode;
   manualFacilityEvents?: ManualFacilityEvent[];
+  completedAddOns?: CompletedAddOnEntry[];
   viewerKey?: string;
   resources?: FacilityResource[];
 }
@@ -283,7 +295,7 @@ const BUILTIN_SERVICE_LABELS: Record<string, string> = {
   custom: "Custom Service",
 };
 
-const BUILTIN_SERVICE_COLORS: Record<string, string> = {
+export const BUILTIN_SERVICE_COLORS: Record<string, string> = {
   Daycare: "#0284c7",
   Boarding: "#8b5cf6",
   Grooming: "#ec4899",
@@ -293,7 +305,7 @@ const BUILTIN_SERVICE_COLORS: Record<string, string> = {
   Facility: "#0f766e",
 };
 
-const STATUS_COLOR_MAP: Record<string, string> = {
+export const STATUS_COLOR_MAP: Record<string, string> = {
   Confirmed: "#3b82f6",
   Pending: "#f59e0b",
   "Checked-in": "#22c55e",
@@ -318,6 +330,54 @@ const STAFF_COLOR_PALETTE = [
   "#6366f1",
   "#84cc16",
 ];
+
+/** Curated brand palette — the only colors users can pick from. */
+export const BRAND_COLOR_PALETTE: Array<{ hex: string; name: string }> = [
+  // Blues
+  { hex: "#0284c7", name: "Sky" },
+  { hex: "#2563eb", name: "Blue" },
+  { hex: "#3b82f6", name: "Royal" },
+  { hex: "#0ea5e9", name: "Cyan" },
+  { hex: "#06b6d4", name: "Teal Blue" },
+  // Purples
+  { hex: "#8b5cf6", name: "Violet" },
+  { hex: "#7c3aed", name: "Purple" },
+  { hex: "#6366f1", name: "Indigo" },
+  { hex: "#a855f7", name: "Amethyst" },
+  // Pinks & Reds
+  { hex: "#ec4899", name: "Pink" },
+  { hex: "#f43f5e", name: "Rose" },
+  { hex: "#e11d48", name: "Crimson" },
+  { hex: "#ef4444", name: "Red" },
+  // Oranges & Yellows
+  { hex: "#f97316", name: "Orange" },
+  { hex: "#f59e0b", name: "Amber" },
+  { hex: "#eab308", name: "Gold" },
+  { hex: "#d97706", name: "Honey" },
+  // Greens
+  { hex: "#22c55e", name: "Green" },
+  { hex: "#10b981", name: "Emerald" },
+  { hex: "#14b8a6", name: "Teal" },
+  { hex: "#059669", name: "Jade" },
+  { hex: "#84cc16", name: "Lime" },
+  // Neutrals
+  { hex: "#64748b", name: "Slate" },
+  { hex: "#0f766e", name: "Deep Teal" },
+  { hex: "#78716c", name: "Stone" },
+  { hex: "#475569", name: "Charcoal" },
+];
+
+export interface CalendarColorOverrides {
+  /** service name → hex */
+  services: Record<string, string>;
+  /** status label → hex */
+  statuses: Record<string, string>;
+}
+
+export const EMPTY_COLOR_OVERRIDES: CalendarColorOverrides = {
+  services: {},
+  statuses: {},
+};
 
 const BOOKING_STATUS_LABELS: Record<string, string> = {
   confirmed: "Confirmed",
@@ -951,7 +1011,14 @@ function buildCustomServiceEvents(
   });
 }
 
-function buildTaskEvents(tasks: FacilityTask[]): OperationsCalendarEvent[] {
+function buildTaskEvents(
+  tasks: FacilityTask[],
+  bookings: Booking[],
+): OperationsCalendarEvent[] {
+  const bookingClientLookup = new Map(
+    bookings.map((b) => [b.id, b.clientId]),
+  );
+
   return tasks.map((task) => {
     const start = makeDateTime(task.scheduledDate, task.scheduledTime);
     const end = addMinutes(start, 30);
@@ -984,6 +1051,7 @@ function buildTaskEvents(tasks: FacilityTask[]): OperationsCalendarEvent[] {
       resourceType: undefined,
       unassigned: !task.assignedToName,
       petId: task.petId,
+      clientId: bookingClientLookup.get(task.bookingId),
       taskId: task.id,
       petNames: [task.petName],
       customerName: task.ownerName,
@@ -1171,9 +1239,14 @@ function buildAddOnSubEvents(
   bookingEvents: OperationsCalendarEvent[],
   view: OperationsCalendarView,
   addOnDisplayMode: CalendarAddOnDisplayMode,
+  completedAddOns?: CompletedAddOnEntry[],
 ): OperationsCalendarEvent[] {
   if (addOnDisplayMode !== "separate") return [];
   if (view !== "day" && view !== "week") return [];
+
+  const completedLookup = new Map(
+    (completedAddOns ?? []).map((entry) => [`${entry.bookingId}-${entry.addOnName.toLowerCase()}`, entry]),
+  );
 
   return bookingEvents.flatMap((event) => {
     return event.addOns
@@ -1181,9 +1254,12 @@ function buildAddOnSubEvents(
       .map((addOn, index) => {
         const start = addOn.scheduledAt ?? event.start;
         const end = addMinutes(start, 20);
+        const addOnEventId = `addon-${event.id}-${index}`;
+        const completionEntry = completedLookup.get(`${event.bookingId}-${addOn.name.toLowerCase()}`);
+        const isCompleted = !!completionEntry;
 
         return {
-          id: `addon-${event.id}-${index}`,
+          id: addOnEventId,
           sourceId: addOn.id,
           type: "add-on" as const,
           subtype: addOn.iconKey,
@@ -1191,7 +1267,10 @@ function buildAddOnSubEvents(
           start,
           end,
           allDay: false,
-          status: event.status,
+          status: isCompleted ? "Completed" : event.status,
+          completedAt: completionEntry?.completedAt,
+          completedByName: completionEntry?.completedByName,
+          completedByStaffId: completionEntry?.completedByStaffId,
           service: event.service,
           module: event.module,
           staff: event.staff,
@@ -1229,7 +1308,11 @@ function buildStayAddOnCalendarEvents(
   stayBookings: Booking[],
   clients: Client[],
   facilityId: number,
+  completedAddOns?: CompletedAddOnEntry[],
 ): OperationsCalendarEvent[] {
+  const completedLookup = new Map(
+    (completedAddOns ?? []).map((entry) => [`${entry.bookingId}-${entry.addOnName.toLowerCase()}`, entry]),
+  );
   const { petLookup } = buildClientLookups(clients);
 
   return stayBookings
@@ -1270,8 +1353,13 @@ function buildStayAddOnCalendarEvents(
           scheduledAt,
         };
 
+        // Check if this add-on has been marked completed
+        const addOnEventId = `stay-addon-${booking.id}-${index}`;
+        const completionEntry = completedLookup.get(`${booking.id}-${item.name.toLowerCase()}`);
+        const isCompleted = !!completionEntry;
+
         return {
-          id: `stay-addon-${booking.id}-${index}`,
+          id: addOnEventId,
           sourceId: String(booking.id),
           type: "add-on" as const,
           subtype: getAddOnIconKey(item.name),
@@ -1279,7 +1367,10 @@ function buildStayAddOnCalendarEvents(
           start: scheduledAt,
           end,
           allDay: false,
-          status: "Scheduled",
+          status: isCompleted ? "Completed" : "Scheduled",
+          completedAt: completionEntry?.completedAt,
+          completedByName: completionEntry?.completedByName,
+          completedByStaffId: completionEntry?.completedByStaffId,
           service: serviceLabel,
           module: serviceLabel,
           staff: assignedStaff,
@@ -1330,6 +1421,7 @@ export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCa
     bookingEvents,
     input.view,
     input.addOnDisplayMode,
+    input.completedAddOns,
   );
 
   // Stay add-ons always appear as standalone events regardless of display mode
@@ -1337,9 +1429,10 @@ export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCa
     stayBookings,
     input.clients,
     input.facilityId,
+    input.completedAddOns,
   );
 
-  const taskEvents = buildTaskEvents(input.tasks);
+  const taskEvents = buildTaskEvents(input.tasks, input.bookings);
   const facilityEvents = buildFacilityEvents(
     new Date(),
     input.manualFacilityEvents ?? [],
@@ -1816,6 +1909,7 @@ export function findResourceConflict(
 
 export function buildServiceColorMap(
   customModules: CustomServiceModule[],
+  colorOverrides?: CalendarColorOverrides,
 ): Record<string, string> {
   const customMap: Record<string, string> = {};
 
@@ -1829,6 +1923,7 @@ export function buildServiceColorMap(
   return {
     ...BUILTIN_SERVICE_COLORS,
     ...customMap,
+    ...(colorOverrides?.services ?? {}),
   };
 }
 
@@ -1841,9 +1936,10 @@ export function resolveEventColor(
   event: OperationsCalendarEvent,
   colorMode: CalendarColorMode,
   serviceColorMap: Record<string, string>,
+  colorOverrides?: CalendarColorOverrides,
 ): string {
   if (colorMode === "status") {
-    return STATUS_COLOR_MAP[event.status] ?? "#64748b";
+    return colorOverrides?.statuses[event.status] ?? STATUS_COLOR_MAP[event.status] ?? "#64748b";
   }
 
   if (colorMode === "staff-member") {

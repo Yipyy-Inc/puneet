@@ -11,6 +11,7 @@ import {
   medFrequencyEnum,
   medAdminInstructionEnum,
   missedDoseActionEnum,
+  medGivenWithEnum,
 } from "@/types/base";
 
 export type {
@@ -24,6 +25,7 @@ export type {
   MedFrequency,
   MedAdminInstruction,
   MissedDoseAction,
+  MedGivenWith,
 } from "@/types/base";
 
 // ============================================================================
@@ -87,6 +89,10 @@ export const medicationItemSchema = z.object({
   prnTrigger: z.string().optional(),
   adminInstructions: z.array(medAdminInstructionEnum),
   adminNotes: z.string().optional(),
+  givenWith: medGivenWithEnum.optional(),
+  givenWithNotes: z.string().optional(),
+  facilityProvidesMedAid: z.boolean().optional(),
+  facilityMedAidItem: z.string().optional(),
   ifMissed: missedDoseActionEnum,
   isHighRisk: z.boolean().optional(),
   parentConfirmed: z.boolean().optional(),

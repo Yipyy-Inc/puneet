@@ -47,6 +47,9 @@ export type MessageTemplate = z.infer<typeof messageTemplateSchema>;
 
 export const automationTriggerEnum = z.enum([
   "booking_created",
+  "booking_request_submitted",
+  "booking_request_approved",
+  "booking_request_declined",
   "24h_before",
   "check_in",
   "check_out",

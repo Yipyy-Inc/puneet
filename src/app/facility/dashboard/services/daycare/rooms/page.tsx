@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Edit2, ImageIcon } from "lucide-react";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 
 interface Room {
   id: string;
@@ -96,17 +96,6 @@ export default function DaycareRoomsPage() {
     setRooms(rooms.filter((r) => r.id !== id));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setRoomForm({ ...roomForm, imageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -124,16 +113,19 @@ export default function DaycareRoomsPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {rooms.map((room) => (
-          <Card key={room.id}>
+          <Card key={room.id} className="overflow-hidden">
             <CardContent className="p-0">
-              {room.imageUrl && (
-                <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                  <Image
+              {room.imageUrl ? (
+                <div className="relative h-48 w-full overflow-hidden">
+                  <img
                     src={room.imageUrl}
                     alt={room.name}
-                    fill
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
+                </div>
+              ) : (
+                <div className="flex h-48 w-full items-center justify-center bg-muted/40">
+                  <ImageIcon className="size-10 text-muted-foreground/25" />
                 </div>
               )}
               <div className="p-6">
@@ -190,7 +182,7 @@ export default function DaycareRoomsPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRoom ? "Edit Room" : "Add Room"}</DialogTitle>
             <DialogDescription>
@@ -198,6 +190,14 @@ export default function DaycareRoomsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <RoomImageUpload
+              value={roomForm.imageUrl || undefined}
+              onChange={(url) =>
+                setRoomForm({ ...roomForm, imageUrl: url ?? "" })
+              }
+              label="Room Photo"
+              hint="Shown to clients when selecting a daycare room"
+            />
             <div className="space-y-2">
               <Label>Room Name</Label>
               <Input
@@ -246,44 +246,6 @@ export default function DaycareRoomsPage() {
                     })
                   }
                   placeholder="35"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Room Image</Label>
-              {roomForm.imageUrl && (
-                <div className="relative mb-2 h-32 w-full overflow-hidden rounded-lg border">
-                  <Image
-                    src={roomForm.imageUrl}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Input
-                  value={roomForm.imageUrl}
-                  onChange={(e) =>
-                    setRoomForm({ ...roomForm, imageUrl: e.target.value })
-                  }
-                  placeholder="/images/rooms/..."
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    document.getElementById("roomImageUpload")?.click()
-                  }
-                >
-                  <ImageIcon className="size-4" />
-                </Button>
-                <input
-                  id="roomImageUpload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageUpload}
                 />
               </div>
             </div>
