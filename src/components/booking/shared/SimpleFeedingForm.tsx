@@ -18,6 +18,7 @@ import {
   Utensils,
   AlertTriangle,
   UtensilsCrossed,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { facilityConfig } from "@/data/facility-config";
@@ -33,7 +34,11 @@ interface SimpleFeedingFormProps {
   feedingSchedule: FeedingScheduleItem[];
   setFeedingSchedule: (schedule: FeedingScheduleItem[]) => void;
   selectedPets: PetOption[];
+  /** The booking service type — used to show feeding fee for daycare */
+  serviceType?: string;
 }
+
+const FEEDING_FEES = facilityConfig.serviceFees.feeding;
 
 // Read from facility config (editable in Settings > Care Tasks)
 const opts = facilityConfig.feedingOptions;
@@ -121,7 +126,11 @@ export function SimpleFeedingForm({
   feedingSchedule,
   setFeedingSchedule,
   selectedPets,
+  serviceType,
 }: SimpleFeedingFormProps) {
+  const showFeedingFee =
+    serviceType === "daycare" && FEEDING_FEES.daycare.enabled;
+  const feedingIncluded = serviceType === "boarding";
   const [customAllergyInput, setCustomAllergyInput] = useState("");
   const [customInstructionInputs, setCustomInstructionInputs] = useState<
     Record<string, string>
@@ -678,6 +687,37 @@ export function SimpleFeedingForm({
           </p>
         </div>
       </div>
+
+      {/* Daycare feeding fee notice */}
+      {showFeedingFee && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+          <DollarSign className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-xs font-medium text-amber-800">
+              Daycare feeding fee applies
+            </p>
+            <p className="text-[11px] text-amber-600">
+              ${FEEDING_FEES.daycare.amount.toFixed(2)}{" "}
+              {FEEDING_FEES.daycare.scope === "per_pet"
+                ? "per pet"
+                : FEEDING_FEES.daycare.scope === "per_meal"
+                  ? "per meal"
+                  : "flat fee"}{" "}
+              when feeding is requested during daycare
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Boarding — feeding included notice */}
+      {feedingIncluded && (
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5">
+          <Utensils className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+          <p className="text-xs font-medium text-emerald-800">
+            Feeding is included with boarding — no extra charge
+          </p>
+        </div>
+      )}
 
       {/* Render per-pet sections or a single shared section */}
       {petItems.map(({ pet, item }) => renderPetSection(pet, item, isMultiPet))}

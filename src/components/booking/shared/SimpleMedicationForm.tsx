@@ -12,10 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, X, Pill, Clock, ShieldAlert, PillBottle } from "lucide-react";
+import {
+  Plus,
+  X,
+  Pill,
+  Clock,
+  ShieldAlert,
+  PillBottle,
+  DollarSign,
+  HandHeart,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { facilityConfig } from "@/data/facility-config";
-import type { MedicationItem, MedForm, MedFrequency } from "@/types/booking";
+import type {
+  MedicationItem,
+  MedForm,
+  MedFrequency,
+  MedGivenWith,
+} from "@/types/booking";
 
 interface PetOption {
   id: number;
@@ -27,6 +41,8 @@ interface SimpleMedicationFormProps {
   medications: MedicationItem[];
   setMedications: (medications: MedicationItem[]) => void;
   selectedPets: PetOption[];
+  /** The booking service type — used to show applicable fees */
+  serviceType?: string;
 }
 
 const MED_FORMS: { value: MedForm; label: string }[] = [
@@ -47,6 +63,11 @@ const MED_FREQUENCIES: { value: MedFrequency; label: string }[] = [
 
 // Read from facility config (editable in Settings > Care Tasks)
 const QUICK_TIMES = facilityConfig.medicationOptions.quickTimes;
+const GIVEN_WITH_OPTIONS = facilityConfig.serviceFees.givenWithOptions;
+const MED_FEES = facilityConfig.serviceFees.medication;
+const FACILITY_AID_ITEMS = MED_FEES.facilityProvides.enabled
+  ? MED_FEES.facilityProvides.items
+  : [];
 
 const HIGH_RISK_KEYWORDS = [
   "insulin",
@@ -77,7 +98,12 @@ export function SimpleMedicationForm({
   medications,
   setMedications,
   selectedPets,
+  serviceType,
 }: SimpleMedicationFormProps) {
+  const showMedFee =
+    MED_FEES.adminFee.enabled &&
+    (!serviceType ||
+      MED_FEES.adminFee.applicableServices.includes(serviceType));
   const updateMed = (index: number, patch: Partial<MedicationItem>) => {
     const next = [...medications];
     next[index] = { ...next[index], ...patch };
@@ -145,6 +171,30 @@ export function SimpleMedicationForm({
           </p>
         </div>
       </div>
+
+      {/* Medication fee notice */}
+      {showMedFee && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+          <DollarSign className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-xs font-medium text-amber-800">
+              Medication administration fee applies
+            </p>
+            <p className="text-[11px] text-amber-600">
+              ${MED_FEES.adminFee.amount.toFixed(2)}{" "}
+              {MED_FEES.adminFee.scope === "per_medication"
+                ? "per medication"
+                : MED_FEES.adminFee.scope === "per_pet"
+                  ? "per pet"
+                  : "flat fee"}{" "}
+              for{" "}
+              {serviceType
+                ? serviceType
+                : MED_FEES.adminFee.applicableServices.join(" & ")}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* #1 — empty state */}
       {medications.length === 0 && (
@@ -403,6 +453,119 @@ export function SimpleMedicationForm({
                     </button>
                   </div>
                 </div>
+
+                {/* Given with — how the medication is administered */}
+                <div className="space-y-2">
+                  <Label className="text-[11px]">
+                    <HandHeart className="mr-1 inline size-3" />
+                    How do you give this medication?
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {GIVEN_WITH_OPTIONS.map((opt) => {
+                      const active = item.givenWith === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() =>
+                            updateMed(index, {
+                              givenWith: active
+                                ? undefined
+                                : (opt.value as MedGivenWith),
+                              ...(active ? { givenWithNotes: undefined } : {}),
+                            })
+                          }
+                          className={cn(
+                            "rounded-lg border-2 px-2.5 py-1.5 text-xs font-medium transition-all",
+                            active
+                              ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                              : "border-border hover:border-emerald-200",
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {item.givenWith === "other" && (
+                    <Input
+                      value={item.givenWithNotes ?? ""}
+                      onChange={(e) =>
+                        updateMed(index, { givenWithNotes: e.target.value })
+                      }
+                      placeholder="Describe how you give this medication..."
+                      className="h-8 text-xs"
+                    />
+                  )}
+                  {item.givenWith && item.givenWith !== "other" && (
+                    <Input
+                      value={item.givenWithNotes ?? ""}
+                      onChange={(e) =>
+                        updateMed(index, { givenWithNotes: e.target.value })
+                      }
+                      placeholder="Any additional notes (optional)..."
+                      className="h-8 text-xs"
+                    />
+                  )}
+                </div>
+
+                {/* Facility-provided medication aid */}
+                {FACILITY_AID_ITEMS.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-[11px]">
+                      Need the facility to provide something to give medication
+                      with?
+                    </Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {FACILITY_AID_ITEMS.map((aidItem) => {
+                        const active =
+                          item.facilityProvidesMedAid &&
+                          item.facilityMedAidItem === aidItem.id;
+                        return (
+                          <button
+                            key={aidItem.id}
+                            type="button"
+                            onClick={() =>
+                              updateMed(index, {
+                                facilityProvidesMedAid: !active,
+                                facilityMedAidItem: active
+                                  ? undefined
+                                  : aidItem.id,
+                              })
+                            }
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-lg border-2 px-2.5 py-1.5 text-xs font-medium transition-all",
+                              active
+                                ? "border-blue-400 bg-blue-50 text-blue-700"
+                                : "border-border hover:border-blue-200",
+                            )}
+                          >
+                            {aidItem.name}
+                            {aidItem.fee > 0 && (
+                              <span className="text-muted-foreground text-[10px]">
+                                +${aidItem.fee.toFixed(2)}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {item.facilityProvidesMedAid && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateMed(index, {
+                              facilityProvidesMedAid: false,
+                              facilityMedAidItem: undefined,
+                            })
+                          }
+                          className="rounded-lg border-2 border-dashed border-slate-200 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600"
+                        >
+                          No, I&apos;ll bring my own
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Drug allergies */}
                 <div className="space-y-1.5">

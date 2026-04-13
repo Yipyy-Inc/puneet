@@ -2,8 +2,6 @@
 
 import type { ReactNode } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Filter,
   Search,
 } from "lucide-react";
@@ -24,6 +22,7 @@ interface OperationsCalendarToolbarProps {
   onToggleFilters: () => void;
   activeFilterCount: number;
   newEventMenu?: ReactNode;
+  colorPanel?: ReactNode;
 }
 
 export function OperationsCalendarToolbar({
@@ -38,6 +37,7 @@ export function OperationsCalendarToolbar({
   onToggleFilters,
   activeFilterCount,
   newEventMenu,
+  colorPanel,
 }: OperationsCalendarToolbarProps) {
   const simplifiedViews: Array<{ value: OperationsCalendarView; label: string }> = [
     { value: "day", label: "Day" },
@@ -54,40 +54,14 @@ export function OperationsCalendarToolbar({
           
           {/* Left Side: Date Navigation */}
           <div className="flex flex-wrap items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onToday} 
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onToday}
               className="rounded-full px-5 h-9 bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 border-slate-200/60 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95 font-medium"
             >
               Today
             </Button>
-            
-            <div className="flex items-center rounded-full bg-slate-50/80 p-0.5 border border-slate-100 shadow-inner">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onStep(-1)}
-                aria-label="Go to previous period"
-                className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all active:scale-95"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <div className="w-[1px] h-3.5 bg-slate-200/80 mx-0.5 rounded-full"></div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onStep(1)}
-                aria-label="Go to next period"
-                className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm transition-all active:scale-95"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-
-            <div className="text-[15px] font-semibold text-slate-800 tracking-tight hidden sm:block animate-in fade-in slide-in-from-left-4 duration-500 delay-150">
-              {rangeLabel}
-            </div>
           </div>
 
           {/* Right Side: Actions & Search */}
@@ -119,6 +93,8 @@ export function OperationsCalendarToolbar({
                 </span>
               )}
             </Button>
+
+            {colorPanel}
 
             <div className="transition-transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-300">
               {newEventMenu}

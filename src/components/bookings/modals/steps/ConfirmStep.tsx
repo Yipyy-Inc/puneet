@@ -26,6 +26,11 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { evaluationConfig } from "@/data/settings";
 import { defaultServiceAddOns } from "@/data/service-addons";
+import {
+  facilityConfig,
+  isApprovalRequired,
+  getEstimatedResponseTime,
+} from "@/data/facility-config";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
 import type { ServiceAddOn, TipConfig } from "@/types/facility";
 
@@ -96,6 +101,9 @@ interface ConfirmStepProps {
     taxAmount?: number;
     total: number;
     adjustments?: Array<{ id: string; label: string; amount: number }>;
+    medicationFeeTotal?: number;
+    feedingFeeTotal?: number;
+    serviceFeeItems?: Array<{ label: string; amount: number }>;
   };
   notificationEmail: boolean;
   setNotificationEmail: (value: boolean) => void;
@@ -289,6 +297,22 @@ export function ConfirmStep({
           </p>
         </div>
       </div>
+
+      {/* ── Approval Required Banner ──────────────────────────── */}
+      {isApprovalRequired(selectedService) && (
+        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <Info className="mt-0.5 size-4 shrink-0 text-blue-600" />
+          <div className="text-sm text-blue-800">
+            <p className="font-medium">This service requires approval</p>
+            <p className="mt-0.5 text-blue-700">
+              Your booking will be submitted as a request and our team will
+              review it within{" "}
+              {getEstimatedResponseTime(selectedService)} hours.
+              You&apos;ll receive a notification once it&apos;s been reviewed.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── #1 — Warnings ───────────────────────────────────────── */}
       {roomsIncomplete && (
@@ -681,6 +705,23 @@ export function ConfirmStep({
                         Drug allergies: {med.drugAllergies.join(", ")}
                       </p>
                     )}
+                    {med.givenWith && (
+                      <p className="text-[11px] text-emerald-700">
+                        Given with:{" "}
+                        {facilityConfig.serviceFees.givenWithOptions.find(
+                          (o) => o.value === med.givenWith,
+                        )?.label ?? med.givenWith.replace(/_/g, " ")}
+                        {med.givenWithNotes ? ` — ${med.givenWithNotes}` : ""}
+                      </p>
+                    )}
+                    {med.facilityProvidesMedAid && med.facilityMedAidItem && (
+                      <p className="text-[11px] text-blue-600">
+                        Facility provides:{" "}
+                        {facilityConfig.serviceFees.medication.facilityProvides.items.find(
+                          (i) => i.id === med.facilityMedAidItem,
+                        )?.name ?? med.facilityMedAidItem}
+                      </p>
+                    )}
                     {med.supplyCount != null && (
                       <p className="text-muted-foreground text-[11px]">
                         Supply: {med.supplyCount} doses
@@ -911,6 +952,18 @@ export function ConfirmStep({
                 <span className="font-[tabular-nums] font-medium">
                   {adjustment.amount > 0 ? "+" : ""}$
                   {adjustment.amount.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          {(calculatePrice.serviceFeeItems ?? []).length > 0 &&
+            (calculatePrice.serviceFeeItems ?? []).map((fee, i) => (
+              <div
+                key={`svc-fee-${i}`}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="text-muted-foreground">{fee.label}</span>
+                <span className="font-[tabular-nums] font-medium">
+                  +${fee.amount.toFixed(2)}
                 </span>
               </div>
             ))}

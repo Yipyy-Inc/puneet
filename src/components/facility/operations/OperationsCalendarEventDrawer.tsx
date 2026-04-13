@@ -164,30 +164,27 @@ export function OperationsCalendarEventDrawer({
   onDeleteManualEvent,
 }: OperationsCalendarEventDrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
 
+  // Animate in on open
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setVisible(true));
+      });
+    } else {
+      setVisible(false);
+    }
+  }, [open]);
+
+  // Escape to close
   useEffect(() => {
     if (!open) return;
-
     const onEscape = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === "Escape") {
-        onClose();
-      }
+      if (keyboardEvent.key === "Escape") onClose();
     };
-
-    const onOutsidePointer = (mouseEvent: MouseEvent) => {
-      const target = mouseEvent.target as Node | null;
-      if (target && panelRef.current && !panelRef.current.contains(target)) {
-        onClose();
-      }
-    };
-
     document.addEventListener("keydown", onEscape);
-    document.addEventListener("mousedown", onOutsidePointer, true);
-
-    return () => {
-      document.removeEventListener("keydown", onEscape);
-      document.removeEventListener("mousedown", onOutsidePointer, true);
-    };
+    return () => document.removeEventListener("keydown", onEscape);
   }, [open, onClose]);
 
   if (!open || !event) {
@@ -195,79 +192,229 @@ export function OperationsCalendarEventDrawer({
   }
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Blurred backdrop */}
+      <div
+        onClick={onClose}
+        className="absolute inset-0 transition-all duration-300 ease-out"
+        style={{
+          backgroundColor: visible ? "rgba(15, 23, 42, 0.4)" : "rgba(15, 23, 42, 0)",
+          backdropFilter: visible ? "blur(6px)" : "blur(0px)",
+          WebkitBackdropFilter: visible ? "blur(6px)" : "blur(0px)",
+        }}
+      />
+
+      {/* Center card */}
       <aside
         ref={panelRef}
-        className="pointer-events-auto absolute inset-y-0 right-0 flex w-full max-w-[560px] flex-col border-l border-slate-200 bg-white shadow-2xl"
+        className="relative z-10 flex max-h-[85vh] w-full max-w-[580px] flex-col rounded-2xl border border-slate-200/60 bg-white shadow-2xl transition-all duration-300 ease-out overflow-hidden"
+        style={{
+          opacity: visible ? 1 : 0,
+          transform: visible ? "scale(1) translateY(0)" : "scale(0.96) translateY(10px)",
+        }}
       >
-        <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Calendar Event</p>
-            <h2 className="text-base font-semibold text-slate-900">{event.title}</h2>
-            <p className="text-xs text-slate-500">{event.type.replace(/-/g, " ")}</p>
+        <QuickActionCard
+          event={event}
+          booking={booking}
+          client={client}
+          pet={pet}
+          bookingAddOns={bookingAddOns}
+          readOnlyMode={readOnlyMode}
+          canCompleteTasks={canCompleteTasks}
+          canCheckInOut={canCheckInOut}
+          canEditBookingActions={canEditBookingActions}
+          onClose={onClose}
+          onCheckInBooking={onCheckInBooking}
+          onCheckOutBooking={onCheckOutBooking}
+          onAssignStaff={onAssignStaff}
+          onMarkTaskComplete={onMarkTaskComplete}
+          onOpenLinkedBooking={onOpenLinkedBooking}
+          onRescheduleBooking={onRescheduleBooking}
+          onCancelBooking={onCancelBooking}
+          onMessageCustomer={onMessageCustomer}
+        />
+      </aside>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   Quick Action Card — unified lightweight view for ALL events
+   ═══════════════════════════════════════════════════ */
+
+function QuickActionCard({
+  event,
+  booking,
+  client,
+  pet,
+  bookingAddOns,
+  readOnlyMode,
+  canCompleteTasks,
+  canCheckInOut,
+  canEditBookingActions,
+  onClose,
+  onCheckInBooking,
+  onCheckOutBooking,
+  onAssignStaff,
+  onMarkTaskComplete,
+  onOpenLinkedBooking,
+  onRescheduleBooking,
+  onCancelBooking,
+  onMessageCustomer,
+}: {
+  event: OperationsCalendarEvent;
+  booking?: Booking;
+  client?: Client;
+  pet?: Pet;
+  bookingAddOns: BookingDrawerAddOnItem[];
+  readOnlyMode: boolean;
+  canCompleteTasks: boolean;
+  canCheckInOut: boolean;
+  canEditBookingActions: boolean;
+  onClose: () => void;
+  onCheckInBooking: (bookingId: number) => void;
+  onCheckOutBooking: (bookingId: number) => void;
+  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
+  onOpenLinkedBooking: (bookingId: number) => void;
+  onRescheduleBooking: (bookingId: number) => void;
+  onCancelBooking: (bookingId: number, reason: string) => void;
+  onMessageCustomer: (bookingId: number) => void;
+}) {
+  const eventNumericId = event.bookingId ?? (Number(event.sourceId) || 0);
+  const timeLabel = event.allDay
+    ? "All day"
+    : `${event.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} – ${event.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+
+  const rawStatus = event.bookingRawStatus ?? booking?.status ?? "";
+  const isCheckedOut = rawStatus === "completed" || rawStatus === "checked-out" || rawStatus === "checked_out";
+  const isCheckedIn = rawStatus === "in_progress" || rawStatus === "checked_in";
+  const isConfirmed = rawStatus === "confirmed" || rawStatus === "scheduled";
+  const isCancelled = rawStatus === "cancelled";
+  const supportsCheckInOut = event.requiresCheckInOut !== false;
+
+  const petName = pet?.name ?? event.petNames[0] ?? "-";
+  const ownerName = client?.name ?? event.customerName ?? "-";
+  const staffName = event.staff && event.staff !== "Unassigned" ? event.staff : "Unassigned";
+  const location = event.location ?? "-";
+
+  return (
+    <>
+      {/* ── Header ── */}
+      <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900 truncate">{event.title}</h2>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <Badge variant="outline" className="text-[11px]">{event.service}</Badge>
+              <Badge variant="outline" className="text-[11px]">{event.status}</Badge>
+            </div>
           </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>
+          <Button size="sm" variant="ghost" className="shrink-0 -mt-1 -mr-2" onClick={onClose}>
             Close
           </Button>
-        </header>
+        </div>
+      </div>
 
-        {event.type === "booking" && booking && (
-          <BookingDrawerContent
-            booking={booking}
-            client={client}
-            pet={pet}
-            bookingTasks={bookingTasks}
-            bookingAddOns={bookingAddOns}
-            bookingsForPet={bookingsForPet}
-            bookingTab={bookingTab}
-            onBookingTabChange={onBookingTabChange}
-            notesState={notesState}
-            userRole={userRole}
-            userDisplayName={userDisplayName}
-            readOnlyMode={readOnlyMode}
-            canCompleteTasks={canCompleteTasks}
-            canCheckInOut={canCheckInOut}
-            canEditBookingActions={canEditBookingActions}
-            supportsCheckInOut={supportsCheckInOut}
-            showAddOnsTab={showAddOnsTab}
-            staffOptions={staffOptions}
-            onCheckInBooking={onCheckInBooking}
-            onCheckOutBooking={onCheckOutBooking}
-            onAssignStaff={onAssignStaff}
-            onMarkTaskComplete={onMarkTaskComplete}
-            onMarkAllBookingTasksComplete={onMarkAllBookingTasksComplete}
-            onAddBookingTask={onAddBookingTask}
-            onAddBookingAddOn={onAddBookingAddOn}
-            onUpdateBookingAddOn={onUpdateBookingAddOn}
-            onRemoveBookingAddOn={onRemoveBookingAddOn}
-            onUpdateNotes={onUpdateNotes}
-            onMessageCustomer={onMessageCustomer}
-            onRescheduleBooking={onRescheduleBooking}
-            onCancelBooking={onCancelBooking}
-          />
+      {/* ── Info grid ── */}
+      <div className="px-5 py-4 space-y-2.5 overflow-y-auto flex-1">
+        <InfoRow label="Pet" value={petName} />
+        <InfoRow label="Owner" value={ownerName} />
+        <InfoRow label="Time" value={timeLabel} />
+        <InfoRow label="Staff" value={staffName} />
+        <InfoRow label="Location" value={location} />
+
+        {/* Add-ons */}
+        {bookingAddOns.length > 0 && (
+          <div className="pt-1">
+            <p className="text-xs font-medium text-slate-500 mb-1.5">Add-ons</p>
+            <div className="flex flex-wrap gap-1.5">
+              {bookingAddOns.map((addOn) => (
+                <Badge
+                  key={addOn.id}
+                  variant="outline"
+                  className={addOn.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : ""}
+                >
+                  {addOn.status === "completed" && <CheckCircle2 className="mr-1 size-3" />}
+                  {addOn.name}
+                </Badge>
+              ))}
+            </div>
+          </div>
         )}
 
-        {event.type === "task" && task && (
-          <TaskDrawerContent
-            task={task}
-            taskSeries={taskSeries}
-            managerAlertCount={managerAlertCount}
-            onMarkTaskComplete={onMarkTaskComplete}
-            onOpenLinkedBooking={onOpenLinkedBooking}
-            canCompleteTasks={canCompleteTasks}
-          />
+        {/* Completed info */}
+        {event.completedAt && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Completed by {event.completedByName ?? "Staff"} at{" "}
+            {formatLocalDateTime(event.completedAt)}
+          </div>
         )}
 
-        {event.type === "facility-event" && (
-          <FacilityEventDrawerContent
-            event={event}
-            userRole={userRole}
-            onUpdateManualEvent={onUpdateManualEvent}
-            onDeleteManualEvent={onDeleteManualEvent}
-            canManageCustomEvents={canManageCustomEvents}
-          />
+        {/* Notes */}
+        {event.notes && (
+          <div className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-600">
+            {event.notes}
+          </div>
         )}
-      </aside>
+      </div>
+
+      {/* ── Action buttons ── */}
+      <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50">
+        <div className="flex flex-wrap gap-2">
+          {/* Check-in / Check-out */}
+          {supportsCheckInOut && isConfirmed && !isCancelled && (
+            <Button size="sm" disabled={!canCheckInOut || readOnlyMode} onClick={() => onCheckInBooking(eventNumericId)}>
+              Check-in
+            </Button>
+          )}
+          {supportsCheckInOut && isCheckedIn && (
+            <Button size="sm" disabled={!canCheckInOut || readOnlyMode} onClick={() => onCheckOutBooking(eventNumericId)}>
+              Check-out
+            </Button>
+          )}
+
+          {/* Mark complete — tasks and add-ons */}
+          {event.type === "task" && event.taskId && event.status !== "Completed" && (
+            <Button size="sm" disabled={!canCompleteTasks || readOnlyMode} onClick={() => onMarkTaskComplete(event.taskId!)}>
+              <CheckCircle2 className="mr-1.5 size-3.5" />
+              Mark complete
+            </Button>
+          )}
+
+          {/* Reschedule */}
+          {!isCheckedOut && !isCancelled && (
+            <Button size="sm" variant="outline" disabled={!canEditBookingActions || readOnlyMode} onClick={() => onRescheduleBooking(eventNumericId)}>
+              Reschedule
+            </Button>
+          )}
+
+          {/* Cancel */}
+          {!isCheckedOut && !isCancelled && (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={!canEditBookingActions || readOnlyMode}
+              onClick={() => {
+                const reason = window.prompt("Cancellation reason", "Customer request") ?? "Customer request";
+                onCancelBooking(eventNumericId, reason);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+
+        </div>
+      </div>
+    </>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-medium text-slate-800">{value}</span>
     </div>
   );
 }
@@ -1045,6 +1192,200 @@ function NotesEditor({
       <Button size="sm" onClick={() => onSave(draft)} disabled={!canEdit}>
         Save notes
       </Button>
+    </div>
+  );
+}
+
+function GenericEventContent({
+  event,
+  readOnlyMode,
+  canCompleteTasks,
+  canCheckInOut,
+  canEditBookingActions,
+  staffOptions,
+  onCheckInBooking,
+  onCheckOutBooking,
+  onAssignStaff,
+  onMarkTaskComplete,
+  onOpenLinkedBooking,
+  onRescheduleBooking,
+  onCancelBooking,
+}: {
+  event: OperationsCalendarEvent;
+  readOnlyMode: boolean;
+  canCompleteTasks: boolean;
+  canCheckInOut: boolean;
+  canEditBookingActions: boolean;
+  staffOptions: string[];
+  onCheckInBooking: (bookingId: number) => void;
+  onCheckOutBooking: (bookingId: number) => void;
+  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
+  onOpenLinkedBooking: (bookingId: number) => void;
+  onRescheduleBooking: (bookingId: number) => void;
+  onCancelBooking: (bookingId: number, reason: string) => void;
+}) {
+  const timeLabel = event.allDay
+    ? "All day"
+    : `${event.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} – ${event.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+
+  const eventNumericId = event.bookingId ?? (Number(event.sourceId) || 0);
+  const isCheckedOut = event.bookingRawStatus === "completed" || event.bookingRawStatus === "checked-out" || event.bookingRawStatus === "checked_out";
+  const isCheckedIn = event.bookingRawStatus === "in_progress" || event.bookingRawStatus === "checked_in";
+  const isConfirmed = event.bookingRawStatus === "confirmed" || event.bookingRawStatus === "scheduled";
+  const supportsCheckInOut = event.requiresCheckInOut !== false;
+
+  return (
+    <div className="flex flex-1 flex-col overflow-y-auto">
+      <div className="px-4 py-3 space-y-3">
+        {/* Status */}
+        <Badge variant="outline">{event.status}</Badge>
+
+        {/* Key info */}
+        <DetailRow label="Service" value={event.service} />
+        <DetailRow label="Time" value={timeLabel} />
+        {event.petNames.length > 0 && (
+          <DetailRow label="Pet" value={event.petNames.join(", ")} />
+        )}
+        {event.customerName && (
+          <DetailRow label="Customer" value={event.customerName} />
+        )}
+        {event.staff && (
+          <DetailRow label="Assigned staff" value={event.staff} />
+        )}
+        {event.location && (
+          <DetailRow label="Location" value={event.location} />
+        )}
+        {event.bookingId && (
+          <DetailRow label="Booking ID" value={`#${event.bookingId}`} />
+        )}
+        {event.confirmationNumber && (
+          <DetailRow label="Confirmation" value={event.confirmationNumber} />
+        )}
+
+        {/* Add-ons listed */}
+        {event.addOns.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-slate-700">Add-ons</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {event.addOns.map((addOn) => (
+                <Badge key={addOn.id} variant="outline">{addOn.name}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notes / details */}
+        {event.details && (
+          <div className="rounded-md border border-slate-200 p-3 text-xs text-slate-700">
+            <p className="font-semibold">Details</p>
+            <p className="mt-1">{event.details}</p>
+          </div>
+        )}
+        {event.notes && (
+          <div className="rounded-md border border-slate-200 p-3 text-xs text-slate-700">
+            <p className="font-semibold">Notes</p>
+            <p className="mt-1">{event.notes}</p>
+          </div>
+        )}
+
+        {event.completedAt && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
+            Completed by {event.completedByName ?? "Staff"} at{" "}
+            {formatLocalDateTime(event.completedAt)}
+          </div>
+        )}
+      </div>
+
+      {/* Sticky action bar at bottom */}
+      <div className="border-t border-slate-200 bg-white px-4 py-3 mt-auto">
+        <div className="flex flex-wrap gap-2">
+          {/* Check-in / Check-out */}
+          {supportsCheckInOut && isConfirmed && (
+            <Button
+              size="sm"
+              disabled={!canCheckInOut || readOnlyMode}
+              onClick={() => onCheckInBooking(eventNumericId)}
+            >
+              Check-in
+            </Button>
+          )}
+          {supportsCheckInOut && isCheckedIn && (
+            <Button
+              size="sm"
+              disabled={!canCheckInOut || readOnlyMode}
+              onClick={() => onCheckOutBooking(eventNumericId)}
+            >
+              Check-out
+            </Button>
+          )}
+
+          {/* Mark complete for tasks */}
+          {event.type === "task" && event.taskId && event.status !== "Completed" && (
+            <Button
+              size="sm"
+              disabled={!canCompleteTasks || readOnlyMode}
+              onClick={() => onMarkTaskComplete(event.taskId!)}
+            >
+              <CheckCircle2 className="mr-1.5 size-3.5" />
+              Mark complete
+            </Button>
+          )}
+
+          {/* Assign staff */}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!canEditBookingActions || readOnlyMode}
+            onClick={() => {
+              const primary = window.prompt("Assign primary staff", event.staff !== "Unassigned" ? event.staff : "") ?? "";
+              if (!primary) return;
+              const secondary = window.prompt("Secondary staff (optional)", "") ?? "";
+              onAssignStaff(eventNumericId, primary, secondary || undefined);
+            }}
+          >
+            Assign staff
+          </Button>
+
+          {/* Reschedule */}
+          {!isCheckedOut && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canEditBookingActions || readOnlyMode}
+              onClick={() => onRescheduleBooking(eventNumericId)}
+            >
+              Reschedule
+            </Button>
+          )}
+
+          {/* Cancel */}
+          {!isCheckedOut && (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={!canEditBookingActions || readOnlyMode}
+              onClick={() => {
+                const reason = window.prompt("Cancellation reason", "Customer request") ?? "Customer request";
+                onCancelBooking(eventNumericId, reason);
+              }}
+            >
+              Cancel
+            </Button>
+          )}
+
+          {/* Full details link */}
+          {event.href && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(event.href, "_blank")}
+            >
+              View full details
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

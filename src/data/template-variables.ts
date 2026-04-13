@@ -263,6 +263,15 @@ const bookingVariables: TemplateVariable[] = [
     example: "Extra Playtime, Nail Trim",
     contextRequired: ["booking"],
   },
+  {
+    key: "estimated_response_time",
+    label: "Estimated Response Time",
+    category: "booking",
+    description:
+      "Estimated time for the facility to respond to a booking request (in hours)",
+    example: "24",
+    contextRequired: ["booking"],
+  },
 ];
 
 // ── Facility Variables ──────────────────────────────────────

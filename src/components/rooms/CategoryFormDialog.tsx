@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, Info } from "lucide-react";
 import type { RoomCategory, RoomRule, RoomCategoryColor, RoomRuleType } from "@/types/rooms";
+import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 
 // ── Color picker ───────────────────────────────────────────────────────────────
 
@@ -93,7 +94,8 @@ interface Props {
   editing: RoomCategory | null;
   facilityId?: number;
   onClose: () => void;
-  onSave: (cat: RoomCategory) => void;
+  /** When creating, unitCount is the number of units to auto-generate */
+  onSave: (cat: RoomCategory, unitCount: number) => void;
 }
 
 // ── Dialog ─────────────────────────────────────────────────────────────────────
@@ -101,10 +103,12 @@ interface Props {
 export function CategoryFormDialog({ open, editing, facilityId = 11, onClose, onSave }: Props) {
   const [form, setForm] = useState<RoomCategory>(() => blankCategory(facilityId));
   const [addType, setAddType] = useState<RoomRuleType | "">("");
+  const [unitCount, setUnitCount] = useState(1);
 
   useEffect(() => {
     setForm(editing ? { ...editing, rules: editing.rules.map((r) => ({ ...r })) } : blankCategory(facilityId));
     setAddType("");
+    setUnitCount(1);
   }, [editing, open, facilityId]);
 
   const addRule = () => {
@@ -152,9 +156,30 @@ export function CategoryFormDialog({ open, editing, facilityId = 11, onClose, on
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <RoomImageUpload
+              value={form.imageUrl}
+              onChange={(url) => setForm({ ...form, imageUrl: url })}
+              label="Cover Photo"
+              hint="Shown to clients when browsing room categories during booking"
+            />
+
+            <div className={editing ? "grid grid-cols-2 gap-4" : "grid grid-cols-3 gap-4"}>
+              {!editing && (
+                <div className="space-y-1.5">
+                  <Label>Number of Units <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number" min={1} max={50}
+                    value={unitCount}
+                    onChange={(e) => setUnitCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+                  />
+                  <p className="text-muted-foreground text-[11px]">
+                    Auto-creates {unitCount} room{unitCount > 1 ? "s" : ""} named {form.name ? `"${form.name} 01"` : '"Room 01"'}
+                    {unitCount > 1 ? ` – "${form.name || "Room"} ${String(unitCount).padStart(2, "0")}"` : ""}
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <Label>Default Capacity / Unit</Label>
+                <Label>Capacity / Unit</Label>
                 <Input
                   type="number" min={1}
                   value={form.defaultCapacity}
@@ -238,8 +263,8 @@ export function CategoryFormDialog({ open, editing, facilityId = 11, onClose, on
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={!valid} onClick={() => onSave(form)}>
-            {editing ? "Save Changes" : "Create Category"}
+          <Button disabled={!valid} onClick={() => onSave(form, editing ? 0 : unitCount)}>
+            {editing ? "Save Changes" : `Create with ${unitCount} Unit${unitCount > 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>

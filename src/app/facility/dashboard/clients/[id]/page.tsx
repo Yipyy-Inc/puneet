@@ -115,6 +115,7 @@ interface Pet {
   allergies: string;
   specialNeeds: string;
   evaluations?: Evaluation[];
+  petStatus?: "active" | "inactive" | "deceased";
 }
 
 export default function ClientDetailPage({
@@ -1188,132 +1189,199 @@ export default function ClientDetailPage({
 
         {/* Pets Tab */}
         <TabsContent value="pets" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-semibold">
-                All Pets ({client.pets.length})
-              </CardTitle>
-              <Button variant="outline" size="sm">
-                <Plus className="mr-1 size-4" />
-                Add Pet
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {client.pets.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {client.pets.map((pet) => {
-                    const petData = getPetData(pet);
-                    return (
-                      <div
-                        key={pet.id}
-                        className="bg-card hover:bg-muted cursor-pointer rounded-lg border p-4 transition-colors"
-                        onClick={() =>
-                          router.push(
-                            `/facility/dashboard/clients/${id}/pets/${pet.id}`,
-                          )
-                        }
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
-                            {pet.type === "Dog" ? (
-                              <Dog className="text-muted-foreground size-8" />
-                            ) : (
-                              <Cat className="text-muted-foreground size-8" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="text-lg font-semibold">
-                              {pet.name}
-                            </h4>
-                            <p className="text-muted-foreground text-sm">
-                              {pet.breed} • {pet.age}{" "}
-                              {pet.age === 1 ? "year" : "years"}
-                            </p>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <Badge variant="secondary">{pet.type}</Badge>
-                              <Badge variant="outline">{pet.weight} kg</Badge>
+          {(() => {
+            const activePets = client.pets.filter(
+              (p) => p.petStatus !== "deceased",
+            );
+            const deceasedPets = client.pets.filter(
+              (p) => p.petStatus === "deceased",
+            );
+            return (
+              <>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-semibold">
+                      Active Pets ({activePets.length})
+                    </CardTitle>
+                    <Button variant="outline" size="sm">
+                      <Plus className="mr-1 size-4" />
+                      Add Pet
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {activePets.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {activePets.map((pet) => {
+                          const petData = getPetData(pet);
+                          return (
+                            <div
+                              key={pet.id}
+                              className="bg-card hover:bg-muted cursor-pointer rounded-lg border p-4 transition-colors"
+                              onClick={() =>
+                                router.push(
+                                  `/facility/dashboard/clients/${id}/pets/${pet.id}`,
+                                )
+                              }
+                            >
+                              <div className="flex items-start gap-4">
+                                <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-lg">
+                                  {pet.type === "Dog" ? (
+                                    <Dog className="text-muted-foreground size-8" />
+                                  ) : (
+                                    <Cat className="text-muted-foreground size-8" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="text-lg font-semibold">
+                                      {pet.name}
+                                    </h4>
+                                    {pet.petStatus === "inactive" && (
+                                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs">
+                                        Inactive
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground text-sm">
+                                    {pet.breed} • {pet.age}{" "}
+                                    {pet.age === 1 ? "year" : "years"}
+                                  </p>
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <Badge variant="secondary">{pet.type}</Badge>
+                                    <Badge variant="outline">{pet.weight} kg</Badge>
+                                    {petData.banRecord && (
+                                      <Badge variant="destructive" className="gap-1">
+                                        <AlertTriangle className="size-3" />
+                                        Banned
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="mt-2">
+                                    <TagList
+                                      entityType="pet"
+                                      entityId={pet.id}
+                                      editable
+                                    />
+                                  </div>
+                                </div>
+                              </div>
                               {petData.banRecord && (
-                                <Badge variant="destructive" className="gap-1">
-                                  <AlertTriangle className="size-3" />
-                                  Banned
-                                </Badge>
+                                <div className="bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-sm p-2 text-xs">
+                                  <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                                  <div>
+                                    <span className="font-medium">
+                                      {petData.banRecord.reason}
+                                    </span>
+                                    {petData.banRecord.notes && (
+                                      <p className="mt-0.5 opacity-80">
+                                        {petData.banRecord.notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4">
+                                <div className="text-center">
+                                  <div className="text-lg font-bold">
+                                    {petData.totalStays}
+                                  </div>
+                                  <div className="text-muted-foreground text-xs">
+                                    Stays
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-bold">
+                                    {petData.vaccinations.length}
+                                  </div>
+                                  <div className="text-muted-foreground text-xs">
+                                    Vaccines
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-lg font-bold">
+                                    {petData.reports.length}
+                                  </div>
+                                  <div className="text-muted-foreground text-xs">
+                                    Reports
+                                  </div>
+                                </div>
+                              </div>
+                              {petData.expiredVaccinations.length > 0 && (
+                                <div className="bg-destructive/10 text-destructive mt-3 flex items-center gap-2 rounded-sm p-2 text-xs">
+                                  <AlertCircle className="size-3" />
+                                  {petData.expiredVaccinations.length} expired
+                                  vaccination(s)
+                                </div>
                               )}
                             </div>
-                            <div className="mt-2">
-                              <TagList
-                                entityType="pet"
-                                entityId={pet.id}
-                                editable
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        {petData.banRecord && (
-                          <div className="bg-destructive/10 text-destructive mt-3 flex items-start gap-2 rounded-sm p-2 text-xs">
-                            <AlertTriangle className="mt-0.5 size-3 shrink-0" />
-                            <div>
-                              <span className="font-medium">
-                                {petData.banRecord.reason}
-                              </span>
-                              {petData.banRecord.notes && (
-                                <p className="mt-0.5 opacity-80">
-                                  {petData.banRecord.notes}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-4">
-                          <div className="text-center">
-                            <div className="text-lg font-bold">
-                              {petData.totalStays}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              Stays
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold">
-                              {petData.vaccinations.length}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              Vaccines
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-lg font-bold">
-                              {petData.reports.length}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              Reports
-                            </div>
-                          </div>
-                        </div>
-                        {petData.expiredVaccinations.length > 0 && (
-                          <div className="bg-destructive/10 text-destructive mt-3 flex items-center gap-2 rounded-sm p-2 text-xs">
-                            <AlertCircle className="size-3" />
-                            {petData.expiredVaccinations.length} expired
-                            vaccination(s)
-                          </div>
-                        )}
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
-                  <p className="text-muted-foreground text-sm">
-                    No pets registered
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    <Plus className="mr-1 size-4" />
-                    Add First Pet
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <Heart className="text-muted-foreground mx-auto mb-2 size-12" />
+                        <p className="text-muted-foreground text-sm">
+                          No active pets registered
+                        </p>
+                        <Button variant="outline" size="sm" className="mt-4">
+                          <Plus className="mr-1 size-4" />
+                          Add First Pet
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {deceasedPets.length > 0 && (
+                  <Card className="border-dashed opacity-75">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                        <Heart className="size-4 text-red-400" />
+                        Deceased Pets ({deceasedPets.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {deceasedPets.map((pet) => (
+                          <div
+                            key={pet.id}
+                            className="bg-muted/50 hover:bg-muted flex cursor-pointer items-center gap-4 rounded-lg border border-dashed p-3 transition-colors"
+                            onClick={() =>
+                              router.push(
+                                `/facility/dashboard/clients/${id}/pets/${pet.id}`,
+                              )
+                            }
+                          >
+                            <div className="bg-muted flex size-10 items-center justify-center rounded-lg">
+                              {pet.type === "Dog" ? (
+                                <Dog className="text-muted-foreground size-5" />
+                              ) : (
+                                <Cat className="text-muted-foreground size-5" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{pet.name}</h4>
+                                <Badge variant="destructive" className="text-xs">
+                                  Deceased
+                                </Badge>
+                              </div>
+                              <p className="text-muted-foreground text-xs">
+                                {pet.breed} • {pet.type}
+                              </p>
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              View records
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* Billing Tab */}

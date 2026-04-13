@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Scale, Users, PawPrint, AlertCircle, Building2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Pencil, Trash2, Scale, Users, PawPrint, AlertCircle, Building2, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RoomCategory, FacilityRoom, RoomRule } from "@/types/rooms";
 
@@ -86,7 +86,14 @@ export function RoomCategoryCard({
             {expanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
           </button>
 
-          <div className={cn("size-3 rounded-full shrink-0", colors.dot)} />
+          {/* Category thumbnail */}
+          {category.imageUrl ? (
+            <div className="size-10 shrink-0 rounded-lg overflow-hidden border shadow-sm">
+              <img src={category.imageUrl} alt={category.name} className="size-full object-cover" />
+            </div>
+          ) : (
+            <div className={cn("size-3 rounded-full shrink-0", colors.dot)} />
+          )}
 
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-base truncate">{category.name}</h3>
@@ -190,26 +197,41 @@ function UnitTile({
   const capacity = room.capacity ?? defaultCapacity;
   return (
     <div className={cn(
-      "group relative rounded-lg border p-3 transition-all hover:border-foreground/20",
+      "group relative rounded-lg border overflow-hidden transition-all hover:border-foreground/20",
       room.active ? "bg-card" : "bg-muted/30 opacity-60",
     )}>
-      <div className="flex items-start justify-between gap-1 mb-2">
-        <p className="text-xs font-semibold truncate leading-tight flex-1">{room.name}</p>
-        <Switch checked={room.active} onCheckedChange={onToggle} className="scale-[0.7] -mt-0.5 -mr-1 shrink-0" />
-      </div>
-      <div className="flex items-center justify-between">
-        <span className={cn("text-[10px] font-medium", room.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-          {room.active ? "Active" : "Inactive"}
-        </span>
-        <span className="text-[10px] text-muted-foreground">Cap {capacity}</span>
-      </div>
-      {room.staffNotes && (
-        <p className="mt-1 text-[10px] text-muted-foreground truncate" title={room.staffNotes}>
-          {room.staffNotes}
-        </p>
+      {/* Room photo */}
+      {room.imageUrl ? (
+        <div className="aspect-[4/3] relative">
+          <img src={room.imageUrl} alt={room.name} className="absolute inset-0 size-full object-cover" />
+          <div className="absolute top-1.5 right-1.5">
+            <Switch checked={room.active} onCheckedChange={onToggle} className="scale-[0.65]" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center aspect-[4/3] bg-muted/40">
+          <ImageIcon className="size-5 text-muted-foreground/25" />
+          <div className="absolute top-1.5 right-1.5">
+            <Switch checked={room.active} onCheckedChange={onToggle} className="scale-[0.65]" />
+          </div>
+        </div>
       )}
+      <div className="p-2.5">
+        <p className="text-xs font-semibold truncate leading-tight">{room.name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <span className={cn("text-[10px] font-medium", room.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+            {room.active ? "Active" : "Inactive"}
+          </span>
+          <span className="text-[10px] text-muted-foreground">Cap {capacity}</span>
+        </div>
+        {room.staffNotes && (
+          <p className="mt-1 text-[10px] text-muted-foreground truncate" title={room.staffNotes}>
+            {room.staffNotes}
+          </p>
+        )}
+      </div>
       {/* Hover overlay */}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 pb-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-card via-card/80 to-transparent pt-4">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 pb-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-card via-card/80 to-transparent pt-6">
         <button onClick={onEdit} className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-1">Edit</button>
         <button onClick={onDelete} className="text-[10px] text-destructive/70 hover:text-destructive underline underline-offset-1">Remove</button>
       </div>

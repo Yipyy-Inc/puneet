@@ -607,6 +607,7 @@ export function DaycareDetails({
                     name: p.name,
                     type: p.type,
                   }))}
+                  serviceType="daycare"
                 />
               </div>
             )}
@@ -648,6 +649,7 @@ export function DaycareDetails({
                     name: p.name,
                     type: p.type,
                   }))}
+                  serviceType="daycare"
                 />
               </div>
             )}

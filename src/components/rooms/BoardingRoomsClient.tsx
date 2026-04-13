@@ -33,13 +33,31 @@ export function BoardingRoomsClient({ initialCategories, initialRooms, facilityI
   }, 0);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const saveCategory = (cat: RoomCategory) => {
+  const saveCategory = (cat: RoomCategory, unitCount: number) => {
+    const isNew = !catDialog.editing;
     setCategories((prev) => {
       const exists = prev.find((c) => c.id === cat.id);
       if (exists) return prev.map((c) => (c.id === cat.id ? cat : c));
       return [...prev, { ...cat, sortOrder: prev.length + 1 }];
     });
-    toast.success(catDialog.editing ? "Category updated" : "Category created");
+
+    // Auto-generate units when creating a new category
+    if (isNew && unitCount > 0) {
+      const newUnits = Array.from({ length: unitCount }, (_, i) => ({
+        id: `room-${Date.now()}-${i}`,
+        categoryId: cat.id,
+        facilityId: cat.facilityId,
+        name: `${cat.name} ${String(i + 1).padStart(2, "0")}`,
+        active: true,
+        capacity: undefined as number | undefined,
+        staffNotes: "",
+        imageUrl: cat.imageUrl,
+      }));
+      setRooms((prev) => [...prev, ...newUnits]);
+      toast.success(`Category created with ${unitCount} unit${unitCount > 1 ? "s" : ""}`);
+    } else {
+      toast.success(isNew ? "Category created" : "Category updated");
+    }
     setCatDialog({ open: false, editing: null });
   };
 

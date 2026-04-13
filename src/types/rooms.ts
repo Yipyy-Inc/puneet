@@ -42,6 +42,8 @@ export interface RoomCategory {
   defaultBasePrice?: number;
   /** Whether this category is shown in the client-facing booking flow */
   visibleToClients: boolean;
+  /** Cover photo shown to clients in booking flow */
+  imageUrl?: string;
 }
 
 export interface FacilityRoom {
@@ -54,6 +56,8 @@ export interface FacilityRoom {
   capacity?: number;
   /** Staff-only notes (not shown to clients) */
   staffNotes?: string;
+  /** Photo of this specific room unit */
+  imageUrl?: string;
 }
 
 export type GroomingStationType = "table" | "tub" | "cage_dryer" | "stand_dryer";
@@ -67,4 +71,6 @@ export interface GroomingStation {
   maxWeightLbs?: number;
   petTypes?: ("dog" | "cat")[];
   staffNotes?: string;
+  /** Photo of this station */
+  imageUrl?: string;
 }

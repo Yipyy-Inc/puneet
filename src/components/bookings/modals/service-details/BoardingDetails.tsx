@@ -652,6 +652,7 @@ export function BoardingDetails({
                     name: p.name,
                     type: p.type,
                   }))}
+                  serviceType="boarding"
                 />
               </div>
             )}
@@ -693,6 +694,7 @@ export function BoardingDetails({
                     name: p.name,
                     type: p.type,
                   }))}
+                  serviceType="boarding"
                 />
               </div>
             )}

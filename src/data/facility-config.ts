@@ -92,9 +92,43 @@ export const facilityConfig = {
       noShowFee: 0.5, // 50% of booking value
     },
     approvalWorkflow: {
-      enabled: false, // If true, bookings require facility approval
-      estimatedResponseTime: 24, // hours
-      autoConfirmAfterHours: null, // Auto-confirm after X hours if no response (null = no auto-confirm)
+      estimatedResponseTime: 24, // default hours — overridden per-service below
+      autoConfirmAfterHours: null as number | null, // Auto-confirm after X hours if no response (null = no auto-confirm)
+      /** Per-service approval settings. When `enabled` is true, customer bookings for that service go to "request_submitted" instead of direct confirmation. */
+      perServiceConfig: {
+        boarding: {
+          enabled: false,
+          estimatedResponseTime: 24,
+          autoConfirmAfterHours: null as number | null,
+        },
+        daycare: {
+          enabled: false,
+          estimatedResponseTime: 24,
+          autoConfirmAfterHours: null as number | null,
+        },
+        grooming: {
+          enabled: false,
+          estimatedResponseTime: 24,
+          autoConfirmAfterHours: null as number | null,
+        },
+        training: {
+          enabled: false,
+          estimatedResponseTime: 24,
+          autoConfirmAfterHours: null as number | null,
+        },
+        evaluation: {
+          enabled: false,
+          estimatedResponseTime: 24,
+          autoConfirmAfterHours: null as number | null,
+        },
+      } as Record<
+        string,
+        {
+          enabled: boolean;
+          estimatedResponseTime: number;
+          autoConfirmAfterHours: number | null;
+        }
+      >,
     },
     /** If true, customer can reach Confirm even with missing forms; booking is "pending until requirements completed". If false, customer must complete required forms before Confirm. */
     allowBookingWithoutForms: true,
@@ -751,6 +785,54 @@ export const facilityConfig = {
     ],
   },
 
+  // ── Service Fees: medication administration & feeding charges ──────
+  serviceFees: {
+    medication: {
+      /** Charge a fee for administering medication */
+      adminFee: {
+        enabled: true,
+        amount: 5,
+        scope: "per_medication" as const, // "per_pet" | "per_medication" | "flat"
+        applicableServices: ["daycare", "boarding"] as string[],
+        label: "Medication Administration Fee",
+      },
+      /** Facility can provide items to give medication with (pill pockets, cheese, etc.) */
+      facilityProvides: {
+        enabled: true,
+        items: [
+          { id: "pill_pocket", name: "Pill Pocket", fee: 2 },
+          { id: "cheese", name: "Cheese Wrap", fee: 1.5 },
+          { id: "peanut_butter", name: "Peanut Butter", fee: 1 },
+        ],
+        label: "Medication Aid",
+      },
+    },
+    feeding: {
+      daycare: {
+        /** Some facilities charge for feeding during daycare */
+        enabled: true,
+        amount: 5,
+        scope: "per_pet" as const, // "per_pet" | "per_meal" | "flat"
+        label: "Daycare Feeding Fee",
+      },
+      boarding: {
+        /** Boarding typically includes feeding */
+        included: true,
+      },
+    },
+    /** Options that the customer can choose from when specifying how they give medication */
+    givenWithOptions: [
+      { value: "pill_pocket", label: "Pill Pocket" },
+      { value: "cheese", label: "Cheese" },
+      { value: "peanut_butter", label: "Peanut Butter" },
+      { value: "wrapped_in_treat", label: "Wrapped in Treat" },
+      { value: "mixed_in_food", label: "Mixed in Food" },
+      { value: "by_hand", label: "By Hand (direct)" },
+      { value: "syringe", label: "Syringe / Dropper" },
+      { value: "other", label: "Other" },
+    ],
+  },
+
   // ── Feeding & Medication field options (configurable per facility) ──
   feedingOptions: {
     schedules: [
@@ -811,3 +893,51 @@ export const facilityConfig = {
     ],
   },
 };
+
+// ── Booking Approval Helpers ─────────────────────────────────
+
+export const APPROVAL_SETTINGS_KEY = "settings-booking-approval";
+
+export type ServiceApprovalConfig = {
+  enabled: boolean;
+  estimatedResponseTime: number;
+  autoConfirmAfterHours: number | null;
+};
+
+/** Read the persisted per-service approval map (localStorage then static fallback). */
+export function getApprovalConfig(): Record<string, ServiceApprovalConfig> {
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem(APPROVAL_SETTINGS_KEY);
+      if (stored)
+        return JSON.parse(stored) as Record<string, ServiceApprovalConfig>;
+    } catch {
+      /* ignore */
+    }
+  }
+  return facilityConfig.bookingRules.approvalWorkflow.perServiceConfig;
+}
+
+/** Persist the per-service approval map to localStorage. */
+export function saveApprovalConfig(
+  config: Record<string, ServiceApprovalConfig>,
+): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(APPROVAL_SETTINGS_KEY, JSON.stringify(config));
+  }
+}
+
+/** Check whether a built-in service type requires booking approval. */
+export function isApprovalRequired(serviceType: string): boolean {
+  const all = getApprovalConfig();
+  return all[serviceType]?.enabled ?? false;
+}
+
+/** Get the estimated response time (hours) for a service's approval workflow. */
+export function getEstimatedResponseTime(serviceType: string): number {
+  const all = getApprovalConfig();
+  return (
+    all[serviceType]?.estimatedResponseTime ??
+    facilityConfig.bookingRules.approvalWorkflow.estimatedResponseTime
+  );
+}
