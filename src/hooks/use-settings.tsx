@@ -55,6 +55,8 @@ import type {
   Integration,
   ModuleAddon,
 } from "@/types/facility";
+import type { CalendarColorOverrides } from "@/lib/operations-calendar";
+import { EMPTY_COLOR_OVERRIDES } from "@/lib/operations-calendar";
 
 interface SettingsContextValue {
   daycare: ModuleConfig;
@@ -78,6 +80,7 @@ interface SettingsContextValue {
   integrations: Integration[];
   addons: ModuleAddon[];
   weatherRules: WeatherWarningRule[];
+  serviceColorOverrides: CalendarColorOverrides;
   holidays: Array<{ month: number; day: number; name: string }>;
   languageSettings: AppLanguageSettings;
   updateDaycare: (config: ModuleConfig) => void;
@@ -101,6 +104,7 @@ interface SettingsContextValue {
   updateIntegrations: (integrations: Integration[]) => void;
   updateAddons: (addons: ModuleAddon[]) => void;
   updateWeatherRules: (rules: WeatherWarningRule[]) => void;
+  updateServiceColorOverrides: (overrides: CalendarColorOverrides) => void;
   updateLanguageSettings: (settings: AppLanguageSettings) => void;
   resetModules: () => void;
 }
@@ -244,6 +248,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [weatherRulesData, setWeatherRulesData] = useState<
     WeatherWarningRule[]
   >(() => loadStored("settings-weather-rules", defaultWeatherRules));
+  const [serviceColorOverridesData, setServiceColorOverridesData] =
+    useState<CalendarColorOverrides>(() =>
+      loadStored("settings-service-color-overrides", EMPTY_COLOR_OVERRIDES),
+    );
 
   const updateDaycare = (config: ModuleConfig) => {
     setDaycare(config);
@@ -373,6 +381,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setWeatherRulesData(rules);
     localStorage.setItem("settings-weather-rules", JSON.stringify(rules));
   };
+  const updateServiceColorOverrides = (overrides: CalendarColorOverrides) => {
+    setServiceColorOverridesData(overrides);
+    localStorage.setItem(
+      "settings-service-color-overrides",
+      JSON.stringify(overrides),
+    );
+  };
 
   const resetModules = () => {
     setDaycare(daycareConfig);
@@ -396,6 +411,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setIntegrationsData(integrations);
     setAddons(moduleAddons);
     setWeatherRulesData(defaultWeatherRules);
+    setServiceColorOverridesData(EMPTY_COLOR_OVERRIDES);
     setLanguageSettings(DEFAULT_APP_LANGUAGE_SETTINGS);
     persistLanguageSettingsCookies(DEFAULT_APP_LANGUAGE_SETTINGS);
     const oneYearSeconds = 60 * 60 * 24 * 365;
@@ -422,6 +438,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("settings-integrations");
     localStorage.removeItem("settings-addons");
     localStorage.removeItem("settings-weather-rules");
+    localStorage.removeItem("settings-service-color-overrides");
     localStorage.removeItem(APP_LANGUAGE_SETTINGS_STORAGE_KEY);
   };
 
@@ -449,6 +466,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         integrations: integrationsData,
         addons,
         weatherRules: weatherRulesData,
+        serviceColorOverrides: serviceColorOverridesData,
         holidays: facilityHolidays,
         languageSettings,
         updateDaycare,
@@ -472,6 +490,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateIntegrations,
         updateAddons,
         updateWeatherRules,
+        updateServiceColorOverrides,
         updateLanguageSettings,
         resetModules,
       }}

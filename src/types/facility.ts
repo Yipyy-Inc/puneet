@@ -814,6 +814,8 @@ export const moduleConfigSchema = z.object({
   slogan: z.string(),
   description: z.string(),
   bannerImage: z.string().optional(),
+  /** Hex color used across the system to identify this service (calendar, badges, etc.) */
+  color: z.string().optional(),
   basePrice: z.number(),
   settings: z.object({
     evaluation: z.object({

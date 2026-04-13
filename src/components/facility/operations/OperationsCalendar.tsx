@@ -50,8 +50,8 @@ import {
   type NewEventSeed,
   OperationsCalendarNewEventMenu,
 } from "@/components/facility/operations/OperationsCalendarNewEventMenu";
-import { OperationsCalendarColorPanel } from "@/components/facility/operations/OperationsCalendarColorPanel";
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
+import { useSettings } from "@/hooks/use-settings";
 import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
 import { ShiftOpportunityBoard } from "@/components/scheduling/ShiftOpportunityBoard";
 import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpportunityDialog";
@@ -70,7 +70,6 @@ import type {
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
-  type CalendarColorOverrides,
   type CalendarVisualConfig,
   type CompletedAddOnEntry,
   type ManualFacilityEvent,
@@ -80,7 +79,6 @@ import {
   type OperationsCalendarSavedView,
   type OperationsCalendarView,
   DEFAULT_VISUAL_CONFIG,
-  EMPTY_COLOR_OVERRIDES,
   OPERATIONS_CALENDAR_EMPTY_FILTERS,
   buildServiceColorMap,
   buildUnifiedEvents,
@@ -107,7 +105,6 @@ const SAVED_VIEWS_KEY = `operations-calendar-saved-views-${FACILITY_ID}`;
 const MANUAL_EVENTS_KEY = `operations-calendar-manual-events-${FACILITY_ID}`;
 const CALENDAR_AXIS_KEY = `operations-calendar-axis-${FACILITY_ID}`;
 const CALENDAR_RESOURCE_TYPE_KEY = `operations-calendar-resource-type-${FACILITY_ID}`;
-const COLOR_OVERRIDES_KEY = `operations-calendar-color-overrides-${FACILITY_ID}`;
 
 interface TaskCompletionAuditEntry {
   id: string;
@@ -539,6 +536,7 @@ export function OperationsCalendar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { activeModules, modules, resources } = useCustomServices();
+  const { daycare, boarding, grooming, training, serviceColorOverrides: colorOverrides } = useSettings();
 
   const [userRole, setUserRole] = useState("facility_admin");
   const [userName, setUserName] = useState("Manager on Duty");
@@ -661,10 +659,6 @@ export function OperationsCalendar() {
     return false;
   });
 
-  const [colorOverrides, setColorOverrides] = useState<CalendarColorOverrides>(() =>
-    loadStoredJson<CalendarColorOverrides>(COLOR_OVERRIDES_KEY, EMPTY_COLOR_OVERRIDES),
-  );
-
   const [showEventCreator, setShowEventCreator] = useState(false);
   const [manualEventDraft, setManualEventDraft] = useState(DEFAULT_DRAFT);
   const [manualFacilityEvents, setManualFacilityEvents] = useState<ManualFacilityEvent[]>(() =>
@@ -711,10 +705,6 @@ export function OperationsCalendar() {
   useEffect(() => {
     localStorage.setItem(VISUAL_CONFIG_KEY, JSON.stringify(visualConfig));
   }, [visualConfig]);
-
-  useEffect(() => {
-    localStorage.setItem(COLOR_OVERRIDES_KEY, JSON.stringify(colorOverrides));
-  }, [colorOverrides]);
 
   useEffect(() => {
     localStorage.setItem(MANUAL_EVENTS_KEY, JSON.stringify(manualFacilityEvents));
@@ -823,9 +813,18 @@ export function OperationsCalendar() {
     ).sort((first, second) => first.localeCompare(second));
   }, [filterOptions.staffRoles]);
 
+  const builtInColorSettings = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    if (daycare.color) map["Daycare"] = daycare.color;
+    if (boarding.color) map["Boarding"] = boarding.color;
+    if (grooming.color) map["Grooming"] = grooming.color;
+    if (training.color) map["Training"] = training.color;
+    return map;
+  }, [daycare.color, boarding.color, grooming.color, training.color]);
+
   const serviceColorMap = useMemo(
-    () => buildServiceColorMap(activeModules, colorOverrides),
-    [activeModules, colorOverrides],
+    () => buildServiceColorMap(activeModules, colorOverrides, builtInColorSettings),
+    [activeModules, colorOverrides, builtInColorSettings],
   );
 
   const resourceCalendarOptions = useMemo<ResourceCalendarOption[]>(
@@ -2650,13 +2649,6 @@ export function OperationsCalendar() {
           showFilters={showFilters}
           onToggleFilters={() => setShowFilters((previous) => !previous)}
           activeFilterCount={activeCount}
-          colorPanel={
-            <OperationsCalendarColorPanel
-              colorOverrides={colorOverrides}
-              onColorOverridesChange={setColorOverrides}
-              customServiceNames={activeModules.map((m) => m.name)}
-            />
-          }
           newEventMenu={
             <OperationsCalendarNewEventMenu
               open={newEventMenuOpen}

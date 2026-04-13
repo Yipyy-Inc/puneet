@@ -5,7 +5,6 @@ import {
   Filter,
   Search,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { OperationsCalendarView } from "@/lib/operations-calendar";
@@ -22,7 +21,6 @@ interface OperationsCalendarToolbarProps {
   onToggleFilters: () => void;
   activeFilterCount: number;
   newEventMenu?: ReactNode;
-  colorPanel?: ReactNode;
 }
 
 export function OperationsCalendarToolbar({
@@ -37,7 +35,6 @@ export function OperationsCalendarToolbar({
   onToggleFilters,
   activeFilterCount,
   newEventMenu,
-  colorPanel,
 }: OperationsCalendarToolbarProps) {
   const simplifiedViews: Array<{ value: OperationsCalendarView; label: string }> = [
     { value: "day", label: "Day" },
@@ -93,8 +90,6 @@ export function OperationsCalendarToolbar({
                 </span>
               )}
             </Button>
-
-            {colorPanel}
 
             <div className="transition-transform hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-300">
               {newEventMenu}

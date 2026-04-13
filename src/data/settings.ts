@@ -1156,6 +1156,7 @@ export const daycareConfig: ModuleConfig = {
   description:
     "Professional daycare services with supervised play, socialization, and personalized care for your furry friends.",
   bannerImage: "/services/daycare.jpg",
+  color: "#0284c7",
   basePrice: 35,
   settings: {
     evaluation: {
@@ -1182,6 +1183,7 @@ export const boardingConfig: ModuleConfig = {
   description:
     "Comfortable overnight boarding with personalized care, exercise, and attention for your beloved pets.",
   bannerImage: "/services/boarding.jpg",
+  color: "#8b5cf6",
   basePrice: 45,
   settings: {
     evaluation: {
@@ -1206,6 +1208,7 @@ export const groomingConfig: ModuleConfig = {
   slogan: "Pamper Your Pet to Perfection",
   description:
     "Professional grooming services including bathing, trimming, and styling to keep your pet looking and feeling great.",
+  color: "#ec4899",
   basePrice: 50,
   settings: {
     evaluation: {
@@ -1231,6 +1234,7 @@ export const trainingConfig: ModuleConfig = {
   slogan: "Train Smart, Love More",
   description:
     "Expert training programs to teach obedience, tricks, and behavior modification for well-behaved pets.",
+  color: "#f97316",
   basePrice: 60,
   settings: {
     evaluation: {

@@ -46,6 +46,7 @@ import { SettingsSidebar } from "@/components/facility/SettingsSidebar";
 import { EvaluationReportCardBuilder } from "@/components/evaluations/EvaluationReportCardBuilder";
 import { EvaluationFormBuilder } from "@/components/evaluations/EvaluationFormBuilder";
 import { EstimateFollowUpSettings } from "@/components/estimates/EstimateFollowUpSettings";
+import { ServiceColorSettings } from "@/components/facility/ServiceColorSettings";
 import { staffMembers } from "@/data/staff";
 
 const AddOnsSettings = dynamic(
@@ -5000,6 +5001,13 @@ export default function SettingsPage() {
           {activeSection === "addons" && (
             <div className="space-y-6">
               <AddOnsSettings />
+            </div>
+          )}
+
+          {/* Service Colors */}
+          {activeSection === "service-colors" && (
+            <div className="space-y-6">
+              <ServiceColorSettings />
             </div>
           )}
         </div>
