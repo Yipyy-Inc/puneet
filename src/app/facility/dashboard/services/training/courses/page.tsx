@@ -38,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 import {
   type TrainingCourseType,
   defaultTrainingCourseTypes,
@@ -67,6 +68,7 @@ export default function TrainingCourseCatalogPage() {
     requiredVaccines: [] as string[],
     prerequisites: [] as string[],
     isActive: true,
+    color: "#f97316",
   });
 
   const handleAddNew = () => {
@@ -80,6 +82,7 @@ export default function TrainingCourseCatalogPage() {
       requiredVaccines: [],
       prerequisites: [],
       isActive: true,
+      color: "#f97316",
     });
     setIsAddEditModalOpen(true);
   };
@@ -95,6 +98,7 @@ export default function TrainingCourseCatalogPage() {
       requiredVaccines: [...course.requiredVaccines],
       prerequisites: [...course.prerequisites],
       isActive: course.isActive,
+      color: course.color ?? "#f97316",
     });
     setIsAddEditModalOpen(true);
   };
@@ -147,6 +151,7 @@ export default function TrainingCourseCatalogPage() {
       requiredVaccines: formData.requiredVaccines,
       prerequisites: formData.prerequisites,
       isActive: formData.isActive,
+      color: formData.color,
       createdAt: editingCourse?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -234,7 +239,15 @@ export default function TrainingCourseCatalogPage() {
               ) : (
                 courseTypes.map((course) => (
                   <TableRow key={course.id}>
-                    <TableCell className="font-medium">{course.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2 font-medium">
+                        <span
+                          className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+                          style={{ backgroundColor: course.color ?? "#f97316" }}
+                        />
+                        {course.name}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-md">
                       <p className="text-muted-foreground truncate text-sm">
                         {course.description}
@@ -342,6 +355,12 @@ export default function TrainingCourseCatalogPage() {
                 rows={4}
               />
             </div>
+
+            {/* Color */}
+            <RateColorPicker
+              value={formData.color}
+              onChange={(hex) => setFormData({ ...formData, color: hex })}
+            />
 
             {/* Duration and Age Range */}
             <div className="grid grid-cols-3 gap-4">

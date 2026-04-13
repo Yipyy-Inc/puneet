@@ -60,6 +60,43 @@ export interface FacilityRoom {
   imageUrl?: string;
 }
 
+// ── Daycare Play Areas & Sections ─────────────────────────────────────────────
+
+/**
+ * A play area is a named location within the facility (e.g. "Indoor Park", "Outdoor Yard").
+ * It contains one or more sections, each with its own capacity and eligibility rules.
+ */
+export interface DaycarePlayArea {
+  id: string;
+  facilityId: number;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+/**
+ * A section is a subdivision of a play area (e.g. "Small Dogs", "Big Dogs").
+ * Each section has a per-day capacity and optional weight/type rules.
+ */
+export interface DaycareSection {
+  id: string;
+  playAreaId: string;
+  facilityId: number;
+  name: string;
+  /** Maximum number of pets per day */
+  capacity: number;
+  description?: string;
+  imageUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+  rules: RoomRule[];
+  color: RoomCategoryColor;
+}
+
+// ── Grooming ──────────────────────────────────────────────────────────────────
+
 export type GroomingStationType = "table" | "tub" | "cage_dryer" | "stand_dryer";
 
 export interface GroomingStation {

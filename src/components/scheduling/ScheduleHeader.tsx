@@ -11,6 +11,8 @@ import {
   Plus,
   Filter,
   Search,
+  BookmarkPlus,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +40,8 @@ interface ScheduleHeaderProps {
   onPublish: () => void;
   onAddShift: () => void;
   onPrint: () => void;
+  onSaveAsTemplate: () => void;
+  onOpenTimeClock: () => void;
 }
 
 function formatDateRange(date: Date, viewMode: ViewMode): string {
@@ -82,6 +86,8 @@ export function ScheduleHeader({
   onPublish,
   onAddShift,
   onPrint,
+  onSaveAsTemplate,
+  onOpenTimeClock,
 }: ScheduleHeaderProps) {
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(currentDate);
@@ -150,6 +156,14 @@ export function ScheduleHeader({
               </Badge>
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={onOpenTimeClock}>
+            <Clock className="mr-1.5 size-3.5" />
+            Time Clock
+          </Button>
+          <Button variant="outline" size="sm" onClick={onSaveAsTemplate}>
+            <BookmarkPlus className="mr-1.5 size-3.5" />
+            Save as Template
+          </Button>
           <Button variant="outline" size="sm" onClick={onAddShift}>
             <Plus className="mr-1.5 size-3.5" />
             Add Shift

@@ -1201,7 +1201,9 @@ export function calculateLaborCost(
 
     totalCost += cost;
     byPosition[shift.positionId] = (byPosition[shift.positionId] || 0) + cost;
-    byEmployee[shift.employeeId] = (byEmployee[shift.employeeId] || 0) + cost;
+    if (shift.employeeId) {
+      byEmployee[shift.employeeId] = (byEmployee[shift.employeeId] || 0) + cost;
+    }
   }
 
   return { totalCost, byPosition, byEmployee };

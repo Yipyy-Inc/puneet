@@ -4,6 +4,11 @@ import {
 } from "@/data/custom-services";
 import { getTagsByType, getTagsForEntity } from "@/data/tags-notes";
 import { users } from "@/data/users";
+import { defaultServiceAddOns } from "@/data/service-addons";
+import { daycareRates } from "@/data/daycare";
+import { boardingRates } from "@/data/boarding";
+import { groomingPackages } from "@/data/grooming";
+import { trainingPackages } from "@/data/training";
 import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
@@ -95,6 +100,7 @@ export interface CalendarAddOn {
     | "video-call"
     | "custom";
   scheduledAt?: Date;
+  colorCode?: string;
 }
 
 export interface ManualFacilityEvent {
@@ -190,6 +196,7 @@ export interface OperationsCalendarEvent {
   customerTags: string[];
   bookingTags: string[];
   addOns: CalendarAddOn[];
+  rateColor?: string;
   href: string;
 }
 
@@ -663,6 +670,42 @@ function mapTaskSubtype(task: FacilityTask): string {
   return "template-task";
 }
 
+// ── Color lookups ──────────────────────────────────────────────────────────────
+
+let _addOnColorLookup: Map<string, string> | null = null;
+function getAddOnColor(name: string): string | undefined {
+  if (!_addOnColorLookup) {
+    _addOnColorLookup = new Map();
+    for (const addon of defaultServiceAddOns) {
+      if (addon.colorCode) {
+        _addOnColorLookup.set(addon.name.toLowerCase(), addon.colorCode);
+      }
+    }
+  }
+  return _addOnColorLookup.get(name.toLowerCase());
+}
+
+let _rateColorLookup: Map<string, string> | null = null;
+function getRateColor(service: string, basePrice: number): string | undefined {
+  if (!_rateColorLookup) {
+    _rateColorLookup = new Map();
+    type RateEntry = { basePrice?: number; price?: number; color?: string };
+    const add = (svc: string, rates: RateEntry[]) => {
+      for (const r of rates) {
+        const p = r.basePrice ?? r.price;
+        if (r.color && p !== undefined) {
+          _rateColorLookup!.set(`${svc}-${p}`, r.color);
+        }
+      }
+    };
+    add("daycare", daycareRates as RateEntry[]);
+    add("boarding", boardingRates as RateEntry[]);
+    add("grooming", groomingPackages as RateEntry[]);
+    add("training", trainingPackages as RateEntry[]);
+  }
+  return _rateColorLookup.get(`${service.toLowerCase()}-${basePrice}`);
+}
+
 function getAddOnIconKey(name: string): CalendarAddOn["iconKey"] {
   const normalized = name.toLowerCase();
   if (normalized.includes("tooth") || normalized.includes("brush")) return "tooth-brushing";
@@ -763,6 +806,7 @@ function extractBookingAddOns(booking: Booking): CalendarAddOn[] {
     name: addOn.name,
     iconKey: getAddOnIconKey(addOn.name),
     scheduledAt: inferAddOnScheduledAt(booking, addOn.name, index),
+    colorCode: getAddOnColor(addOn.name),
   }));
 }
 
@@ -816,6 +860,7 @@ function buildBookingEvents(
       const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
       const addOns = extractBookingAddOns(booking);
       const resourceType = inferBookingResourceType(booking);
+      const rateColor = getRateColor(booking.service, booking.basePrice);
 
       return {
         id: `booking-${booking.id}`,
@@ -847,6 +892,7 @@ function buildBookingEvents(
         customerTags: buildTagNames("customer", booking.clientId),
         bookingTags: buildTagNames("booking", booking.id),
         addOns,
+        rateColor,
         allowsAddOns: true,
         requiresCheckInOut: ["boarding", "daycare", "grooming"].includes(
           booking.service.toLowerCase(),
@@ -1351,6 +1397,7 @@ function buildStayAddOnCalendarEvents(
           name: item.name,
           iconKey: getAddOnIconKey(item.name),
           scheduledAt,
+          colorCode: getAddOnColor(item.name),
         };
 
         // Check if this add-on has been marked completed
@@ -1948,7 +1995,13 @@ export function resolveEventColor(
     return getStaffColor(event.staff);
   }
 
-  return serviceColorMap[event.module] ?? serviceColorMap[event.service] ?? "#64748b";
+  // Service-type mode: use per-rate or per-add-on color when available
+  if (event.type === "add-on") {
+    const addOnColor = event.addOns[0]?.colorCode;
+    if (addOnColor) return addOnColor;
+  }
+
+  return event.rateColor ?? serviceColorMap[event.module] ?? serviceColorMap[event.service] ?? "#64748b";
 }
 
 export function hexToRgba(hexColor: string, opacity: number): string {

@@ -17,12 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-
-const COLOR_SWATCHES = [
-  "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
-  "#f59e0b", "#a855f7", "#14b8a6", "#f97316",
-  "#64748b", "#ef4444",
-];
+import { RateColorPicker } from "@/components/facility/RateColorPicker";
 
 interface Props {
   open: boolean;
@@ -161,29 +156,10 @@ export function AddOnCategorySheet({ open, onOpenChange, categories, onSave }: P
               className="text-sm resize-none"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Color</Label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {COLOR_SWATCHES.map((hex) => (
-                <button
-                  key={hex}
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, colorCode: hex }))}
-                  className={cn(
-                    "size-6 rounded-full border-2 transition-transform hover:scale-110",
-                    form.colorCode === hex ? "border-slate-900 scale-110" : "border-transparent",
-                  )}
-                  style={{ backgroundColor: hex }}
-                />
-              ))}
-              <input
-                type="color"
-                value={form.colorCode ?? "#3b82f6"}
-                onChange={(e) => setForm((p) => ({ ...p, colorCode: e.target.value }))}
-                className="size-6 rounded-full border cursor-pointer p-0"
-              />
-            </div>
-          </div>
+          <RateColorPicker
+            value={form.colorCode ?? "#3b82f6"}
+            onChange={(hex) => setForm((p) => ({ ...p, colorCode: hex }))}
+          />
           <div className="flex gap-2 pt-1">
             <Button size="sm" onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1">
               {editing ? "Save Changes" : <><Plus className="size-3.5 mr-1" />Add Category</>}

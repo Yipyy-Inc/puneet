@@ -131,6 +131,7 @@ export const boardingRateSchema = z
       large: z.number(),
       giant: z.number(),
     }),
+    color: z.string().optional(),
   })
   .catchall(z.unknown());
 

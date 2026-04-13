@@ -17,6 +17,9 @@ import {
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { defaultServiceAddOns } from "@/data/service-addons";
+import { daycarePlayAreas, daycareSections } from "@/data/daycare-areas";
+import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
+import { bookings as allBookings } from "@/data/bookings";
 import type { ServiceAddOn } from "@/types/facility";
 
 interface DaycareDetailsProps {
@@ -72,47 +75,7 @@ function getStoredAddOns(): ServiceAddOn[] {
   return defaultServiceAddOns;
 }
 
-const DAYCARE_ROOMS = [
-  {
-    id: "playroom-a",
-    name: "Playroom A",
-    description: "Main playroom for active dogs",
-    capacity: 15,
-    currentBookings: 12,
-    imageUrl: "/rooms/room-1.jpg",
-    allowedPetTypes: ["Dog"],
-    included: ["Supervised play", "Water station", "Soft flooring"],
-  },
-  {
-    id: "playroom-b",
-    name: "Playroom B",
-    description: "Smaller dogs and calm play",
-    capacity: 10,
-    currentBookings: 6,
-    imageUrl: "/rooms/room-2.jpg",
-    allowedPetTypes: ["Dog"],
-    included: ["Calm environment", "Small-breed friendly", "Toys provided"],
-  },
-  {
-    id: "quiet-zone",
-    name: "Quiet Zone",
-    description: "Low-energy pets and seniors",
-    capacity: 8,
-    currentBookings: 3,
-    imageUrl: "/rooms/room-3.jpg",
-    allowedPetTypes: ["Dog", "Cat"],
-    included: ["Low noise", "Senior-friendly", "Cozy bedding"],
-  },
-  {
-    id: "outdoor-yard",
-    name: "Outdoor Yard",
-    description: "Outdoor supervised play area",
-    capacity: 20,
-    currentBookings: 15,
-    allowedPetTypes: ["Dog"],
-    included: ["Open air", "Agility obstacles", "Shade area"],
-  },
-];
+// Sections are loaded dynamically from daycare-areas.ts and the capacity engine
 
 export function DaycareDetails({
   currentSubStep,
@@ -140,12 +103,6 @@ export function DaycareDetails({
     dropOffPickUpOverrides,
     holidays,
   } = useSettings();
-  const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
-  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
-  const [dragOverRoomId, setDragOverRoomId] = React.useState<string | null>(
-    null,
-  );
-
   const scheduleTimeOverridesForDaycare = React.useMemo(() => {
     return scheduleTimeOverrides.filter(
       (o) => !o.services?.length || o.services.includes("daycare"),
@@ -269,297 +226,13 @@ export function DaycareDetails({
         )}
 
         {currentSubStep === 1 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-base font-semibold">Room Assignment</h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Drag and drop pets into rooms or double-click pets and click on
-                rooms
-              </p>
-            </div>
-
-            {!isStepAccessible(1) && (
-              <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
-                <p className="text-muted-foreground">
-                  Please complete the Schedule step first
-                </p>
-              </div>
-            )}
-
-            {isStepAccessible(1) && (
-              <>
-                {/* Unassigned Pets */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Unassigned Pets</Label>
-                  <div className="bg-muted/20 flex min-h-14 flex-wrap gap-2 rounded-xl border border-dashed p-3">
-                    {selectedPets
-                      .filter(
-                        (pet) =>
-                          !roomAssignments.find((a) => a.petId === pet.id),
-                      )
-                      .map((pet) => (
-                        <div
-                          key={pet.id}
-                          draggable
-                          onDragStart={() => setDraggedPet(pet)}
-                          onDragEnd={() => setDraggedPet(null)}
-                          onDoubleClick={() =>
-                            setSelectedPet(
-                              selectedPet?.id === pet.id ? null : pet,
-                            )
-                          }
-                          className={cn(
-                            "bg-background flex cursor-move items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all",
-                            selectedPet?.id === pet.id
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : "border-border hover:border-primary/50",
-                          )}
-                        >
-                          {/* #4 — pet initial avatar */}
-                          <div className="bg-primary/10 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
-                            {pet.name[0]}
-                          </div>
-                          <span className="text-sm font-medium">
-                            {pet.name}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            ({pet.type})
-                          </span>
-                        </div>
-                      ))}
-                    {selectedPets.filter(
-                      (pet) => !roomAssignments.find((a) => a.petId === pet.id),
-                    ).length === 0 && (
-                      <p className="text-muted-foreground py-1 text-sm">
-                        All pets assigned
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Rooms */}
-                <div className="grid grid-cols-2 gap-3">
-                  {DAYCARE_ROOMS.map((room) => {
-                    const availableSpots = room.capacity - room.currentBookings;
-                    const assignedPets = selectedPets.filter((pet) =>
-                      roomAssignments.find(
-                        (a) => a.petId === pet.id && a.roomId === room.id,
-                      ),
-                    );
-                    const isDraggedPetAllowed = draggedPet
-                      ? room.allowedPetTypes.includes(draggedPet.type)
-                      : true;
-                    const isSelectedPetAllowed = selectedPet
-                      ? room.allowedPetTypes.includes(selectedPet.type)
-                      : true;
-                    const isPetAllowed =
-                      isDraggedPetAllowed && isSelectedPetAllowed;
-                    const isRoomFull = availableSpots <= 0;
-                    const isRoomDisabled = isRoomFull || !isPetAllowed;
-                    const hasAssigned = assignedPets.length > 0;
-                    const remaining = availableSpots - assignedPets.length;
-                    // #1 — reactive drag-over state
-                    const isDragOver =
-                      dragOverRoomId === room.id && !isRoomDisabled;
-                    // #2/#3 — invite state: glow when a pet is being dragged/selected and room is compatible
-                    const showInvite =
-                      !isRoomDisabled &&
-                      !hasAssigned &&
-                      remaining > 0 &&
-                      ((draggedPet && isDraggedPetAllowed) ||
-                        (selectedPet && isSelectedPetAllowed));
-
-                    return (
-                      <div
-                        key={room.id}
-                        // #1 — reactive state instead of imperative classList
-                        onDragOver={(e) => {
-                          if (!isRoomDisabled) {
-                            e.preventDefault();
-                            setDragOverRoomId(room.id);
-                          }
-                        }}
-                        onDragLeave={() => setDragOverRoomId(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOverRoomId(null);
-                          if (
-                            draggedPet &&
-                            availableSpots > assignedPets.length &&
-                            isPetAllowed
-                          ) {
-                            setRoomAssignments([
-                              ...roomAssignments.filter(
-                                (a) => a.petId !== draggedPet.id,
-                              ),
-                              { petId: draggedPet.id, roomId: room.id },
-                            ]);
-                          }
-                        }}
-                        onClick={() => {
-                          if (
-                            selectedPet &&
-                            availableSpots > assignedPets.length &&
-                            room.allowedPetTypes.includes(selectedPet.type)
-                          ) {
-                            setRoomAssignments([
-                              ...roomAssignments.filter(
-                                (a) => a.petId !== selectedPet.id,
-                              ),
-                              { petId: selectedPet.id, roomId: room.id },
-                            ]);
-                            setSelectedPet(null);
-                          }
-                        }}
-                        className={cn(
-                          "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
-                          isRoomDisabled
-                            ? "cursor-not-allowed opacity-60"
-                            : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg",
-                          // #1 — drag-over highlight via state
-                          isDragOver && "ring-primary ring-2 ring-offset-2",
-                          hasAssigned
-                            ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
-                            : // #2/#3 — invite pulsing border
-                              showInvite
-                              ? "border-primary/40 border-dashed"
-                              : "border-border hover:border-primary/40",
-                        )}
-                      >
-                        {/* Image area */}
-                        <div className="relative h-36 w-full overflow-hidden">
-                          {room.imageUrl ? (
-                            <Image
-                              src={room.imageUrl}
-                              alt={room.name}
-                              fill
-                              className={cn(
-                                "object-cover transition-transform duration-300",
-                                !isRoomDisabled && "group-hover:scale-105",
-                              )}
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="bg-muted flex size-full items-center justify-center">
-                              <PawPrint className="text-muted-foreground/30 size-12" />
-                            </div>
-                          )}
-
-                          {/* Assigned pet count badge */}
-                          {hasAssigned && (
-                            <div className="bg-primary text-primary-foreground absolute top-2.5 right-2.5 flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-md">
-                              {assignedPets.length}
-                            </div>
-                          )}
-
-                          {/* Full overlay */}
-                          {isRoomFull && (
-                            <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                              <span className="bg-destructive/10 text-destructive rounded-full border border-red-200 px-3 py-1 text-xs font-semibold">
-                                Full
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Pet type blocked overlay */}
-                          {draggedPet && !isDraggedPetAllowed && (
-                            <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                              <span className="text-muted-foreground text-xs font-semibold">
-                                Not allowed for {draggedPet.type}s
-                              </span>
-                            </div>
-                          )}
-                          {selectedPet &&
-                            !isSelectedPetAllowed &&
-                            !(draggedPet && !isDraggedPetAllowed) && (
-                              <div className="bg-background/75 absolute inset-0 flex items-center justify-center">
-                                <span className="text-muted-foreground text-xs font-semibold">
-                                  Not allowed for {selectedPet.type}s
-                                </span>
-                              </div>
-                            )}
-                        </div>
-
-                        {/* Content strip */}
-                        <div className="p-3.5">
-                          <p className="text-sm/tight font-semibold">
-                            {room.name}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                            {room.description}
-                          </p>
-
-                          {/* #5 — included amenities */}
-                          {room.included.length > 0 && !hasAssigned && (
-                            <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
-                              {room.included.map((item) => (
-                                <span
-                                  key={item}
-                                  className="text-muted-foreground text-[10px]"
-                                >
-                                  · {item}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Assigned pets with #4 — avatars */}
-                          {hasAssigned && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {assignedPets.map((pet) => (
-                                <span
-                                  key={pet.id}
-                                  className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md py-0.5 pr-2 pl-1 text-[11px] font-medium"
-                                >
-                                  <span className="bg-primary/20 flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
-                                    {pet.name[0]}
-                                  </span>
-                                  {pet.name}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRoomAssignments(
-                                        roomAssignments.filter(
-                                          (a) => a.petId !== pet.id,
-                                        ),
-                                      );
-                                    }}
-                                    className="hover:text-destructive ml-0.5 transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Availability */}
-                          <div className="mt-2.5 flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              {room.allowedPetTypes.join(", ")}
-                            </span>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                remaining <= 0 && "text-destructive",
-                                remaining > 0 &&
-                                  remaining <= 2 &&
-                                  "text-orange-600",
-                                remaining > 2 && "text-emerald-600",
-                              )}
-                            >
-                              {remaining}/{room.capacity}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+          <DaycareSectionAssignmentStep
+            isStepAccessible={isStepAccessible}
+            selectedPets={selectedPets}
+            roomAssignments={roomAssignments}
+            setRoomAssignments={setRoomAssignments}
+            daycareSelectedDates={daycareSelectedDates}
+          />
         )}
 
         {currentSubStep === 2 && (
@@ -661,6 +334,294 @@ export function DaycareDetails({
 }
 
 // ============================================================================
+// Section Assignment Sub-Step (play areas → sections with live capacity)
+// ============================================================================
+
+function DaycareSectionAssignmentStep({
+  isStepAccessible,
+  selectedPets,
+  roomAssignments,
+  setRoomAssignments,
+  daycareSelectedDates,
+}: {
+  isStepAccessible: (step: number) => boolean;
+  selectedPets: Pet[];
+  roomAssignments: Array<{ petId: number; roomId: string }>;
+  setRoomAssignments: (a: Array<{ petId: number; roomId: string }>) => void;
+  daycareSelectedDates: Date[];
+}) {
+  const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
+  const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
+  const [dragOverSectionId, setDragOverSectionId] = React.useState<string | null>(null);
+
+  // Compute availability for the first selected pet (or no pet)
+  const focusPet = selectedPet ?? draggedPet ?? selectedPets[0] ?? null;
+  const dates = daycareSelectedDates.map((d) => d.toISOString().split("T")[0]);
+
+  const availabilitySummary = React.useMemo(
+    () =>
+      focusPet
+        ? getDaycareAvailabilitySummary(
+            focusPet,
+            dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
+            daycareSections,
+            allBookings,
+          )
+        : getDaycareAvailabilitySummary(
+            { weight: 0, type: "Dog" } as Pet,
+            dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
+            daycareSections,
+            allBookings,
+          ),
+    [focusPet, dates],
+  );
+
+  const availabilityBySectionId = React.useMemo(() => {
+    const map: Record<string, typeof availabilitySummary[number]> = {};
+    for (const item of availabilitySummary) map[item.section.id] = item;
+    return map;
+  }, [availabilitySummary]);
+
+  const assignPetToSection = (pet: Pet, sectionId: string) => {
+    const avail = availabilityBySectionId[sectionId];
+    if (!avail || !avail.eligible || avail.minRemaining <= 0) return;
+    setRoomAssignments([
+      ...roomAssignments.filter((a) => a.petId !== pet.id),
+      { petId: pet.id, roomId: sectionId },
+    ]);
+    setSelectedPet(null);
+  };
+
+  if (!isStepAccessible(1)) {
+    return (
+      <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
+        <p className="text-muted-foreground">Please complete the Schedule step first</p>
+      </div>
+    );
+  }
+
+  const COLOR_BAR: Record<string, string> = {
+    amber: "bg-amber-400", violet: "bg-violet-500", blue: "bg-blue-500",
+    emerald: "bg-emerald-500", rose: "bg-rose-500", orange: "bg-orange-400",
+    indigo: "bg-indigo-500", slate: "bg-slate-400",
+  };
+  const COLOR_BORDER: Record<string, string> = {
+    amber: "border-l-amber-400", violet: "border-l-violet-400", blue: "border-l-blue-400",
+    emerald: "border-l-emerald-400", rose: "border-l-rose-400", orange: "border-l-orange-400",
+    indigo: "border-l-indigo-400", slate: "border-l-slate-400",
+  };
+  const COLOR_BADGE: Record<string, string> = {
+    amber: "bg-amber-100 text-amber-800", violet: "bg-violet-100 text-violet-800",
+    blue: "bg-blue-100 text-blue-800", emerald: "bg-emerald-100 text-emerald-800",
+    rose: "bg-rose-100 text-rose-800", orange: "bg-orange-100 text-orange-800",
+    indigo: "bg-indigo-100 text-indigo-800", slate: "bg-slate-100 text-slate-800",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold">Section Assignment</h3>
+        <p className="text-muted-foreground mt-1 text-xs">
+          Select a pet, then click a section — or drag &amp; drop pets into sections.
+          The system will auto-assign on booking creation.
+        </p>
+      </div>
+
+      {/* Unassigned pets */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Unassigned Pets</Label>
+        <div className="bg-muted/20 flex min-h-14 flex-wrap gap-2 rounded-xl border border-dashed p-3">
+          {selectedPets
+            .filter((pet) => !roomAssignments.find((a) => a.petId === pet.id))
+            .map((pet) => (
+              <div
+                key={pet.id}
+                draggable
+                onDragStart={() => { setDraggedPet(pet); setSelectedPet(null); }}
+                onDragEnd={() => setDraggedPet(null)}
+                onClick={() => setSelectedPet(selectedPet?.id === pet.id ? null : pet)}
+                className={cn(
+                  "bg-background flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all select-none",
+                  selectedPet?.id === pet.id
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border hover:border-primary/50",
+                )}
+              >
+                <div className="bg-primary/10 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                  {pet.name[0]}
+                </div>
+                <span className="text-sm font-medium">{pet.name}</span>
+                <span className="text-muted-foreground text-xs">({pet.type}, {pet.weight} lbs)</span>
+              </div>
+            ))}
+          {selectedPets.filter((p) => !roomAssignments.find((a) => a.petId === p.id)).length === 0 && (
+            <p className="text-muted-foreground py-1 text-sm">All pets assigned ✓</p>
+          )}
+        </div>
+      </div>
+
+      {/* Play areas → sections */}
+      <div className="space-y-4">
+        {daycarePlayAreas
+          .filter((area) => area.isActive)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((area) => {
+            const areaSections = daycareSections.filter(
+              (s) => s.playAreaId === area.id && s.isActive,
+            );
+            if (areaSections.length === 0) return null;
+
+            return (
+              <div key={area.id} className="space-y-2">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <span className="bg-muted inline-flex size-5 items-center justify-center rounded text-[10px]">🌳</span>
+                  {area.name}
+                  {area.description && (
+                    <span className="text-muted-foreground text-xs font-normal">— {area.description}</span>
+                  )}
+                </p>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {areaSections
+                    .sort((a, b) => a.sortOrder - b.sortOrder)
+                    .map((section) => {
+                      const avail = availabilityBySectionId[section.id];
+                      const assignedPets = selectedPets.filter((pet) =>
+                        roomAssignments.find((a) => a.petId === pet.id && a.roomId === section.id),
+                      );
+                      const eligible = avail?.eligible ?? true;
+                      const remaining = avail?.minRemaining ?? section.capacity;
+                      const isFull = remaining <= 0;
+                      const isDisabled = isFull || !eligible;
+                      const isDragOver = dragOverSectionId === section.id && !isDisabled;
+                      const hasAssigned = assignedPets.length > 0;
+                      const pct = section.capacity > 0
+                        ? Math.min(((section.capacity - remaining) / section.capacity) * 100, 100)
+                        : 0;
+                      const showInvite = !isDisabled && !hasAssigned && remaining > 0 &&
+                        ((draggedPet && (availabilityBySectionId[section.id]?.eligible ?? true)) ||
+                          (selectedPet && (availabilityBySectionId[section.id]?.eligible ?? true)));
+
+                      return (
+                        <div
+                          key={section.id}
+                          onDragOver={(e) => { if (!isDisabled) { e.preventDefault(); setDragOverSectionId(section.id); } }}
+                          onDragLeave={() => setDragOverSectionId(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOverSectionId(null);
+                            if (draggedPet && !isDisabled) assignPetToSection(draggedPet, section.id);
+                          }}
+                          onClick={() => {
+                            const petToAssign = selectedPet ??
+                              (selectedPets.length === 1 ? selectedPets[0] : null) ??
+                              selectedPets.find((p) => !roomAssignments.find((a) => a.petId === p.id)) ?? null;
+                            if (petToAssign && !isDisabled) assignPetToSection(petToAssign, section.id);
+                          }}
+                          className={cn(
+                            "group relative overflow-hidden rounded-xl border-l-4 border border-border bg-card transition-all duration-200 select-none",
+                            COLOR_BORDER[section.color],
+                            isDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:shadow-md hover:-translate-y-0.5",
+                            isDragOver && "ring-primary ring-2 ring-offset-1",
+                            hasAssigned && "ring-primary/30 shadow-md ring-2",
+                            showInvite && "border-dashed border-primary/40",
+                          )}
+                        >
+                          {section.imageUrl && (
+                            <div className="relative h-24 w-full overflow-hidden">
+                              <Image src={section.imageUrl} alt={section.name} fill className="object-cover" unoptimized />
+                              <div className="from-card absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent p-2 pt-6">
+                                <p className="text-sm font-semibold">{section.name}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="p-3 space-y-2">
+                            {!section.imageUrl && (
+                              <p className="text-sm font-semibold">{section.name}</p>
+                            )}
+                            {section.description && (
+                              <p className="text-muted-foreground line-clamp-1 text-xs">{section.description}</p>
+                            )}
+
+                            {/* Rules chips */}
+                            {avail?.eligibilityMessage && !eligible ? (
+                              <p className="text-[10px] text-amber-600 font-medium">{avail.eligibilityMessage}</p>
+                            ) : (
+                              section.rules.filter((r) => r.enabled).length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {section.rules.filter((r) => r.enabled).map((rule) => (
+                                    <span key={rule.id} className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", COLOR_BADGE[section.color])}>
+                                      {rule.type === "max_weight" ? `≤${rule.value} lbs` :
+                                       rule.type === "min_weight" ? `≥${rule.value} lbs` :
+                                       rule.type === "pet_type" ? `${rule.value}s only` : "Rule"}
+                                    </span>
+                                  ))}
+                                </div>
+                              )
+                            )}
+
+                            {/* Capacity bar */}
+                            <div className="space-y-1">
+                              <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                                <div
+                                  className={cn("h-full rounded-full transition-all", COLOR_BAR[section.color])}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-muted-foreground">{section.capacity - remaining} used</span>
+                                <span className={cn("font-semibold tabular-nums",
+                                  isFull ? "text-destructive" : remaining <= 3 ? "text-orange-500" : "text-emerald-600",
+                                )}>
+                                  {isFull ? "Full" : `${remaining} / ${section.capacity} open`}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Assigned pets */}
+                            {hasAssigned && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {assignedPets.map((pet) => (
+                                  <span
+                                    key={pet.id}
+                                    className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md py-0.5 pr-2 pl-1 text-[11px] font-medium"
+                                  >
+                                    <span className="bg-primary/20 flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
+                                      {pet.name[0]}
+                                    </span>
+                                    {pet.name}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRoomAssignments(roomAssignments.filter((a) => a.petId !== pet.id));
+                                      }}
+                                      className="hover:text-destructive ml-0.5 transition-colors"
+                                    >×</button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Full / blocked overlays */}
+                            {isFull && !hasAssigned && (
+                              <p className="text-destructive text-[10px] font-semibold">Section full — waitlist only</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Daycare Add-Ons Sub-Step (uses configured add-ons from settings)
 // ============================================================================
 
@@ -711,7 +672,7 @@ function DaycareAddOnsSubStep({
       )}
 
       {isStepAccessible(2) && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {daycareAddOns.map((service) => {
             const totalQuantity = extraServices
               .filter((es) => es.serviceId === service.id)

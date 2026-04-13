@@ -203,6 +203,12 @@ export const newBookingSchema = z.object({
     .enum(["pending", "in_progress", "completed", "skipped"])
     .optional(),
   kennel: z.string().optional(),
+  /** Boarding: the specific FacilityRoom.id auto-assigned to this booking */
+  unitAssignment: z.string().optional(),
+  /** Daycare: the DaycareSection.id the pet was assigned to */
+  sectionId: z.string().optional(),
+  /** Grooming: the GroomingStation.id assigned to this booking */
+  stationAssignment: z.string().optional(),
   feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
   walkSchedule: z.string().optional(),
   medications: z.array(medicationItemSchema).optional(),

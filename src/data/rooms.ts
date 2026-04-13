@@ -125,56 +125,8 @@ export const roomCategories: RoomCategory[] = [
     ],
   },
 
-  // ── Daycare ──────────────────────────────────────────────────────────────
-  {
-    id: "cat-dc-main",
-    facilityId: FACILITY_ID,
-    service: "daycare",
-    name: "Playroom A",
-    description: "Main playroom for active dogs — large breed friendly, high energy",
-    color: "orange",
-    sortOrder: 1,
-    defaultCapacity: 15,
-    defaultBasePrice: 35,
-    visibleToClients: true,
-    rules: [],
-  },
-  {
-    id: "cat-dc-small",
-    facilityId: FACILITY_ID,
-    service: "daycare",
-    name: "Playroom B",
-    description: "Smaller play area for calm and petite dogs",
-    color: "emerald",
-    sortOrder: 2,
-    defaultCapacity: 10,
-    defaultBasePrice: 35,
-    visibleToClients: true,
-    rules: [
-      {
-        id: "rule-pb-1",
-        type: "max_weight",
-        value: 25,
-        clientMessage:
-          "Playroom B is designed for dogs up to 25 lbs. Larger dogs will love Playroom A instead.",
-        enabled: true,
-      },
-    ],
-  },
-  {
-    id: "cat-dc-quiet",
-    facilityId: FACILITY_ID,
-    service: "daycare",
-    name: "Quiet Zone",
-    description: "Low-energy sanctuary for senior pets and those needing a calmer environment",
-    color: "indigo",
-    sortOrder: 3,
-    defaultCapacity: 8,
-    defaultBasePrice: 30,
-    visibleToClients: true,
-    rules: [],
-  },
 ];
+// Note: daycare play areas and sections are managed in src/data/daycare-areas.ts
 
 // ── Individual Room Units ──────────────────────────────────────────────────────
 
@@ -221,11 +173,8 @@ export const facilityRooms: FacilityRoom[] = [
     ...(i >= 13 ? { staffNotes: "Pending deep clean & inspection" } : {}),
   })),
 
-  // Daycare rooms (1 "unit" per room — capacity is the room's pet limit)
-  { id: "room-dc-a", categoryId: "cat-dc-main", facilityId: FACILITY_ID, name: "Playroom A", active: true, capacity: 15 },
-  { id: "room-dc-b", categoryId: "cat-dc-small", facilityId: FACILITY_ID, name: "Playroom B", active: true, capacity: 10 },
-  { id: "room-dc-q", categoryId: "cat-dc-quiet", facilityId: FACILITY_ID, name: "Quiet Zone", active: true, capacity: 8 },
 ];
+// Note: daycare room units are now modelled as DaycareSection in src/data/daycare-areas.ts
 
 // ── Grooming Stations ──────────────────────────────────────────────────────────
 
@@ -274,20 +223,7 @@ export function getBoardingCapacityStats() {
   });
 }
 
+/** @deprecated Use getTotalDaycareCapacity() from src/data/daycare-areas.ts instead */
 export function getDaycareCapacityStats() {
-  const dcCats = roomCategories.filter(
-    (c) => c.facilityId === FACILITY_ID && c.service === "daycare",
-  );
-  return dcCats.map((cat) => {
-    const units = facilityRooms.filter((r) => r.categoryId === cat.id && r.active);
-    return {
-      categoryId: cat.id,
-      name: cat.name,
-      color: cat.color,
-      totalCapacity: units.reduce(
-        (sum, r) => sum + (r.capacity ?? cat.defaultCapacity),
-        0,
-      ),
-    };
-  });
+  return [];
 }

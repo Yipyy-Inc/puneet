@@ -233,6 +233,7 @@ export const groomingPackageSchema = z.object({
   assignedStylistIds: z.array(z.string()).optional(),
   requiresEvaluation: z.boolean().optional(),
   productUsage: z.array(productUsageSchema).optional(),
+  color: z.string().optional(),
 });
 export type GroomingPackage = z.infer<typeof groomingPackageSchema>;
 
