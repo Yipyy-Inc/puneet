@@ -5,9 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import {
-  getModuleWorkflowQuestionnaire,
-} from "@/data/custom-services";
+import { getModuleWorkflowQuestionnaire } from "@/data/custom-services";
 import { bookings } from "@/data/bookings";
 import { clients } from "@/data/clients";
 import { customServiceCheckIns } from "@/data/custom-service-checkins";
@@ -19,10 +17,7 @@ import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { CustomServiceModule } from "@/types/facility";
 import type { Pet } from "@/types/pet";
-import {
-  OperationsCalendarConfigPanel,
-  type ManualEventDraft,
-} from "@/components/facility/operations/OperationsCalendarConfigPanel";
+import { type ManualEventDraft } from "@/components/facility/operations/OperationsCalendarConfigPanel";
 import { OperationsCalendarContent } from "@/components/facility/operations/OperationsCalendarContent";
 import {
   type BookingDrawerAddOnItem,
@@ -30,7 +25,6 @@ import {
   OperationsCalendarEventDrawer,
 } from "@/components/facility/operations/OperationsCalendarEventDrawer";
 import { OperationsCalendarFiltersPanel } from "@/components/facility/operations/OperationsCalendarFiltersPanel";
-import { OperationsCalendarReportsPanel } from "@/components/facility/operations/OperationsCalendarReportsPanel";
 import {
   activeFiltersCount,
   canAccessSavedView,
@@ -78,7 +72,6 @@ import {
   getDaysForView,
   getTimelineSlotHeight,
   getViewWindow,
-  isCalendarView,
   isSameDay,
   parseDateKey,
   sortEvents,
@@ -128,7 +121,10 @@ type CalendarPermissionLevel =
   | "manager"
   | "admin";
 
-type CalendarVisibilityScope = "full-facility" | "own-schedule" | "selected-roles";
+type CalendarVisibilityScope =
+  | "full-facility"
+  | "own-schedule"
+  | "selected-roles";
 
 interface CalendarPermissionSet {
   level: CalendarPermissionLevel;
@@ -172,7 +168,9 @@ interface CalendarAuditEntry {
   details: Record<string, string | number | boolean | null | undefined>;
 }
 
-function parsePermissionLevelFromCookie(userRole: string): CalendarPermissionLevel {
+function parsePermissionLevelFromCookie(
+  userRole: string,
+): CalendarPermissionLevel {
   if (typeof document !== "undefined") {
     const cookieMatch = document.cookie.match(
       /(?:^|;\s*)calendar_permission_level=([^;]+)/,
@@ -242,7 +240,9 @@ function parseVisibilityRolesFromCookie(): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-function buildPermissionSet(level: CalendarPermissionLevel): CalendarPermissionSet {
+function buildPermissionSet(
+  level: CalendarPermissionLevel,
+): CalendarPermissionSet {
   return {
     level,
     canCompleteTasks:
@@ -374,7 +374,9 @@ function createDefaultNotesState(): {
   };
 }
 
-function mapBookingToAddOns(source: Booking[]): Record<number, BookingDrawerAddOnItem[]> {
+function mapBookingToAddOns(
+  source: Booking[],
+): Record<number, BookingDrawerAddOnItem[]> {
   const result: Record<number, BookingDrawerAddOnItem[]> = {};
 
   for (const booking of source) {
@@ -395,9 +397,14 @@ function mapBookingToAddOns(source: Booking[]): Record<number, BookingDrawerAddO
       };
     });
 
-    const deduped = [...invoiceAddOns, ...extraAddOns].filter((item, index, allItems) => {
-      return allItems.findIndex((candidate) => candidate.name === item.name) === index;
-    });
+    const deduped = [...invoiceAddOns, ...extraAddOns].filter(
+      (item, index, allItems) => {
+        return (
+          allItems.findIndex((candidate) => candidate.name === item.name) ===
+          index
+        );
+      },
+    );
 
     result[booking.id] = deduped;
   }
@@ -443,7 +450,9 @@ function shiftMinutes(base: Date, minutes: number): Date {
   return new Date(base.getTime() + minutes * 60 * 1000);
 }
 
-function escapeCsvCell(value: string | number | boolean | null | undefined): string {
+function escapeCsvCell(
+  value: string | number | boolean | null | undefined,
+): string {
   const normalized = value === null || value === undefined ? "" : String(value);
   if (/[",\n]/.test(normalized)) {
     return `"${normalized.replace(/"/g, '""')}"`;
@@ -451,7 +460,10 @@ function escapeCsvCell(value: string | number | boolean | null | undefined): str
   return normalized;
 }
 
-function buildCsv(headers: string[], rows: Array<Array<string | number | boolean | null | undefined>>): string {
+function buildCsv(
+  headers: string[],
+  rows: Array<Array<string | number | boolean | null | undefined>>,
+): string {
   const lines = [headers.map(escapeCsvCell).join(",")];
   for (const row of rows) {
     lines.push(row.map(escapeCsvCell).join(","));
@@ -463,14 +475,17 @@ function generateTasksFromCustomServiceWorkflow(
   checkIns: typeof customServiceCheckIns,
   modules: CustomServiceModule[],
 ): FacilityTask[] {
-  const moduleById = new Map(modules.map((serviceModule) => [serviceModule.id, serviceModule]));
+  const moduleById = new Map(
+    modules.map((serviceModule) => [serviceModule.id, serviceModule]),
+  );
 
   return checkIns.flatMap((checkIn, checkInIndex) => {
     const serviceModule = moduleById.get(checkIn.moduleId);
     if (!serviceModule) return [];
 
     const workflow = getModuleWorkflowQuestionnaire(serviceModule);
-    if (!workflow.generatesTasks || workflow.taskTemplates.length === 0) return [];
+    if (!workflow.generatesTasks || workflow.taskTemplates.length === 0)
+      return [];
 
     const start = new Date(checkIn.checkInTime);
     const checkoutBase = checkIn.checkOutTime
@@ -511,7 +526,8 @@ function generateTasksFromCustomServiceWorkflow(
         shiftPeriod: inferShiftFromHour(scheduledAt.getHours()),
         status: "pending",
         isOverdue: false,
-        isCritical: template.requiresPhotoProof || template.requiresCompletionNote,
+        isCritical:
+          template.requiresPhotoProof || template.requiresCompletionNote,
       } as FacilityTask;
     });
   });
@@ -522,7 +538,13 @@ export function OperationsCalendar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { activeModules, modules, resources } = useCustomServices();
-  const { daycare, boarding, grooming, training, serviceColorOverrides: colorOverrides } = useSettings();
+  const {
+    daycare,
+    boarding,
+    grooming,
+    training,
+    serviceColorOverrides: colorOverrides,
+  } = useSettings();
 
   const [userRole, setUserRole] = useState("facility_admin");
   const [userName, setUserName] = useState("Manager on Duty");
@@ -530,33 +552,43 @@ export function OperationsCalendar() {
 
   const [bookingRecords, setBookingRecords] = useState<Booking[]>(bookings);
   const [taskRecords, setTaskRecords] = useState<FacilityTask[]>(facilityTasks);
-  const [bookingAddOnState, setBookingAddOnState] = useState<Record<number, BookingDrawerAddOnItem[]>>(
-    () => mapBookingToAddOns(bookings),
-  );
+  const [bookingAddOnState, setBookingAddOnState] = useState<
+    Record<number, BookingDrawerAddOnItem[]>
+  >(() => mapBookingToAddOns(bookings));
 
-  const [taskCompletionAudit, setTaskCompletionAudit] = useState<TaskCompletionAuditEntry[]>([]);
-  const [completedAddOns, setCompletedAddOns] = useState<CompletedAddOnEntry[]>([]);
-  const [overdueMeta, setOverdueMeta] = useState<Record<string, OverdueMeta>>({});
+  const [taskCompletionAudit, setTaskCompletionAudit] = useState<
+    TaskCompletionAuditEntry[]
+  >([]);
+  const [completedAddOns, setCompletedAddOns] = useState<CompletedAddOnEntry[]>(
+    [],
+  );
+  const [overdueMeta, setOverdueMeta] = useState<Record<string, OverdueMeta>>(
+    {},
+  );
   const [managerAlerts, setManagerAlerts] = useState<ManagerAlert[]>([]);
-  const [calendarAuditLog, setCalendarAuditLog] = useState<CalendarAuditEntry[]>([]);
+  const [calendarAuditLog, setCalendarAuditLog] = useState<
+    CalendarAuditEntry[]
+  >([]);
   const [clockTimestamp, setClockTimestamp] = useState(0);
 
-  const [permissionLevel, setPermissionLevel] = useState<CalendarPermissionLevel>("admin");
-  const [visibilityScope, setVisibilityScope] = useState<CalendarVisibilityScope>(
-    "full-facility",
-  );
+  const [permissionLevel, setPermissionLevel] =
+    useState<CalendarPermissionLevel>("admin");
+  const [visibilityScope, setVisibilityScope] =
+    useState<CalendarVisibilityScope>("full-facility");
   const [visibilityRoles, setVisibilityRoles] = useState<string[]>([]);
 
   const [axisMode, setAxisMode] = useState<CalendarAxisMode>(() => {
     return "master";
   });
 
-  const [selectedResourceType, setSelectedResourceType] = useState<string>(() => {
-    const incoming = searchParams.get("resourceType");
-    if (incoming && incoming.length > 0) return incoming;
-    if (typeof window === "undefined") return "pool";
-    return localStorage.getItem(CALENDAR_RESOURCE_TYPE_KEY) ?? "pool";
-  });
+  const [selectedResourceType, setSelectedResourceType] = useState<string>(
+    () => {
+      const incoming = searchParams.get("resourceType");
+      if (incoming && incoming.length > 0) return incoming;
+      if (typeof window === "undefined") return "pool";
+      return localStorage.getItem(CALENDAR_RESOURCE_TYPE_KEY) ?? "pool";
+    },
+  );
 
   const [showReports, setShowReports] = useState<boolean>(() => {
     return false;
@@ -580,7 +612,9 @@ export function OperationsCalendar() {
 
   const [filters, setFilters] = useState<OperationsCalendarFilters>(() => ({
     ...OPERATIONS_CALENDAR_EMPTY_FILTERS,
-    modules: parseCsv(searchParams.get("modules") ?? searchParams.get("services")),
+    modules: parseCsv(
+      searchParams.get("modules") ?? searchParams.get("services"),
+    ),
   }));
 
   const [visualConfig, setVisualConfig] = useState<CalendarVisualConfig>(() => {
@@ -607,27 +641,28 @@ export function OperationsCalendar() {
         colorMode === "staff-member" ||
         colorMode === "status"
           ? colorMode
-          : stored.colorMode ?? DEFAULT_VISUAL_CONFIG.colorMode,
+          : (stored.colorMode ?? DEFAULT_VISUAL_CONFIG.colorMode),
       colorStyle:
         colorStyle === "stripe" || colorStyle === "full-background"
           ? colorStyle
-          : stored.colorStyle ?? DEFAULT_VISUAL_CONFIG.colorStyle,
+          : (stored.colorStyle ?? DEFAULT_VISUAL_CONFIG.colorStyle),
       zoomLevel:
         zoomLevel === "compact" ||
         zoomLevel === "comfortable" ||
         zoomLevel === "expanded"
           ? zoomLevel
-          : stored.zoomLevel ?? DEFAULT_VISUAL_CONFIG.zoomLevel,
+          : (stored.zoomLevel ?? DEFAULT_VISUAL_CONFIG.zoomLevel),
       addOnDisplayMode:
         addOnMode === "nested" || addOnMode === "separate"
           ? addOnMode
-          : stored.addOnDisplayMode ?? DEFAULT_VISUAL_CONFIG.addOnDisplayMode,
+          : (stored.addOnDisplayMode ?? DEFAULT_VISUAL_CONFIG.addOnDisplayMode),
       completedTaskDecoration:
         taskDecoration === "none" ||
         taskDecoration === "checkmark" ||
         taskDecoration === "strikethrough"
           ? taskDecoration
-          : stored.completedTaskDecoration ?? DEFAULT_VISUAL_CONFIG.completedTaskDecoration,
+          : (stored.completedTaskDecoration ??
+            DEFAULT_VISUAL_CONFIG.completedTaskDecoration),
     };
   });
 
@@ -641,12 +676,12 @@ export function OperationsCalendar() {
 
   const [showEventCreator, setShowEventCreator] = useState(false);
   const [manualEventDraft, setManualEventDraft] = useState(DEFAULT_DRAFT);
-  const [manualFacilityEvents, setManualFacilityEvents] = useState<ManualFacilityEvent[]>(() =>
-    loadStoredJson<ManualFacilityEvent[]>(MANUAL_EVENTS_KEY, []),
-  );
+  const [manualFacilityEvents, setManualFacilityEvents] = useState<
+    ManualFacilityEvent[]
+  >(() => loadStoredJson<ManualFacilityEvent[]>(MANUAL_EVENTS_KEY, []));
 
-  const [savedViews, setSavedViews] = useState<OperationsCalendarSavedView[]>(() =>
-    loadStoredJson<OperationsCalendarSavedView[]>(SAVED_VIEWS_KEY, []),
+  const [savedViews, setSavedViews] = useState<OperationsCalendarSavedView[]>(
+    () => loadStoredJson<OperationsCalendarSavedView[]>(SAVED_VIEWS_KEY, []),
   );
   const [selectedSavedViewId, setSelectedSavedViewId] = useState<string>("");
 
@@ -659,9 +694,18 @@ export function OperationsCalendar() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [bookingTabMemory, setBookingTabMemory] = useState<Record<number, BookingDrawerTab>>({});
+  const [bookingTabMemory, setBookingTabMemory] = useState<
+    Record<number, BookingDrawerTab>
+  >({});
   const [noteStateByBooking, setNoteStateByBooking] = useState<
-    Record<number, { booking: NoteSectionState; pet: NoteSectionState; customer: NoteSectionState }>
+    Record<
+      number,
+      {
+        booking: NoteSectionState;
+        pet: NoteSectionState;
+        customer: NoteSectionState;
+      }
+    >
   >({});
 
   const initialFocusNow = useRef(searchParams.get("focus") === "now");
@@ -687,7 +731,10 @@ export function OperationsCalendar() {
   }, [visualConfig]);
 
   useEffect(() => {
-    localStorage.setItem(MANUAL_EVENTS_KEY, JSON.stringify(manualFacilityEvents));
+    localStorage.setItem(
+      MANUAL_EVENTS_KEY,
+      JSON.stringify(manualFacilityEvents),
+    );
   }, [manualFacilityEvents]);
 
   useEffect(() => {
@@ -711,7 +758,8 @@ export function OperationsCalendar() {
   const canCreateBookingShortcut = permissions.canEditBookings;
 
   const generatedWorkflowTasks = useMemo(
-    () => generateTasksFromCustomServiceWorkflow(customServiceCheckIns, modules),
+    () =>
+      generateTasksFromCustomServiceWorkflow(customServiceCheckIns, modules),
     [modules],
   );
 
@@ -789,7 +837,11 @@ export function OperationsCalendar() {
 
   const roleOptions = useMemo(() => {
     return Array.from(
-      new Set(users.map((user) => user.role).concat(filterOptions.staffRoles.map((role) => role.value))),
+      new Set(
+        users
+          .map((user) => user.role)
+          .concat(filterOptions.staffRoles.map((role) => role.value)),
+      ),
     ).sort((first, second) => first.localeCompare(second));
   }, [filterOptions.staffRoles]);
 
@@ -803,7 +855,8 @@ export function OperationsCalendar() {
   }, [daycare.color, boarding.color, grooming.color, training.color]);
 
   const serviceColorMap = useMemo(
-    () => buildServiceColorMap(activeModules, colorOverrides, builtInColorSettings),
+    () =>
+      buildServiceColorMap(activeModules, colorOverrides, builtInColorSettings),
     [activeModules, colorOverrides, builtInColorSettings],
   );
 
@@ -824,7 +877,9 @@ export function OperationsCalendar() {
   useEffect(() => {
     if (resourceTypeOptions.length === 0) return;
     if (
-      !resourceTypeOptions.some((option) => option.value === selectedResourceType)
+      !resourceTypeOptions.some(
+        (option) => option.value === selectedResourceType,
+      )
     ) {
       setSelectedResourceType(resourceTypeOptions[0].value);
     }
@@ -887,16 +942,25 @@ export function OperationsCalendar() {
     [resourceCalendarOptions, selectedResourceType],
   );
 
-  const calendarWindow = useMemo(() => getViewWindow(anchorDate, view), [anchorDate, view]);
+  const calendarWindow = useMemo(
+    () => getViewWindow(anchorDate, view),
+    [anchorDate, view],
+  );
 
   const visibleEvents = useMemo(() => {
-    return filteredEvents.filter((event) => eventIntersectsWindow(event, calendarWindow));
+    return filteredEvents.filter((event) =>
+      eventIntersectsWindow(event, calendarWindow),
+    );
   }, [filteredEvents, calendarWindow]);
 
-  const days = useMemo(() => getDaysForView(anchorDate, view), [anchorDate, view]);
+  const days = useMemo(
+    () => getDaysForView(anchorDate, view),
+    [anchorDate, view],
+  );
 
   const availableSavedViews = useMemo(
-    () => savedViews.filter((savedView) => canAccessSavedView(savedView, userRole)),
+    () =>
+      savedViews.filter((savedView) => canAccessSavedView(savedView, userRole)),
     [savedViews, userRole],
   );
 
@@ -967,7 +1031,10 @@ export function OperationsCalendar() {
 
     const now = new Date();
     const slotHeight = getTimelineSlotHeight(visualConfig.zoomLevel);
-    timelineRef.current.scrollTop = Math.max(0, (now.getHours() - 1) * slotHeight);
+    timelineRef.current.scrollTop = Math.max(
+      0,
+      (now.getHours() - 1) * slotHeight,
+    );
     didAutoScroll.current = true;
   }, [anchorDate, view, visualConfig.zoomLevel]);
 
@@ -979,23 +1046,26 @@ export function OperationsCalendar() {
     }
   }, [eventLookup, selectedEventId]);
 
-  const appendAuditEntry = useCallback((
-    action: CalendarAuditEntry["action"],
-    details: CalendarAuditEntry["details"],
-  ) => {
-    setCalendarAuditLog((previous) => [
-      {
-        id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        action,
-        actorUserId: userId,
-        actorName: userName,
-        actorRole: userRole,
-        timestamp: new Date().toISOString(),
-        details,
-      },
-      ...previous,
-    ]);
-  }, [userId, userName, userRole]);
+  const appendAuditEntry = useCallback(
+    (
+      action: CalendarAuditEntry["action"],
+      details: CalendarAuditEntry["details"],
+    ) => {
+      setCalendarAuditLog((previous) => [
+        {
+          id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          action,
+          actorUserId: userId,
+          actorName: userName,
+          actorRole: userRole,
+          timestamp: new Date().toISOString(),
+          details,
+        },
+        ...previous,
+      ]);
+    },
+    [userId, userName, userRole],
+  );
 
   useEffect(() => {
     const now = new Date();
@@ -1093,7 +1163,8 @@ export function OperationsCalendar() {
           if (meta && !meta.reminderSentAt) {
             const rule = TASK_COMPLETION_RULES[task.category];
             const elapsedMinutes =
-              (now.getTime() - new Date(meta.alertedAt).getTime()) / (60 * 1000);
+              (now.getTime() - new Date(meta.alertedAt).getTime()) /
+              (60 * 1000);
 
             if (elapsedMinutes >= rule.overdueReminderMinutes) {
               meta.reminderSentAt = now.toISOString();
@@ -1131,7 +1202,9 @@ export function OperationsCalendar() {
     }
 
     if (freshAlerts.length > 0) {
-      setManagerAlerts((previous) => [...freshAlerts, ...previous].slice(0, 80));
+      setManagerAlerts((previous) =>
+        [...freshAlerts, ...previous].slice(0, 80),
+      );
     }
 
     if (auditTrailEvents.length > 0) {
@@ -1161,7 +1234,9 @@ export function OperationsCalendar() {
   );
 
   const activeCount = activeFiltersCount(filters);
-  const selectedEvent = selectedEventId ? eventLookup.get(selectedEventId) ?? null : null;
+  const selectedEvent = selectedEventId
+    ? (eventLookup.get(selectedEventId) ?? null)
+    : null;
 
   const moduleById = useMemo(
     () => new Map(activeModules.map((module) => [module.id, module])),
@@ -1196,15 +1271,16 @@ export function OperationsCalendar() {
     [selectedServiceModule],
   );
 
-  const selectedSupportsCheckInOut =
-    selectedWorkflow?.requiresCheckInOut;
+  const selectedSupportsCheckInOut = selectedWorkflow?.requiresCheckInOut;
   const selectedAllowsAddOns = selectedWorkflow
     ? selectedWorkflow.allowsAddOns
     : true;
 
   const selectedBooking = useMemo(() => {
     if (!selectedEvent?.bookingId) return undefined;
-    return bookingRecords.find((booking) => booking.id === selectedEvent.bookingId);
+    return bookingRecords.find(
+      (booking) => booking.id === selectedEvent.bookingId,
+    );
   }, [bookingRecords, selectedEvent]);
 
   const selectedTask = useMemo(() => {
@@ -1245,11 +1321,15 @@ export function OperationsCalendar() {
           task.petId === selectedTask.petId &&
           task.name === selectedTask.name,
       )
-      .sort((first, second) => parseTaskDueDate(first).getTime() - parseTaskDueDate(second).getTime());
+      .sort(
+        (first, second) =>
+          parseTaskDueDate(first).getTime() -
+          parseTaskDueDate(second).getTime(),
+      );
   }, [selectedTask, taskRecords]);
 
   const selectedBookingAddOns = selectedBooking
-    ? bookingAddOnState[selectedBooking.id] ?? []
+    ? (bookingAddOnState[selectedBooking.id] ?? [])
     : [];
 
   useEffect(() => {
@@ -1289,7 +1369,7 @@ export function OperationsCalendar() {
       : createDefaultNotesState();
 
   const activeBookingTab: BookingDrawerTab = selectedBooking
-    ? bookingTabMemory[selectedBooking.id] ?? "summary"
+    ? (bookingTabMemory[selectedBooking.id] ?? "summary")
     : "summary";
 
   useEffect(() => {
@@ -1309,7 +1389,9 @@ export function OperationsCalendar() {
     const todaysBookings = bookingRecords.filter(
       (booking) => booking.startDate === reportDateKey,
     );
-    const todaysTasks = taskRecords.filter((task) => task.scheduledDate === reportDateKey);
+    const todaysTasks = taskRecords.filter(
+      (task) => task.scheduledDate === reportDateKey,
+    );
     const todaysManualEvents = manualFacilityEvents.filter(
       (event) => !event.deletedAt && event.start.startsWith(reportDateKey),
     );
@@ -1317,11 +1399,18 @@ export function OperationsCalendar() {
     return {
       dateLabel: anchorDate.toLocaleDateString(),
       bookingsScheduled: todaysBookings.length,
-      checkedIn: todaysBookings.filter((booking) => booking.status === "in_progress").length,
-      checkedOut: todaysBookings.filter((booking) => booking.status === "completed").length,
-      cancelled: todaysBookings.filter((booking) => booking.status === "cancelled").length,
+      checkedIn: todaysBookings.filter(
+        (booking) => booking.status === "in_progress",
+      ).length,
+      checkedOut: todaysBookings.filter(
+        (booking) => booking.status === "completed",
+      ).length,
+      cancelled: todaysBookings.filter(
+        (booking) => booking.status === "cancelled",
+      ).length,
       tasksDue: todaysTasks.length,
-      overdueTasks: todaysTasks.filter((task) => task.status === "overdue").length,
+      overdueTasks: todaysTasks.filter((task) => task.status === "overdue")
+        .length,
       facilityEvents: todaysManualEvents.length,
     };
   }, [anchorDate, bookingRecords, manualFacilityEvents, taskRecords]);
@@ -1374,7 +1463,8 @@ export function OperationsCalendar() {
       }).length,
       escalationOpen: taskRecords.filter(
         (task) =>
-          task.status !== "completed" && task.name.toLowerCase().startsWith("escalation:"),
+          task.status !== "completed" &&
+          task.name.toLowerCase().startsWith("escalation:"),
       ).length,
       managerAlerts: managerAlerts.length,
     };
@@ -1383,7 +1473,12 @@ export function OperationsCalendar() {
   const reportServiceUtilization = useMemo(() => {
     const aggregate = new Map<
       string,
-      { key: string; label: string; eventCount: number; scheduledMinutes: number }
+      {
+        key: string;
+        label: string;
+        eventCount: number;
+        scheduledMinutes: number;
+      }
     >();
 
     const reportWindowMinutes = Math.max(
@@ -1395,8 +1490,14 @@ export function OperationsCalendar() {
     );
 
     for (const event of visibleEvents) {
-      const boundedStart = Math.max(event.start.getTime(), calendarWindow.start.getTime());
-      const boundedEnd = Math.min(event.end.getTime(), calendarWindow.end.getTime());
+      const boundedStart = Math.max(
+        event.start.getTime(),
+        calendarWindow.start.getTime(),
+      );
+      const boundedEnd = Math.min(
+        event.end.getTime(),
+        calendarWindow.end.getTime(),
+      );
       const durationMinutes = Math.max(
         0,
         Math.round((boundedEnd - boundedStart) / (60 * 1000)),
@@ -1421,13 +1522,20 @@ export function OperationsCalendar() {
         ...row,
         utilizationPercent: (row.scheduledMinutes / reportWindowMinutes) * 100,
       }))
-      .sort((first, second) => second.scheduledMinutes - first.scheduledMinutes);
+      .sort(
+        (first, second) => second.scheduledMinutes - first.scheduledMinutes,
+      );
   }, [calendarWindow.end, calendarWindow.start, visibleEvents]);
 
   const reportResourceUtilization = useMemo(() => {
     const aggregate = new Map<
       string,
-      { key: string; label: string; eventCount: number; scheduledMinutes: number }
+      {
+        key: string;
+        label: string;
+        eventCount: number;
+        scheduledMinutes: number;
+      }
     >();
 
     const reportWindowMinutes = Math.max(
@@ -1441,8 +1549,14 @@ export function OperationsCalendar() {
     for (const event of visibleEvents) {
       if (!event.resource) continue;
 
-      const boundedStart = Math.max(event.start.getTime(), calendarWindow.start.getTime());
-      const boundedEnd = Math.min(event.end.getTime(), calendarWindow.end.getTime());
+      const boundedStart = Math.max(
+        event.start.getTime(),
+        calendarWindow.start.getTime(),
+      );
+      const boundedEnd = Math.min(
+        event.end.getTime(),
+        calendarWindow.end.getTime(),
+      );
       const durationMinutes = Math.max(
         0,
         Math.round((boundedEnd - boundedStart) / (60 * 1000)),
@@ -1468,7 +1582,9 @@ export function OperationsCalendar() {
         ...row,
         utilizationPercent: (row.scheduledMinutes / reportWindowMinutes) * 100,
       }))
-      .sort((first, second) => second.scheduledMinutes - first.scheduledMinutes);
+      .sort(
+        (first, second) => second.scheduledMinutes - first.scheduledMinutes,
+      );
   }, [calendarWindow.end, calendarWindow.start, visibleEvents]);
 
   const onExportReport = (
@@ -1529,7 +1645,13 @@ export function OperationsCalendar() {
     if (scope === "overdue") {
       csvContent = buildCsv(
         ["overdueOpen", "escalationOpen", "managerAlerts"],
-        [[reportOverdueSummary.overdueOpen, reportOverdueSummary.escalationOpen, reportOverdueSummary.managerAlerts]],
+        [
+          [
+            reportOverdueSummary.overdueOpen,
+            reportOverdueSummary.escalationOpen,
+            reportOverdueSummary.managerAlerts,
+          ],
+        ],
       );
     }
 
@@ -1671,7 +1793,8 @@ export function OperationsCalendar() {
         createdAt: new Date().toISOString(),
         createdByRole: userRole,
         createdByName: userName,
-        privateToUser: event.visibility === "internal-only" ? userId : undefined,
+        privateToUser:
+          event.visibility === "internal-only" ? userId : undefined,
       },
       ...previous,
     ]);
@@ -1792,11 +1915,15 @@ export function OperationsCalendar() {
 
   const applySavedView = (savedViewId: string) => {
     setSelectedSavedViewId(savedViewId);
-    const savedView = availableSavedViews.find((candidate) => candidate.id === savedViewId);
+    const savedView = availableSavedViews.find(
+      (candidate) => candidate.id === savedViewId,
+    );
     if (!savedView) return;
 
     setView(
-      savedView.view === "day" || savedView.view === "week" || savedView.view === "month"
+      savedView.view === "day" ||
+        savedView.view === "week" ||
+        savedView.view === "month"
         ? savedView.view
         : "week",
     );
@@ -1819,7 +1946,9 @@ export function OperationsCalendar() {
   };
 
   const deleteSavedView = (savedViewId: string) => {
-    const targetView = availableSavedViews.find((viewItem) => viewItem.id === savedViewId);
+    const targetView = availableSavedViews.find(
+      (viewItem) => viewItem.id === savedViewId,
+    );
     if (!targetView) {
       return;
     }
@@ -1832,7 +1961,9 @@ export function OperationsCalendar() {
       return;
     }
 
-    setSavedViews((previous) => previous.filter((viewItem) => viewItem.id !== savedViewId));
+    setSavedViews((previous) =>
+      previous.filter((viewItem) => viewItem.id !== savedViewId),
+    );
     if (selectedSavedViewId === savedViewId) {
       setSelectedSavedViewId("");
     }
@@ -1851,12 +1982,15 @@ export function OperationsCalendar() {
 
     // Add-on events — find the matching add-on in bookingAddOnState and mark complete
     if (event.type === "add-on" && event.bookingId) {
-      const addOnName = event.addOns[0]?.name ?? event.title.split("—")[0]?.trim();
+      const addOnName =
+        event.addOns[0]?.name ?? event.title.split("—")[0]?.trim();
       if (!addOnName) return;
 
       const addOns = bookingAddOnState[event.bookingId] ?? [];
       const match = addOns.find(
-        (a) => a.name.toLowerCase() === addOnName.toLowerCase() && a.status !== "completed",
+        (a) =>
+          a.name.toLowerCase() === addOnName.toLowerCase() &&
+          a.status !== "completed",
       );
 
       if (match) {
@@ -1865,7 +1999,11 @@ export function OperationsCalendar() {
         // Already completed or no match — still track it
         setCompletedAddOns((prev) => [
           ...prev.filter(
-            (e) => !(e.bookingId === event.bookingId && e.addOnName.toLowerCase() === addOnName.toLowerCase()),
+            (e) =>
+              !(
+                e.bookingId === event.bookingId &&
+                e.addOnName.toLowerCase() === addOnName.toLowerCase()
+              ),
           ),
           {
             addOnName,
@@ -1893,7 +2031,8 @@ export function OperationsCalendar() {
     } else if (event.type === "booking" && event.bookingId) {
       setBookingTabMemory((previous) => ({
         ...previous,
-        [event.bookingId as number]: previous[event.bookingId as number] ?? "summary",
+        [event.bookingId as number]:
+          previous[event.bookingId as number] ?? "summary",
       }));
     } else if (event.type === "task" && event.bookingId) {
       setBookingTabMemory((previous) => ({
@@ -1943,14 +2082,18 @@ export function OperationsCalendar() {
       if (!options?.bypassPrompts) {
         if (rule.noteRequired) {
           completionNote =
-            window.prompt("Completion note is required for this task", completionNote) ?? "";
+            window.prompt(
+              "Completion note is required for this task",
+              completionNote,
+            ) ?? "";
           if (!completionNote.trim()) {
             toast.error("Completion note is required");
             return previous;
           }
         } else if (target.status === "overdue") {
           completionNote =
-            window.prompt("Add completion note (optional)", completionNote) ?? completionNote;
+            window.prompt("Add completion note (optional)", completionNote) ??
+            completionNote;
         }
 
         if (rule.photoRequired) {
@@ -2020,13 +2163,15 @@ export function OperationsCalendar() {
 
     if (bookingNote) {
       setNoteStateByBooking((previous) => {
-        const existing = previous[bookingNote.bookingId] ?? createDefaultNotesState();
+        const existing =
+          previous[bookingNote.bookingId] ?? createDefaultNotesState();
         return {
           ...previous,
           [bookingNote.bookingId]: {
             ...existing,
             booking: {
-              content: `${existing.booking.content}\n${bookingNote.note}`.trim(),
+              content:
+                `${existing.booking.content}\n${bookingNote.note}`.trim(),
               lastEditedBy: userName,
               lastEditedAt: new Date().toISOString(),
             },
@@ -2053,7 +2198,9 @@ export function OperationsCalendar() {
       return;
     }
 
-    const hasOverdue = bookingTaskItems.some((task) => task.status === "overdue");
+    const hasOverdue = bookingTaskItems.some(
+      (task) => task.status === "overdue",
+    );
     if (hasOverdue) {
       const confirmed = window.confirm(
         "Some tasks are overdue. Mark all open tasks complete?",
@@ -2104,7 +2251,10 @@ export function OperationsCalendar() {
         "Outstanding balance exists. Open invoice in POS after check-out?",
       );
       if (openInvoice) {
-        window.open(`/facility/dashboard/services/retail?bookingId=${bookingId}`, "_blank");
+        window.open(
+          `/facility/dashboard/services/retail?bookingId=${bookingId}`,
+          "_blank",
+        );
       }
     }
 
@@ -2123,7 +2273,11 @@ export function OperationsCalendar() {
     toast.success(`Checked out by ${toDisplayRole(userRole)}`);
   };
 
-  const assignBookingStaff = (bookingId: number, primary: string, secondary?: string) => {
+  const assignBookingStaff = (
+    bookingId: number,
+    primary: string,
+    secondary?: string,
+  ) => {
     if (!permissions.canEditBookings) {
       toast.error("You do not have permission to reassign bookings");
       return;
@@ -2159,7 +2313,9 @@ export function OperationsCalendar() {
 
   const addBookingTask = (bookingId: number, task: Partial<FacilityTask>) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to add tasks from booking drawer");
+      toast.error(
+        "You do not have permission to add tasks from booking drawer",
+      );
       return;
     }
 
@@ -2182,7 +2338,9 @@ export function OperationsCalendar() {
         clients
           .flatMap((client) => client.pets)
           .find((pet) => pet.id === bookingPetId)?.name ?? "Pet",
-      ownerName: clients.find((client) => client.id === booking.clientId)?.name ?? "Owner",
+      ownerName:
+        clients.find((client) => client.id === booking.clientId)?.name ??
+        "Owner",
       name: task.name ?? "New task",
       description: task.description,
       category: task.category ?? "care",
@@ -2191,7 +2349,9 @@ export function OperationsCalendar() {
       autoAssigned: false,
       scheduledDate,
       scheduledTime: task.scheduledTime ?? "10:00",
-      shiftPeriod: inferShiftFromHour(Number((task.scheduledTime ?? "10:00").split(":")[0])),
+      shiftPeriod: inferShiftFromHour(
+        Number((task.scheduledTime ?? "10:00").split(":")[0]),
+      ),
       status: "pending",
       isOverdue: false,
       isCritical: false,
@@ -2207,7 +2367,10 @@ export function OperationsCalendar() {
     toast.success("Task linked to booking");
   };
 
-  const addBookingAddOn = (bookingId: number, addOn: BookingDrawerAddOnItem) => {
+  const addBookingAddOn = (
+    bookingId: number,
+    addOn: BookingDrawerAddOnItem,
+  ) => {
     if (!permissions.canEditBookings) {
       toast.error("You do not have permission to modify add-ons");
       return;
@@ -2223,7 +2386,13 @@ export function OperationsCalendar() {
         if (booking.id !== bookingId) return booking;
 
         const extras = booking.extraServices ?? [];
-        if (extras.some((entry) => (typeof entry === "string" ? entry : entry.serviceId) === addOn.name)) {
+        if (
+          extras.some(
+            (entry) =>
+              (typeof entry === "string" ? entry : entry.serviceId) ===
+              addOn.name,
+          )
+        ) {
           return booking;
         }
 
@@ -2255,11 +2424,17 @@ export function OperationsCalendar() {
     // If the add-on is being marked completed, track the completion with
     // timestamp and staff info so the calendar event turns grey.
     if (updates.status === "completed") {
-      const addOnItem = bookingAddOnState[bookingId]?.find((item) => item.id === addOnId);
+      const addOnItem = bookingAddOnState[bookingId]?.find(
+        (item) => item.id === addOnId,
+      );
       if (addOnItem) {
         setCompletedAddOns((previous) => [
           ...previous.filter(
-            (entry) => !(entry.bookingId === bookingId && entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()),
+            (entry) =>
+              !(
+                entry.bookingId === bookingId &&
+                entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()
+              ),
           ),
           {
             addOnName: addOnItem.name,
@@ -2273,11 +2448,17 @@ export function OperationsCalendar() {
       }
     } else if (updates.status === "pending") {
       // If reverting to pending, remove from completed tracking
-      const addOnItem = bookingAddOnState[bookingId]?.find((item) => item.id === addOnId);
+      const addOnItem = bookingAddOnState[bookingId]?.find(
+        (item) => item.id === addOnId,
+      );
       if (addOnItem) {
         setCompletedAddOns((previous) =>
           previous.filter(
-            (entry) => !(entry.bookingId === bookingId && entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()),
+            (entry) =>
+              !(
+                entry.bookingId === bookingId &&
+                entry.addOnName.toLowerCase() === addOnItem.name.toLowerCase()
+              ),
           ),
         );
       }
@@ -2297,7 +2478,8 @@ export function OperationsCalendar() {
 
     appendAuditEntry("booking_edited", {
       bookingId,
-      field: updates.status === "completed" ? "addon-completed" : "addon-updated",
+      field:
+        updates.status === "completed" ? "addon-completed" : "addon-updated",
       addOnId,
     });
   };
@@ -2308,11 +2490,15 @@ export function OperationsCalendar() {
       return;
     }
 
-    const removedName = bookingAddOnState[bookingId]?.find((item) => item.id === addOnId)?.name;
+    const removedName = bookingAddOnState[bookingId]?.find(
+      (item) => item.id === addOnId,
+    )?.name;
 
     setBookingAddOnState((previous) => ({
       ...previous,
-      [bookingId]: (previous[bookingId] ?? []).filter((item) => item.id !== addOnId),
+      [bookingId]: (previous[bookingId] ?? []).filter(
+        (item) => item.id !== addOnId,
+      ),
     }));
 
     if (removedName) {
@@ -2353,7 +2539,8 @@ export function OperationsCalendar() {
     if (!selectedBooking) return;
 
     setNoteStateByBooking((previous) => {
-      const existing = previous[selectedBooking.id] ?? createDefaultNotesState();
+      const existing =
+        previous[selectedBooking.id] ?? createDefaultNotesState();
       return {
         ...previous,
         [selectedBooking.id]: {
@@ -2377,7 +2564,9 @@ export function OperationsCalendar() {
 
   const messageCustomer = (bookingId: number) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to message customers from calendar");
+      toast.error(
+        "You do not have permission to message customers from calendar",
+      );
       return;
     }
 
@@ -2404,7 +2593,10 @@ export function OperationsCalendar() {
       return;
     }
 
-    window.open(`/facility/dashboard/bookings?bookingId=${bookingId}&mode=reschedule`, "_blank");
+    window.open(
+      `/facility/dashboard/bookings?bookingId=${bookingId}&mode=reschedule`,
+      "_blank",
+    );
     appendAuditEntry("booking_rescheduled", {
       bookingId,
       source: "calendar-reschedule-shortcut",
@@ -2442,7 +2634,10 @@ export function OperationsCalendar() {
     toast.success("Booking cancelled");
   };
 
-  const updateManualEvent = (eventId: string, updates: Partial<ManualFacilityEvent>) => {
+  const updateManualEvent = (
+    eventId: string,
+    updates: Partial<ManualFacilityEvent>,
+  ) => {
     if (!permissions.canCreateCustomEvents) {
       toast.error("You do not have permission to edit custom events");
       return;
@@ -2534,7 +2729,9 @@ export function OperationsCalendar() {
 
   const onCreateBookingShortcut = (seed: NewEventSeed) => {
     if (!permissions.canEditBookings) {
-      toast.error("You do not have permission to create bookings from calendar");
+      toast.error(
+        "You do not have permission to create bookings from calendar",
+      );
       return;
     }
 
@@ -2547,7 +2744,9 @@ export function OperationsCalendar() {
     if (axisMode === "resource" && selectedResourceOption) {
       const defaultResourceName = selectedResourceOption.resources[0]?.name;
       const resourceName =
-        window.prompt("Assign resource for this booking", defaultResourceName ?? "")?.trim() ?? "";
+        window
+          .prompt("Assign resource for this booking", defaultResourceName ?? "")
+          ?.trim() ?? "";
 
       if (resourceName.length > 0) {
         const start = new Date(`${seed.date}T${seed.time}:00`);
@@ -2603,7 +2802,7 @@ export function OperationsCalendar() {
   const rangeLabel = formatRangeLabel(anchorDate, view);
 
   return (
-    <div className="flex bg-slate-50 min-h-[calc(100vh-4rem)] animate-in fade-in duration-700 ease-in-out">
+    <div className="animate-in fade-in flex min-h-[calc(100vh-4rem)] bg-slate-50 duration-700 ease-in-out">
       {/* Left sidebar: mini calendar + stats */}
       <OperationsCalendarSidePanel
         anchorDate={anchorDate}
@@ -2615,7 +2814,7 @@ export function OperationsCalendar() {
       />
 
       {/* Main calendar area */}
-      <div className="flex-1 min-w-0 flex flex-col space-y-4 p-4 pt-6 md:p-6 overflow-auto">
+      <div className="flex min-w-0 flex-1 flex-col space-y-4 overflow-auto p-4 pt-6 md:p-6">
         <OperationsCalendarToolbar
           view={view}
           onViewChange={setView}

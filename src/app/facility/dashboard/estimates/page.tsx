@@ -81,7 +81,9 @@ export default function EstimatesPage() {
           e.estimateId.toLowerCase().includes(q) ||
           (e.convertedBookingId != null &&
             (String(e.convertedBookingId).includes(q) ||
-              formatBookingRef(e.convertedBookingId).toLowerCase().includes(q))),
+              formatBookingRef(e.convertedBookingId)
+                .toLowerCase()
+                .includes(q))),
       );
     }
     return list;

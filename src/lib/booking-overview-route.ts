@@ -47,7 +47,9 @@ export function getBookingOverviewHref({
     ? candidates.filter((booking) => {
         const bookingService = normalize(booking.service);
         const bookingServiceType = normalize(booking.serviceType);
-        return bookingService === serviceKey || bookingServiceType === serviceKey;
+        return (
+          bookingService === serviceKey || bookingServiceType === serviceKey
+        );
       })
     : candidates;
 

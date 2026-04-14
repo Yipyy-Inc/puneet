@@ -52,7 +52,9 @@ export function StepReview({ data, goToStep }: Props) {
           />
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium">{data.name || "Untitled plan"}</span>
+              <span className="font-medium">
+                {data.name || "Untitled plan"}
+              </span>
               <Badge variant="outline" className="uppercase">
                 {data.tierLabel}
               </Badge>
@@ -185,9 +187,7 @@ export function StepReview({ data, goToStep }: Props) {
             <ShieldCheck className="text-muted-foreground size-3.5" />
             Cancellation: {data.cancellationPolicy.replace("_", " ")}
           </div>
-          <div>
-            Online: {data.availableOnline ? "enabled" : "disabled"}
-          </div>
+          <div>Online: {data.availableOnline ? "enabled" : "disabled"}</div>
           <div>
             Categories:{" "}
             {data.applicableServices.length === 0

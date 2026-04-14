@@ -148,14 +148,13 @@ export default function ClientFormsPage({
                           {form.questions.length !== 1 ? "s" : ""}
                           {pet && <> · For {pet.name}</>}
                           {sub &&
-                            ` · Submitted ${new Date(sub.submittedAt).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}`}
+                            ` · Submitted ${new Date(
+                              sub.submittedAt,
+                            ).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}`}
                         </div>
                       </div>
                     </div>
@@ -174,7 +173,9 @@ export default function ClientFormsPage({
                         </Badge>
                       )}
                       <Button size="sm" variant="outline" asChild>
-                        <Link href={`/forms/${form.slug}?customerId=${clientId}`}>
+                        <Link
+                          href={`/forms/${form.slug}?customerId=${clientId}`}
+                        >
                           <ExternalLink className="mr-1 size-3.5" />
                           Open
                         </Link>

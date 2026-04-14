@@ -174,7 +174,9 @@ function toHexColor(color: string): string {
   return COLOR_HEX_MAP[color] ?? "#3b82f6";
 }
 
-function inferResourceType(module: CustomServiceModule): CustomServiceWorkflowResourceType {
+function inferResourceType(
+  module: CustomServiceModule,
+): CustomServiceWorkflowResourceType {
   if (module.category === "transport") return "van";
   if (module.category === "stay_based") return "room";
 
@@ -182,7 +184,8 @@ function inferResourceType(module: CustomServiceModule): CustomServiceWorkflowRe
     const firstType = module.capacity.resources[0].type.toLowerCase();
     if (firstType.includes("pool")) return "pool";
     if (firstType.includes("room")) return "room";
-    if (firstType.includes("van") || firstType.includes("vehicle")) return "van";
+    if (firstType.includes("van") || firstType.includes("vehicle"))
+      return "van";
     if (firstType.includes("yard")) return "yard";
     if (firstType.includes("equip")) return "equipment";
   }
@@ -190,30 +193,34 @@ function inferResourceType(module: CustomServiceModule): CustomServiceWorkflowRe
   return "other";
 }
 
-function inferTaskTemplates(module: CustomServiceModule): CustomServiceTaskTemplateQuestionnaireItem[] {
-  return (module.staffAssignment.taskGeneration ?? []).map((taskKey, index) => ({
-    id: `${module.id}-template-${taskKey}-${index}`,
-    taskName:
-      taskKey === "setup"
-        ? `${module.name} setup`
-        : taskKey === "cleanup"
-          ? `${module.name} cleanup`
-          : `${module.name} execution`,
-    taskType: taskKey === "cleanup" ? "cleanup" : "care",
-    timingRule:
-      taskKey === "setup"
-        ? "before_start"
-        : taskKey === "cleanup"
-          ? "after_check_out"
-          : "at_check_in",
-    offsetMinutes: taskKey === "setup" ? 15 : taskKey === "cleanup" ? 15 : 0,
-    assignedStaffRole:
-      module.staffAssignment.requiredRole === "custom"
-        ? (module.staffAssignment.customRoleName ?? "custom")
-        : module.staffAssignment.requiredRole,
-    requiresCompletionNote: taskKey !== "execution",
-    requiresPhotoProof: false,
-  }));
+function inferTaskTemplates(
+  module: CustomServiceModule,
+): CustomServiceTaskTemplateQuestionnaireItem[] {
+  return (module.staffAssignment.taskGeneration ?? []).map(
+    (taskKey, index) => ({
+      id: `${module.id}-template-${taskKey}-${index}`,
+      taskName:
+        taskKey === "setup"
+          ? `${module.name} setup`
+          : taskKey === "cleanup"
+            ? `${module.name} cleanup`
+            : `${module.name} execution`,
+      taskType: taskKey === "cleanup" ? "cleanup" : "care",
+      timingRule:
+        taskKey === "setup"
+          ? "before_start"
+          : taskKey === "cleanup"
+            ? "after_check_out"
+            : "at_check_in",
+      offsetMinutes: taskKey === "setup" ? 15 : taskKey === "cleanup" ? 15 : 0,
+      assignedStaffRole:
+        module.staffAssignment.requiredRole === "custom"
+          ? (module.staffAssignment.customRoleName ?? "custom")
+          : module.staffAssignment.requiredRole,
+      requiresCompletionNote: taskKey !== "execution",
+      requiresPhotoProof: false,
+    }),
+  );
 }
 
 export function createDefaultCustomServiceWorkflowQuestionnaire(
@@ -263,7 +270,8 @@ export function getModuleWorkflowQuestionnaire(
     allowsAddOns: module.category !== "addon_only",
     allowedAddOnIds: [],
     bookableOnline: module.onlineBooking.enabled,
-    onlineLeadTimeHours: module.onlineBooking.cancellationPolicy.hoursBeforeBooking,
+    onlineLeadTimeHours:
+      module.onlineBooking.cancellationPolicy.hoursBeforeBooking,
     onlineCapacityLimit: module.capacity?.maxPerSlot,
     affectsCapacityHeatmap:
       module.capacity?.enabled ?? module.calendar.maxSimultaneousBookings > 0,
@@ -280,7 +288,8 @@ export function getModuleWorkflowQuestionnaire(
     ...module.workflow,
     resourceIds: module.workflow.resourceIds ?? inferred.resourceIds,
     taskTemplates: module.workflow.taskTemplates ?? inferred.taskTemplates,
-    allowedAddOnIds: module.workflow.allowedAddOnIds ?? inferred.allowedAddOnIds,
+    allowedAddOnIds:
+      module.workflow.allowedAddOnIds ?? inferred.allowedAddOnIds,
   };
 }
 
@@ -308,7 +317,8 @@ export function normalizeCustomServiceModule(
     },
     capacity: {
       enabled: workflow.affectsCapacityHeatmap,
-      maxPerSlot: workflow.capacityCeilingPerHour ?? module.capacity?.maxPerSlot ?? 1,
+      maxPerSlot:
+        workflow.capacityCeilingPerHour ?? module.capacity?.maxPerSlot ?? 1,
       slotDurationMinutes: module.capacity?.slotDurationMinutes ?? 60,
       resources: module.capacity?.resources ?? [],
       waitlistEnabled: module.capacity?.waitlistEnabled ?? false,

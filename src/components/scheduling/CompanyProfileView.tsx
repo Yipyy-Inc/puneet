@@ -88,7 +88,10 @@ export function CompanyProfileView() {
   };
 
   const handleSave = () => {
-    setProfile((p) => ({ ...p, updatedAt: new Date().toISOString().split("T")[0] }));
+    setProfile((p) => ({
+      ...p,
+      updatedAt: new Date().toISOString().split("T")[0],
+    }));
     toast.success("Company profile saved");
   };
 
@@ -125,7 +128,9 @@ export function CompanyProfileView() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Company Profile</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Company Profile
+          </h2>
           <p className="text-muted-foreground text-sm">
             Business identity, locations, and operating hours.
           </p>
@@ -221,7 +226,9 @@ export function CompanyProfileView() {
           <Field label="Pay period">
             <Select
               value={profile.payPeriod}
-              onValueChange={(v) => setField("payPeriod", v as CompanyProfile["payPeriod"])}
+              onValueChange={(v) =>
+                setField("payPeriod", v as CompanyProfile["payPeriod"])
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -255,7 +262,9 @@ export function CompanyProfileView() {
                   <MapPin className="size-4" />
                   <Input
                     value={loc.name}
-                    onChange={(e) => setLocation(loc.id, { name: e.target.value })}
+                    onChange={(e) =>
+                      setLocation(loc.id, { name: e.target.value })
+                    }
                     className="h-8 w-auto min-w-[200px] text-base font-semibold"
                   />
                   {loc.isPrimary && (
@@ -304,13 +313,17 @@ export function CompanyProfileView() {
                 <Field label="City">
                   <Input
                     value={loc.city}
-                    onChange={(e) => setLocation(loc.id, { city: e.target.value })}
+                    onChange={(e) =>
+                      setLocation(loc.id, { city: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label="Region / State">
                   <Input
                     value={loc.region}
-                    onChange={(e) => setLocation(loc.id, { region: e.target.value })}
+                    onChange={(e) =>
+                      setLocation(loc.id, { region: e.target.value })
+                    }
                   />
                 </Field>
                 <Field label="Postal / ZIP">
@@ -358,8 +371,10 @@ export function CompanyProfileView() {
                       key={h.dayOfWeek}
                       className="flex items-center gap-3 text-sm"
                     >
-                      <div className="w-12 font-medium">{DAYS[h.dayOfWeek]}</div>
-                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <div className="w-12 font-medium">
+                        {DAYS[h.dayOfWeek]}
+                      </div>
+                      <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <input
                           type="checkbox"
                           checked={h.isOpen}
@@ -368,7 +383,7 @@ export function CompanyProfileView() {
                               isOpen: e.target.checked,
                             })
                           }
-                          className="size-3.5 rounded"
+                          className="size-3.5 rounded-sm"
                         />
                         Open
                       </label>
@@ -397,7 +412,9 @@ export function CompanyProfileView() {
                           />
                         </div>
                       ) : (
-                        <span className="text-muted-foreground text-xs">Closed</span>
+                        <span className="text-muted-foreground text-xs">
+                          Closed
+                        </span>
                       )}
                     </div>
                   ))}

@@ -245,7 +245,10 @@ export default function OnlineBookingPage() {
           <TabsTrigger value="unfinished" className="flex items-center gap-2">
             <ShoppingCart className="size-3.5" />
             Unfinished
-            <Badge variant={abandonedCount > 0 ? "warning" : "secondary"} className="ml-1">
+            <Badge
+              variant={abandonedCount > 0 ? "warning" : "secondary"}
+              className="ml-1"
+            >
               {abandonedCount}
             </Badge>
           </TabsTrigger>

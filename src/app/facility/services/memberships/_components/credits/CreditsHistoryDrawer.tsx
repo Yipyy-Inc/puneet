@@ -41,11 +41,7 @@ export function CreditsHistoryDrawer({ credits, open, onOpenChange }: Props) {
           <SheetDescription>Prepaid credits history</SheetDescription>
 
           <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-            <Stat
-              label="Balance"
-              value={fmt(credits.balance)}
-              tone="emerald"
-            />
+            <Stat label="Balance" value={fmt(credits.balance)} tone="emerald" />
             <Stat label="Purchased" value={fmt(credits.totalPurchased)} />
             <Stat label="Used" value={fmt(credits.totalUsed)} />
           </div>

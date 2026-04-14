@@ -6,7 +6,6 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
-  Building2,
   CalendarOff,
   Clock,
   Download,
@@ -34,12 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   hoursByEmployee,
   hoursByDepartment,
@@ -84,7 +78,12 @@ const LaborCostChart = dynamic(
     import("@/components/scheduling/charts/LaborCostChart").then(
       (m) => m.LaborCostChart,
     ),
-  { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded bg-muted" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted h-[200px] animate-pulse rounded-sm" />
+    ),
+  },
 );
 
 const DeptHoursChart = dynamic(
@@ -92,7 +91,12 @@ const DeptHoursChart = dynamic(
     import("@/components/scheduling/charts/DeptHoursChart").then(
       (m) => m.DeptHoursChart,
     ),
-  { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded bg-muted" /> },
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-muted h-[200px] animate-pulse rounded-sm" />
+    ),
+  },
 );
 
 export function ReportsView() {
@@ -375,10 +379,7 @@ export function ReportsView() {
               />
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {deptHours.map((d) => (
-                  <div
-                    key={d.department.id}
-                    className="rounded-md border p-3"
-                  >
+                  <div key={d.department.id} className="rounded-md border p-3">
                     <div className="flex items-center gap-2">
                       <span
                         className="size-2.5 rounded-full"
@@ -393,7 +394,9 @@ export function ReportsView() {
                       {d.uniqueEmployees} staff
                     </div>
                     <div className="mt-1 text-xs">
-                      <span className="font-medium">${d.laborCost.toFixed(0)}</span>
+                      <span className="font-medium">
+                        ${d.laborCost.toFixed(0)}
+                      </span>
                       <span className="text-muted-foreground"> labor cost</span>
                     </div>
                   </div>
@@ -444,7 +447,7 @@ export function ReportsView() {
                       <>
                         <div
                           key={`label-${dow}`}
-                          className="flex items-center text-muted-foreground"
+                          className="text-muted-foreground flex items-center"
                         >
                           {label}
                         </div>
@@ -471,7 +474,9 @@ export function ReportsView() {
                               title={`${DAY_LABELS[dow]} ${h}:00 — ${cell?.staffCount ?? 0} staff`}
                               className={`flex h-6 items-center justify-center rounded-sm tabular-nums ${bg}`}
                             >
-                              {cell && cell.staffCount > 0 ? cell.staffCount : ""}
+                              {cell && cell.staffCount > 0
+                                ? cell.staffCount
+                                : ""}
                             </div>
                           );
                         })}
@@ -623,9 +628,11 @@ function KpiCard({
   accent: "emerald" | "blue" | "amber" | "red";
 }) {
   const accentMap = {
-    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
+    emerald:
+      "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
     blue: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30",
-    amber: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
+    amber:
+      "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
     red: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30",
   };
   return (
@@ -637,9 +644,7 @@ function KpiCard({
           <Icon className="size-5" />
         </div>
         <div>
-          <p className="text-2xl font-bold tabular-nums leading-tight">
-            {value}
-          </p>
+          <p className="text-2xl/tight font-bold tabular-nums">{value}</p>
           <p className="text-muted-foreground text-xs">{label}</p>
         </div>
       </CardContent>

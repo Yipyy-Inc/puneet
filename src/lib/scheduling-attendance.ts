@@ -35,7 +35,11 @@ function toMinutes(time: string): number {
   return h * 60 + m;
 }
 
-function diffMin(actualIso: string, scheduledDate: string, scheduledTime: string): number {
+function diffMin(
+  actualIso: string,
+  scheduledDate: string,
+  scheduledTime: string,
+): number {
   const scheduled = new Date(`${scheduledDate}T${scheduledTime}:00`);
   const actual = new Date(actualIso);
   return Math.round((actual.getTime() - scheduled.getTime()) / 60_000);
@@ -59,14 +63,12 @@ export function reconcileShift(
   if (!entry) {
     // Decide if it's a no-show (scheduled start passed by grace) or just upcoming.
     const scheduledStart = new Date(`${shift.date}T${shift.startTime}:00`);
-    const minutesPastStart = (now.getTime() - scheduledStart.getTime()) / 60_000;
+    const minutesPastStart =
+      (now.getTime() - scheduledStart.getTime()) / 60_000;
     return {
       shift,
       entry: null,
-      status:
-        minutesPastStart > NO_SHOW_GRACE_MIN
-          ? "no_show"
-          : "scheduled",
+      status: minutesPastStart > NO_SHOW_GRACE_MIN ? "no_show" : "scheduled",
       clockInDeltaMin: null,
       clockOutDeltaMin: null,
       scheduledHours,
@@ -97,8 +99,8 @@ export function reconcileShift(
     if (
       entry.clockedInAt &&
       !entry.clockedOutAt &&
-      now.getTime() > new Date(`${shift.date}T${shift.endTime}:00`).getTime() +
-        15 * 60_000
+      now.getTime() >
+        new Date(`${shift.date}T${shift.endTime}:00`).getTime() + 15 * 60_000
     ) {
       status = "missing_clock_out";
     }
@@ -163,9 +165,11 @@ export function reconcileBatch(
     onTime: records.filter((r) => r.status === "on_time").length,
     late: records.filter((r) => r.status === "late").length,
     noShow: records.filter((r) => r.status === "no_show").length,
-    earlyDeparture: records.filter((r) => r.status === "early_departure").length,
+    earlyDeparture: records.filter((r) => r.status === "early_departure")
+      .length,
     leftLate: records.filter((r) => r.status === "left_late").length,
-    missingClockOut: records.filter((r) => r.status === "missing_clock_out").length,
+    missingClockOut: records.filter((r) => r.status === "missing_clock_out")
+      .length,
     totalScheduledHours: records.reduce((s, r) => s + r.scheduledHours, 0),
     totalActualHours: records.reduce((s, r) => s + (r.actualHours ?? 0), 0),
     totalOvertimeHours: records.reduce((s, r) => s + r.overtimeHours, 0),

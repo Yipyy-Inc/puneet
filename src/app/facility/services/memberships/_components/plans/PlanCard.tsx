@@ -114,7 +114,7 @@ export function PlanCard({
                 )}
               </div>
               <div className="text-muted-foreground mt-0.5 text-xs">
-                <span className="uppercase tracking-wide">
+                <span className="tracking-wide uppercase">
                   {plan.tierLabel ?? "Silver"}
                 </span>
                 {" · "}
@@ -185,10 +185,7 @@ export function PlanCard({
             </div>
             <ul className="space-y-1">
               {items.map((it) => (
-                <li
-                  key={it.id}
-                  className="flex items-center gap-2 text-sm"
-                >
+                <li key={it.id} className="flex items-center gap-2 text-sm">
                   <Check className="size-3.5 shrink-0 text-emerald-600" />
                   <span className="flex-1 truncate">{it.label}</span>
                   <span className="text-muted-foreground text-xs">
@@ -217,10 +214,7 @@ export function PlanCard({
             </div>
             <ul className="space-y-1">
               {perkList.map((p, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm"
-                >
+                <li key={i} className="flex items-start gap-2 text-sm">
                   <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
                   <span className="flex-1">{p}</span>
                 </li>

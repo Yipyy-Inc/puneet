@@ -276,7 +276,7 @@ export function AddRetailItemModal({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p
-                        className="pr-1 text-sm/tight font-medium break-words"
+                        className="pr-1 text-sm/tight font-medium wrap-break-word"
                         title={product.name}
                       >
                         {product.name}

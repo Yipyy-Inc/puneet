@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import type { ScheduleShift, ScheduleEmployee, Position } from "@/types/scheduling";
+import type {
+  ScheduleShift,
+  ScheduleEmployee,
+  Position,
+} from "@/types/scheduling";
 
 interface AssignShiftDialogProps {
   open: boolean;
@@ -38,7 +42,8 @@ export function AssignShiftDialog({
   positions,
   onAssign,
 }: AssignShiftDialogProps) {
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("__open__");
+  const [selectedEmployeeId, setSelectedEmployeeId] =
+    useState<string>("__open__");
 
   useEffect(() => {
     if (shift) {
@@ -52,7 +57,8 @@ export function AssignShiftDialog({
   const isCurrentlyAssigned = !!shift.employeeId;
 
   const handleSave = () => {
-    const empId = selectedEmployeeId === "__open__" ? undefined : selectedEmployeeId;
+    const empId =
+      selectedEmployeeId === "__open__" ? undefined : selectedEmployeeId;
     onAssign(shift.id, empId);
     onOpenChange(false);
   };
@@ -67,18 +73,18 @@ export function AssignShiftDialog({
         </DialogHeader>
 
         {/* Shift info */}
-        <div className="bg-muted/40 rounded-lg p-3 space-y-1.5">
+        <div className="bg-muted/40 space-y-1.5 rounded-lg p-3">
           <div className="flex items-center gap-2">
             {position && (
               <div
-                className="size-2.5 rounded-full shrink-0"
+                className="size-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: position.color }}
               />
             )}
             <span className="text-sm font-medium">
               {position?.name ?? "Unknown Position"}
             </span>
-            <Badge variant="outline" className="text-[10px] ml-auto">
+            <Badge variant="outline" className="ml-auto text-[10px]">
               {shift.status}
             </Badge>
           </div>
@@ -87,14 +93,19 @@ export function AssignShiftDialog({
             {shift.breakMinutes > 0 && ` · ${shift.breakMinutes}min break`}
           </p>
           {shift.notes && (
-            <p className="text-muted-foreground text-xs italic">{shift.notes}</p>
+            <p className="text-muted-foreground text-xs italic">
+              {shift.notes}
+            </p>
           )}
         </div>
 
         {/* Employee picker */}
         <div className="space-y-2">
           <Label>Assign to</Label>
-          <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+          <Select
+            value={selectedEmployeeId}
+            onValueChange={setSelectedEmployeeId}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select employee…" />
             </SelectTrigger>
@@ -114,7 +125,7 @@ export function AssignShiftDialog({
                         </AvatarFallback>
                       </Avatar>
                       <span>{emp.name}</span>
-                      <span className="text-muted-foreground text-xs ml-1">
+                      <span className="text-muted-foreground ml-1 text-xs">
                         {emp.role}
                       </span>
                     </div>

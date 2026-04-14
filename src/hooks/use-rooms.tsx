@@ -111,7 +111,8 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
     (category: RoomCategory, unitCount = 0) => {
       persistCategories((prev) => {
         const exists = prev.find((c) => c.id === category.id);
-        if (exists) return prev.map((c) => (c.id === category.id ? category : c));
+        if (exists)
+          return prev.map((c) => (c.id === category.id ? category : c));
         return [...prev, { ...category, sortOrder: prev.length + 1 }];
       });
 
@@ -236,7 +237,9 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <RoomsContext.Provider value={value}>{children}</RoomsContext.Provider>;
+  return (
+    <RoomsContext.Provider value={value}>{children}</RoomsContext.Provider>
+  );
 }
 
 export function useRooms(): RoomsContextValue {

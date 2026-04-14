@@ -1284,14 +1284,8 @@ export function AuditLogsManager() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Date Range</label>
                 <div className="flex gap-2">
-                  <Input
-                    type="date"
-                    className="h-10"
-                  />
-                  <Input
-                    type="date"
-                    className="h-10"
-                  />
+                  <Input type="date" className="h-10" />
+                  <Input type="date" className="h-10" />
                 </div>
               </div>
               <div className="space-y-2">

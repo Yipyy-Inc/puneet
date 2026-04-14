@@ -88,7 +88,9 @@ export function Calendar({
       setManualDateInput("");
       return;
     }
-    setCurrentMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    setCurrentMonth(
+      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
+    );
     setManualDateInput(toISODateString(selectedDate));
     setManualInputError("");
   }, [selectedDate]);

@@ -36,8 +36,7 @@ export function GuestContactForm({
   createAccount,
   setCreateAccount,
 }: GuestContactFormProps) {
-  const resolvedGuestPetNames =
-    guestPetNames.length > 0 ? guestPetNames : [""];
+  const resolvedGuestPetNames = guestPetNames.length > 0 ? guestPetNames : [""];
 
   const handleGuestPetNameChange = (index: number, value: string) => {
     setGuestPetNames((prev) => {

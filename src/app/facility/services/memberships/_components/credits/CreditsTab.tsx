@@ -46,7 +46,12 @@ export function CreditsTab() {
   };
 
   const columns: ColumnDef<Row>[] = [
-    { key: "customerName", label: "Customer", icon: User, defaultVisible: true },
+    {
+      key: "customerName",
+      label: "Customer",
+      icon: User,
+      defaultVisible: true,
+    },
     {
       key: "balance",
       label: "Balance",
@@ -135,7 +140,9 @@ export function CreditsTab() {
               align="end"
               onClick={(e) => e.stopPropagation()}
             >
-              <DropdownMenuItem onClick={() => openHistory(item as PrepaidCredits)}>
+              <DropdownMenuItem
+                onClick={() => openHistory(item as PrepaidCredits)}
+              >
                 <History className="mr-2 size-4" />
                 View history
               </DropdownMenuItem>

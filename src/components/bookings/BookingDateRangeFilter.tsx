@@ -25,7 +25,11 @@ function fmtShort(d: Date): string {
   });
 }
 
-export function BookingDateRangeFilter({ rangeStart, rangeEnd, onChange }: Props) {
+export function BookingDateRangeFilter({
+  rangeStart,
+  rangeEnd,
+  onChange,
+}: Props) {
   const [open, setOpen] = useState(false);
   const hasFilter = !!rangeStart;
 
@@ -54,7 +58,7 @@ export function BookingDateRangeFilter({ rangeStart, rangeEnd, onChange }: Props
             <span
               role="button"
               aria-label="Clear date filter"
-              className="ml-0.5 flex size-5 items-center justify-center rounded-full hover:bg-white/25 cursor-pointer"
+              className="ml-0.5 flex size-5 cursor-pointer items-center justify-center rounded-full hover:bg-white/25"
               onClick={(e) => {
                 e.stopPropagation();
                 onChange(null, null);
@@ -69,17 +73,17 @@ export function BookingDateRangeFilter({ rangeStart, rangeEnd, onChange }: Props
       <PopoverContent
         align="start"
         sideOffset={8}
-        className="w-auto p-0 shadow-2xl border-border/60"
+        className="border-border/60 w-auto p-0 shadow-2xl"
       >
-        <div className="p-3 space-y-2">
+        <div className="space-y-2 p-3">
           <div className="flex items-center justify-between px-1">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Filter by Date Range
             </p>
             {hasFilter && (
               <button
                 type="button"
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                className="text-muted-foreground hover:text-foreground text-[11px] underline underline-offset-2"
                 onClick={() => {
                   onChange(null, null);
                   setOpen(false);
@@ -106,7 +110,7 @@ export function BookingDateRangeFilter({ rangeStart, rangeEnd, onChange }: Props
 
           {hasFilter && (
             <div className="flex items-center justify-between border-t pt-2">
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 {rangeEnd && !isSingleDay
                   ? `${Math.round((rangeEnd.getTime() - rangeStart!.getTime()) / 86_400_000) + 1} days selected`
                   : "1 day selected"}

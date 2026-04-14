@@ -112,7 +112,7 @@ function VarChips() {
         <button
           key={v}
           type="button"
-          className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+          className="bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground rounded-sm px-1.5 py-0.5 font-mono text-[10px] transition-colors"
           title="Click to copy"
           onClick={() => {
             navigator.clipboard.writeText(v);
@@ -136,14 +136,18 @@ interface StepRowProps {
   onUpdate: (patch: Partial<AbandonmentStepAutomation>) => void;
 }
 
-function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps) {
+function StepRow({
+  step,
+  rule,
+  masterEnabled,
+  settings,
+  onUpdate,
+}: StepRowProps) {
   const stepConfig = ABANDONMENT_STEP_LABELS[step];
   const effective = resolvedChannel(rule, settings);
   const isDisabled = !masterEnabled || !rule.enabled;
-  const showEmail =
-    effective === "email" || effective === "both";
-  const showSms =
-    effective === "sms" || effective === "both";
+  const showEmail = effective === "email" || effective === "both";
+  const showSms = effective === "sms" || effective === "both";
 
   return (
     <AccordionItem
@@ -162,13 +166,13 @@ function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{stepConfig.label}</p>
             <div className="mt-0.5 flex items-center gap-2">
-              <div className="h-1 w-14 overflow-hidden rounded-full bg-muted">
+              <div className="bg-muted h-1 w-14 overflow-hidden rounded-full">
                 <div
                   className="h-full rounded-full bg-amber-400"
                   style={{ width: `${stepConfig.progress}%` }}
                 />
               </div>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-muted-foreground text-[10px]">
                 {stepConfig.progress}%
               </span>
               <Badge
@@ -185,11 +189,11 @@ function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps
               </Badge>
             </div>
           </div>
-          <ChevronDown className="ml-2 size-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+          <ChevronDown className="text-muted-foreground ml-2 size-4 shrink-0 transition-transform duration-200" />
         </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>
 
-      <AccordionContent className="space-y-4 border-t px-4 pb-4 pt-3">
+      <AccordionContent className="space-y-4 border-t px-4 pt-3 pb-4">
         {/* Channel + Delay row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -248,7 +252,7 @@ function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps
         {showEmail && (
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <Mail className="size-3.5 text-muted-foreground" />
+              <Mail className="text-muted-foreground size-3.5" />
               <p className="text-xs font-medium">Email Template</p>
             </div>
             <Input
@@ -273,7 +277,7 @@ function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <MessageSquare className="size-3.5 text-muted-foreground" />
+                <MessageSquare className="text-muted-foreground size-3.5" />
                 <p className="text-xs font-medium">SMS Template</p>
               </div>
               <span
@@ -298,7 +302,7 @@ function StepRow({ step, rule, masterEnabled, settings, onUpdate }: StepRowProps
 
         {/* Variable chips */}
         <div className="space-y-1">
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-muted-foreground text-[10px]">
             Available variables (click to copy):
           </p>
           <VarChips />
@@ -354,11 +358,11 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
               <Zap className="size-4 text-amber-600" />
             </div>
             <div>
-              <SheetTitle className="text-base leading-tight">
+              <SheetTitle className="text-base/tight">
                 Abandonment Recovery Settings
               </SheetTitle>
               <SheetDescription className="text-xs">
-                Auto-reach out when clients don't finish their booking
+                Auto-reach out when clients don&apos;t finish their booking
               </SheetDescription>
             </div>
           </div>
@@ -367,10 +371,10 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
         {/* Scrollable body */}
         <div className="flex-1 space-y-5 overflow-y-auto p-4">
           {/* Master toggle */}
-          <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3">
+          <div className="bg-muted/30 flex items-center justify-between rounded-xl border px-4 py-3">
             <div>
               <p className="text-sm font-medium">Enable Recovery Automation</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Automatically contact clients who abandon their booking
               </p>
             </div>
@@ -384,7 +388,7 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
 
           {/* Global defaults */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Default Settings
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -459,14 +463,14 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
           {/* Per-step rules */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                 Per-Step Rules
               </p>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {activeStepCount}/{ORDERED_STEPS.length} active
               </span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Expand each step to configure the message sent when a client
               abandons there. Each step can override the default channel and
               delay.
@@ -492,7 +496,7 @@ export function AbandonmentRecoverySettings({ open, onOpenChange }: Props) {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5 text-xs text-muted-foreground"
+            className="text-muted-foreground gap-1.5 text-xs"
             asChild
           >
             <a href="/facility/dashboard/automations">

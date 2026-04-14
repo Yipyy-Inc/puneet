@@ -271,10 +271,12 @@ export function ClientFiltersInline({
       element: React.ReactNode;
     }[] = [];
 
-    const preferredLanguageOptions = CUSTOMER_LANGUAGE_OPTIONS.map((option) => ({
-      value: option.code,
-      label: getCustomerLanguageLabel(option.code),
-    }));
+    const preferredLanguageOptions = CUSTOMER_LANGUAGE_OPTIONS.map(
+      (option) => ({
+        value: option.code,
+        label: getCustomerLanguageLabel(option.code),
+      }),
+    );
 
     const add = (
       label: string,
@@ -288,9 +290,7 @@ export function ClientFiltersInline({
         categoryId: catId,
         categoryLabel: catLabel,
         key: `${catId}-${label}`,
-        searchText: [label, catLabel, ...searchTerms]
-          .join(" ")
-          .toLowerCase(),
+        searchText: [label, catLabel, ...searchTerms].join(" ").toLowerCase(),
         element,
       });
     };

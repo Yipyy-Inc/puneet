@@ -16,12 +16,7 @@ import {
   Files,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -128,7 +123,9 @@ export default function OnboardingPage() {
         if (task.type === "policy")
           return tmpl.type === "policy_acknowledgement" && tmpl.isActive;
         return false;
-      }) ?? templates.find((t) => t.isActive) ?? null;
+      }) ??
+      templates.find((t) => t.isActive) ??
+      null;
     setSigningTask({ task, template: matchingTemplate });
   };
 
@@ -195,9 +192,7 @@ export default function OnboardingPage() {
               <BookOpen className="size-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {onboardingEmployees.length}
-              </p>
+              <p className="text-2xl font-bold">{onboardingEmployees.length}</p>
               <p className="text-muted-foreground text-xs">
                 Employees onboarding
               </p>
@@ -213,8 +208,7 @@ export default function OnboardingPage() {
               <p className="text-2xl font-bold">
                 {
                   tasks.filter(
-                    (t) =>
-                      t.status === "pending" || t.status === "in_progress",
+                    (t) => t.status === "pending" || t.status === "in_progress",
                   ).length
                 }
               </p>
@@ -284,15 +278,15 @@ export default function OnboardingPage() {
 
             return (
               <Card key={employee.id} className="overflow-hidden">
-                <CardHeader className="border-b bg-muted/30 pb-4">
+                <CardHeader className="bg-muted/30 border-b pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Avatar className="size-11 ring-2 ring-background shadow">
+                      <Avatar className="ring-background size-11 shadow-sm ring-2">
                         <AvatarImage
                           src={employee.avatar}
                           alt={employee.name}
                         />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-sm font-semibold">
+                        <AvatarFallback className="bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {employee.initials}
                         </AvatarFallback>
                       </Avatar>
@@ -348,7 +342,7 @@ export default function OnboardingPage() {
                     return (
                       <div
                         key={task.id}
-                        className="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/30"
+                        className="hover:bg-muted/30 flex items-center gap-4 px-4 py-3 transition-colors"
                       >
                         <StatusIcon
                           className={`size-5 shrink-0 ${statusInfo.color}`}
@@ -362,7 +356,7 @@ export default function OnboardingPage() {
                             </p>
                             <Badge
                               variant="secondary"
-                              className="text-[10px] gap-1"
+                              className="gap-1 text-[10px]"
                             >
                               <TypeIcon className="size-2.5" />
                               {task.type}
@@ -392,7 +386,7 @@ export default function OnboardingPage() {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex shrink-0 items-center gap-2">
                           {task.status !== "completed" &&
                             task.requiresSignature && (
                               <Button
@@ -448,7 +442,7 @@ export default function OnboardingPage() {
         {/* ── Tab: Signed Documents ── */}
         <TabsContent value="signed" className="mt-4 space-y-3">
           {submissions.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-center text-muted-foreground">
+            <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
               <Files className="mb-3 size-10 opacity-30" />
               <p className="font-medium">No signed documents yet</p>
               <p className="text-sm">
@@ -471,16 +465,16 @@ export default function OnboardingPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       {/* Employee avatar */}
-                      <Avatar className="size-10 ring-2 ring-background shadow shrink-0">
+                      <Avatar className="ring-background size-10 shrink-0 shadow-sm ring-2">
                         <AvatarImage src={emp?.avatar} alt={emp?.name} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-xs font-semibold">
+                        <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {emp?.initials ?? "??"}
                         </AvatarFallback>
                       </Avatar>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-sm">
+                          <p className="text-sm font-medium">
                             {sub.employeeName}
                           </p>
                           <Badge variant="secondary" className="text-[10px]">
@@ -538,7 +532,7 @@ export default function OnboardingPage() {
                         )}
 
                         {/* Audit trail */}
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-[11px]">
                           <span>
                             Submitted{" "}
                             {new Date(sub.submittedAt).toLocaleDateString(
@@ -555,13 +549,9 @@ export default function OnboardingPage() {
                               })}
                             </span>
                           )}
-                          {sub.ipAddress && (
-                            <span>IP: {sub.ipAddress}</span>
-                          )}
+                          {sub.ipAddress && <span>IP: {sub.ipAddress}</span>}
                           {sub.timezone && <span>{sub.timezone}</span>}
-                          {sub.deviceId && (
-                            <span>Device: {sub.deviceId}</span>
-                          )}
+                          {sub.deviceId && <span>Device: {sub.deviceId}</span>}
                         </div>
                       </div>
 
@@ -575,7 +565,7 @@ export default function OnboardingPage() {
                               className="h-10 w-24 object-contain"
                             />
                           </div>
-                          <p className="mt-0.5 text-center text-[9px] text-muted-foreground">
+                          <p className="text-muted-foreground mt-0.5 text-center text-[9px]">
                             Signature
                           </p>
                         </div>
@@ -598,9 +588,10 @@ export default function OnboardingPage() {
           }}
           template={signingTask.template}
           employee={{
-            id: scheduleEmployees.find(
-              (e) => e.id === signingTask.task.employeeId,
-            )?.id ?? signingTask.task.employeeId,
+            id:
+              scheduleEmployees.find(
+                (e) => e.id === signingTask.task.employeeId,
+              )?.id ?? signingTask.task.employeeId,
             name:
               scheduleEmployees.find(
                 (e) => e.id === signingTask.task.employeeId,

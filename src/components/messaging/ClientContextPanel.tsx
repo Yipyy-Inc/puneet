@@ -273,12 +273,14 @@ export function ClientContextPanel({
     return null;
   }, [threadId, messages]);
 
-  const client = !isCustomerMode && threadEntityId
-    ? clients.find((c) => c.id === threadEntityId)
-    : null;
-  const facility = isCustomerMode && threadEntityId
-    ? facilities.find((f) => f.id === threadEntityId)
-    : null;
+  const client =
+    !isCustomerMode && threadEntityId
+      ? clients.find((c) => c.id === threadEntityId)
+      : null;
+  const facility =
+    isCustomerMode && threadEntityId
+      ? facilities.find((f) => f.id === threadEntityId)
+      : null;
   const customer = isCustomerMode
     ? clients.find((c) => c.id === customerId)
     : null;
@@ -314,7 +316,9 @@ export function ClientContextPanel({
   }, [isCustomerMode, customerId, threadEntityId]);
 
   const upcoming = scopedBookings
-    .filter((b) => new Date(b.startDate) > new Date() && b.status !== "cancelled")
+    .filter(
+      (b) => new Date(b.startDate) > new Date() && b.status !== "cancelled",
+    )
     .sort(
       (a, b) =>
         new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
@@ -564,7 +568,11 @@ export function ClientContextPanel({
         </Section>
 
         {/* ── Quick Links ── */}
-        <Section title={isCustomerMode ? "Quick Links" : "Quick Send"} icon={Send} defaultOpen>
+        <Section
+          title={isCustomerMode ? "Quick Links" : "Quick Send"}
+          icon={Send}
+          defaultOpen
+        >
           <div className="space-y-1">
             {quickLinks.map((link) => {
               const content = (
@@ -606,7 +614,9 @@ export function ClientContextPanel({
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(link.url ?? "");
-                    toast.success(`"${link.label}" link copied — paste in chat`);
+                    toast.success(
+                      `"${link.label}" link copied — paste in chat`,
+                    );
                   }}
                   className="group flex w-full items-center gap-2 rounded-lg p-1.5 text-left transition-colors hover:bg-slate-50"
                 >

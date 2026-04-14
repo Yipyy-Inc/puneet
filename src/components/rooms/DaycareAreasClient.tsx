@@ -26,10 +26,21 @@ import { PlayAreaCard } from "@/components/rooms/PlayAreaCard";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { getMockUsage } from "@/lib/capacity-engine";
 import { useDaycareAreas } from "@/hooks/use-daycare-areas";
-import type { DaycarePlayArea, DaycareSection, RoomCategoryColor } from "@/types/rooms";
+import type {
+  DaycarePlayArea,
+  DaycareSection,
+  RoomCategoryColor,
+} from "@/types/rooms";
 
 const COLORS: RoomCategoryColor[] = [
-  "emerald", "blue", "amber", "violet", "orange", "rose", "indigo", "slate",
+  "emerald",
+  "blue",
+  "amber",
+  "violet",
+  "orange",
+  "rose",
+  "indigo",
+  "slate",
 ];
 
 const TODAY = new Date().toISOString().split("T")[0];
@@ -166,7 +177,8 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
     setSectionDialog({
       open: true,
       data:
-        section ?? blankSection(facilityId, playAreaId, existingForArea.length + 1),
+        section ??
+        blankSection(facilityId, playAreaId, existingForArea.length + 1),
       isNew: !section,
     });
   };
@@ -212,10 +224,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
             automatically tracks daily occupancy.
           </p>
         </div>
-        <Button
-          onClick={() => openAreaDialog()}
-          className="shrink-0 gap-1.5"
-        >
+        <Button onClick={() => openAreaDialog()} className="shrink-0 gap-1.5">
           <Plus className="size-4" />
           Add Play Area
         </Button>
@@ -223,10 +232,30 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total Capacity" value={totalCapacity} color="indigo"  sub="pets/day across all sections" />
-        <StatCard label="In Today"       value={totalUsed}     color="amber"   sub="currently booked today"        />
-        <StatCard label="Play Areas"     value={areas.length}  color="emerald" sub="parks & locations"             />
-        <StatCard label="Sections"       value={activeSections.length} color="violet" sub="active sections"        />
+        <StatCard
+          label="Total Capacity"
+          value={totalCapacity}
+          color="indigo"
+          sub="pets/day across all sections"
+        />
+        <StatCard
+          label="In Today"
+          value={totalUsed}
+          color="amber"
+          sub="currently booked today"
+        />
+        <StatCard
+          label="Play Areas"
+          value={areas.length}
+          color="emerald"
+          sub="parks & locations"
+        />
+        <StatCard
+          label="Sections"
+          value={activeSections.length}
+          color="violet"
+          sub="active sections"
+        />
       </div>
 
       {/* Play area cards */}
@@ -429,7 +458,7 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                       }
                       className={`size-7 rounded-full border-2 transition-transform ${
                         sectionDialog.data.color === color
-                          ? "scale-110 border-foreground"
+                          ? "border-foreground scale-110"
                           : "border-transparent"
                       } bg-${color}-400`}
                       title={color}
@@ -443,7 +472,9 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                 <Label>Weight Restrictions (optional)</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-xs">Min weight (lbs)</p>
+                    <p className="text-muted-foreground text-xs">
+                      Min weight (lbs)
+                    </p>
                     <Input
                       type="number"
                       min={0}
@@ -481,7 +512,9 @@ export function DaycareAreasClient({ facilityId = 11 }: Props) {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-xs">Max weight (lbs)</p>
+                    <p className="text-muted-foreground text-xs">
+                      Max weight (lbs)
+                    </p>
                     <Input
                       type="number"
                       min={0}
@@ -610,7 +643,7 @@ function StatCard({
   }[color];
   return (
     <div className="bg-card rounded-xl border px-4 py-3">
-      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {label}
       </p>
       <p className={`text-2xl font-bold ${text}`}>{value}</p>
@@ -621,15 +654,14 @@ function StatCard({
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-muted/20 py-24 text-center">
+    <div className="bg-muted/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center">
       <div className="bg-muted mb-4 flex size-16 items-center justify-center rounded-2xl">
         <TreePine className="text-muted-foreground/50 size-8" />
       </div>
       <h3 className="mb-1 text-lg font-semibold">No play areas yet</h3>
       <p className="text-muted-foreground mb-6 max-w-sm text-sm">
-        Create play areas like{" "}
-        <span className="font-medium">Indoor Park</span> or{" "}
-        <span className="font-medium">Outdoor Yard</span>, then add sections
+        Create play areas like <span className="font-medium">Indoor Park</span>{" "}
+        or <span className="font-medium">Outdoor Yard</span>, then add sections
         (Small Dogs, Medium Dogs, etc.) with per-section capacity.
       </p>
       <Button onClick={onAdd}>

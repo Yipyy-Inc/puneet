@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -215,9 +215,7 @@ export function DocumentTemplatesManager({
 
   const handleToggleActive = (id: string) => {
     onTemplatesChange(
-      templates.map((t) =>
-        t.id === id ? { ...t, isActive: !t.isActive } : t,
-      ),
+      templates.map((t) => (t.id === id ? { ...t, isActive: !t.isActive } : t)),
     );
   };
 
@@ -231,7 +229,7 @@ export function DocumentTemplatesManager({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">Document Templates</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Create reusable documents employees can fill in and sign online
           </p>
         </div>
@@ -283,7 +281,7 @@ export function DocumentTemplatesManager({
                           {tmpl.requiresSignature && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-400"
+                              className="border-amber-200 text-[10px] text-amber-600 dark:border-amber-800 dark:text-amber-400"
                             >
                               <PenTool className="mr-0.5 size-2.5" />
                               Signature required
@@ -292,7 +290,7 @@ export function DocumentTemplatesManager({
                           {!tmpl.isActive && (
                             <Badge
                               variant="secondary"
-                              className="text-[10px] text-muted-foreground"
+                              className="text-muted-foreground text-[10px]"
                             >
                               Inactive
                             </Badge>
@@ -343,10 +341,10 @@ export function DocumentTemplatesManager({
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                    <p className="text-muted-foreground mt-1.5 line-clamp-2 text-xs">
                       {tmpl.description}
                     </p>
-                    <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-3 flex items-center gap-3 text-xs">
                       <span className="flex items-center gap-1">
                         <ClipboardList className="size-3" />
                         {tmpl.fields.length} field
@@ -367,7 +365,7 @@ export function DocumentTemplatesManager({
       </div>
 
       {templates.length === 0 && (
-        <div className="flex flex-col items-center py-12 text-center text-muted-foreground">
+        <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
           <FileText className="mb-3 size-10 opacity-30" />
           <p className="font-medium">No document templates yet</p>
           <p className="text-sm">
@@ -459,7 +457,7 @@ export function DocumentTemplatesManager({
                 className="font-mono text-xs"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               After creating, you can assign this template to employees during
               onboarding. Field definitions can be configured separately.
             </p>
@@ -483,23 +481,23 @@ export function DocumentTemplatesManager({
         open={!!previewTemplate}
         onOpenChange={() => setPreviewTemplate(null)}
       >
-        <DialogContent className="sm:max-w-[580px] max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[580px]">
           <DialogHeader className="shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-base">
                 {previewTemplate?.title}
               </DialogTitle>
-              <Badge variant="outline" className="text-[10px] mr-6">
+              <Badge variant="outline" className="mr-6 text-[10px]">
                 v{previewTemplate?.version}
               </Badge>
             </div>
           </DialogHeader>
-          <div className="flex-1 overflow-auto rounded-lg border bg-muted/20 p-5">
-            <pre className="whitespace-pre-wrap font-sans text-sm/relaxed">
+          <div className="bg-muted/20 flex-1 overflow-auto rounded-lg border p-5">
+            <pre className="font-sans text-sm/relaxed whitespace-pre-wrap">
               {previewTemplate?.content}
             </pre>
           </div>
-          <div className="mt-3 shrink-0 flex justify-end">
+          <div className="mt-3 flex shrink-0 justify-end">
             <Button
               variant="outline"
               size="sm"

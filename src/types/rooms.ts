@@ -1,4 +1,8 @@
-export type FacilityRoomService = "boarding" | "daycare" | "grooming" | "training";
+export type FacilityRoomService =
+  | "boarding"
+  | "daycare"
+  | "grooming"
+  | "training";
 
 export type RoomRuleType =
   | "max_weight"
@@ -97,7 +101,11 @@ export interface DaycareSection {
 
 // ── Grooming ──────────────────────────────────────────────────────────────────
 
-export type GroomingStationType = "table" | "tub" | "cage_dryer" | "stand_dryer";
+export type GroomingStationType =
+  | "table"
+  | "tub"
+  | "cage_dryer"
+  | "stand_dryer";
 
 export interface GroomingStation {
   id: string;

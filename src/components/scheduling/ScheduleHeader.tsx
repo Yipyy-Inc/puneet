@@ -141,7 +141,7 @@ export function ScheduleHeader({
       </div>
 
       {/* Date navigation */}
-      <div className="flex min-w-0 shrink items-center gap-1.5 rounded-lg border border-border/50 bg-background px-1 py-0.5">
+      <div className="border-border/50 bg-background flex min-w-0 shrink items-center gap-1.5 rounded-lg border px-1 py-0.5">
         <Button
           variant="ghost"
           size="sm"

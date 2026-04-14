@@ -42,14 +42,19 @@ import {
 } from "@/data/scheduling";
 
 const statusColor: Record<AttendanceStatus, string> = {
-  on_time: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  on_time:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
   late: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-  early_departure: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  early_departure:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   left_late: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-  early_arrival: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  early_arrival:
+    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   no_show: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-  missing_clock_out: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  scheduled: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  missing_clock_out:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  scheduled:
+    "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
 };
 
 const RANGE_OPTIONS = [
@@ -149,7 +154,12 @@ export function AttendanceView() {
           accent="emerald"
         />
         <StatCard label="Late" value={summary.late} icon={Clock} accent="red" />
-        <StatCard label="No-show" value={summary.noShow} icon={TimerOff} accent="red" />
+        <StatCard
+          label="No-show"
+          value={summary.noShow}
+          icon={TimerOff}
+          accent="red"
+        />
         <StatCard
           label="Left early"
           value={summary.earlyDeparture}
@@ -166,7 +176,13 @@ export function AttendanceView() {
           label="On-time rate"
           value={`${reliabilityPct}%`}
           icon={Hourglass}
-          accent={reliabilityPct >= 85 ? "emerald" : reliabilityPct >= 70 ? "amber" : "red"}
+          accent={
+            reliabilityPct >= 85
+              ? "emerald"
+              : reliabilityPct >= 70
+                ? "amber"
+                : "red"
+          }
         />
       </div>
 
@@ -224,7 +240,9 @@ export function AttendanceView() {
                   const emp = scheduleEmployees.find(
                     (e) => e.id === r.shift.employeeId,
                   );
-                  const pos = allPositions.find((p) => p.id === r.shift.positionId);
+                  const pos = allPositions.find(
+                    (p) => p.id === r.shift.positionId,
+                  );
                   const dept = departments.find(
                     (d) => d.id === r.shift.departmentId,
                   );
@@ -244,7 +262,9 @@ export function AttendanceView() {
                             </div>
                             <div className="text-muted-foreground text-[11px]">
                               {pos?.name}
-                              {departmentFilter === "all" && dept ? ` · ${dept.name}` : ""}
+                              {departmentFilter === "all" && dept
+                                ? ` · ${dept.name}`
+                                : ""}
                             </div>
                           </div>
                         </div>
@@ -260,18 +280,27 @@ export function AttendanceView() {
                           <>
                             {new Date(r.entry.clockedInAt).toLocaleTimeString(
                               "en-CA",
-                              { hour: "2-digit", minute: "2-digit", hour12: false },
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              },
                             )}
                             –
                             {r.entry.clockedOutAt
-                              ? new Date(r.entry.clockedOutAt).toLocaleTimeString(
-                                  "en-CA",
-                                  { hour: "2-digit", minute: "2-digit", hour12: false },
-                                )
+                              ? new Date(
+                                  r.entry.clockedOutAt,
+                                ).toLocaleTimeString("en-CA", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })
                               : "—"}
                           </>
                         ) : (
-                          <span className="text-muted-foreground">No clock-in</span>
+                          <span className="text-muted-foreground">
+                            No clock-in
+                          </span>
                         )}
                         {r.clockInDeltaMin !== null && (
                           <span
@@ -289,7 +318,9 @@ export function AttendanceView() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${statusColor[r.status]} text-[10px]`}>
+                        <Badge
+                          className={`${statusColor[r.status]} text-[10px]`}
+                        >
                           {attendanceStatusLabels[r.status]}
                         </Badge>
                       </TableCell>
@@ -351,9 +382,11 @@ function StatCard({
   accent: "emerald" | "blue" | "amber" | "red";
 }) {
   const accentMap = {
-    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
+    emerald:
+      "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
     blue: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30",
-    amber: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
+    amber:
+      "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
     red: "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30",
   };
   return (
@@ -365,7 +398,7 @@ function StatCard({
           <Icon className="size-4" />
         </div>
         <div className="min-w-0">
-          <p className="text-xl font-bold tabular-nums leading-tight">{value}</p>
+          <p className="text-xl/tight font-bold tabular-nums">{value}</p>
           <p className="text-muted-foreground truncate text-[11px]">{label}</p>
         </div>
       </CardContent>

@@ -141,7 +141,9 @@ export function ContactList({
       const tid = msg.threadId ?? msg.id;
       const existing = map.get(tid);
 
-      const customer = msg.clientId ? clients.find((c) => c.id === msg.clientId) : null;
+      const customer = msg.clientId
+        ? clients.find((c) => c.id === msg.clientId)
+        : null;
       const facility = msg.clientId
         ? facilities.find((f) => f.id === msg.clientId)
         : null;
@@ -179,7 +181,11 @@ export function ContactList({
       }
     }
 
-    if (isCustomerMode && customerFacilityIds && customerFacilityIds.length > 0) {
+    if (
+      isCustomerMode &&
+      customerFacilityIds &&
+      customerFacilityIds.length > 0
+    ) {
       const existingFacilityIds = new Set(
         [...map.values()].map((thread) => thread.clientId),
       );
@@ -215,19 +221,17 @@ export function ContactList({
       }
     }
 
-    return [...map.values()].sort(
-      (a, b) => {
-        const aTime = a.isPlaceholder
-          ? 0
-          : new Date(a.lastMessage.timestamp).getTime();
-        const bTime = b.isPlaceholder
-          ? 0
-          : new Date(b.lastMessage.timestamp).getTime();
+    return [...map.values()].sort((a, b) => {
+      const aTime = a.isPlaceholder
+        ? 0
+        : new Date(a.lastMessage.timestamp).getTime();
+      const bTime = b.isPlaceholder
+        ? 0
+        : new Date(b.lastMessage.timestamp).getTime();
 
-        if (bTime !== aTime) return bTime - aTime;
-        return a.clientName.localeCompare(b.clientName);
-      },
-    );
+      if (bTime !== aTime) return bTime - aTime;
+      return a.clientName.localeCompare(b.clientName);
+    });
   }, [customerFacilityIds, isCustomerMode, messages]);
 
   const filtered = useMemo(() => {
@@ -575,7 +579,7 @@ export function ContactList({
                           {thread.clientName}
                         </span>
                         {preferredLanguageLabel && (
-                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-indigo-700">
+                          <span className="rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-indigo-700">
                             {preferredLanguageLabel}
                           </span>
                         )}

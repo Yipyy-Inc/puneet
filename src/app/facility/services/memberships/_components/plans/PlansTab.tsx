@@ -77,8 +77,7 @@ function dataToPlan(
 export function PlansTab() {
   const [plans, setPlans] = useState<MembershipPlan[]>(seedPlans);
   const [query, setQuery] = useState("");
-  const [cycleView, setCycleView] =
-    useState<MembershipBillingCycle>("monthly");
+  const [cycleView, setCycleView] = useState<MembershipBillingCycle>("monthly");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<MembershipPlan | undefined>(
     undefined,
@@ -118,13 +117,9 @@ export function PlansTab() {
   };
   const toggleActive = (plan: MembershipPlan) => {
     setPlans((prev) =>
-      prev.map((p) =>
-        p.id === plan.id ? { ...p, isActive: !p.isActive } : p,
-      ),
+      prev.map((p) => (p.id === plan.id ? { ...p, isActive: !p.isActive } : p)),
     );
-    toast.success(
-      plan.isActive ? "Plan deactivated" : "Plan activated",
-    );
+    toast.success(plan.isActive ? "Plan deactivated" : "Plan activated");
   };
   const confirmDelete = () => {
     if (!deletingPlan) return;
@@ -160,9 +155,7 @@ export function PlansTab() {
           <div className="text-muted-foreground text-xs">Show pricing as</div>
           <Select
             value={cycleView}
-            onValueChange={(v) =>
-              setCycleView(v as MembershipBillingCycle)
-            }
+            onValueChange={(v) => setCycleView(v as MembershipBillingCycle)}
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue />
@@ -217,17 +210,14 @@ export function PlansTab() {
           <DialogHeader>
             <DialogTitle>Delete plan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {" "}
+              Are you sure you want to delete{" "}
               <span className="font-medium">{deletingPlan?.name}</span>? This
               action cannot be undone. Existing subscribers will keep access
               until their next billing date.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeletingPlan(null)}
-            >
+            <Button variant="outline" onClick={() => setDeletingPlan(null)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>

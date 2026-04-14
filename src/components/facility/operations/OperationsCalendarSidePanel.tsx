@@ -39,8 +39,8 @@ export function OperationsCalendarSidePanel({
   serviceColorMap,
   onDateChange,
 }: OperationsCalendarSidePanelProps) {
-  const [displayMonth, setDisplayMonth] = useState(() =>
-    new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1),
+  const [displayMonth, setDisplayMonth] = useState(
+    () => new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1),
   );
 
   useEffect(() => {
@@ -107,7 +107,10 @@ export function OperationsCalendarSidePanel({
       .slice(0, 7);
   }, [visibleEvents, serviceColorMap]);
 
-  const totalVisible = serviceBreakdown.reduce((s, [, { count }]) => s + count, 0);
+  const totalVisible = serviceBreakdown.reduce(
+    (s, [, { count }]) => s + count,
+    0,
+  );
 
   const monthLabel = displayMonth.toLocaleDateString("en-US", {
     month: "long",
@@ -115,13 +118,21 @@ export function OperationsCalendarSidePanel({
   });
 
   const prevMonth = () =>
-    setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1));
+    setDisplayMonth(
+      new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1),
+    );
   const nextMonth = () =>
-    setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1));
+    setDisplayMonth(
+      new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1),
+    );
 
   const bookingCount = todayEvents.filter((e) => e.type === "booking").length;
-  const confirmedCount = todayEvents.filter((e) => e.status === "Confirmed").length;
-  const completedCount = todayEvents.filter((e) => e.status === "Completed").length;
+  const confirmedCount = todayEvents.filter(
+    (e) => e.status === "Confirmed",
+  ).length;
+  const completedCount = todayEvents.filter(
+    (e) => e.status === "Completed",
+  ).length;
   const taskCount = todayEvents.filter((e) => e.type === "task").length;
 
   const stats = [
@@ -164,9 +175,9 @@ export function OperationsCalendarSidePanel({
   ];
 
   return (
-    <aside className="w-72 shrink-0 border-r border-slate-200/60 bg-white flex flex-col overflow-y-auto">
+    <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-r border-slate-200/60 bg-white">
       {/* Header */}
-      <div className="relative overflow-hidden px-5 pt-5 pb-4 border-b border-slate-100">
+      <div className="relative overflow-hidden border-b border-slate-100 px-5 pt-5 pb-4">
         <div className="pointer-events-none absolute inset-0 bg-slate-50/50" />
 
         <div className="relative">
@@ -175,8 +186,12 @@ export function OperationsCalendarSidePanel({
               <Sparkles className="size-4 text-sky-600" />
             </div>
             <div>
-              <span className="block text-sm font-black text-slate-800 tracking-tight leading-none">Schedule</span>
-              <span className="block text-[10px] text-slate-400 mt-0.5">Operations Calendar</span>
+              <span className="block text-sm leading-none font-black tracking-tight text-slate-800">
+                Schedule
+              </span>
+              <span className="mt-0.5 block text-[10px] text-slate-400">
+                Operations Calendar
+              </span>
             </div>
           </div>
         </div>
@@ -185,33 +200,35 @@ export function OperationsCalendarSidePanel({
       {/* Mini calendar */}
       <div className="p-4 pb-3">
         {/* Month nav */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
             onClick={prevMonth}
             aria-label="Previous month"
-            className="size-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronLeft className="size-3.5" />
           </button>
-          <span className="text-[12px] font-bold text-slate-700 tracking-tight">
+          <span className="text-[12px] font-bold tracking-tight text-slate-700">
             {monthLabel}
           </span>
           <button
             type="button"
             onClick={nextMonth}
             aria-label="Next month"
-            className="size-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+            className="flex size-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <ChevronRight className="size-3.5" />
           </button>
         </div>
 
         {/* Day-of-week headers */}
-        <div className="grid grid-cols-7 mb-1.5">
+        <div className="mb-1.5 grid grid-cols-7">
           {DAY_INITIALS.map((d, i) => (
-            <div key={i} className="flex items-center justify-center h-6">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">{d}</span>
+            <div key={i} className="flex h-6 items-center justify-center">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">
+                {d}
+              </span>
             </div>
           ))}
         </div>
@@ -232,19 +249,19 @@ export function OperationsCalendarSidePanel({
                   type="button"
                   onClick={() => onDateChange(key)}
                   className={cn(
-                    "size-7 rounded-lg text-[12px] font-medium transition-all duration-150 flex items-center justify-center",
+                    "flex size-7 items-center justify-center rounded-lg text-[12px] font-medium transition-all duration-150",
                     "hover:scale-110 active:scale-95",
                     isSelected
-                      ? "bg-sky-600 text-white font-bold shadow-sm shadow-sky-800/20"
+                      ? "bg-sky-600 font-bold text-white shadow-sm shadow-sky-800/20"
                       : isToday
-                      ? "bg-sky-100 text-sky-700 font-bold ring-1 ring-sky-400/60"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                        ? "bg-sky-100 font-bold text-sky-700 ring-1 ring-sky-400/60"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
                   )}
                 >
                   {date.getDate()}
                 </button>
                 {/* Event dots */}
-                <div className="h-1 flex items-center justify-center gap-0.5 mt-0.5">
+                <div className="mt-0.5 flex h-1 items-center justify-center gap-0.5">
                   {dotCount > 0 && !isSelected && (
                     <div className="size-1 rounded-full bg-sky-400/80" />
                   )}
@@ -265,28 +282,39 @@ export function OperationsCalendarSidePanel({
 
       {/* Today's stats */}
       <div className="px-4 pt-3 pb-2">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
-          Today's Overview
+        <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
+          Today&apos;s Overview
         </p>
         <div className="grid grid-cols-2 gap-2">
           {stats.map((s) => (
             <div
               key={s.label}
               className={cn(
-                "group flex items-center gap-2.5 rounded-xl px-3 py-2.5 border transition-all duration-200 hover:shadow-sm cursor-default",
+                "group flex cursor-default items-center gap-2.5 rounded-xl border px-3 py-2.5 transition-all duration-200 hover:shadow-sm",
                 s.bg,
                 `ring-1 ${s.ring}`,
                 "border-transparent",
               )}
             >
-              <div className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm")}>
+              <div
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm",
+                )}
+              >
                 <s.icon className={cn("size-3.5", s.iconColor)} />
               </div>
               <div className="min-w-0">
-                <span className={cn("block text-xl font-black tabular-nums leading-none", s.textColor)}>
+                <span
+                  className={cn(
+                    "block text-xl leading-none font-black tabular-nums",
+                    s.textColor,
+                  )}
+                >
                   {s.value}
                 </span>
-                <span className="block text-[10px] text-slate-500 mt-0.5 leading-tight font-medium">{s.label}</span>
+                <span className="mt-0.5 block text-[10px] leading-tight font-medium text-slate-500">
+                  {s.label}
+                </span>
               </div>
             </div>
           ))}
@@ -296,9 +324,9 @@ export function OperationsCalendarSidePanel({
       {/* Upcoming today */}
       {upcomingEvents.length > 0 && (
         <>
-          <div className="mx-4 h-px bg-slate-200/70 mt-2 mb-0" />
+          <div className="mx-4 mt-2 mb-0 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-2">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+            <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
               Upcoming Today
             </p>
             <div className="space-y-1.5">
@@ -309,14 +337,18 @@ export function OperationsCalendarSidePanel({
                 return (
                   <div
                     key={ev.id}
-                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 border border-slate-100 bg-slate-50/80 hover:bg-white hover:shadow-sm transition-all duration-150"
+                    className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/80 px-2.5 py-2 transition-all duration-150 hover:bg-white hover:shadow-sm"
                     style={{ borderLeftColor: color, borderLeftWidth: 3 }}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-slate-800 truncate leading-tight">{petName}</p>
-                      <p className="text-[10px] text-slate-500 truncate capitalize">{svc}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[11px] leading-tight font-bold text-slate-800">
+                        {petName}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-500 capitalize">
+                        {svc}
+                      </p>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-500 shrink-0 tabular-nums">
+                    <span className="shrink-0 text-[10px] font-semibold text-slate-500 tabular-nums">
                       {formatTimeLabel(ev.start)}
                     </span>
                   </div>
@@ -330,9 +362,9 @@ export function OperationsCalendarSidePanel({
       {/* Service breakdown */}
       {serviceBreakdown.length > 0 && (
         <>
-          <div className="mx-4 h-px bg-slate-200/70 mt-2" />
+          <div className="mx-4 mt-2 h-px bg-slate-200/70" />
           <div className="px-4 pt-3 pb-5">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+            <p className="mb-2.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
               {view === "day" ? "Today's Services" : "Services in View"}
             </p>
             <div className="space-y-2.5">
@@ -340,20 +372,28 @@ export function OperationsCalendarSidePanel({
                 const pct = totalVisible > 0 ? (count / totalVisible) * 100 : 0;
                 return (
                   <div key={service}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="flex min-w-0 items-center gap-2">
                         <span
-                          className="size-2.5 rounded-full shrink-0 shadow-sm"
-                          style={{ backgroundColor: color, boxShadow: `0 0 4px ${hexToRgba(color, 0.5)}` }}
+                          className="size-2.5 shrink-0 rounded-full shadow-sm"
+                          style={{
+                            backgroundColor: color,
+                            boxShadow: `0 0 4px ${hexToRgba(color, 0.5)}`,
+                          }}
                         />
-                        <span className="text-[11px] font-semibold text-slate-600 truncate capitalize">{service}</span>
+                        <span className="truncate text-[11px] font-semibold text-slate-600 capitalize">
+                          {service}
+                        </span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-800 tabular-nums ml-2 shrink-0">
+                      <span className="ml-2 shrink-0 text-[11px] font-bold text-slate-800 tabular-nums">
                         {count}
                       </span>
                     </div>
                     {/* Progress bar */}
-                    <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: hexToRgba(color, 0.12) }}>
+                    <div
+                      className="h-1.5 w-full overflow-hidden rounded-full"
+                      style={{ backgroundColor: hexToRgba(color, 0.12) }}
+                    >
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{ width: `${pct}%`, backgroundColor: color }}

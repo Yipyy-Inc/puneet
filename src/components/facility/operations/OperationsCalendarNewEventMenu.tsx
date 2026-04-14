@@ -138,7 +138,10 @@ export function OperationsCalendarNewEventMenu({
   });
 
   const staffOptionsWithEmpty = useMemo(() => {
-    return ["Unassigned", ...staffOptions.filter((name) => name !== "Unassigned")];
+    return [
+      "Unassigned",
+      ...staffOptions.filter((name) => name !== "Unassigned"),
+    ];
   }, [staffOptions]);
 
   useEffect(() => {
@@ -174,7 +177,13 @@ export function OperationsCalendarNewEventMenu({
     }
 
     onOpenChange(true);
-  }, [canCreateCustomEvent, onOpenChange, quickCreateNonce, seed.date, seed.time]);
+  }, [
+    canCreateCustomEvent,
+    onOpenChange,
+    quickCreateNonce,
+    seed.date,
+    seed.time,
+  ]);
 
   const openDialog = (nextMode: Exclude<CreateMode, null>) => {
     setCustomDraft((previous) => ({
@@ -232,7 +241,9 @@ export function OperationsCalendarNewEventMenu({
       recurrence: customDraft.recurrence,
       visibility: customDraft.visibility,
       visibleRoles:
-        customDraft.visibility === "selected-roles" ? customDraft.selectedRoles : [],
+        customDraft.visibility === "selected-roles"
+          ? customDraft.selectedRoles
+          : [],
     });
 
     setDialogOpen(false);
@@ -257,12 +268,17 @@ export function OperationsCalendarNewEventMenu({
           : blockDraft.affects === "resource"
             ? blockDraft.resource || "Resource"
             : blockDraft.staff || "Staff",
-      staff: blockDraft.affects === "staff" ? blockDraft.staff || "Unassigned" : "Operations",
+      staff:
+        blockDraft.affects === "staff"
+          ? blockDraft.staff || "Unassigned"
+          : "Operations",
       status: "Planned",
       recurrence: blockDraft.recurrence,
       affects: blockDraft.affects,
-      affectedResource: blockDraft.affects === "resource" ? blockDraft.resource : undefined,
-      affectedStaff: blockDraft.affects === "staff" ? blockDraft.staff : undefined,
+      affectedResource:
+        blockDraft.affects === "resource" ? blockDraft.resource : undefined,
+      affectedStaff:
+        blockDraft.affects === "staff" ? blockDraft.staff : undefined,
       visibility: "all-staff",
     });
 
@@ -282,7 +298,7 @@ export function OperationsCalendarNewEventMenu({
   return (
     <>
       {customOnlyMode ? (
-        <Button 
+        <Button
           className={yipyyPrimaryButtonClass}
           onClick={() => openDialog("custom-event")}
         >
@@ -300,13 +316,19 @@ export function OperationsCalendarNewEventMenu({
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel>Create</DropdownMenuLabel>
             {canCreateCustomEvent && (
-              <DropdownMenuItem className="gap-2" onSelect={() => openDialog("custom-event")}>
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => openDialog("custom-event")}
+              >
                 <CalendarClock className="size-4 text-slate-600" />
                 Custom event
               </DropdownMenuItem>
             )}
             {canCreateBlockTime && (
-              <DropdownMenuItem className="gap-2" onSelect={() => openDialog("block-time")}>
+              <DropdownMenuItem
+                className="gap-2"
+                onSelect={() => openDialog("block-time")}
+              >
                 <ShieldMinus className="size-4 text-rose-600" />
                 Block time
               </DropdownMenuItem>
@@ -340,7 +362,8 @@ export function OperationsCalendarNewEventMenu({
               <DialogHeader>
                 <DialogTitle>Create Custom Event</DialogTitle>
                 <DialogDescription>
-                  Non-booking events for reminders, meetings, and operational planning.
+                  Non-booking events for reminders, meetings, and operational
+                  planning.
                 </DialogDescription>
               </DialogHeader>
 
@@ -509,8 +532,12 @@ export function OperationsCalendarNewEventMenu({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="internal-only">Internal only</SelectItem>
-                    <SelectItem value="all-staff">Visible to all staff</SelectItem>
-                    <SelectItem value="selected-roles">Visible to selected roles</SelectItem>
+                    <SelectItem value="all-staff">
+                      Visible to all staff
+                    </SelectItem>
+                    <SelectItem value="selected-roles">
+                      Visible to selected roles
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -529,19 +556,27 @@ export function OperationsCalendarNewEventMenu({
 
                 {customDraft.visibility === "selected-roles" && (
                   <div className="space-y-2 rounded-md border border-slate-200 p-3 md:col-span-2">
-                    <p className="text-xs font-medium text-slate-700">Visible roles</p>
+                    <p className="text-xs font-medium text-slate-700">
+                      Visible roles
+                    </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {roleOptions.map((role) => {
-                        const checked = customDraft.selectedRoles.includes(role);
+                        const checked =
+                          customDraft.selectedRoles.includes(role);
                         return (
-                          <label key={role} className="flex items-center gap-2 text-xs text-slate-700">
+                          <label
+                            key={role}
+                            className="flex items-center gap-2 text-xs text-slate-700"
+                          >
                             <Checkbox
                               checked={checked}
                               onCheckedChange={() =>
                                 setCustomDraft((previous) => ({
                                   ...previous,
                                   selectedRoles: checked
-                                    ? previous.selectedRoles.filter((item) => item !== role)
+                                    ? previous.selectedRoles.filter(
+                                        (item) => item !== role,
+                                      )
                                     : [...previous.selectedRoles, role],
                                 }))
                               }
@@ -553,7 +588,6 @@ export function OperationsCalendarNewEventMenu({
                     </div>
                   </div>
                 )}
-
               </div>
 
               <DialogFooter>
@@ -570,7 +604,8 @@ export function OperationsCalendarNewEventMenu({
               <DialogHeader>
                 <DialogTitle>Create Block Time</DialogTitle>
                 <DialogDescription>
-                  Blocks booking availability for facilities, resources, or staff.
+                  Blocks booking availability for facilities, resources, or
+                  staff.
                 </DialogDescription>
               </DialogHeader>
 
@@ -716,7 +751,12 @@ function shiftTime(time: string, minutesToAdd: number): string {
   const hour = Number(hourRaw);
   const minute = Number(minuteRaw);
   const now = new Date();
-  now.setHours(Number.isNaN(hour) ? 9 : hour, Number.isNaN(minute) ? 0 : minute, 0, 0);
+  now.setHours(
+    Number.isNaN(hour) ? 9 : hour,
+    Number.isNaN(minute) ? 0 : minute,
+    0,
+    0,
+  );
   const shifted = new Date(now.getTime() + minutesToAdd * 60 * 1000);
   const shiftedHour = `${shifted.getHours()}`.padStart(2, "0");
   const shiftedMinute = `${shifted.getMinutes()}`.padStart(2, "0");

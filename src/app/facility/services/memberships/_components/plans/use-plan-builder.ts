@@ -128,7 +128,11 @@ export function usePlanBuilder(initial?: MembershipPlan) {
             data.tierLabel.trim().length > 0
           );
         case 1:
-          return data.monthlyPrice > 0 || data.quarterlyPrice > 0 || data.annualPrice > 0;
+          return (
+            data.monthlyPrice > 0 ||
+            data.quarterlyPrice > 0 ||
+            data.annualPrice > 0
+          );
         default:
           return true;
       }

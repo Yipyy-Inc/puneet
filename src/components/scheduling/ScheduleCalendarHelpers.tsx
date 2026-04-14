@@ -23,7 +23,11 @@ export function getDatesForView(currentDate: Date, viewMode: ViewMode): Date[] {
   const totalDays = viewMode === "month" ? 35 : viewMode === "2weeks" ? 14 : 7;
 
   if (viewMode === "month") {
-    const firstOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const firstOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1,
+    );
     const dow = firstOfMonth.getDay();
     const startOffset = dow === 0 ? -6 : 1 - dow;
     firstOfMonth.setDate(firstOfMonth.getDate() + startOffset);
@@ -126,7 +130,7 @@ export function ShiftContextMenu({
     <button
       key={label}
       className={cn(
-        "w-full px-3 py-1.5 text-left text-sm hover:bg-muted/60 transition-colors",
+        "hover:bg-muted/60 w-full px-3 py-1.5 text-left text-sm transition-colors",
         danger && "text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20",
       )}
       onMouseDown={(e) => {
@@ -142,15 +146,17 @@ export function ShiftContextMenu({
   return (
     <div
       ref={ref}
-      className="fixed z-50 min-w-[180px] overflow-hidden rounded-md border bg-popover shadow-lg"
+      className="bg-popover fixed z-50 min-w-[180px] overflow-hidden rounded-md border shadow-lg"
       style={{ left: menu.x, top: menu.y }}
     >
       {item("Edit Shift", onEdit)}
-      {isAssigned ? item("Reassign to…", onAssign) : item("Assign Employee", onAssign)}
+      {isAssigned
+        ? item("Reassign to…", onAssign)
+        : item("Assign Employee", onAssign)}
       {isAssigned && item("Make Open Shift", onMakeOpen)}
-      <div className="h-px bg-border my-0.5" />
+      <div className="bg-border my-0.5 h-px" />
       {item("Copy Shift", onCopy)}
-      <div className="h-px bg-border my-0.5" />
+      <div className="bg-border my-0.5 h-px" />
       {item("Delete Shift", onDelete, true)}
     </div>
   );
@@ -175,12 +181,12 @@ export function HoursBadge({
   const badge = (
     <span
       className={cn(
-        "rounded-full px-2 py-0.5 text-xs font-semibold cursor-default",
+        "cursor-default rounded-full px-2 py-0.5 text-xs font-semibold",
         isOverMax
           ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
           : hasOT
-          ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"
-          : "text-muted-foreground",
+            ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"
+            : "text-muted-foreground",
       )}
     >
       {totalHours.toFixed(1)}h

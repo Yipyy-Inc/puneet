@@ -156,8 +156,12 @@ export function CampaignBuilderModal({
   );
 
   const selectedSegment = availableSegments.find((s) => s.id === segmentId);
-  const customSegments = availableSegments.filter((segment) => !segment.isBuiltIn);
-  const builtInSegments = availableSegments.filter((segment) => segment.isBuiltIn);
+  const customSegments = availableSegments.filter(
+    (segment) => !segment.isBuiltIn,
+  );
+  const builtInSegments = availableSegments.filter(
+    (segment) => segment.isBuiltIn,
+  );
   const selectedTemplate = emailTemplates.find((t) => t.id === templateId);
   const suggestedSegmentIds = goal
     ? CAMPAIGN_GOALS.find((g) => g.value === goal)?.suggestedSegments || []

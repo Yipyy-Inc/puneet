@@ -14,7 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { BookmarkPlus, Calendar, Clock, Users, AlertCircle } from "lucide-react";
+import {
+  BookmarkPlus,
+  Calendar,
+  Clock,
+  Users,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { parseLocalDate } from "@/lib/shift-recurrence";
 import type { ScheduleShift, Department } from "@/types/scheduling";
@@ -59,7 +65,8 @@ export function SaveAsTemplateDialog({
       action: {
         label: "View Templates",
         onClick: () => {
-          window.location.href = "/facility/dashboard/services/scheduling/templates";
+          window.location.href =
+            "/facility/dashboard/services/scheduling/templates";
         },
       },
     });
@@ -74,7 +81,7 @@ export function SaveAsTemplateDialog({
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-indigo-500">
               <BookmarkPlus className="size-4 text-white" />
             </div>
             Save as Template
@@ -86,23 +93,26 @@ export function SaveAsTemplateDialog({
 
         <div className="space-y-5 py-1">
           {/* Source info */}
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="bg-muted/30 space-y-2 rounded-lg border p-3">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
               Saving from
             </p>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge
                 variant="outline"
-                style={{ borderColor: department.color, color: department.color }}
+                style={{
+                  borderColor: department.color,
+                  color: department.color,
+                }}
                 className="text-[11px]"
               >
                 {department.name}
               </Badge>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Calendar className="size-3" /> {dateRangeLabel}
               </span>
             </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-4 text-xs">
               <span className="flex items-center gap-1">
                 <Clock className="size-3" />
                 {assignedShifts.length} shifts
@@ -122,7 +132,7 @@ export function SaveAsTemplateDialog({
               {[0, 1, 2, 3, 4, 5, 6].map((day) => (
                 <div
                   key={day}
-                  className={`flex size-7 items-center justify-center rounded text-[10px] font-medium ${
+                  className={`flex size-7 items-center justify-center rounded-sm text-[10px] font-medium ${
                     activeDays.has(day)
                       ? "bg-primary/10 text-primary"
                       : "bg-muted text-muted-foreground"
@@ -182,7 +192,7 @@ export function SaveAsTemplateDialog({
           <Button
             onClick={handleSave}
             disabled={!name.trim() || assignedShifts.length === 0}
-            className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600"
+            className="bg-linear-to-r from-violet-500 to-indigo-500 text-white hover:from-violet-600 hover:to-indigo-600"
           >
             <BookmarkPlus className="mr-1.5 size-4" />
             Save Template

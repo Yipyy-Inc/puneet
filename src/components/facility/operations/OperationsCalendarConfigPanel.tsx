@@ -47,7 +47,9 @@ interface OperationsCalendarConfigPanelProps {
   visualConfig: CalendarVisualConfig;
   onColorModeChange: (value: CalendarVisualConfig["colorMode"]) => void;
   onColorStyleChange: (value: CalendarVisualConfig["colorStyle"]) => void;
-  onAddOnDisplayModeChange: (value: CalendarVisualConfig["addOnDisplayMode"]) => void;
+  onAddOnDisplayModeChange: (
+    value: CalendarVisualConfig["addOnDisplayMode"],
+  ) => void;
   onZoomLevelChange: (value: CalendarVisualConfig["zoomLevel"]) => void;
   onCompletedTaskDecorationChange: (
     value: CalendarVisualConfig["completedTaskDecoration"],
@@ -102,7 +104,10 @@ export function OperationsCalendarConfigPanel({
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-slate-700">Color Mode</p>
-            <Select value={visualConfig.colorMode} onValueChange={onColorModeChange}>
+            <Select
+              value={visualConfig.colorMode}
+              onValueChange={onColorModeChange}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -116,7 +121,10 @@ export function OperationsCalendarConfigPanel({
 
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-slate-700">Color Style</p>
-            <Select value={visualConfig.colorStyle} onValueChange={onColorStyleChange}>
+            <Select
+              value={visualConfig.colorStyle}
+              onValueChange={onColorStyleChange}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -138,14 +146,19 @@ export function OperationsCalendarConfigPanel({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="nested">Mode A - Nested</SelectItem>
-                <SelectItem value="separate">Mode B - Separate sub-events</SelectItem>
+                <SelectItem value="separate">
+                  Mode B - Separate sub-events
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-slate-700">Zoom Level</p>
-            <Select value={visualConfig.zoomLevel} onValueChange={onZoomLevelChange}>
+            <Select
+              value={visualConfig.zoomLevel}
+              onValueChange={onZoomLevelChange}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -158,7 +171,9 @@ export function OperationsCalendarConfigPanel({
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-xs font-medium text-slate-700">Completed Task Style</p>
+            <p className="text-xs font-medium text-slate-700">
+              Completed Task Style
+            </p>
             <Select
               value={visualConfig.completedTaskDecoration}
               onValueChange={onCompletedTaskDecorationChange}
@@ -183,7 +198,9 @@ export function OperationsCalendarConfigPanel({
                 key={fieldKey}
                 className="flex items-center justify-between gap-3 rounded-md px-2 py-1"
               >
-                <span className="text-xs text-slate-700">{CARD_FIELD_LABELS[key]}</span>
+                <span className="text-xs text-slate-700">
+                  {CARD_FIELD_LABELS[key]}
+                </span>
                 <Switch
                   checked={visualConfig.cardFields[key]}
                   onCheckedChange={() => onToggleCardField(key)}
@@ -197,7 +214,9 @@ export function OperationsCalendarConfigPanel({
 
         <div className="space-y-3 rounded-lg border border-slate-200 bg-white/90 p-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-800">Custom Facility Event</h3>
+            <h3 className="text-sm font-semibold text-slate-800">
+              Custom Facility Event
+            </h3>
             <Button variant="outline" size="sm" onClick={onToggleEventCreator}>
               {showEventCreator ? "Hide" : "Create event"}
             </Button>
@@ -225,8 +244,12 @@ export function OperationsCalendarConfigPanel({
                   <SelectItem value="blocked-time">Blocked time</SelectItem>
                   <SelectItem value="staff-meeting">Staff meeting</SelectItem>
                   <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="holiday-closure">Holiday closure</SelectItem>
-                  <SelectItem value="personal-reminder">Personal reminder</SelectItem>
+                  <SelectItem value="holiday-closure">
+                    Holiday closure
+                  </SelectItem>
+                  <SelectItem value="personal-reminder">
+                    Personal reminder
+                  </SelectItem>
                 </SelectContent>
               </Select>
 
@@ -239,18 +262,24 @@ export function OperationsCalendarConfigPanel({
               <Input
                 type="time"
                 value={manualEventDraft.startTime}
-                onChange={(event) => updateDraft({ startTime: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ startTime: event.target.value })
+                }
               />
 
               <Input
                 type="time"
                 value={manualEventDraft.endTime}
-                onChange={(event) => updateDraft({ endTime: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ endTime: event.target.value })
+                }
               />
 
               <Input
                 value={manualEventDraft.location}
-                onChange={(event) => updateDraft({ location: event.target.value })}
+                onChange={(event) =>
+                  updateDraft({ location: event.target.value })
+                }
                 placeholder="Location / resource"
               />
 
@@ -264,7 +293,9 @@ export function OperationsCalendarConfigPanel({
                 All day
                 <Switch
                   checked={manualEventDraft.allDay}
-                  onCheckedChange={(checked) => updateDraft({ allDay: checked })}
+                  onCheckedChange={(checked) =>
+                    updateDraft({ allDay: checked })
+                  }
                 />
               </label>
 
@@ -272,7 +303,9 @@ export function OperationsCalendarConfigPanel({
                 Private reminder
                 <Switch
                   checked={manualEventDraft.privateToUser}
-                  onCheckedChange={(checked) => updateDraft({ privateToUser: checked })}
+                  onCheckedChange={(checked) =>
+                    updateDraft({ privateToUser: checked })
+                  }
                 />
               </label>
 

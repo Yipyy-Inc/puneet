@@ -17,7 +17,8 @@ type SearchResult = {
 
 const normalize = (value: string) => value.toLowerCase().trim();
 
-const normalizeLoose = (value: string) => normalize(value).replace(/[^a-z0-9]/g, "");
+const normalizeLoose = (value: string) =>
+  normalize(value).replace(/[^a-z0-9]/g, "");
 
 const getMatchScore = (tokens: string[], query: string, looseQuery: string) => {
   let best = 0;
@@ -51,7 +52,9 @@ const parseLimit = (rawLimit: string | null) => {
 };
 
 const unique = (values: Array<string | undefined | null>) =>
-  Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+  Array.from(
+    new Set(values.filter((value): value is string => Boolean(value))),
+  );
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;

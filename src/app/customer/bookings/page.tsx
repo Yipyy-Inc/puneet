@@ -340,7 +340,7 @@ export default function CustomerBookingsPage() {
                 <TabsTrigger value="unfinished" className="relative">
                   Unfinished
                   {myUnfinishedBookings.length > 0 && (
-                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                    <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                       {myUnfinishedBookings.length}
                     </span>
                   )}

@@ -1,4 +1,8 @@
-import type { RoomCategory, FacilityRoom, GroomingStation } from "@/types/rooms";
+import type {
+  RoomCategory,
+  FacilityRoom,
+  GroomingStation,
+} from "@/types/rooms";
 
 const FACILITY_ID = 11;
 
@@ -11,7 +15,8 @@ export const roomCategories: RoomCategory[] = [
     facilityId: FACILITY_ID,
     service: "boarding",
     name: "Private Care Suite",
-    description: "Exclusive private suites for premium guests — multi-large-dog stays or dogs 80 lbs+",
+    description:
+      "Exclusive private suites for premium guests — multi-large-dog stays or dogs 80 lbs+",
     color: "amber",
     sortOrder: 1,
     defaultCapacity: 2,
@@ -41,7 +46,8 @@ export const roomCategories: RoomCategory[] = [
     facilityId: FACILITY_ID,
     service: "boarding",
     name: "Deluxe Suite",
-    description: "Spacious suites with premium bedding — ideal for dogs 40–80 lbs or multi-pet stays",
+    description:
+      "Spacious suites with premium bedding — ideal for dogs 40–80 lbs or multi-pet stays",
     color: "violet",
     sortOrder: 2,
     defaultCapacity: 2,
@@ -72,7 +78,8 @@ export const roomCategories: RoomCategory[] = [
     facilityId: FACILITY_ID,
     service: "boarding",
     name: "Suite",
-    description: "Comfortable private suites — best for dogs up to 80 lbs, single pet per booking",
+    description:
+      "Comfortable private suites — best for dogs up to 80 lbs, single pet per booking",
     color: "blue",
     sortOrder: 3,
     defaultCapacity: 1,
@@ -103,7 +110,8 @@ export const roomCategories: RoomCategory[] = [
     facilityId: FACILITY_ID,
     service: "boarding",
     name: "Condominium",
-    description: "Standard comfortable kennels — economical and efficient for all dogs up to 60 lbs",
+    description:
+      "Standard comfortable kennels — economical and efficient for all dogs up to 60 lbs",
     color: "slate",
     sortOrder: 4,
     defaultCapacity: 1,
@@ -124,12 +132,12 @@ export const roomCategories: RoomCategory[] = [
         id: "rule-c-2",
         type: "single_pet_only",
         value: 1,
-        clientMessage: "Condominiums are single-pet only. For multi-pet stays please choose a Deluxe Suite.",
+        clientMessage:
+          "Condominiums are single-pet only. For multi-pet stays please choose a Deluxe Suite.",
         enabled: true,
       },
     ],
   },
-
 ];
 // Note: daycare play areas and sections are managed in src/data/daycare-areas.ts
 
@@ -146,10 +154,34 @@ export const facilityRooms: FacilityRoom[] = [
   },
 
   // Deluxe Suites (5 units)
-  { id: "room-ds-01", categoryId: "cat-deluxe", facilityId: FACILITY_ID, name: "Deluxe 01", active: true },
-  { id: "room-ds-02", categoryId: "cat-deluxe", facilityId: FACILITY_ID, name: "Deluxe 02", active: true },
-  { id: "room-ds-03", categoryId: "cat-deluxe", facilityId: FACILITY_ID, name: "Deluxe 03", active: true },
-  { id: "room-ds-04", categoryId: "cat-deluxe", facilityId: FACILITY_ID, name: "Deluxe 04", active: true },
+  {
+    id: "room-ds-01",
+    categoryId: "cat-deluxe",
+    facilityId: FACILITY_ID,
+    name: "Deluxe 01",
+    active: true,
+  },
+  {
+    id: "room-ds-02",
+    categoryId: "cat-deluxe",
+    facilityId: FACILITY_ID,
+    name: "Deluxe 02",
+    active: true,
+  },
+  {
+    id: "room-ds-03",
+    categoryId: "cat-deluxe",
+    facilityId: FACILITY_ID,
+    name: "Deluxe 03",
+    active: true,
+  },
+  {
+    id: "room-ds-04",
+    categoryId: "cat-deluxe",
+    facilityId: FACILITY_ID,
+    name: "Deluxe 04",
+    active: true,
+  },
   {
     id: "room-ds-05",
     categoryId: "cat-deluxe",
@@ -177,16 +209,33 @@ export const facilityRooms: FacilityRoom[] = [
     active: i < 13,
     ...(i >= 13 ? { staffNotes: "Pending deep clean & inspection" } : {}),
   })),
-
 ];
 // Note: daycare room units are now modelled as DaycareSection in src/data/daycare-areas.ts
 
 // ── Grooming Stations ──────────────────────────────────────────────────────────
 
 export const groomingStations: GroomingStation[] = [
-  { id: "gs-t-01", facilityId: FACILITY_ID, type: "table", name: "Table 1", active: true },
-  { id: "gs-t-02", facilityId: FACILITY_ID, type: "table", name: "Table 2", active: true },
-  { id: "gs-t-03", facilityId: FACILITY_ID, type: "table", name: "Table 3", active: true },
+  {
+    id: "gs-t-01",
+    facilityId: FACILITY_ID,
+    type: "table",
+    name: "Table 1",
+    active: true,
+  },
+  {
+    id: "gs-t-02",
+    facilityId: FACILITY_ID,
+    type: "table",
+    name: "Table 2",
+    active: true,
+  },
+  {
+    id: "gs-t-03",
+    facilityId: FACILITY_ID,
+    type: "table",
+    name: "Table 3",
+    active: true,
+  },
   {
     id: "gs-t-04",
     facilityId: FACILITY_ID,
@@ -195,10 +244,34 @@ export const groomingStations: GroomingStation[] = [
     active: false,
     staffNotes: "Awaiting replacement hydraulic lift",
   },
-  { id: "gs-tub-01", facilityId: FACILITY_ID, type: "tub", name: "Tub 1", active: true },
-  { id: "gs-tub-02", facilityId: FACILITY_ID, type: "tub", name: "Tub 2", active: true },
-  { id: "gs-dryer-01", facilityId: FACILITY_ID, type: "cage_dryer", name: "Cage Dryer 1", active: true },
-  { id: "gs-dryer-02", facilityId: FACILITY_ID, type: "stand_dryer", name: "Stand Dryer 1", active: true },
+  {
+    id: "gs-tub-01",
+    facilityId: FACILITY_ID,
+    type: "tub",
+    name: "Tub 1",
+    active: true,
+  },
+  {
+    id: "gs-tub-02",
+    facilityId: FACILITY_ID,
+    type: "tub",
+    name: "Tub 2",
+    active: true,
+  },
+  {
+    id: "gs-dryer-01",
+    facilityId: FACILITY_ID,
+    type: "cage_dryer",
+    name: "Cage Dryer 1",
+    active: true,
+  },
+  {
+    id: "gs-dryer-02",
+    facilityId: FACILITY_ID,
+    type: "stand_dryer",
+    name: "Stand Dryer 1",
+    active: true,
+  },
 ];
 
 // ── Helper functions ───────────────────────────────────────────────────────────

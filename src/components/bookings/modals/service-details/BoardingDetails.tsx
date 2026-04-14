@@ -2,7 +2,6 @@
 
 import React from "react";
 import { DateSelectionCalendar } from "@/components/ui/date-selection-calendar";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Check, PawPrint, Bed, X, AlertCircle } from "lucide-react";
 import Image from "next/image";
@@ -374,7 +373,9 @@ interface BoardingRoomSelectionStepProps {
   isStepAccessible: (step: number) => boolean;
   selectedPets: Pet[];
   roomAssignments: Array<{ petId: number; roomId: string }>;
-  setRoomAssignments: (assignments: Array<{ petId: number; roomId: string }>) => void;
+  setRoomAssignments: (
+    assignments: Array<{ petId: number; roomId: string }>,
+  ) => void;
   serviceType: string;
   setServiceType: (type: string) => void;
   boardingRangeStart: Date | null;
@@ -443,7 +444,9 @@ function BoardingRoomSelectionStep({
   if (!isStepAccessible(1)) {
     return (
       <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
-        <p className="text-muted-foreground">Please complete the previous steps first</p>
+        <p className="text-muted-foreground">
+          Please complete the previous steps first
+        </p>
       </div>
     );
   }
@@ -451,7 +454,9 @@ function BoardingRoomSelectionStep({
   if (!startDate || !endDate) {
     return (
       <div className="bg-muted/50 rounded-lg border border-dashed p-8 text-center">
-        <p className="text-muted-foreground">Please select boarding dates first</p>
+        <p className="text-muted-foreground">
+          Please select boarding dates first
+        </p>
       </div>
     );
   }
@@ -482,7 +487,8 @@ function BoardingRoomSelectionStep({
         {selectedPets.map((pet) => {
           const assignment = roomAssignments.find((ra) => ra.petId === pet.id);
           const assignedCat = assignment
-            ? availability.find((a) => a.category.id === assignment.roomId)?.category
+            ? availability.find((a) => a.category.id === assignment.roomId)
+                ?.category
             : null;
           const isActive = activePet?.id === pet.id;
 
@@ -518,7 +524,9 @@ function BoardingRoomSelectionStep({
               </span>
               <span className="font-medium">{pet.name}</span>
               {assignedCat && !isActive && (
-                <span className="text-[10px] opacity-70">· {assignedCat.name}</span>
+                <span className="text-[10px] opacity-70">
+                  · {assignedCat.name}
+                </span>
               )}
               {assignment && (
                 <span
@@ -561,7 +569,7 @@ function BoardingRoomSelectionStep({
           <button
             type="button"
             onClick={() => setActivePet(null)}
-            className="ml-auto rounded p-0.5 hover:bg-black/5"
+            className="ml-auto rounded-sm p-0.5 hover:bg-black/5"
           >
             <X className="size-3.5" />
           </button>
@@ -569,7 +577,7 @@ function BoardingRoomSelectionStep({
       )}
 
       {allAssigned && selectedPets.length > 0 && (
-        <div className="border-emerald-200 bg-emerald-50 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm text-emerald-700">
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <Check className="size-4 shrink-0" />
           All pets assigned — you can continue to the next step.
         </div>
@@ -578,7 +586,7 @@ function BoardingRoomSelectionStep({
       {/* Room category cards */}
       {availability.length === 0 ? (
         <div className="bg-muted/30 rounded-xl border border-dashed p-8 text-center">
-          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
+          <div className="bg-muted mx-auto mb-3 flex size-12 items-center justify-center rounded-xl">
             <Bed className="text-muted-foreground/60 size-6" />
           </div>
           <p className="text-sm font-semibold">No room categories set up yet</p>
@@ -587,172 +595,186 @@ function BoardingRoomSelectionStep({
           </p>
         </div>
       ) : (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {availability.map(
-          ({ category, totalActive, availableUnits, eligible, eligibilityMessage }) => {
-            const petsHere = roomAssignments
-              .filter((ra) => ra.roomId === category.id)
-              .map((ra) => selectedPets.find((p) => p.id === ra.petId))
-              .filter(Boolean) as Pet[];
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {availability.map(
+            ({
+              category,
+              totalActive,
+              availableUnits,
+              eligible,
+              eligibilityMessage,
+            }) => {
+              const petsHere = roomAssignments
+                .filter((ra) => ra.roomId === category.id)
+                .map((ra) => selectedPets.find((p) => p.id === ra.petId))
+                .filter(Boolean) as Pet[];
 
-            const isFullyBooked = availableUnits === 0;
-            const isDragOver = dragOverCatId === category.id;
-            const canDrop =
-              !isFullyBooked && (eligible || !activePet) && (draggedPet || activePet);
-            const pct =
-              totalActive > 0
-                ? ((totalActive - availableUnits) / totalActive) * 100
-                : 0;
+              const isFullyBooked = availableUnits === 0;
+              const isDragOver = dragOverCatId === category.id;
+              const canDrop =
+                !isFullyBooked &&
+                (eligible || !activePet) &&
+                (draggedPet || activePet);
+              const pct =
+                totalActive > 0
+                  ? ((totalActive - availableUnits) / totalActive) * 100
+                  : 0;
 
-            return (
-              <div
-                key={category.id}
-                onClick={() => {
-                  if (activePet && !isFullyBooked && eligible) {
-                    assignPet(activePet, category.id);
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOverCatId(category.id);
-                }}
-                onDragLeave={() => setDragOverCatId(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOverCatId(null);
-                  if (draggedPet && !isFullyBooked && eligible) {
-                    assignPet(draggedPet, category.id);
-                  }
-                }}
-                className={cn(
-                  "group relative overflow-hidden rounded-2xl border-2 transition-all duration-200",
-                  activePet && !isFullyBooked && eligible
-                    ? "cursor-pointer"
-                    : activePet && (isFullyBooked || !eligible)
-                      ? "cursor-not-allowed"
-                      : "",
-                  isDragOver && canDrop
-                    ? "border-primary ring-primary/20 scale-[1.02] ring-2 ring-offset-2"
-                    : petsHere.length > 0
-                      ? "border-primary/70 shadow-md"
-                      : "border-border hover:border-primary/30 hover:shadow-sm",
-                  (isFullyBooked || (!eligible && activePet)) && "opacity-70",
-                )}
-              >
-                {/* Image area */}
-                <div className="relative h-36 w-full overflow-hidden bg-muted">
-                  {category.imageUrl ? (
-                    <Image
-                      src={category.imageUrl}
-                      alt={category.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center">
-                      <Bed className="text-muted-foreground/20 size-14" />
-                    </div>
+              return (
+                <div
+                  key={category.id}
+                  onClick={() => {
+                    if (activePet && !isFullyBooked && eligible) {
+                      assignPet(activePet, category.id);
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverCatId(category.id);
+                  }}
+                  onDragLeave={() => setDragOverCatId(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverCatId(null);
+                    if (draggedPet && !isFullyBooked && eligible) {
+                      assignPet(draggedPet, category.id);
+                    }
+                  }}
+                  className={cn(
+                    "group relative overflow-hidden rounded-2xl border-2 transition-all duration-200",
+                    activePet && !isFullyBooked && eligible
+                      ? "cursor-pointer"
+                      : activePet && (isFullyBooked || !eligible)
+                        ? "cursor-not-allowed"
+                        : "",
+                    isDragOver && canDrop
+                      ? "border-primary ring-primary/20 scale-[1.02] ring-2 ring-offset-2"
+                      : petsHere.length > 0
+                        ? "border-primary/70 shadow-md"
+                        : "border-border hover:border-primary/30 hover:shadow-sm",
+                    (isFullyBooked || (!eligible && activePet)) && "opacity-70",
                   )}
+                >
+                  {/* Image area */}
+                  <div className="bg-muted relative h-36 w-full overflow-hidden">
+                    {category.imageUrl ? (
+                      <Image
+                        src={category.imageUrl}
+                        alt={category.name}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center">
+                        <Bed className="text-muted-foreground/20 size-14" />
+                      </div>
+                    )}
 
-                  {/* Price badge */}
-                  {category.defaultBasePrice != null && (
-                    <div className="absolute top-2.5 left-2.5">
-                      <span className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
-                        ${category.defaultBasePrice}/night
-                      </span>
-                    </div>
-                  )}
+                    {/* Price badge */}
+                    {category.defaultBasePrice != null && (
+                      <div className="absolute top-2.5 left-2.5">
+                        <span className="bg-foreground/80 text-background rounded-lg px-2 py-1 text-xs font-bold backdrop-blur-sm">
+                          ${category.defaultBasePrice}/night
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Assigned pet avatars */}
-                  {petsHere.length > 0 && (
-                    <div className="absolute top-2.5 right-2.5 flex gap-1">
-                      {petsHere.map((pet) => (
-                        <div
-                          key={pet.id}
-                          className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-bold shadow"
-                        >
-                          {pet.name[0]}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    {/* Assigned pet avatars */}
+                    {petsHere.length > 0 && (
+                      <div className="absolute top-2.5 right-2.5 flex gap-1">
+                        {petsHere.map((pet) => (
+                          <div
+                            key={pet.id}
+                            className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-full text-xs font-bold shadow-sm"
+                          >
+                            {pet.name[0]}
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Fully booked overlay */}
-                  {isFullyBooked && (
-                    <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
-                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 shadow-sm">
-                        No rooms available
-                      </span>
-                    </div>
-                  )}
+                    {/* Fully booked overlay */}
+                    {isFullyBooked && (
+                      <div className="bg-background/70 absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600 shadow-sm">
+                          No rooms available
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Drop-zone highlight */}
-                  {isDragOver && canDrop && (
-                    <div className="border-primary/60 absolute inset-0 flex items-center justify-center border-4 border-dashed bg-white/20">
-                      <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-semibold shadow">
-                        Drop here
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card content */}
-                <div className="space-y-3 p-4">
-                  <div>
-                    <h4 className="font-semibold leading-tight">{category.name}</h4>
-                    {category.description && (
-                      <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
-                        {category.description}
-                      </p>
+                    {/* Drop-zone highlight */}
+                    {isDragOver && canDrop && (
+                      <div className="border-primary/60 absolute inset-0 flex items-center justify-center border-4 border-dashed bg-white/20">
+                        <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs font-semibold shadow-sm">
+                          Drop here
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Availability bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground">Availability</span>
-                      <span
-                        className={cn(
-                          "font-semibold tabular-nums",
-                          isFullyBooked
-                            ? "text-red-600"
-                            : availableUnits <= 1
-                              ? "text-orange-500"
-                              : "text-emerald-600",
-                        )}
-                      >
-                        {availableUnits} / {totalActive} rooms free
-                      </span>
+                  {/* Card content */}
+                  <div className="space-y-3 p-4">
+                    <div>
+                      <h4 className="leading-tight font-semibold">
+                        {category.name}
+                      </h4>
+                      {category.description && (
+                        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+                          {category.description}
+                        </p>
+                      )}
                     </div>
-                    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          pct >= 100
-                            ? "bg-red-500"
-                            : pct >= 70
-                              ? "bg-orange-400"
-                              : "bg-emerald-500",
-                        )}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
 
-                  {/* Ineligibility notice (only when a pet is selected and it doesn't qualify) */}
-                  {!eligible && eligibilityMessage && activePet && (
-                    <div className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
-                      <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
-                      <p className="text-[11px] text-amber-700">{eligibilityMessage}</p>
+                    {/* Availability bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">
+                          Availability
+                        </span>
+                        <span
+                          className={cn(
+                            "font-semibold tabular-nums",
+                            isFullyBooked
+                              ? "text-red-600"
+                              : availableUnits <= 1
+                                ? "text-orange-500"
+                                : "text-emerald-600",
+                          )}
+                        >
+                          {availableUnits} / {totalActive} rooms free
+                        </span>
+                      </div>
+                      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            pct >= 100
+                              ? "bg-red-500"
+                              : pct >= 70
+                                ? "bg-orange-400"
+                                : "bg-emerald-500",
+                          )}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
                     </div>
-                  )}
+
+                    {/* Ineligibility notice (only when a pet is selected and it doesn't qualify) */}
+                    {!eligible && eligibilityMessage && activePet && (
+                      <div className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2">
+                        <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+                        <p className="text-[11px] text-amber-700">
+                          {eligibilityMessage}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          },
-        )}
-      </div>
+              );
+            },
+          )}
+        </div>
       )}
     </div>
   );

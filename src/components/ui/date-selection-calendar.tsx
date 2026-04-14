@@ -330,7 +330,12 @@ export function DateSelectionCalendar({
   const isDateDisabled = (date: Date): boolean => {
     if (effectiveMinDate && date < effectiveMinDate) return true;
     if (effectiveMaxDate && date > effectiveMaxDate) return true;
-    if (enableAvailabilityRules && facilityHours && !getFacilityHoursForDate(date)?.isOpen) return true;
+    if (
+      enableAvailabilityRules &&
+      facilityHours &&
+      !getFacilityHoursForDate(date)?.isOpen
+    )
+      return true;
     if (enableAvailabilityRules && getHolidayName(date)) return true;
     return effectiveDisabledDates.some((d) => isSameDay(d, date));
   };
@@ -344,7 +349,11 @@ export function DateSelectionCalendar({
     const holiday = enableAvailabilityRules ? getHolidayName(date) : null;
     if (holiday) return `Closed — ${holiday}`;
     // Facility closed
-    if (enableAvailabilityRules && facilityHours && !getFacilityHoursForDate(date)?.isOpen)
+    if (
+      enableAvailabilityRules &&
+      facilityHours &&
+      !getFacilityHoursForDate(date)?.isOpen
+    )
       return "Facility closed";
     // Before minimum advance
     if (effectiveMinDate && date < effectiveMinDate)
@@ -468,7 +477,12 @@ export function DateSelectionCalendar({
       currentMonth.getMonth() - 1,
       1,
     );
-    if (!isMonthWithinBounds(previousMonth.getFullYear(), previousMonth.getMonth())) {
+    if (
+      !isMonthWithinBounds(
+        previousMonth.getFullYear(),
+        previousMonth.getMonth(),
+      )
+    ) {
       return;
     }
     setCurrentMonth(previousMonth);
@@ -493,7 +507,10 @@ export function DateSelectionCalendar({
   const handleYearChange = (value: string) => {
     const selectedYear = Number(value);
     if (!Number.isFinite(selectedYear)) return;
-    const clampedMonth = clampMonthForYear(selectedYear, currentMonth.getMonth());
+    const clampedMonth = clampMonthForYear(
+      selectedYear,
+      currentMonth.getMonth(),
+    );
     setCurrentMonth(new Date(selectedYear, clampedMonth, 1));
   };
 
@@ -885,7 +902,7 @@ export function DateSelectionCalendar({
                     </SelectTrigger>
                     <SelectContent
                       align="start"
-                      className="z-[90] max-h-44 min-w-[4.8rem]"
+                      className="z-90 max-h-44 min-w-[4.8rem]"
                     >
                       {yearOptions.map((year) => (
                         <SelectItem
@@ -911,14 +928,17 @@ export function DateSelectionCalendar({
                     </SelectTrigger>
                     <SelectContent
                       align="start"
-                      className="z-[90] max-h-52 min-w-[6.8rem]"
+                      className="z-90 max-h-52 min-w-[6.8rem]"
                     >
                       {MONTH_NAMES.map((monthLabel, monthIndex) => (
                         <SelectItem
                           key={monthLabel}
                           value={String(monthIndex)}
                           disabled={
-                            !isMonthWithinBounds(currentMonth.getFullYear(), monthIndex)
+                            !isMonthWithinBounds(
+                              currentMonth.getFullYear(),
+                              monthIndex,
+                            )
                           }
                           className="text-xs"
                         >

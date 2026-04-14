@@ -8,7 +8,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Stepper, StepperContent, StepperNavigation } from "@/components/ui/stepper";
+import {
+  Stepper,
+  StepperContent,
+  StepperNavigation,
+} from "@/components/ui/stepper";
 import type { Step } from "@/components/ui/stepper";
 import { usePlanBuilder } from "./use-plan-builder";
 import { StepBasics } from "./steps/StepBasics";
@@ -40,12 +44,7 @@ const steps: Step[] = [
   { id: "review", title: "Review", description: "Save plan" },
 ];
 
-export function PlanBuilderDialog({
-  open,
-  onOpenChange,
-  plan,
-  onSave,
-}: Props) {
+export function PlanBuilderDialog({ open, onOpenChange, plan, onSave }: Props) {
   const builder = usePlanBuilder(plan);
   const { data, update, currentStep, setCurrentStep, canProceedFrom, reset } =
     builder;
@@ -88,12 +87,8 @@ export function PlanBuilderDialog({
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <StepperContent>
-              {currentStep === 0 && (
-                <StepBasics data={data} update={update} />
-              )}
-              {currentStep === 1 && (
-                <StepPricing data={data} update={update} />
-              )}
+              {currentStep === 0 && <StepBasics data={data} update={update} />}
+              {currentStep === 1 && <StepPricing data={data} update={update} />}
               {currentStep === 2 && (
                 <StepBenefits data={data} update={update} />
               )}

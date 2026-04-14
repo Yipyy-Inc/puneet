@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  ArrowLeftRight,
-  Check,
-  X,
-  Clock,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowLeftRight, Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -141,9 +135,7 @@ export default function ShiftSwapsPage() {
             (e) => e.id === swap.targetEmployeeId,
           );
           const status = statusBadge[swap.status] || statusBadge.pending;
-          const dept = departments.find(
-            (d) => d.id === swap.departmentId,
-          );
+          const dept = departments.find((d) => d.id === swap.departmentId);
 
           return (
             <Card
@@ -155,9 +147,9 @@ export default function ShiftSwapsPage() {
                   <div className="flex items-center gap-4">
                     {/* Requesting Employee */}
                     <div className="flex items-center gap-2.5">
-                      <Avatar className="size-9 ring-2 ring-background shadow">
+                      <Avatar className="ring-background size-9 shadow-sm ring-2">
                         <AvatarImage src={reqEmp?.avatar} alt={reqEmp?.name} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold">
+                        <AvatarFallback className="bg-slate-100 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {reqEmp?.initials || "??"}
                         </AvatarFallback>
                       </Avatar>
@@ -166,7 +158,8 @@ export default function ShiftSwapsPage() {
                           {swap.requestingEmployeeName}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {swap.requestingShiftDate} · {swap.requestingShiftTime}
+                          {swap.requestingShiftDate} ·{" "}
+                          {swap.requestingShiftTime}
                         </p>
                       </div>
                     </div>
@@ -178,9 +171,9 @@ export default function ShiftSwapsPage() {
 
                     {/* Target Employee */}
                     <div className="flex items-center gap-2.5">
-                      <Avatar className="size-9 ring-2 ring-background shadow">
+                      <Avatar className="ring-background size-9 shadow-sm ring-2">
                         <AvatarImage src={tgtEmp?.avatar} alt={tgtEmp?.name} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-[10px] font-semibold">
+                        <AvatarFallback className="bg-slate-100 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                           {tgtEmp?.initials || "??"}
                         </AvatarFallback>
                       </Avatar>

@@ -49,10 +49,7 @@ export function StepBenefits({ data, update }: Props) {
     update({ discountRules: [...data.discountRules, rule] });
   };
 
-  const updateRule = (
-    id: string,
-    patch: Partial<MembershipDiscountRule>,
-  ) => {
+  const updateRule = (id: string, patch: Partial<MembershipDiscountRule>) => {
     update({
       discountRules: data.discountRules.map((r) =>
         r.id === id ? { ...r, ...patch } : r,
@@ -159,7 +156,9 @@ export function StepBenefits({ data, update }: Props) {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">
-                      {rule.discountType === "percentage" ? "Percent" : "Amount ($)"}
+                      {rule.discountType === "percentage"
+                        ? "Percent"
+                        : "Amount ($)"}
                     </Label>
                     <Input
                       type="number"
@@ -276,7 +275,7 @@ function PerkInput({ onAdd }: { onAdd: (perk: string) => void }) {
         type="button"
         variant="secondary"
         onClick={(e) => {
-          const input = (e.currentTarget.previousSibling as HTMLInputElement);
+          const input = e.currentTarget.previousSibling as HTMLInputElement;
           if (input) {
             onAdd(input.value);
             input.value = "";

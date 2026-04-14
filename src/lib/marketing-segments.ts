@@ -23,18 +23,16 @@ function emitSegmentsChanged(): void {
 
 function normalizeCustomerIds(ids: Array<string | number>): string[] {
   return Array.from(
-    new Set(
-      ids
-        .map((id) => String(id).trim())
-        .filter((id) => id.length > 0),
-    ),
+    new Set(ids.map((id) => String(id).trim()).filter((id) => id.length > 0)),
   );
 }
 
 export function loadCustomCustomerSegmentsFromStorage(): CustomerSegment[] {
   if (typeof window === "undefined") return [];
 
-  const raw = window.localStorage.getItem(MARKETING_CUSTOM_SEGMENTS_STORAGE_KEY);
+  const raw = window.localStorage.getItem(
+    MARKETING_CUSTOM_SEGMENTS_STORAGE_KEY,
+  );
   if (!raw) return [];
 
   try {
@@ -43,7 +41,10 @@ export function loadCustomCustomerSegmentsFromStorage(): CustomerSegment[] {
 
     return parsed.filter(
       (value): value is CustomerSegment =>
-        !!value && typeof value === "object" && "id" in value && "name" in value,
+        !!value &&
+        typeof value === "object" &&
+        "id" in value &&
+        "name" in value,
     );
   } catch {
     return [];
@@ -78,10 +79,14 @@ export function createCustomCustomerSegment(
   }
 
   const now = new Date().toISOString();
-  const descriptionParts = [input.description.trim() || "Created from customer selection."];
+  const descriptionParts = [
+    input.description.trim() || "Created from customer selection.",
+  ];
 
   if (input.sourceFilterSummary?.trim()) {
-    descriptionParts.push(`Source filters: ${input.sourceFilterSummary.trim()}`);
+    descriptionParts.push(
+      `Source filters: ${input.sourceFilterSummary.trim()}`,
+    );
   }
 
   const newSegment: CustomerSegment = {

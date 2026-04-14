@@ -9,21 +9,54 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 
-const PET_TYPES = ["Dog", "Cat", "Rabbit", "Bird", "Guinea Pig", "Hamster", "Reptile"];
+const PET_TYPES = [
+  "Dog",
+  "Cat",
+  "Rabbit",
+  "Bird",
+  "Guinea Pig",
+  "Hamster",
+  "Reptile",
+];
 
 const DOG_BREEDS = [
-  "Labrador Retriever", "Golden Retriever", "French Bulldog", "German Shepherd",
-  "Poodle", "Bulldog", "Beagle", "Rottweiler", "Dachshund", "Shih Tzu",
-  "Husky", "Boxer", "Border Collie", "Cocker Spaniel", "Mixed / Other",
+  "Labrador Retriever",
+  "Golden Retriever",
+  "French Bulldog",
+  "German Shepherd",
+  "Poodle",
+  "Bulldog",
+  "Beagle",
+  "Rottweiler",
+  "Dachshund",
+  "Shih Tzu",
+  "Husky",
+  "Boxer",
+  "Border Collie",
+  "Cocker Spaniel",
+  "Mixed / Other",
 ];
 
 const CAT_BREEDS = [
-  "Persian", "Siamese", "Maine Coon", "Ragdoll", "Bengal",
-  "British Shorthair", "Sphynx", "Scottish Fold", "Mixed / Other",
+  "Persian",
+  "Siamese",
+  "Maine Coon",
+  "Ragdoll",
+  "Bengal",
+  "British Shorthair",
+  "Sphynx",
+  "Scottish Fold",
+  "Mixed / Other",
 ];
 
 const COAT_TYPES = [
-  "Short", "Medium", "Long", "Curly / Wavy", "Double Coat", "Wire / Rough", "Hairless",
+  "Short",
+  "Medium",
+  "Long",
+  "Curly / Wavy",
+  "Double Coat",
+  "Wire / Rough",
+  "Hairless",
 ];
 
 type Mode = "all" | "custom";
@@ -42,7 +75,9 @@ export function AddOnPetFilter({ value, onChange }: Props) {
     value?.types?.length ? "custom" : "all",
   );
   const [weightMode, setWeightMode] = useState<Mode>(
-    value?.weightMin !== undefined || value?.weightMax !== undefined ? "custom" : "all",
+    value?.weightMin !== undefined || value?.weightMax !== undefined
+      ? "custom"
+      : "all",
   );
   const [coatMode, setCoatMode] = useState<Mode>(
     value?.coatTypes?.length ? "custom" : "all",
@@ -89,15 +124,23 @@ export function AddOnPetFilter({ value, onChange }: Props) {
   return (
     <div className="space-y-4">
       {/* Type & Breed */}
-      <div className="rounded-xl border bg-card/50 p-4 space-y-3">
+      <div className="bg-card/50 space-y-3 rounded-xl border p-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800">Type &amp; Breed</p>
+          <p className="text-sm font-semibold text-slate-800">
+            Type &amp; Breed
+          </p>
           {typeMode === "custom" && selectedTypes.length > 0 && (
-            <Badge variant="secondary" className="text-[10px]">{selectedTypes.join(", ")}</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {selectedTypes.join(", ")}
+            </Badge>
           )}
         </div>
-        <ModeSelector mode={typeMode} onChange={setTypeMode_}
-          allLabel="All Types and Breeds" customLabel="Customize" />
+        <ModeSelector
+          mode={typeMode}
+          onChange={setTypeMode_}
+          allLabel="All Types and Breeds"
+          customLabel="Customize"
+        />
         {typeMode === "custom" && (
           <div className="space-y-3 pt-1">
             <div className="flex flex-wrap gap-2">
@@ -105,7 +148,12 @@ export function AddOnPetFilter({ value, onChange }: Props) {
                 <button
                   key={type}
                   type="button"
-                  onClick={() => patch({ types: toggle(selectedTypes, type), breeds: undefined })}
+                  onClick={() =>
+                    patch({
+                      types: toggle(selectedTypes, type),
+                      breeds: undefined,
+                    })
+                  }
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs font-medium transition-all",
                     selectedTypes.includes(type)
@@ -122,23 +170,36 @@ export function AddOnPetFilter({ value, onChange }: Props) {
                 <button
                   type="button"
                   onClick={() => setBreedsOpen((o) => !o)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-slate-700 transition-colors"
+                  className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-slate-700"
                 >
-                  {breedsOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                  {breedsOpen ? (
+                    <ChevronDown className="size-3.5" />
+                  ) : (
+                    <ChevronRight className="size-3.5" />
+                  )}
                   Specific breeds
                   {selectedBreeds.length > 0 && (
-                    <span className="ml-1 text-primary">{selectedBreeds.length} selected</span>
+                    <span className="text-primary ml-1">
+                      {selectedBreeds.length} selected
+                    </span>
                   )}
                 </button>
                 {breedsOpen && (
-                  <div className="mt-2 grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto rounded-lg border bg-muted/20 p-3">
+                  <div className="bg-muted/20 mt-2 grid max-h-40 grid-cols-2 gap-1.5 overflow-y-auto rounded-lg border p-3">
                     {availableBreeds.map((breed) => (
-                      <label key={breed} className="flex items-center gap-2 cursor-pointer group">
+                      <label
+                        key={breed}
+                        className="group flex cursor-pointer items-center gap-2"
+                      >
                         <Checkbox
                           checked={selectedBreeds.includes(breed)}
-                          onCheckedChange={() => patch({ breeds: toggle(selectedBreeds, breed) })}
+                          onCheckedChange={() =>
+                            patch({ breeds: toggle(selectedBreeds, breed) })
+                          }
                         />
-                        <span className="text-xs group-hover:text-slate-900 transition-colors">{breed}</span>
+                        <span className="text-xs transition-colors group-hover:text-slate-900">
+                          {breed}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -150,28 +211,48 @@ export function AddOnPetFilter({ value, onChange }: Props) {
       </div>
 
       {/* Weight */}
-      <div className="rounded-xl border bg-card/50 p-4 space-y-3">
+      <div className="bg-card/50 space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold text-slate-800">Weight</p>
-        <ModeSelector mode={weightMode} onChange={setWeightMode_}
-          allLabel="Full Range" customLabel="Customize" />
+        <ModeSelector
+          mode={weightMode}
+          onChange={setWeightMode_}
+          allLabel="Full Range"
+          customLabel="Customize"
+        />
         {weightMode === "custom" && (
           <div className="flex items-center gap-3">
-            <div className="space-y-1 flex-1">
-              <Label className="text-xs text-muted-foreground">Min (lbs)</Label>
+            <div className="flex-1 space-y-1">
+              <Label className="text-muted-foreground text-xs">Min (lbs)</Label>
               <Input
-                type="number" min={0} placeholder="0"
+                type="number"
+                min={0}
+                placeholder="0"
                 value={value?.weightMin ?? ""}
-                onChange={(e) => patch({ weightMin: e.target.value ? Number(e.target.value) : undefined })}
+                onChange={(e) =>
+                  patch({
+                    weightMin: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
                 className="h-8 text-sm"
               />
             </div>
-            <span className="text-muted-foreground text-sm mt-5">–</span>
-            <div className="space-y-1 flex-1">
-              <Label className="text-xs text-muted-foreground">Max (lbs)</Label>
+            <span className="text-muted-foreground mt-5 text-sm">–</span>
+            <div className="flex-1 space-y-1">
+              <Label className="text-muted-foreground text-xs">Max (lbs)</Label>
               <Input
-                type="number" min={0} placeholder="No limit"
+                type="number"
+                min={0}
+                placeholder="No limit"
                 value={value?.weightMax ?? ""}
-                onChange={(e) => patch({ weightMax: e.target.value ? Number(e.target.value) : undefined })}
+                onChange={(e) =>
+                  patch({
+                    weightMax: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
                 className="h-8 text-sm"
               />
             </div>
@@ -180,17 +261,23 @@ export function AddOnPetFilter({ value, onChange }: Props) {
       </div>
 
       {/* Coat Type */}
-      <div className="rounded-xl border bg-card/50 p-4 space-y-3">
+      <div className="bg-card/50 space-y-3 rounded-xl border p-4">
         <p className="text-sm font-semibold text-slate-800">Coat Type</p>
-        <ModeSelector mode={coatMode} onChange={setCoatMode_}
-          allLabel="All Coat Types" customLabel="Selected Coat Types" />
+        <ModeSelector
+          mode={coatMode}
+          onChange={setCoatMode_}
+          allLabel="All Coat Types"
+          customLabel="Selected Coat Types"
+        />
         {coatMode === "custom" && (
           <div className="flex flex-wrap gap-2 pt-1">
             {COAT_TYPES.map((coat) => (
               <button
                 key={coat}
                 type="button"
-                onClick={() => patch({ coatTypes: toggle(selectedCoats, coat) })}
+                onClick={() =>
+                  patch({ coatTypes: toggle(selectedCoats, coat) })
+                }
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs font-medium transition-all",
                   selectedCoats.includes(coat)
@@ -209,7 +296,10 @@ export function AddOnPetFilter({ value, onChange }: Props) {
 }
 
 function ModeSelector({
-  mode, onChange, allLabel, customLabel,
+  mode,
+  onChange,
+  allLabel,
+  customLabel,
 }: {
   mode: Mode;
   onChange: (m: Mode) => void;
@@ -224,10 +314,10 @@ function ModeSelector({
           type="button"
           onClick={() => onChange(m)}
           className={cn(
-            "flex-1 rounded-lg border py-2 px-3 text-xs font-medium text-center transition-all",
+            "flex-1 rounded-lg border px-3 py-2 text-center text-xs font-medium transition-all",
             mode === m
               ? "border-primary bg-primary/8 text-primary"
-              : "hover:border-slate-300 hover:bg-muted/50 text-muted-foreground",
+              : "hover:bg-muted/50 text-muted-foreground hover:border-slate-300",
           )}
         >
           {m === "all" ? allLabel : customLabel}

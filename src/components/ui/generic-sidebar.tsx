@@ -205,14 +205,14 @@ export function GenericSidebar({
                   <SidebarMenu className="gap-0.5">
                     {section.items.map((item) => {
                       const isActive = effectivePathname === item.url;
-                        const itemLabel = t(item.title);
+                      const itemLabel = t(item.title);
                       return (
                         <SidebarMenuItem key={item.title}>
                           {item.disabled ? (
                             <SidebarMenuButton
                               asChild={false}
                               disabled
-                                tooltip={itemLabel}
+                              tooltip={itemLabel}
                               className={cn(
                                 "w-full rounded-lg text-sm font-medium",
                                 "cursor-not-allowed opacity-50",
@@ -452,53 +452,53 @@ export function GenericSidebar({
                       {(() => {
                         const activeItemLabel = t(activeItem.title);
                         return activeItem.disabled ? (
-                        <SidebarMenuButton
-                          asChild={false}
-                          disabled
-                          tooltip={activeItemLabel}
-                          className={cn(
-                            "w-full rounded-xl text-sm font-medium",
-                            "cursor-not-allowed opacity-50",
-                            "text-muted-foreground",
-                          )}
-                        >
-                          <activeItem.icon className="size-4 shrink-0" />
-                          <span className="truncate">{activeItemLabel}</span>
-                        </SidebarMenuButton>
-                      ) : (
-                        <SidebarMenuButton
-                          asChild
-                          isActive={true}
-                          tooltip={activeItemLabel}
-                          className={cn(
-                            `w-full rounded-xl text-sm font-medium transition-all duration-200`,
-                            "bg-primary text-primary-foreground",
-                            "shadow-sm",
-                            "hover:bg-primary/90",
-                          )}
-                        >
-                          <Link
-                            href={activeItem.url}
-                            className="flex items-center gap-3"
-                          >
-                            <activeItem.icon
-                              className={cn(
-                                "size-4 shrink-0 transition-colors",
-                                "text-muted-foreground",
-                              )}
-                            />
-                            <span className="flex-1 truncate">
-                              {activeItemLabel}
-                            </span>
-                            {activeItem.count && (
-                              <Badge variant="secondary" className="text-xs">
-                                {activeItem.count}
-                              </Badge>
+                          <SidebarMenuButton
+                            asChild={false}
+                            disabled
+                            tooltip={activeItemLabel}
+                            className={cn(
+                              "w-full rounded-xl text-sm font-medium",
+                              "cursor-not-allowed opacity-50",
+                              "text-muted-foreground",
                             )}
-                            <ChevronRight className="size-4 opacity-60" />
-                          </Link>
-                        </SidebarMenuButton>
-                      );
+                          >
+                            <activeItem.icon className="size-4 shrink-0" />
+                            <span className="truncate">{activeItemLabel}</span>
+                          </SidebarMenuButton>
+                        ) : (
+                          <SidebarMenuButton
+                            asChild
+                            isActive={true}
+                            tooltip={activeItemLabel}
+                            className={cn(
+                              `w-full rounded-xl text-sm font-medium transition-all duration-200`,
+                              "bg-primary text-primary-foreground",
+                              "shadow-sm",
+                              "hover:bg-primary/90",
+                            )}
+                          >
+                            <Link
+                              href={activeItem.url}
+                              className="flex items-center gap-3"
+                            >
+                              <activeItem.icon
+                                className={cn(
+                                  "size-4 shrink-0 transition-colors",
+                                  "text-muted-foreground",
+                                )}
+                              />
+                              <span className="flex-1 truncate">
+                                {activeItemLabel}
+                              </span>
+                              {activeItem.count && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {activeItem.count}
+                                </Badge>
+                              )}
+                              <ChevronRight className="size-4 opacity-60" />
+                            </Link>
+                          </SidebarMenuButton>
+                        );
                       })()}
                     </SidebarMenuItem>
                   </SidebarMenu>

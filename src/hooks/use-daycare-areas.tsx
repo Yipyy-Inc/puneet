@@ -37,7 +37,9 @@ interface DaycareAreasContextValue {
   resetDaycareAreas: () => void;
 }
 
-const DaycareAreasContext = createContext<DaycareAreasContextValue | null>(null);
+const DaycareAreasContext = createContext<DaycareAreasContextValue | null>(
+  null,
+);
 
 const AREAS_KEY = "daycare-play-areas";
 const SECTIONS_KEY = "daycare-sections";

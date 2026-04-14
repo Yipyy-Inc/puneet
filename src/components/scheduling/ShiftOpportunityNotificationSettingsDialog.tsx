@@ -17,16 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import {
-  Bell,
-  Mail,
-  MessageSquare,
-  Smartphone,
-  Users,
-  Shield,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Bell, Mail, Smartphone, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type {
   ShiftOpportunityNotificationSettings,
@@ -51,7 +42,8 @@ export function ShiftOpportunityNotificationSettingsDialog({
   employees,
   onSave,
 }: Props) {
-  const [form, setForm] = useState<ShiftOpportunityNotificationSettings>(settings);
+  const [form, setForm] =
+    useState<ShiftOpportunityNotificationSettings>(settings);
 
   const activeEmployees = employees.filter((e) => e.status === "active");
   const managersExcluded = employees.filter(
@@ -108,7 +100,7 @@ export function ShiftOpportunityNotificationSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bell className="size-4" />
@@ -122,15 +114,14 @@ export function ShiftOpportunityNotificationSettingsDialog({
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <p className="text-sm font-medium">Enable Notifications</p>
-                <p className="text-xs text-muted-foreground">
-                  Send notifications to employees when shift opportunities are posted
+                <p className="text-muted-foreground text-xs">
+                  Send notifications to employees when shift opportunities are
+                  posted
                 </p>
               </div>
               <Switch
                 checked={form.enabled}
-                onCheckedChange={(v) =>
-                  setForm((p) => ({ ...p, enabled: v }))
-                }
+                onCheckedChange={(v) => setForm((p) => ({ ...p, enabled: v }))}
               />
             </div>
 
@@ -140,7 +131,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
 
                 {/* Notification channels */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Notification Channels</Label>
+                  <Label className="text-sm font-semibold">
+                    Notification Channels
+                  </Label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() =>
@@ -224,13 +217,16 @@ export function ShiftOpportunityNotificationSettingsDialog({
 
                 {/* Notification scope */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Who Gets Notified</Label>
+                  <Label className="text-sm font-semibold">
+                    Who Gets Notified
+                  </Label>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="text-sm">Notify all active employees</p>
-                        <p className="text-xs text-muted-foreground">
-                          Every active employee receives shift opportunity notifications
+                        <p className="text-muted-foreground text-xs">
+                          Every active employee receives shift opportunity
+                          notifications
                         </p>
                       </div>
                       <Switch
@@ -243,8 +239,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="text-sm">Filter by department</p>
-                        <p className="text-xs text-muted-foreground">
-                          Only notify employees in the same department as the open shift
+                        <p className="text-muted-foreground text-xs">
+                          Only notify employees in the same department as the
+                          open shift
                         </p>
                       </div>
                       <Switch
@@ -257,8 +254,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="text-sm">Filter by position</p>
-                        <p className="text-xs text-muted-foreground">
-                          Only notify employees who hold the same position as the open shift
+                        <p className="text-muted-foreground text-xs">
+                          Only notify employees who hold the same position as
+                          the open shift
                         </p>
                       </div>
                       <Switch
@@ -280,7 +278,8 @@ export function ShiftOpportunityNotificationSettingsDialog({
                       <Label className="text-sm font-semibold">
                         Eligible Employees
                         <Badge variant="secondary" className="ml-2 text-[10px]">
-                          {form.eligibleEmployeeIds.length} / {activeEmployees.length}
+                          {form.eligibleEmployeeIds.length} /{" "}
+                          {activeEmployees.length}
                         </Badge>
                       </Label>
                       <div className="flex gap-1.5">
@@ -302,11 +301,11 @@ export function ShiftOpportunityNotificationSettingsDialog({
                         </Button>
                       </div>
                     </div>
-                    <div className="space-y-1 rounded-lg border p-2 max-h-[200px] overflow-auto">
+                    <div className="max-h-[200px] space-y-1 overflow-auto rounded-lg border p-2">
                       {activeEmployees.map((emp) => (
                         <label
                           key={emp.id}
-                          className="flex items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted/50 cursor-pointer"
+                          className="hover:bg-muted/50 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5"
                         >
                           <Checkbox
                             checked={isEligible(emp.id)}
@@ -314,22 +313,23 @@ export function ShiftOpportunityNotificationSettingsDialog({
                           />
                           <Avatar className="size-6">
                             <AvatarImage src={emp.avatar} alt={emp.name} />
-                            <AvatarFallback className="text-[8px] bg-slate-100 dark:bg-slate-800">
+                            <AvatarFallback className="bg-slate-100 text-[8px] dark:bg-slate-800">
                               {emp.initials}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-medium">
                               {emp.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-muted-foreground text-[10px]">
                               {emp.role} · {getDeptName(emp.id)}
                             </p>
                           </div>
-                          {(emp.role === "Manager" || emp.role === "Supervisor") && (
+                          {(emp.role === "Manager" ||
+                            emp.role === "Supervisor") && (
                             <Badge
                               variant="outline"
-                              className="text-[9px] shrink-0"
+                              className="shrink-0 text-[9px]"
                             >
                               {emp.role}
                             </Badge>
@@ -344,13 +344,16 @@ export function ShiftOpportunityNotificationSettingsDialog({
 
                 {/* Approval settings */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Approval Rules</Label>
+                  <Label className="text-sm font-semibold">
+                    Approval Rules
+                  </Label>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="text-sm">Require manager approval</p>
-                        <p className="text-xs text-muted-foreground">
-                          Manager must approve before the shift claim is finalized
+                        <p className="text-muted-foreground text-xs">
+                          Manager must approve before the shift claim is
+                          finalized
                         </p>
                       </div>
                       <Switch
@@ -367,8 +370,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div>
                         <p className="text-sm">Auto-approve claims</p>
-                        <p className="text-xs text-muted-foreground">
-                          Automatically approve claims from eligible employees (faster coverage)
+                        <p className="text-muted-foreground text-xs">
+                          Automatically approve claims from eligible employees
+                          (faster coverage)
                         </p>
                       </div>
                       <Switch
@@ -389,8 +393,9 @@ export function ShiftOpportunityNotificationSettingsDialog({
                   <Label className="text-sm font-semibold">
                     Max Claims Per Employee Per Week
                   </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Limit how many shift opportunities an employee can claim per week to prevent overwork
+                  <p className="text-muted-foreground text-xs">
+                    Limit how many shift opportunities an employee can claim per
+                    week to prevent overwork
                   </p>
                   <Input
                     type="number"

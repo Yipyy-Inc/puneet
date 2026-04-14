@@ -72,7 +72,8 @@ function rangesOverlap(
 
 /** Employee is active / not terminated. */
 function checkEmployeeActive(employee: ScheduleEmployee): Conflict | null {
-  if (employee.status === "active" || employee.status === "onboarding") return null;
+  if (employee.status === "active" || employee.status === "onboarding")
+    return null;
   return {
     kind: "inactive_employee",
     severity: "error",
@@ -192,7 +193,12 @@ function checkDoubleBooking(
     if (s.employeeId !== employeeId) return false;
     if (s.date !== shift.date) return false;
     if (s.status === "cancelled") return false;
-    return rangesOverlap(shStart, shEnd, toMinutes(s.startTime), toMinutes(s.endTime));
+    return rangesOverlap(
+      shStart,
+      shEnd,
+      toMinutes(s.startTime),
+      toMinutes(s.endTime),
+    );
   });
   if (!conflict) return null;
   return {
@@ -267,7 +273,11 @@ function checkWeeklyHours(
     (sum, s) => sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
     0,
   );
-  const newHours = computeShiftHours(shift.startTime, shift.endTime, shift.breakMinutes);
+  const newHours = computeShiftHours(
+    shift.startTime,
+    shift.endTime,
+    shift.breakMinutes,
+  );
   const total = existingHours + newHours;
 
   const conflicts: Conflict[] = [];
@@ -278,7 +288,10 @@ function checkWeeklyHours(
       message: `Would push ${employee.name} to ${total.toFixed(1)}h this week (max ${employee.maxHoursPerWeek}h).`,
     });
   }
-  if (settings.overtimeThresholdWeekly && total > settings.overtimeThresholdWeekly) {
+  if (
+    settings.overtimeThresholdWeekly &&
+    total > settings.overtimeThresholdWeekly
+  ) {
     const over = total - settings.overtimeThresholdWeekly;
     conflicts.push({
       kind: "overtime_risk",
@@ -348,7 +361,14 @@ export interface ConflictCheckInput {
  * Returns conflicts sorted by severity (errors first).
  */
 export function detectShiftConflicts(input: ConflictCheckInput): Conflict[] {
-  const { shift, employee, allShifts, availability, timeOffRequests, settings } = input;
+  const {
+    shift,
+    employee,
+    allShifts,
+    availability,
+    timeOffRequests,
+    settings,
+  } = input;
 
   const checks: (Conflict | null)[] = [
     checkEmployeeActive(employee),
@@ -365,7 +385,11 @@ export function detectShiftConflicts(input: ConflictCheckInput): Conflict[] {
   const conflicts: Conflict[] = checks.filter((c): c is Conflict => c !== null);
   conflicts.push(...checkWeeklyHours(shift, employee, allShifts, settings));
 
-  const order: Record<ConflictSeverity, number> = { error: 0, warning: 1, info: 2 };
+  const order: Record<ConflictSeverity, number> = {
+    error: 0,
+    warning: 1,
+    info: 2,
+  };
   return conflicts.sort((a, b) => order[a.severity] - order[b.severity]);
 }
 
@@ -394,8 +418,14 @@ export function rankEmployeesForShift(
   const { availabilities, ...rest } = baseInput;
   return pool
     .map((employee) => {
-      const availability = availabilities.find((a) => a.employeeId === employee.id);
-      const conflicts = detectShiftConflicts({ ...rest, employee, availability });
+      const availability = availabilities.find(
+        (a) => a.employeeId === employee.id,
+      );
+      const conflicts = detectShiftConflicts({
+        ...rest,
+        employee,
+        availability,
+      });
       const score =
         conflicts.reduce((sum, c) => {
           if (c.severity === "error") return sum + 100;

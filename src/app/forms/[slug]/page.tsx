@@ -557,8 +557,7 @@ export default function PublicFormPage() {
   // Phase 2: Detect if form can display bilingual labels
   const hasFrenchTranslations =
     form?.questions.some((q) => q.labelI18n?.fr) ?? false;
-  const showLocaleSwitcher =
-    hasFrenchTranslations && enabledLocales.length > 1;
+  const showLocaleSwitcher = hasFrenchTranslations && enabledLocales.length > 1;
 
   const isAnonymous = !customerId && !petIds?.length;
   const total = visibleQuestions.length;

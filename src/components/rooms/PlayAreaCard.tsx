@@ -13,10 +13,14 @@ import {
   PawPrint,
   AlertCircle,
   TreePine,
-  ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DaycarePlayArea, DaycareSection, RoomRule, RoomCategoryColor } from "@/types/rooms";
+import type {
+  DaycarePlayArea,
+  DaycareSection,
+  RoomRule,
+  RoomCategoryColor,
+} from "@/types/rooms";
 
 // ── Color config ───────────────────────────────────────────────────────────────
 
@@ -24,26 +28,80 @@ const COLOR_CONFIG: Record<
   RoomCategoryColor,
   { bg: string; text: string; bar: string; badge: string; border: string }
 > = {
-  amber:   { bg: "bg-amber-100",   text: "text-amber-700",   bar: "bg-amber-400",   badge: "bg-amber-100 text-amber-800 border-amber-200",   border: "border-l-amber-400"   },
-  violet:  { bg: "bg-violet-100",  text: "text-violet-700",  bar: "bg-violet-500",  badge: "bg-violet-100 text-violet-800 border-violet-200",  border: "border-l-violet-400"  },
-  blue:    { bg: "bg-blue-100",    text: "text-blue-700",    bar: "bg-blue-500",    badge: "bg-blue-100 text-blue-800 border-blue-200",        border: "border-l-blue-400"    },
-  emerald: { bg: "bg-emerald-100", text: "text-emerald-700", bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-800 border-emerald-200", border: "border-l-emerald-400" },
-  rose:    { bg: "bg-rose-100",    text: "text-rose-700",    bar: "bg-rose-500",    badge: "bg-rose-100 text-rose-800 border-rose-200",        border: "border-l-rose-400"    },
-  orange:  { bg: "bg-orange-100",  text: "text-orange-700",  bar: "bg-orange-400",  badge: "bg-orange-100 text-orange-800 border-orange-200",  border: "border-l-orange-400"  },
-  indigo:  { bg: "bg-indigo-100",  text: "text-indigo-700",  bar: "bg-indigo-500",  badge: "bg-indigo-100 text-indigo-800 border-indigo-200",  border: "border-l-indigo-400"  },
-  slate:   { bg: "bg-slate-100",   text: "text-slate-700",   bar: "bg-slate-400",   badge: "bg-slate-100 text-slate-800 border-slate-200",     border: "border-l-slate-400"   },
+  amber: {
+    bg: "bg-amber-100",
+    text: "text-amber-700",
+    bar: "bg-amber-400",
+    badge: "bg-amber-100 text-amber-800 border-amber-200",
+    border: "border-l-amber-400",
+  },
+  violet: {
+    bg: "bg-violet-100",
+    text: "text-violet-700",
+    bar: "bg-violet-500",
+    badge: "bg-violet-100 text-violet-800 border-violet-200",
+    border: "border-l-violet-400",
+  },
+  blue: {
+    bg: "bg-blue-100",
+    text: "text-blue-700",
+    bar: "bg-blue-500",
+    badge: "bg-blue-100 text-blue-800 border-blue-200",
+    border: "border-l-blue-400",
+  },
+  emerald: {
+    bg: "bg-emerald-100",
+    text: "text-emerald-700",
+    bar: "bg-emerald-500",
+    badge: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    border: "border-l-emerald-400",
+  },
+  rose: {
+    bg: "bg-rose-100",
+    text: "text-rose-700",
+    bar: "bg-rose-500",
+    badge: "bg-rose-100 text-rose-800 border-rose-200",
+    border: "border-l-rose-400",
+  },
+  orange: {
+    bg: "bg-orange-100",
+    text: "text-orange-700",
+    bar: "bg-orange-400",
+    badge: "bg-orange-100 text-orange-800 border-orange-200",
+    border: "border-l-orange-400",
+  },
+  indigo: {
+    bg: "bg-indigo-100",
+    text: "text-indigo-700",
+    bar: "bg-indigo-500",
+    badge: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    border: "border-l-indigo-400",
+  },
+  slate: {
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    bar: "bg-slate-400",
+    badge: "bg-slate-100 text-slate-800 border-slate-200",
+    border: "border-l-slate-400",
+  },
 };
 
 // ── Rule helpers ───────────────────────────────────────────────────────────────
 
 function ruleLabel(rule: RoomRule): string {
   switch (rule.type) {
-    case "max_weight":      return `Max ${rule.value} lbs`;
-    case "min_weight":      return `Min ${rule.value} lbs`;
-    case "pet_type":        return `${String(rule.value)} only`;
-    case "max_pets":        return `Max ${rule.value} pets`;
-    case "single_pet_only": return "Single pet";
-    default:                return "Rule";
+    case "max_weight":
+      return `Max ${rule.value} lbs`;
+    case "min_weight":
+      return `Min ${rule.value} lbs`;
+    case "pet_type":
+      return `${String(rule.value)} only`;
+    case "max_pets":
+      return `Max ${rule.value} pets`;
+    case "single_pet_only":
+      return "Single pet";
+    default:
+      return "Rule";
   }
 }
 
@@ -67,7 +125,11 @@ function CapacityBar({
   const pct = capacity > 0 ? Math.min((used / capacity) * 100, 100) : 0;
   const remaining = capacity - used;
   const urgency =
-    pct >= 90 ? "text-red-600" : pct >= 70 ? "text-orange-500" : "text-emerald-600";
+    pct >= 90
+      ? "text-red-600"
+      : pct >= 70
+        ? "text-orange-500"
+        : "text-emerald-600";
 
   return (
     <div className="space-y-1">
@@ -79,7 +141,10 @@ function CapacityBar({
       </div>
       <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div
-          className={cn("h-full rounded-full transition-all duration-500", barColor)}
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            barColor,
+          )}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -129,7 +194,7 @@ export function PlayAreaCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md",
+        "bg-card overflow-hidden rounded-xl border shadow-sm transition-shadow hover:shadow-md",
         !area.isActive && "opacity-60",
       )}
     >
@@ -138,7 +203,7 @@ export function PlayAreaCard({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="hover:bg-white/60 flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-white/60"
           >
             {expanded ? (
               <ChevronDown className="text-muted-foreground size-4" />
@@ -173,13 +238,13 @@ export function PlayAreaCard({
           {/* Stats */}
           <div className="mr-2 hidden shrink-0 items-center gap-6 text-sm sm:flex">
             {[
-              { val: sections.length,        label: "Sections"  },
-              { val: totalCapacity,           label: "Capacity"  },
-              { val: activeSections.length,   label: "Active"    },
+              { val: sections.length, label: "Sections" },
+              { val: totalCapacity, label: "Capacity" },
+              { val: activeSections.length, label: "Active" },
             ].map(({ val, label }) => (
               <div key={label} className="text-center">
-                <p className="text-lg font-bold leading-none">{val}</p>
-                <p className="text-muted-foreground mt-0.5 text-[10px] uppercase tracking-wide">
+                <p className="text-lg leading-none font-bold">{val}</p>
+                <p className="text-muted-foreground mt-0.5 text-[10px] tracking-wide uppercase">
                   {label}
                 </p>
               </div>
@@ -239,7 +304,9 @@ export function PlayAreaCard({
           {sections.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <TreePine className="text-muted-foreground/30 mb-2 size-8" />
-              <p className="text-muted-foreground mb-3 text-sm">No sections yet</p>
+              <p className="text-muted-foreground mb-3 text-sm">
+                No sections yet
+              </p>
               <Button size="sm" variant="outline" onClick={onAddSection}>
                 <Plus className="mr-1 size-3" />
                 Add First Section
@@ -304,7 +371,7 @@ function SectionTile({
             alt={section.name}
             className="size-full object-cover"
           />
-          <div className="from-background/80 absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent px-3 pb-2 pt-6">
+          <div className="from-background/80 absolute inset-x-0 bottom-0 bg-linear-to-t to-transparent px-3 pt-6 pb-2">
             <p className="text-sm font-semibold">{section.name}</p>
           </div>
           <div className="absolute top-2 right-2">
@@ -331,7 +398,7 @@ function SectionTile({
         </div>
       )}
 
-      <div className="p-3 space-y-2.5">
+      <div className="space-y-2.5 p-3">
         {section.description && (
           <p className="text-muted-foreground line-clamp-1 text-xs">
             {section.description}
@@ -373,13 +440,15 @@ function SectionTile({
         <p className="text-muted-foreground text-[10px]">
           Max {section.capacity} pets/day
           {pct >= 90 && (
-            <span className="ml-1.5 font-semibold text-red-500">· Near full</span>
+            <span className="ml-1.5 font-semibold text-red-500">
+              · Near full
+            </span>
           )}
         </p>
       </div>
 
       {/* Hover actions */}
-      <div className="from-card via-card/90 absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t to-transparent px-3 pb-2 pt-5 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="from-card via-card/90 absolute inset-x-0 bottom-0 flex items-center justify-between bg-linear-to-t to-transparent px-3 pt-5 pb-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button
           onClick={onEdit}
           className="text-muted-foreground hover:text-foreground text-[10px] underline underline-offset-2"

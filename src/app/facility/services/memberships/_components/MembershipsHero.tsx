@@ -40,7 +40,7 @@ export function MembershipsHero() {
   );
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-linear-to-br from-amber-50/60 via-background to-background p-6 dark:from-amber-950/20 dark:via-background dark:to-background">
+    <div className="via-background to-background dark:via-background dark:to-background relative overflow-hidden rounded-2xl border bg-linear-to-br from-amber-50/60 p-6 dark:from-amber-950/20">
       <div className="pointer-events-none absolute inset-0 opacity-[0.06]">
         <div className="absolute -top-10 -right-10 size-48 rounded-full bg-amber-300 blur-3xl" />
         <div className="absolute -bottom-10 -left-10 size-40 rounded-full bg-purple-300 blur-3xl" />
@@ -108,8 +108,7 @@ export function MembershipsHero() {
 
 type Accent = "amber" | "blue" | "emerald" | "purple";
 const accentTokens: Record<Accent, string> = {
-  amber:
-    "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   blue: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   emerald:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",

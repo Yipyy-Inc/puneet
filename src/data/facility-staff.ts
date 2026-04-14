@@ -1,0 +1,384 @@
+import type {
+  StaffProfile,
+  FacilityStaffRole,
+  ServiceModule,
+  NotificationEvent,
+  NotificationScope,
+} from "@/types/facility-staff";
+import { ALL_NOTIFICATION_EVENTS, ROLE_PRESETS } from "@/types/facility-staff";
+
+function defaultNotifications(
+  role: FacilityStaffRole,
+  overrides: Partial<Record<NotificationEvent, NotificationScope>> = {},
+): Record<NotificationEvent, NotificationScope> {
+  const preset = ROLE_PRESETS[role].defaultNotifications;
+  const base = Object.fromEntries(
+    ALL_NOTIFICATION_EVENTS.map((e) => [
+      e,
+      "do_not_notify" as NotificationScope,
+    ]),
+  ) as Record<NotificationEvent, NotificationScope>;
+  return { ...base, ...preset, ...overrides };
+}
+
+export const FACILITY_LOCATIONS = [
+  { id: "loc-mtl-plateau", label: "Plateau Flagship" },
+  { id: "loc-mtl-westmount", label: "Westmount Suites" },
+  { id: "loc-mtl-laval", label: "Laval Resort" },
+];
+
+function buildProfile(
+  p: Omit<
+    StaffProfile,
+    | "notifications"
+    | "payroll"
+    | "clockIn"
+    | "permissionOverrides"
+    | "calendarAccess"
+  > & {
+    services?: ServiceModule[];
+    commission?: number;
+    hourly?: number;
+    tipsRate?: number;
+    calendar?: StaffProfile["calendarAccess"];
+    clockInCode?: string;
+    notifications?: Partial<Record<NotificationEvent, NotificationScope>>;
+  },
+): StaffProfile {
+  return {
+    ...p,
+    serviceAssignments: p.services ?? p.serviceAssignments,
+    calendarAccess: p.calendar ?? { mode: "all" },
+    permissionOverrides: {},
+    notifications: defaultNotifications(p.primaryRole, p.notifications),
+    clockIn: p.clockInCode
+      ? { requireAccessCode: true, accessCode: p.clockInCode }
+      : { requireAccessCode: false },
+    payroll: {
+      generalServiceCommission: p.commission ?? 0,
+      hourlyRate: p.hourly ?? 0,
+      tipsRate: p.tipsRate ?? 0,
+      overrides: [],
+    },
+  };
+}
+
+export const facilityStaff: StaffProfile[] = [
+  buildProfile({
+    id: "fs-owner-01",
+    firstName: "Émilie",
+    lastName: "Laurent",
+    email: "emilie@doggieville.com",
+    phone: "+1-514-555-0101",
+    colorHex: "#B45309",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "owner",
+    additionalRoles: [],
+    serviceAssignments: [
+      "grooming",
+      "training",
+      "daycare",
+      "boarding",
+      "reception",
+      "retail",
+    ],
+    assignedLocations: [
+      "loc-mtl-plateau",
+      "loc-mtl-westmount",
+      "loc-mtl-laval",
+    ],
+    showOnCalendar: false,
+    employment: {
+      hireDate: "2021-04-01",
+      employmentType: "full_time",
+      notes: "Founder — owner operator.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T09:12:00",
+    upcomingAppointments: 0,
+    openTasks: 4,
+    commission: 0,
+    hourly: 0,
+    tipsRate: 0,
+  }),
+  buildProfile({
+    id: "fs-mgr-01",
+    firstName: "Nathalie",
+    lastName: "Côté",
+    email: "nathalie@doggieville.com",
+    phone: "+1-514-555-0102",
+    colorHex: "#7C3AED",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "manager",
+    additionalRoles: ["reception"],
+    serviceAssignments: [
+      "grooming",
+      "training",
+      "daycare",
+      "boarding",
+      "reception",
+    ],
+    assignedLocations: ["loc-mtl-plateau", "loc-mtl-westmount"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2022-09-12",
+      employmentType: "full_time",
+      notes: "Runs Plateau. Approves schedules & payroll exports.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T08:45:00",
+    upcomingAppointments: 6,
+    openTasks: 2,
+    commission: 8,
+    hourly: 34,
+    tipsRate: 0,
+    clockInCode: "4421",
+  }),
+  buildProfile({
+    id: "fs-rec-01",
+    firstName: "Yasmine",
+    lastName: "Tremblay",
+    email: "yasmine@doggieville.com",
+    phone: "+1-514-555-0103",
+    colorHex: "#0284C7",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "reception",
+    additionalRoles: [],
+    serviceAssignments: ["reception"],
+    assignedLocations: ["loc-mtl-plateau"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2023-03-20",
+      employmentType: "full_time",
+      notes: "Client-facing only; no rate or service edits.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T07:55:00",
+    upcomingAppointments: 0,
+    openTasks: 3,
+    hourly: 22,
+    tipsRate: 0,
+    clockInCode: "8812",
+  }),
+  buildProfile({
+    id: "fs-groom-01",
+    firstName: "Olivia",
+    lastName: "Beaumont",
+    email: "olivia@doggieville.com",
+    phone: "+1-514-555-0104",
+    colorHex: "#E11D48",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "groomer",
+    additionalRoles: ["daycare_attendant"],
+    serviceAssignments: ["grooming", "daycare"],
+    assignedLocations: ["loc-mtl-plateau", "loc-mtl-westmount"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2023-06-01",
+      employmentType: "full_time",
+      notes: "Double-hatted — grooms Tue/Wed/Thu; daycare attendant Mon/Fri.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T09:30:00",
+    upcomingAppointments: 8,
+    openTasks: 1,
+    commission: 45,
+    hourly: 18,
+    tipsRate: 100,
+  }),
+  buildProfile({
+    id: "fs-groom-02",
+    firstName: "Julien",
+    lastName: "Roy",
+    email: "julien@doggieville.com",
+    phone: "+1-514-555-0105",
+    colorHex: "#9D174D",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "groomer",
+    additionalRoles: [],
+    serviceAssignments: ["grooming"],
+    assignedLocations: ["loc-mtl-westmount"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2024-01-15",
+      employmentType: "contractor",
+      notes: "Commission-only. Specialty in hand stripping.",
+    },
+    status: "active",
+    lastActive: "2026-04-13T19:10:00",
+    upcomingAppointments: 5,
+    openTasks: 0,
+    commission: 55,
+    hourly: 0,
+    tipsRate: 100,
+  }),
+  buildProfile({
+    id: "fs-train-01",
+    firstName: "Marcus",
+    lastName: "Bélanger",
+    email: "marcus@doggieville.com",
+    phone: "+1-514-555-0106",
+    colorHex: "#059669",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "trainer",
+    additionalRoles: [],
+    serviceAssignments: ["training"],
+    assignedLocations: ["loc-mtl-plateau", "loc-mtl-laval"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2023-10-04",
+      employmentType: "full_time",
+      notes: "CCPDT-KA certified. Runs private + group sessions.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T06:02:00",
+    upcomingAppointments: 4,
+    openTasks: 2,
+    commission: 40,
+    hourly: 26,
+    tipsRate: 100,
+  }),
+  buildProfile({
+    id: "fs-daycare-01",
+    firstName: "Sophie",
+    lastName: "Gagnon",
+    email: "sophie@doggieville.com",
+    phone: "+1-514-555-0107",
+    colorHex: "#EA580C",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "daycare_attendant",
+    additionalRoles: ["reception"],
+    serviceAssignments: ["daycare", "reception"],
+    assignedLocations: ["loc-mtl-plateau"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2024-05-18",
+      employmentType: "part_time",
+      notes: "Opens AM daycare then floats to reception post-noon.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T07:10:00",
+    upcomingAppointments: 0,
+    openTasks: 5,
+    hourly: 19,
+    tipsRate: 0,
+    clockInCode: "3319",
+  }),
+  buildProfile({
+    id: "fs-board-01",
+    firstName: "Dominic",
+    lastName: "Levesque",
+    email: "dominic@doggieville.com",
+    phone: "+1-514-555-0108",
+    colorHex: "#4338CA",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "boarding_attendant",
+    additionalRoles: [],
+    serviceAssignments: ["boarding"],
+    assignedLocations: ["loc-mtl-laval"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2023-11-01",
+      employmentType: "full_time",
+      notes:
+        "Overnight boarding — anytime access for medication and midnight checks.",
+    },
+    status: "active",
+    lastActive: "2026-04-14T05:42:00",
+    upcomingAppointments: 0,
+    openTasks: 6,
+    hourly: 23,
+    tipsRate: 0,
+    clockInCode: "7702",
+  }),
+  buildProfile({
+    id: "fs-board-02",
+    firstName: "Amira",
+    lastName: "Saleh",
+    email: "amira@doggieville.com",
+    phone: "+1-514-555-0109",
+    colorHex: "#4F46E5",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1534751516642-a1af1ef26a56?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "boarding_attendant",
+    additionalRoles: ["daycare_attendant"],
+    serviceAssignments: ["boarding", "daycare"],
+    assignedLocations: ["loc-mtl-plateau", "loc-mtl-laval"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2024-02-20",
+      employmentType: "full_time",
+      notes: "Swing shifts between daycare and boarding when needed.",
+    },
+    status: "active",
+    lastActive: "2026-04-13T22:14:00",
+    upcomingAppointments: 0,
+    openTasks: 3,
+    hourly: 22,
+    tipsRate: 0,
+  }),
+  buildProfile({
+    id: "fs-sani-01",
+    firstName: "Philippe",
+    lastName: "Dubois",
+    email: "philippe@doggieville.com",
+    phone: "+1-514-555-0110",
+    colorHex: "#0D9488",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "sanitation",
+    additionalRoles: [],
+    serviceAssignments: ["sanitation"],
+    assignedLocations: ["loc-mtl-plateau", "loc-mtl-westmount"],
+    showOnCalendar: false,
+    employment: {
+      hireDate: "2024-08-05",
+      employmentType: "part_time",
+      notes: "Evening deep-clean rotation across Plateau & Westmount.",
+    },
+    status: "active",
+    lastActive: "2026-04-13T23:05:00",
+    upcomingAppointments: 0,
+    openTasks: 2,
+    hourly: 20,
+    tipsRate: 0,
+    clockInCode: "1108",
+  }),
+  buildProfile({
+    id: "fs-train-02",
+    firstName: "Noémie",
+    lastName: "Fortin",
+    email: "noemie@doggieville.com",
+    phone: "+1-514-555-0111",
+    colorHex: "#0F766E",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
+    primaryRole: "trainer",
+    additionalRoles: ["sanitation"],
+    serviceAssignments: ["training", "sanitation"],
+    assignedLocations: ["loc-mtl-westmount"],
+    showOnCalendar: true,
+    employment: {
+      hireDate: "2024-11-01",
+      employmentType: "part_time",
+      notes:
+        "Junior trainer, handles Westmount facility refresh between sessions.",
+    },
+    status: "invited",
+    lastActive: "2026-04-10T15:00:00",
+    upcomingAppointments: 1,
+    openTasks: 0,
+    commission: 35,
+    hourly: 21,
+    tipsRate: 100,
+    invitationSentAt: "2026-04-12T10:30:00",
+  }),
+];

@@ -39,7 +39,7 @@ export function FacilityMobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed right-0 bottom-14 left-0 z-[45] border-t border-slate-200 bg-white/95 px-2 py-1.5 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+    <nav className="fixed right-0 bottom-14 left-0 z-45 border-t border-slate-200 bg-white/95 px-2 py-1.5 shadow-[0_-6px_20px_rgba(15,23,42,0.08)] backdrop-blur-sm md:hidden">
       <ul className="grid grid-cols-4 gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

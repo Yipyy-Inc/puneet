@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { DataTable, ColumnDef, FilterDef } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/badge";
-import {
-  Calendar,
-  Crown,
-  DollarSign,
-  User,
-  CircleDot,
-} from "lucide-react";
+import { Calendar, Crown, DollarSign, User, CircleDot } from "lucide-react";
 import {
   memberships as seedMemberships,
   type Membership,

@@ -381,7 +381,13 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 40,
     employmentType: "full_time",
     role: "Manager",
-    skills: ["opener", "closer", "senior-staff", "food-safe", "barista-trained"],
+    skills: [
+      "opener",
+      "closer",
+      "senior-staff",
+      "food-safe",
+      "barista-trained",
+    ],
   },
   {
     id: "emp-8",
@@ -536,9 +542,7 @@ function generateWeekShifts(
     "emp-9": [
       { days: [1, 3, 5], start: "09:00", end: "17:00", posId: "pos-10" },
     ],
-    "emp-10": [
-      { days: [2, 4], start: "10:00", end: "16:00", posId: "pos-8" },
-    ],
+    "emp-10": [{ days: [2, 4], start: "10:00", end: "16:00", posId: "pos-8" }],
     "emp-11": [
       {
         days: [1, 2, 3, 4, 5],
@@ -622,7 +626,9 @@ function generateTimeClockEntries(): TimeClockEntry[] {
   const entries: TimeClockEntry[] = [];
   const todayStr = new Date().toISOString().split("T")[0];
   const pastShifts = scheduleShifts
-    .filter((s) => s.date < todayStr && s.employeeId && s.status !== "cancelled")
+    .filter(
+      (s) => s.date < todayStr && s.employeeId && s.status !== "cancelled",
+    )
     .slice(0, 80); // cap to keep mock data reasonable
 
   pastShifts.forEach((shift, idx) => {
@@ -654,7 +660,8 @@ function generateTimeClockEntries(): TimeClockEntry[] {
     const actualMinutes = Math.max(
       0,
       Math.round(
-        (clockedOut.getTime() - clockedIn.getTime()) / 60_000 - shift.breakMinutes,
+        (clockedOut.getTime() - clockedIn.getTime()) / 60_000 -
+          shift.breakMinutes,
       ),
     );
 
@@ -917,15 +924,11 @@ export const schedulePeriods: SchedulePeriod[] = [
     startDate: thisMonday.toISOString().split("T")[0],
     endDate: thisSunday.toISOString().split("T")[0],
     status: "published",
-    publishedAt: new Date(
-      thisMonday.getTime() - 3 * 24 * 60 * 60 * 1000,
-    )
+    publishedAt: new Date(thisMonday.getTime() - 3 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
     publishedBy: "emp-1",
-    createdAt: new Date(
-      thisMonday.getTime() - 5 * 24 * 60 * 60 * 1000,
-    )
+    createdAt: new Date(thisMonday.getTime() - 5 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
     createdBy: "emp-1",
@@ -1242,7 +1245,8 @@ export const onboardingTasks: OnboardingTask[] = [
     id: "onb-1",
     employeeId: "emp-10",
     title: "Complete Personal Information Form",
-    description: "Fill out all personal details, emergency contacts, and tax information",
+    description:
+      "Fill out all personal details, emergency contacts, and tax information",
     type: "form",
     status: "completed",
     dueDate: "2026-04-05",
@@ -1265,7 +1269,8 @@ export const onboardingTasks: OnboardingTask[] = [
     id: "onb-3",
     employeeId: "emp-10",
     title: "Review Company Policies",
-    description: "Read through employee handbook, code of conduct, and safety protocols",
+    description:
+      "Read through employee handbook, code of conduct, and safety protocols",
     type: "policy",
     status: "in_progress",
     dueDate: "2026-04-12",
@@ -1604,9 +1609,7 @@ export function getShiftsForEmployee(
 ): ScheduleShift[] {
   return scheduleShifts.filter(
     (s) =>
-      s.employeeId === employeeId &&
-      s.date >= startDate &&
-      s.date <= endDate,
+      s.employeeId === employeeId && s.date >= startDate && s.date <= endDate,
   );
 }
 
@@ -1619,7 +1622,8 @@ export function getEmployeeScheduledHours(
   return shifts.reduce((total, shift) => {
     const [startH, startM] = shift.startTime.split(":").map(Number);
     const [endH, endM] = shift.endTime.split(":").map(Number);
-    const hours = endH - startH + (endM - startM) / 60 - shift.breakMinutes / 60;
+    const hours =
+      endH - startH + (endM - startM) / 60 - shift.breakMinutes / 60;
     return total + hours;
   }, 0);
 }
@@ -1642,7 +1646,11 @@ export function calculateLaborCost(
   departmentId: string,
   startDate: string,
   endDate: string,
-): { totalCost: number; byPosition: Record<string, number>; byEmployee: Record<string, number> } {
+): {
+  totalCost: number;
+  byPosition: Record<string, number>;
+  byEmployee: Record<string, number>;
+} {
   const shifts = getShiftsForDepartment(departmentId, startDate, endDate);
   const byPosition: Record<string, number> = {};
   const byEmployee: Record<string, number> = {};
@@ -1654,7 +1662,8 @@ export function calculateLaborCost(
 
     const [startH, startM] = shift.startTime.split(":").map(Number);
     const [endH, endM] = shift.endTime.split(":").map(Number);
-    const hours = endH - startH + (endM - startM) / 60 - shift.breakMinutes / 60;
+    const hours =
+      endH - startH + (endM - startM) / 60 - shift.breakMinutes / 60;
 
     let cost = 0;
     if (position.payType === "hourly" && position.hourlyRate) {
@@ -1683,7 +1692,8 @@ export const employeeDocumentTemplates: EmployeeDocumentTemplate[] = [
     facilityId: 1,
     title: "Employment Agreement",
     type: "employment_agreement",
-    description: "Standard employment contract covering terms, compensation, and responsibilities",
+    description:
+      "Standard employment contract covering terms, compensation, and responsibilities",
     content: `EMPLOYMENT AGREEMENT
 
 This Employment Agreement ("Agreement") is entered into as of the date of signing between Doggieville MTL ("Employer") and the employee named below ("Employee").
@@ -1711,13 +1721,49 @@ This Agreement shall be governed by the laws of the Province of Quebec, Canada.
 
 By signing below, Employee acknowledges they have read, understood, and agree to the terms of this Employment Agreement.`,
     fields: [
-      { id: "full_name", label: "Full Legal Name", type: "text", placeholder: "As it appears on your ID", required: true },
-      { id: "address", label: "Home Address", type: "address", placeholder: "Street, City, Province, Postal Code", required: true },
-      { id: "phone", label: "Phone Number", type: "phone", placeholder: "(514) 000-0000", required: true },
-      { id: "email", label: "Email Address", type: "email", placeholder: "your@email.com", required: true },
-      { id: "sin", label: "Social Insurance Number (SIN)", type: "sin_ssn", placeholder: "XXX-XXX-XXX", required: true },
+      {
+        id: "full_name",
+        label: "Full Legal Name",
+        type: "text",
+        placeholder: "As it appears on your ID",
+        required: true,
+      },
+      {
+        id: "address",
+        label: "Home Address",
+        type: "address",
+        placeholder: "Street, City, Province, Postal Code",
+        required: true,
+      },
+      {
+        id: "phone",
+        label: "Phone Number",
+        type: "phone",
+        placeholder: "(514) 000-0000",
+        required: true,
+      },
+      {
+        id: "email",
+        label: "Email Address",
+        type: "email",
+        placeholder: "your@email.com",
+        required: true,
+      },
+      {
+        id: "sin",
+        label: "Social Insurance Number (SIN)",
+        type: "sin_ssn",
+        placeholder: "XXX-XXX-XXX",
+        required: true,
+      },
       { id: "start_date", label: "Start Date", type: "date", required: true },
-      { id: "position", label: "Position / Role", type: "text", placeholder: "e.g., Dog Groomer", required: true },
+      {
+        id: "position",
+        label: "Position / Role",
+        type: "text",
+        placeholder: "e.g., Dog Groomer",
+        required: true,
+      },
     ],
     requiresSignature: true,
     isActive: true,
@@ -1730,7 +1776,8 @@ By signing below, Employee acknowledges they have read, understood, and agree to
     facilityId: 1,
     title: "Confidentiality & NDA",
     type: "nda",
-    description: "Non-disclosure agreement protecting client data and business information",
+    description:
+      "Non-disclosure agreement protecting client data and business information",
     content: `CONFIDENTIALITY AND NON-DISCLOSURE AGREEMENT
 
 This Confidentiality Agreement ("Agreement") is made between Doggieville MTL ("Company") and the undersigned employee.
@@ -1757,7 +1804,13 @@ This Agreement remains in effect during and after the term of employment.
 6. REMEDIES
 Any breach of this Agreement may result in disciplinary action, termination, and/or legal proceedings.`,
     fields: [
-      { id: "full_name", label: "Full Legal Name", type: "text", placeholder: "As it appears on your ID", required: true },
+      {
+        id: "full_name",
+        label: "Full Legal Name",
+        type: "text",
+        placeholder: "As it appears on your ID",
+        required: true,
+      },
       { id: "date", label: "Effective Date", type: "date", required: true },
     ],
     requiresSignature: true,
@@ -1771,7 +1824,8 @@ Any breach of this Agreement may result in disciplinary action, termination, and
     facilityId: 1,
     title: "Company Policy Acknowledgement",
     type: "policy_acknowledgement",
-    description: "Acknowledgement of having read and understood the employee handbook and all company policies",
+    description:
+      "Acknowledgement of having read and understood the employee handbook and all company policies",
     content: `COMPANY POLICY ACKNOWLEDGEMENT
 
 I, the undersigned employee, acknowledge that I have received, read, and understood the Doggieville MTL Employee Handbook and all Company Policies, including but not limited to:
@@ -1800,9 +1854,32 @@ I understand that violation of any company policy may result in disciplinary act
 
 I confirm that I have had the opportunity to ask questions about any policy I did not understand, and all my questions have been answered satisfactorily.`,
     fields: [
-      { id: "full_name", label: "Full Legal Name", type: "text", required: true },
-      { id: "employee_id", label: "Employee ID", type: "text", placeholder: "Assigned by HR", required: false },
-      { id: "department", label: "Department", type: "select", options: ["Daycare", "Boarding", "Grooming", "Training", "Administration"], required: true },
+      {
+        id: "full_name",
+        label: "Full Legal Name",
+        type: "text",
+        required: true,
+      },
+      {
+        id: "employee_id",
+        label: "Employee ID",
+        type: "text",
+        placeholder: "Assigned by HR",
+        required: false,
+      },
+      {
+        id: "department",
+        label: "Department",
+        type: "select",
+        options: [
+          "Daycare",
+          "Boarding",
+          "Grooming",
+          "Training",
+          "Administration",
+        ],
+        required: true,
+      },
     ],
     requiresSignature: true,
     isActive: true,
@@ -1815,7 +1892,8 @@ I confirm that I have had the opportunity to ask questions about any policy I di
     facilityId: 1,
     title: "Emergency Contact Form",
     type: "emergency_contact",
-    description: "Emergency contacts and voluntary medical information kept on file for workplace safety",
+    description:
+      "Emergency contacts and voluntary medical information kept on file for workplace safety",
     content: `EMERGENCY CONTACT INFORMATION FORM
 
 This information is collected to ensure your safety and wellbeing in the event of a workplace emergency or medical situation. This information is strictly confidential and will only be accessed in the event of an emergency.
@@ -1828,15 +1906,77 @@ Please indicate any conditions that may be relevant in a workplace emergency (al
 DATA PRIVACY
 This information is stored securely and in accordance with Quebec privacy law (Law 25). It will not be shared with any third party unless required by emergency services.`,
     fields: [
-      { id: "full_name", label: "Employee Full Name", type: "text", required: true },
-      { id: "contact1_name", label: "Primary Emergency Contact — Full Name", type: "text", placeholder: "Full name", required: true },
-      { id: "contact1_relation", label: "Relationship to You", type: "select", options: ["Spouse / Partner", "Parent", "Sibling", "Child", "Friend", "Other"], required: true },
-      { id: "contact1_phone", label: "Primary Contact Phone", type: "phone", placeholder: "(514) 000-0000", required: true },
-      { id: "contact2_name", label: "Secondary Emergency Contact — Full Name", type: "text", placeholder: "Full name", required: false },
-      { id: "contact2_phone", label: "Secondary Contact Phone", type: "phone", placeholder: "(514) 000-0000", required: false },
-      { id: "allergies", label: "Known Allergies", type: "textarea", placeholder: "List any allergies (food, medications, environmental) — or write 'None'", required: false },
-      { id: "medical_conditions", label: "Medical Conditions (optional)", type: "textarea", placeholder: "Any conditions relevant in an emergency (e.g., diabetes, epilepsy)", required: false },
-      { id: "blood_type", label: "Blood Type (optional)", type: "select", options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"], required: false },
+      {
+        id: "full_name",
+        label: "Employee Full Name",
+        type: "text",
+        required: true,
+      },
+      {
+        id: "contact1_name",
+        label: "Primary Emergency Contact — Full Name",
+        type: "text",
+        placeholder: "Full name",
+        required: true,
+      },
+      {
+        id: "contact1_relation",
+        label: "Relationship to You",
+        type: "select",
+        options: [
+          "Spouse / Partner",
+          "Parent",
+          "Sibling",
+          "Child",
+          "Friend",
+          "Other",
+        ],
+        required: true,
+      },
+      {
+        id: "contact1_phone",
+        label: "Primary Contact Phone",
+        type: "phone",
+        placeholder: "(514) 000-0000",
+        required: true,
+      },
+      {
+        id: "contact2_name",
+        label: "Secondary Emergency Contact — Full Name",
+        type: "text",
+        placeholder: "Full name",
+        required: false,
+      },
+      {
+        id: "contact2_phone",
+        label: "Secondary Contact Phone",
+        type: "phone",
+        placeholder: "(514) 000-0000",
+        required: false,
+      },
+      {
+        id: "allergies",
+        label: "Known Allergies",
+        type: "textarea",
+        placeholder:
+          "List any allergies (food, medications, environmental) — or write 'None'",
+        required: false,
+      },
+      {
+        id: "medical_conditions",
+        label: "Medical Conditions (optional)",
+        type: "textarea",
+        placeholder:
+          "Any conditions relevant in an emergency (e.g., diabetes, epilepsy)",
+        required: false,
+      },
+      {
+        id: "blood_type",
+        label: "Blood Type (optional)",
+        type: "select",
+        options: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"],
+        required: false,
+      },
     ],
     requiresSignature: false,
     isActive: true,
@@ -1868,12 +2008,47 @@ Please attach a void cheque or a bank-issued direct deposit form to confirm your
 SECURITY NOTICE
 Your banking information is stored with bank-level encryption and is accessed only by authorized payroll personnel.`,
     fields: [
-      { id: "full_name", label: "Full Legal Name", type: "text", required: true },
-      { id: "bank_name", label: "Bank Name", type: "text", placeholder: "e.g., RBC, TD, Desjardins", required: true },
-      { id: "transit_number", label: "Transit Number (5 digits)", type: "text", placeholder: "00000", required: true },
-      { id: "institution_number", label: "Institution Number (3 digits)", type: "text", placeholder: "000", required: true },
-      { id: "account_number", label: "Account Number", type: "text", placeholder: "Your chequing account number", required: true },
-      { id: "account_type", label: "Account Type", type: "select", options: ["Chequing", "Savings"], required: true },
+      {
+        id: "full_name",
+        label: "Full Legal Name",
+        type: "text",
+        required: true,
+      },
+      {
+        id: "bank_name",
+        label: "Bank Name",
+        type: "text",
+        placeholder: "e.g., RBC, TD, Desjardins",
+        required: true,
+      },
+      {
+        id: "transit_number",
+        label: "Transit Number (5 digits)",
+        type: "text",
+        placeholder: "00000",
+        required: true,
+      },
+      {
+        id: "institution_number",
+        label: "Institution Number (3 digits)",
+        type: "text",
+        placeholder: "000",
+        required: true,
+      },
+      {
+        id: "account_number",
+        label: "Account Number",
+        type: "text",
+        placeholder: "Your chequing account number",
+        required: true,
+      },
+      {
+        id: "account_type",
+        label: "Account Type",
+        type: "select",
+        options: ["Chequing", "Savings"],
+        required: true,
+      },
     ],
     requiresSignature: true,
     isActive: true,
@@ -1975,7 +2150,8 @@ export const shiftOpportunities: ShiftOpportunity[] = [
     startTime: "06:30",
     endTime: "14:30",
     breakMinutes: 30,
-    reason: "David called in sick — need kennel tech coverage for morning shift",
+    reason:
+      "David called in sick — need kennel tech coverage for morning shift",
     urgency: "urgent",
     status: "open",
     originalEmployeeId: "emp-4",
@@ -2108,25 +2284,34 @@ export const shiftOpportunities: ShiftOpportunity[] = [
 // Shift Opportunity Notification Settings
 // ============================================================================
 
-export const shiftOpportunityNotificationSettings: ShiftOpportunityNotificationSettings = {
-  facilityId: 1,
-  enabled: true,
-  notifyAllActive: false,
-  notifyByDepartment: true,
-  notifyByPosition: false,
-  eligibleEmployeeIds: [
-    "emp-2", "emp-3", "emp-4", "emp-5", "emp-6",
-    "emp-8", "emp-9", "emp-10",
-    "emp-11", "emp-12", "emp-13",
-  ],
-  excludedEmployeeIds: [],
-  channels: {
-    inApp: true,
-    email: true,
-    sms: false,
-  },
-  autoApprove: false,
-  requireManagerApproval: true,
-  maxClaimsPerWeek: 3,
-  blackoutDays: [],
-};
+export const shiftOpportunityNotificationSettings: ShiftOpportunityNotificationSettings =
+  {
+    facilityId: 1,
+    enabled: true,
+    notifyAllActive: false,
+    notifyByDepartment: true,
+    notifyByPosition: false,
+    eligibleEmployeeIds: [
+      "emp-2",
+      "emp-3",
+      "emp-4",
+      "emp-5",
+      "emp-6",
+      "emp-8",
+      "emp-9",
+      "emp-10",
+      "emp-11",
+      "emp-12",
+      "emp-13",
+    ],
+    excludedEmployeeIds: [],
+    channels: {
+      inApp: true,
+      email: true,
+      sms: false,
+    },
+    autoApprove: false,
+    requireManagerApproval: true,
+    maxClaimsPerWeek: 3,
+    blackoutDays: [],
+  };

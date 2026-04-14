@@ -124,14 +124,13 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
       <div
         key={cellKey}
         className={cn(
-          "group/cell relative flex min-h-[60px] cursor-pointer flex-col gap-1 border-b border-r border-border/50 p-1.5 transition-colors",
+          "group/cell border-border/50 relative flex min-h-[60px] cursor-pointer flex-col gap-1 border-r border-b p-1.5 transition-colors",
           weekend && "bg-muted/20",
           todayFlag && "bg-indigo-50/40 dark:bg-indigo-950/10",
           empId
             ? "hover:bg-muted/40"
             : "hover:bg-amber-50/60 dark:hover:bg-amber-950/10",
-          isDragOver &&
-            "bg-primary/10 ring-1 ring-inset ring-primary/40",
+          isDragOver && "bg-primary/10 ring-primary/40 ring-1 ring-inset",
         )}
         onClick={() => {
           if (cellShifts.length === 0 && !timeOff) onCellClick(empId, dateStr);
@@ -166,11 +165,11 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
   };
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden">
+    <div className="h-full overflow-x-hidden overflow-y-auto">
       <div className="grid" style={gridStyle}>
         {/* ─── Header row ───────────────────────────────────── */}
-        <div className="sticky top-0 z-20 flex items-center border-b border-r border-border/60 bg-background/95 px-4 py-3 backdrop-blur-sm">
-          <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.08em]">
+        <div className="border-border/60 bg-background/95 sticky top-0 z-20 flex items-center border-r border-b px-4 py-3 backdrop-blur-sm">
+          <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.08em] uppercase">
             Staff
           </span>
         </div>
@@ -186,14 +185,14 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             <div
               key={`header-${i}`}
               className={cn(
-                "sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-b border-r border-border/60 py-2.5 backdrop-blur-sm",
+                "border-border/60 sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-r border-b py-2.5 backdrop-blur-sm",
                 weekend ? "bg-muted/40" : "bg-background/95",
                 todayFlag && "bg-indigo-50/70 dark:bg-indigo-950/30",
               )}
             >
               <span
                 className={cn(
-                  "text-[10px] font-semibold uppercase tracking-[0.08em]",
+                  "text-[10px] font-semibold tracking-[0.08em] uppercase",
                   todayFlag
                     ? "text-indigo-600 dark:text-indigo-400"
                     : "text-muted-foreground",
@@ -232,8 +231,8 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             </div>
           );
         })}
-        <div className="sticky top-0 z-20 flex items-center justify-center border-b border-l border-border/60 bg-background/95 px-2 backdrop-blur-sm">
-          <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.08em]">
+        <div className="border-border/60 bg-background/95 sticky top-0 z-20 flex items-center justify-center border-b border-l px-2 backdrop-blur-sm">
+          <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.08em] uppercase">
             Hours
           </span>
         </div>
@@ -241,7 +240,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         {/* ─── Open shifts row ──────────────────────────────── */}
         {hasOpenShifts && (
           <Fragment>
-            <div className="flex items-center gap-3 border-b border-r border-border/50 bg-amber-50/30 px-4 py-3 dark:bg-amber-950/10">
+            <div className="border-border/50 flex items-center gap-3 border-r border-b bg-amber-50/30 px-4 py-3 dark:bg-amber-950/10">
               <div className="flex size-9 items-center justify-center rounded-full border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
                 <UserX className="size-4 text-amber-600" />
               </div>
@@ -256,11 +255,10 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             </div>
             {dates.map((date) => {
               const dateStr = formatDateStr(date);
-              const cellShifts =
-                shiftsByKey.get(`unassigned-${dateStr}`) ?? [];
+              const cellShifts = shiftsByKey.get(`unassigned-${dateStr}`) ?? [];
               return renderCell(undefined, date, cellShifts);
             })}
-            <div className="flex items-center justify-center border-b border-l border-border/50 bg-amber-50/30 px-2 dark:bg-amber-950/10">
+            <div className="border-border/50 flex items-center justify-center border-b border-l bg-amber-50/30 px-2 dark:bg-amber-950/10">
               <span className="text-muted-foreground text-xs">—</span>
             </div>
           </Fragment>
@@ -271,8 +269,8 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
           const totalHours = getEmployeeHours(employee.id);
           return (
             <Fragment key={employee.id}>
-              <div className="flex items-center gap-3 border-b border-r border-border/50 bg-background px-4 py-3 transition-colors hover:bg-muted/20">
-                <Avatar className="size-9 shrink-0 ring-2 ring-background">
+              <div className="border-border/50 bg-background hover:bg-muted/20 flex items-center gap-3 border-r border-b px-4 py-3 transition-colors">
+                <Avatar className="ring-background size-9 shrink-0 ring-2">
                   <AvatarImage src={employee.avatar} alt={employee.name} />
                   <AvatarFallback className="bg-linear-to-br from-indigo-100 via-slate-100 to-slate-50 text-[11px] font-semibold text-slate-700 dark:from-indigo-900/30 dark:via-slate-900 dark:to-slate-950 dark:text-slate-200">
                     {employee.initials}
@@ -282,7 +280,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                   <p className="truncate text-sm font-medium">
                     {employee.name}
                   </p>
-                  <p className="truncate text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground truncate text-[11px]">
                     {employee.role}
                   </p>
                 </div>
@@ -298,7 +296,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 );
                 return renderCell(employee.id, date, cellShifts, timeOff);
               })}
-              <div className="flex items-center justify-center border-b border-l border-border/50 bg-background px-2 transition-colors hover:bg-muted/20">
+              <div className="border-border/50 bg-background hover:bg-muted/20 flex items-center justify-center border-b border-l px-2 transition-colors">
                 <HoursBadge
                   totalHours={totalHours}
                   maxHours={employee.maxHoursPerWeek}

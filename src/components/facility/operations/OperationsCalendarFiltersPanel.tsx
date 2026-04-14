@@ -50,8 +50,8 @@ export function OperationsCalendarFiltersPanel({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-slate-600">
-          Service filters include built-in services and active custom modules configured for this
-          facility.
+          Service filters include built-in services and active custom modules
+          configured for this facility.
         </p>
         <FilterSection
           title="Service Type"

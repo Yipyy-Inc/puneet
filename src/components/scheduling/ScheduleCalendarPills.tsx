@@ -53,7 +53,7 @@ export function ShiftPill({
           <div
             className={cn(
               "mx-auto h-2.5 w-full max-w-[28px] cursor-grab rounded-full transition-all hover:scale-110 active:cursor-grabbing",
-              isDraft && "outline-1 outline-dashed outline-offset-1",
+              isDraft && "outline-1 outline-offset-1 outline-dashed",
               isDragging && "opacity-50",
               isOpen && "border border-dashed border-amber-500",
             )}
@@ -115,23 +115,23 @@ export function ShiftPill({
           />
           <div className="min-w-0 flex-1">
             <p
-              className="truncate text-[11px] font-semibold leading-tight"
+              className="truncate text-[11px] leading-tight font-semibold"
               style={{ color }}
             >
               {position?.name ?? "—"}
             </p>
-            <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[10px]">
               <Clock className="size-2.5" />
               {shift.startTime} – {shift.endTime}
             </p>
           </div>
           {isDraft && (
-            <div className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase">
               Draft
             </div>
           )}
           {isOpen && (
-            <div className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+            <div className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-700 uppercase dark:bg-amber-900/40 dark:text-amber-400">
               Open
             </div>
           )}

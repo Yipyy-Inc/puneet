@@ -63,11 +63,7 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
   );
 
   const handleDrop = useCallback(
-    (
-      e: React.DragEvent,
-      employeeId: string | undefined,
-      dateStr: string,
-    ) => {
+    (e: React.DragEvent, employeeId: string | undefined, dateStr: string) => {
       e.preventDefault();
       const shiftId = e.dataTransfer.getData("shiftId");
       if (!shiftId) return;

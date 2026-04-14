@@ -48,8 +48,8 @@ export function CancelSubscriptionDialog({
                 <span className="font-medium">
                   {membership?.nextBillingDate}
                 </span>
-                . All perks, included items, and discounts continue until
-                then. No further charges will be made.
+                . All perks, included items, and discounts continue until then.
+                No further charges will be made.
               </p>
             </div>
           </div>

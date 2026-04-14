@@ -112,7 +112,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <div className="flex min-h-screen flex-col pb-16" suppressHydrationWarning>
+        <div
+          className="flex min-h-screen flex-col pb-16"
+          suppressHydrationWarning
+        >
           <main className="flex-1">
             <QueryProvider>{children}</QueryProvider>
           </main>

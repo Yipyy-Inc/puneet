@@ -117,43 +117,15 @@ export function UnfinishedBookingDetailSheet({
     >
       <DialogPrimitive.Portal>
         {/* Backdrop */}
-        <DialogPrimitive.Overlay
-          className="
-            fixed inset-0 z-50 bg-black/55 backdrop-blur-md
-            data-[state=open]:animate-in data-[state=closed]:animate-out
-            data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0
-            duration-300
-          "
-        />
+        <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 fixed inset-0 z-50 bg-black/55 backdrop-blur-md duration-300" />
 
         {/* Card */}
-        <DialogPrimitive.Content
-          className="
-            fixed left-1/2 top-1/2 z-50
-            -translate-x-1/2 -translate-y-1/2
-            w-[calc(100%-2rem)] max-w-2xl max-h-[90vh]
-            flex flex-col overflow-hidden
-            rounded-2xl border border-white/10
-            bg-background shadow-[0_32px_80px_-12px_rgba(0,0,0,0.45)]
-            data-[state=open]:animate-in data-[state=closed]:animate-out
-            data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0
-            data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95
-            data-[state=open]:slide-in-from-bottom-3
-            duration-200 ease-out
-          "
-        >
+        <DialogPrimitive.Content className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[state=open]:slide-in-from-bottom-3 fixed top-1/2 left-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-white/10 shadow-[0_32px_80px_-12px_rgba(0,0,0,0.45)] duration-200 ease-out">
           {/* ── Gradient hero header ── */}
-          <div className="relative shrink-0 bg-gradient-to-br from-amber-50 via-orange-50/60 to-background dark:from-amber-950/40 dark:via-amber-900/15 dark:to-background px-7 pt-7 pb-6 border-b border-border/60">
+          <div className="to-background dark:to-background border-border/60 relative shrink-0 border-b bg-linear-to-br from-amber-50 via-orange-50/60 px-7 pt-7 pb-6 dark:from-amber-950/40 dark:via-amber-900/15">
             {/* Close */}
             <DialogPrimitive.Close
-              className="
-                absolute top-4 right-4
-                flex size-7 items-center justify-center rounded-full
-                text-muted-foreground hover:text-foreground
-                bg-background/70 hover:bg-muted
-                border border-border/50
-                transition-all duration-150
-              "
+              className="text-muted-foreground hover:text-foreground bg-background/70 hover:bg-muted border-border/50 absolute top-4 right-4 flex size-7 items-center justify-center rounded-full border transition-all duration-150"
               aria-label="Close"
             >
               <X className="size-3.5" />
@@ -161,14 +133,7 @@ export function UnfinishedBookingDetailSheet({
 
             <div className="flex items-start gap-4">
               {/* Avatar */}
-              <div
-                className="
-                  flex size-14 shrink-0 items-center justify-center
-                  rounded-full bg-white dark:bg-slate-800
-                  text-base font-bold tracking-wide
-                  shadow-md ring-2 ring-white/80 dark:ring-slate-700
-                "
-              >
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white text-base font-bold tracking-wide shadow-md ring-2 ring-white/80 dark:bg-slate-800 dark:ring-slate-700">
                 {getInitials(booking.clientName)}
               </div>
 
@@ -210,14 +175,13 @@ export function UnfinishedBookingDetailSheet({
 
           {/* ── Scrollable body ── */}
           <div className="flex-1 space-y-6 overflow-y-auto px-7 py-6">
-
             {/* Detail cards 2×2 grid */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {booking.petName && (
                 <DetailCard label="Pet">
                   <span className="font-medium">{booking.petName}</span>
                   {booking.petType && (
-                    <span className="text-muted-foreground text-xs capitalize block">
+                    <span className="text-muted-foreground block text-xs capitalize">
                       {booking.petType}
                     </span>
                   )}
@@ -225,9 +189,11 @@ export function UnfinishedBookingDetailSheet({
               )}
               {booking.service && (
                 <DetailCard label="Service">
-                  <span className="font-medium capitalize">{booking.service}</span>
+                  <span className="font-medium capitalize">
+                    {booking.service}
+                  </span>
                   {booking.serviceType && (
-                    <span className="text-muted-foreground text-xs capitalize block">
+                    <span className="text-muted-foreground block text-xs capitalize">
                       {booking.serviceType.replace(/_/g, " ")}
                     </span>
                   )}
@@ -235,10 +201,11 @@ export function UnfinishedBookingDetailSheet({
               )}
               {booking.requestedStartDate && (
                 <DetailCard label="Dates">
-                  <span className="font-medium text-sm">
+                  <span className="text-sm font-medium">
                     {fmtDate(booking.requestedStartDate)}
                     {booking.requestedEndDate &&
-                      booking.requestedEndDate !== booking.requestedStartDate && (
+                      booking.requestedEndDate !==
+                        booking.requestedStartDate && (
                         <> → {fmtDate(booking.requestedEndDate)}</>
                       )}
                   </span>
@@ -254,20 +221,20 @@ export function UnfinishedBookingDetailSheet({
             </div>
 
             {/* Abandonment step progress */}
-            <div className="rounded-xl border bg-muted/20 px-4 py-3.5">
+            <div className="bg-muted/20 rounded-xl border px-4 py-3.5">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-sm font-medium">{stepConfig.label}</p>
                 <span className="text-muted-foreground text-xs font-medium">
                   {stepConfig.progress}% complete
                 </span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div className="bg-muted h-2 overflow-hidden rounded-full">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all"
+                  className="h-full rounded-full bg-linear-to-r from-amber-400 to-orange-400 transition-all"
                   style={{ width: `${stepConfig.progress}%` }}
                 />
               </div>
-              <p className="text-muted-foreground mt-1.5 text-[10px] uppercase tracking-wide">
+              <p className="text-muted-foreground mt-1.5 text-[10px] tracking-wide uppercase">
                 Abandoned at step
               </p>
             </div>
@@ -298,7 +265,7 @@ export function UnfinishedBookingDetailSheet({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                  className="gap-1.5 border-blue-200 text-blue-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/20"
                   onClick={() => onMarkAs(booking.id, "contacted")}
                 >
                   <CheckCircle2 className="size-3.5" />
@@ -309,7 +276,7 @@ export function UnfinishedBookingDetailSheet({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 text-emerald-600 hover:text-emerald-700 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                  className="gap-1.5 border-emerald-200 text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/20"
                   onClick={() => onMarkAs(booking.id, "recovered")}
                 >
                   <RefreshCw className="size-3.5" />
@@ -340,13 +307,7 @@ export function UnfinishedBookingDetailSheet({
                   {notes.map((note) => (
                     <div key={note.id} className="flex gap-3">
                       {/* Staff avatar */}
-                      <div
-                        className="
-                          flex size-8 shrink-0 items-center justify-center
-                          rounded-full bg-muted text-xs font-semibold
-                          ring-2 ring-background
-                        "
-                      >
+                      <div className="bg-muted ring-background flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-2">
                         {getInitials(note.staffName)}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -358,7 +319,7 @@ export function UnfinishedBookingDetailSheet({
                             {formatNoteDate(note.createdAt)}
                           </span>
                         </div>
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">
+                        <p className="text-foreground/80 mt-1 text-sm/relaxed whitespace-pre-wrap">
                           {note.text}
                         </p>
                       </div>
@@ -369,10 +330,10 @@ export function UnfinishedBookingDetailSheet({
               )}
 
               {/* Add note input */}
-              <div className="rounded-xl border bg-muted/20 p-3 space-y-2.5">
+              <div className="bg-muted/20 space-y-2.5 rounded-xl border p-3">
                 <Textarea
                   placeholder="Add a note… e.g. Left voicemail, client said they'll call back"
-                  className="min-h-[76px] resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 focus-visible:border-0"
+                  className="min-h-[76px] resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:border-0 focus-visible:ring-0"
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   onKeyDown={(e) => {
@@ -382,7 +343,7 @@ export function UnfinishedBookingDetailSheet({
                     }
                   }}
                 />
-                <div className="flex items-center justify-between border-t border-border/50 pt-2.5">
+                <div className="border-border/50 flex items-center justify-between border-t pt-2.5">
                   <p className="text-muted-foreground text-[11px]">
                     Ctrl + Enter to submit
                   </p>
@@ -398,7 +359,6 @@ export function UnfinishedBookingDetailSheet({
                 </div>
               </div>
             </div>
-
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -423,8 +383,8 @@ function DetailCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-muted/20 px-3.5 py-3">
-      <p className="text-muted-foreground mb-1 text-[10px] font-medium uppercase tracking-wider">
+    <div className="bg-muted/20 rounded-xl border px-3.5 py-3">
+      <p className="text-muted-foreground mb-1 text-[10px] font-medium tracking-wider uppercase">
         {label}
       </p>
       <div className="text-sm">{children}</div>

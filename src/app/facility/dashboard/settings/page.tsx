@@ -501,13 +501,10 @@ function LanguageSettingsCard() {
           <div className="flex items-start gap-3 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
             <Languages className="mt-0.5 size-4 shrink-0 text-sky-600" />
             <div className="space-y-1 text-sm">
-              <p className="font-medium text-sky-900">
-                Software Language Mode
-              </p>
+              <p className="font-medium text-sky-900">Software Language Mode</p>
               <p className="text-sky-800/90">
-                Use English only, or enable bilingual mode (English + French)
-                so forms and translated UI content can be used in both
-                languages.
+                Use English only, or enable bilingual mode (English + French) so
+                forms and translated UI content can be used in both languages.
               </p>
             </div>
           </div>
@@ -652,7 +649,10 @@ function LanguageSettingsCard() {
                                     option.code,
                                   ];
 
-                              if (nextChecked !== true && nextLanguages.length === 0) {
+                              if (
+                                nextChecked !== true &&
+                                nextLanguages.length === 0
+                              ) {
                                 return;
                               }
 
@@ -681,9 +681,15 @@ function LanguageSettingsCard() {
           </div>
 
           <p className="text-muted-foreground text-xs">
-            Current mode: {localLanguageSettings.secondaryEnabled ? "Bilingual" : "Single language"}
+            Current mode:{" "}
+            {localLanguageSettings.secondaryEnabled
+              ? "Bilingual"
+              : "Single language"}
             {" · "}
-            Primary: {localLanguageSettings.primaryLocale === "en" ? "English" : "Français"}
+            Primary:{" "}
+            {localLanguageSettings.primaryLocale === "en"
+              ? "English"
+              : "Français"}
             {localLanguageSettings.secondaryEnabled
               ? ` · Secondary: ${localLanguageSettings.secondaryLocale === "en" ? "English" : "Français"}`
               : ""}
@@ -1678,9 +1684,9 @@ function BookingApprovalSettingsCard() {
         <div>
           <CardTitle>Booking Approval by Service</CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Choose which services require approval before a booking is confirmed.
-            When enabled, customer bookings go to a request queue for staff
-            review.
+            Choose which services require approval before a booking is
+            confirmed. When enabled, customer bookings go to a request queue for
+            staff review.
           </p>
         </div>
         {isEditing ? (
@@ -1693,7 +1699,11 @@ function BookingApprovalSettingsCard() {
             </Button>
           </div>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+          >
             Edit
           </Button>
         )}
@@ -1736,8 +1746,7 @@ function BookingApprovalSettingsCard() {
                       value={svc.estimatedResponseTime}
                       onChange={(e) =>
                         updateService(key, {
-                          estimatedResponseTime:
-                            parseInt(e.target.value) || 24,
+                          estimatedResponseTime: parseInt(e.target.value) || 24,
                         })
                       }
                       readOnly={!isEditing}
@@ -5009,7 +5018,6 @@ export default function SettingsPage() {
               <AddOnsSettings />
             </div>
           )}
-
         </div>
       </div>
     </div>

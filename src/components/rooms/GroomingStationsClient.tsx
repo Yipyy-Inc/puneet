@@ -6,10 +6,32 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, Scissors, Droplets, Wind, Zap, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Scissors,
+  Droplets,
+  Wind,
+  Zap,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { GroomingStation, GroomingStationType } from "@/types/rooms";
@@ -31,41 +53,60 @@ type StationType = {
 
 const STATION_TYPES: StationType[] = [
   {
-    value: "table",       label: "Grooming Table", plural: "Tables",
+    value: "table",
+    label: "Grooming Table",
+    plural: "Tables",
     Icon: Scissors,
-    iconBg:    "bg-pink-100 dark:bg-pink-950/40",
+    iconBg: "bg-pink-100 dark:bg-pink-950/40",
     iconColor: "text-pink-600 dark:text-pink-300",
     statColor: "text-pink-600 dark:text-pink-400",
-    defaultImage: "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=600&h=450&fit=crop",
+    defaultImage:
+      "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=600&h=450&fit=crop",
   },
   {
-    value: "tub",         label: "Bathing Tub",    plural: "Tubs",
+    value: "tub",
+    label: "Bathing Tub",
+    plural: "Tubs",
     Icon: Droplets,
-    iconBg:    "bg-blue-100 dark:bg-blue-950/40",
+    iconBg: "bg-blue-100 dark:bg-blue-950/40",
     iconColor: "text-blue-600 dark:text-blue-300",
     statColor: "text-blue-600 dark:text-blue-400",
-    defaultImage: "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=600&h=450&fit=crop",
+    defaultImage:
+      "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=600&h=450&fit=crop",
   },
   {
-    value: "cage_dryer",  label: "Cage Dryer",      plural: "Cage Dryers",
+    value: "cage_dryer",
+    label: "Cage Dryer",
+    plural: "Cage Dryers",
     Icon: Wind,
-    iconBg:    "bg-amber-100 dark:bg-amber-950/40",
+    iconBg: "bg-amber-100 dark:bg-amber-950/40",
     iconColor: "text-amber-600 dark:text-amber-300",
     statColor: "text-amber-600 dark:text-amber-400",
-    defaultImage: "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=600&h=450&fit=crop",
+    defaultImage:
+      "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=600&h=450&fit=crop",
   },
   {
-    value: "stand_dryer", label: "Stand Dryer",     plural: "Stand Dryers",
+    value: "stand_dryer",
+    label: "Stand Dryer",
+    plural: "Stand Dryers",
     Icon: Zap,
-    iconBg:    "bg-violet-100 dark:bg-violet-950/40",
+    iconBg: "bg-violet-100 dark:bg-violet-950/40",
     iconColor: "text-violet-600 dark:text-violet-300",
     statColor: "text-violet-600 dark:text-violet-400",
-    defaultImage: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=450&fit=crop",
+    defaultImage:
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=450&fit=crop",
   },
 ];
 
 function blank(facilityId: number): GroomingStation {
-  return { id: `gs-${Date.now()}`, facilityId, type: "table", name: "", active: true, staffNotes: "" };
+  return {
+    id: `gs-${Date.now()}`,
+    facilityId,
+    type: "table",
+    name: "",
+    active: true,
+    staffNotes: "",
+  };
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -86,7 +127,10 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
   } = useGroomingStations();
   const stations = allStations.filter((s) => s.facilityId === facilityId);
 
-  const [dialog, setDialog] = useState<{ open: boolean; editing: GroomingStation | null }>({ open: false, editing: null });
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    editing: GroomingStation | null;
+  }>({ open: false, editing: null });
   const [form, setForm] = useState<GroomingStation>(() => blank(facilityId));
 
   const openDialog = (s?: GroomingStation) => {
@@ -115,8 +159,10 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
   const toggle = (id: string) => toggleStation(id);
 
   const activeCount = stations.filter((s) => s.active).length;
-  const tableCount  = stations.filter((s) => s.type === "table" && s.active).length;
-  const tubCount    = stations.filter((s) => s.type === "tub"   && s.active).length;
+  const tableCount = stations.filter(
+    (s) => s.type === "table" && s.active,
+  ).length;
+  const tubCount = stations.filter((s) => s.type === "tub" && s.active).length;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -124,32 +170,52 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Grooming Stations</h2>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Manage tables, tubs, and drying stations — active station count controls booking capacity
+          <h2 className="text-2xl font-bold tracking-tight">
+            Grooming Stations
+          </h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">
+            Manage tables, tubs, and drying stations — active station count
+            controls booking capacity
           </p>
         </div>
         <Button onClick={() => openDialog()} className="shrink-0 gap-1.5">
-          <Plus className="size-4" />Add Station
+          <Plus className="size-4" />
+          Add Station
         </Button>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Active Stations</p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{activeCount}</p>
-          <p className="text-muted-foreground text-xs mt-0.5">total operational</p>
+        <div className="bg-card rounded-xl border px-4 py-3">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            Active Stations
+          </p>
+          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {activeCount}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            total operational
+          </p>
         </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Tables</p>
-          <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{tableCount}</p>
-          <p className="text-muted-foreground text-xs mt-0.5">grooming tables</p>
+        <div className="bg-card rounded-xl border px-4 py-3">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            Tables
+          </p>
+          <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
+            {tableCount}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            grooming tables
+          </p>
         </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Tubs</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{tubCount}</p>
-          <p className="text-muted-foreground text-xs mt-0.5">bathing tubs</p>
+        <div className="bg-card rounded-xl border px-4 py-3">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            Tubs
+          </p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            {tubCount}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">bathing tubs</p>
         </div>
       </div>
 
@@ -176,8 +242,13 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
       )}
 
       {stations.length > 0 && (
-        <Button variant="outline" onClick={() => openDialog()} className="gap-1.5">
-          <Plus className="size-4" />Add Station
+        <Button
+          variant="outline"
+          onClick={() => openDialog()}
+          className="gap-1.5"
+        >
+          <Plus className="size-4" />
+          Add Station
         </Button>
       )}
 
@@ -197,7 +268,11 @@ export function GroomingStationsClient({ facilityId = 11 }: Props) {
 // ── Section ────────────────────────────────────────────────────────────────────
 
 function StationSection({
-  sType, stations, onEdit, onToggle, onDelete,
+  sType,
+  stations,
+  onEdit,
+  onToggle,
+  onDelete,
 }: {
   sType: StationType;
   stations: GroomingStation[];
@@ -209,34 +284,45 @@ function StationSection({
   const [expanded, setExpanded] = useState(false);
   const active = stations.filter((s) => s.active).length;
   return (
-    <div className="rounded-xl border bg-card overflow-hidden">
+    <div className="bg-card overflow-hidden rounded-xl border">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+        className="hover:bg-muted/40 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
       >
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg hover:bg-muted transition-colors">
+        <div className="hover:bg-muted flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors">
           {expanded ? (
             <ChevronDown className="text-muted-foreground size-4" />
           ) : (
             <ChevronRight className="text-muted-foreground size-4" />
           )}
         </div>
-        <div className={cn("flex size-9 items-center justify-center rounded-xl shrink-0", iconBg)}>
+        <div
+          className={cn(
+            "flex size-9 shrink-0 items-center justify-center rounded-xl",
+            iconBg,
+          )}
+        >
           <Icon className={cn("size-4", iconColor)} />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm">{plural}</h3>
-          <p className="text-muted-foreground text-xs">{stations.length} total · {active} active</p>
+          <h3 className="text-sm font-semibold">{plural}</h3>
+          <p className="text-muted-foreground text-xs">
+            {stations.length} total · {active} active
+          </p>
         </div>
       </button>
       {expanded && (
-        <div className="border-t border-border/40 p-4">
+        <div className="border-border/40 border-t p-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {stations.map((s) => (
               <StationCard
-                key={s.id} station={s} sType={sType}
-                onEdit={() => onEdit(s)} onToggle={() => onToggle(s.id)} onDelete={() => onDelete(s.id)}
+                key={s.id}
+                station={s}
+                sType={sType}
+                onEdit={() => onEdit(s)}
+                onToggle={() => onToggle(s.id)}
+                onDelete={() => onDelete(s.id)}
               />
             ))}
           </div>
@@ -249,7 +335,11 @@ function StationSection({
 // ── Station card ───────────────────────────────────────────────────────────────
 
 function StationCard({
-  station, sType, onEdit, onToggle, onDelete,
+  station,
+  sType,
+  onEdit,
+  onToggle,
+  onDelete,
 }: {
   station: GroomingStation;
   sType: StationType;
@@ -260,38 +350,76 @@ function StationCard({
   const { Icon, iconBg, iconColor, defaultImage } = sType;
   const displayImage = station.imageUrl ?? defaultImage;
   return (
-    <div className={cn(
-      "group rounded-xl border bg-card overflow-hidden transition-all hover:shadow-md",
-      !station.active && "opacity-60",
-    )}>
+    <div
+      className={cn(
+        "group bg-card overflow-hidden rounded-xl border transition-all hover:shadow-md",
+        !station.active && "opacity-60",
+      )}
+    >
       {/* Station photo */}
-      <div className="aspect-[4/3] relative">
-        <img src={displayImage} alt={station.name} className="absolute inset-0 size-full object-cover" />
+      <div className="relative aspect-4/3">
+        <img
+          src={displayImage}
+          alt={station.name}
+          className="absolute inset-0 size-full object-cover"
+        />
         <div className="absolute top-2 right-2">
-          <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75" />
+          <Switch
+            checked={station.active}
+            onCheckedChange={onToggle}
+            className="scale-75"
+          />
         </div>
-        <div className={cn("absolute top-2 left-2 flex size-7 items-center justify-center rounded-lg shadow-sm", iconBg)}>
+        <div
+          className={cn(
+            "absolute top-2 left-2 flex size-7 items-center justify-center rounded-lg shadow-sm",
+            iconBg,
+          )}
+        >
           <Icon className={cn("size-3.5", iconColor)} />
         </div>
       </div>
       <div className="p-4 pt-2">
-        <p className="font-semibold text-sm truncate">{station.name}</p>
-        <p className={cn("text-xs mt-0.5", station.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+        <p className="truncate text-sm font-semibold">{station.name}</p>
+        <p
+          className={cn(
+            "mt-0.5 text-xs",
+            station.active
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-muted-foreground",
+          )}
+        >
           {station.active ? "Active" : "Inactive"}
         </p>
         {station.maxWeightLbs && (
-          <p className="text-[11px] text-muted-foreground mt-1">Max {station.maxWeightLbs} lbs</p>
+          <p className="text-muted-foreground mt-1 text-[11px]">
+            Max {station.maxWeightLbs} lbs
+          </p>
         )}
         {station.staffNotes && (
-          <p className="text-[11px] text-muted-foreground mt-1 truncate" title={station.staffNotes}>
+          <p
+            className="text-muted-foreground mt-1 truncate text-[11px]"
+            title={station.staffNotes}
+          >
             {station.staffNotes}
           </p>
         )}
-        <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button size="sm" variant="outline" className="flex-1 h-7 text-xs" onClick={onEdit}>
-            <Pencil className="size-3 mr-1" />Edit
+        <div className="mt-3 flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 flex-1 text-xs"
+            onClick={onEdit}
+          >
+            <Pencil className="mr-1 size-3" />
+            Edit
           </Button>
-          <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive/70 hover:text-destructive h-7 px-2"
+            onClick={onDelete}
+          >
             <Trash2 className="size-3" />
           </Button>
         </div>
@@ -303,7 +431,12 @@ function StationCard({
 // ── Dialog ─────────────────────────────────────────────────────────────────────
 
 function StationDialog({
-  open, editing, form, setForm, onClose, onSave,
+  open,
+  editing,
+  form,
+  setForm,
+  onClose,
+  onSave,
 }: {
   open: boolean;
   editing: GroomingStation | null;
@@ -313,25 +446,43 @@ function StationDialog({
   onSave: () => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Station" : "Add Grooming Station"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Edit Station" : "Add Grooming Station"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label>Station Type</Label>
-            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as GroomingStationType })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={form.type}
+              onValueChange={(v) =>
+                setForm({ ...form, type: v as GroomingStationType })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {STATION_TYPES.map((st) => (
-                  <SelectItem key={st.value} value={st.value}>{st.label}</SelectItem>
+                  <SelectItem key={st.value} value={st.value}>
+                    {st.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Station Name <span className="text-destructive">*</span></Label>
+            <Label>
+              Station Name <span className="text-destructive">*</span>
+            </Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -342,9 +493,15 @@ function StationDialog({
           <div className="space-y-1.5">
             <Label>Max Weight (lbs)</Label>
             <Input
-              type="number" min={0}
+              type="number"
+              min={0}
               value={form.maxWeightLbs ?? ""}
-              onChange={(e) => setForm({ ...form, maxWeightLbs: parseInt(e.target.value) || undefined })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  maxWeightLbs: parseInt(e.target.value) || undefined,
+                })
+              }
               placeholder="No limit"
             />
           </div>
@@ -366,14 +523,21 @@ function StationDialog({
           />
           <Separator />
           <div className="flex items-center gap-2.5">
-            <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
-            <Label className="cursor-pointer font-normal text-sm">
-              {form.active ? "Active — available for bookings" : "Inactive — hidden from bookings"}
+            <Switch
+              checked={form.active}
+              onCheckedChange={(v) => setForm({ ...form, active: v })}
+            />
+            <Label className="cursor-pointer text-sm font-normal">
+              {form.active
+                ? "Active — available for bookings"
+                : "Inactive — hidden from bookings"}
             </Label>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button disabled={!form.name.trim()} onClick={onSave}>
             {editing ? "Save Changes" : "Add Station"}
           </Button>
@@ -387,16 +551,18 @@ function StationDialog({
 
 function EmptyGrooming({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-2xl border-2 border-dashed bg-muted/20 flex flex-col items-center justify-center py-24 text-center">
-      <div className="flex size-16 items-center justify-center rounded-2xl bg-muted mb-4">
-        <Scissors className="size-8 text-muted-foreground/50" />
+    <div className="bg-muted/20 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-24 text-center">
+      <div className="bg-muted mb-4 flex size-16 items-center justify-center rounded-2xl">
+        <Scissors className="text-muted-foreground/50 size-8" />
       </div>
-      <h3 className="font-semibold text-lg mb-1">No grooming stations yet</h3>
-      <p className="text-muted-foreground text-sm max-w-sm mb-6">
-        Add grooming tables, bathing tubs, and drying stations. Active station count controls how many appointments can be booked simultaneously.
+      <h3 className="mb-1 text-lg font-semibold">No grooming stations yet</h3>
+      <p className="text-muted-foreground mb-6 max-w-sm text-sm">
+        Add grooming tables, bathing tubs, and drying stations. Active station
+        count controls how many appointments can be booked simultaneously.
       </p>
       <Button onClick={onAdd}>
-        <Plus className="mr-2 size-4" />Add First Station
+        <Plus className="mr-2 size-4" />
+        Add First Station
       </Button>
     </div>
   );

@@ -54,7 +54,7 @@ export function StepPricing({ data, update }: Props) {
 
   return (
     <div className="space-y-5">
-      <section className="space-y-3 rounded-xl border bg-linear-to-br from-emerald-50/40 to-background p-4 dark:from-emerald-950/20">
+      <section className="to-background space-y-3 rounded-xl border bg-linear-to-br from-emerald-50/40 p-4 dark:from-emerald-950/20">
         <div className="flex items-center gap-2">
           <Receipt className="size-4 text-emerald-700 dark:text-emerald-400" />
           <h4 className="text-sm font-semibold">Subscription price</h4>

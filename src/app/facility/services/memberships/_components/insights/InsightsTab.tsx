@@ -18,17 +18,9 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Users, DollarSign } from "lucide-react";
-import {
-  memberships,
-  membershipPlans,
-} from "@/data/services-pricing";
+import { memberships, membershipPlans } from "@/data/services-pricing";
 
 const PALETTE = [
   "#D4AF37",
@@ -66,8 +58,18 @@ export function InsightsTab() {
   // Synthetic 12-month trend derived from seed data for visual demo
   const trend = useMemo(() => {
     const months = [
-      "May", "Jun", "Jul", "Aug", "Sep", "Oct",
-      "Nov", "Dec", "Jan", "Feb", "Mar", "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
     ];
     return months.map((m, i) => {
       const pct = 0.55 + i * 0.04;
