@@ -327,7 +327,12 @@ export default function CustomerDocumentsPage() {
                     ...(primaryId !== 11 ? getFormsByFacility(11) : []),
                   ];
                   const forms = allForms.filter(
-                    (f) => f.status === "published" && f.audience !== "staff",
+                    (f) =>
+                      f.status === "published" &&
+                      f.audience !== "staff" &&
+                      (f.type === "intake" ||
+                        f.type === "owner" ||
+                        f.type === "customer"),
                   );
                   if (forms.length === 0) {
                     return (

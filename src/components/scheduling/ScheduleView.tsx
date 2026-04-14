@@ -12,11 +12,20 @@ import { DraftPublishBar } from "@/components/scheduling/DraftPublishBar";
 import { AddShiftDialog } from "@/components/scheduling/AddShiftDialog";
 import { SaveAsTemplateDialog } from "@/components/scheduling/SaveAsTemplateDialog";
 import { TimeClock } from "@/components/scheduling/TimeClock";
+import { ShiftOpportunityBoard } from "@/components/scheduling/ShiftOpportunityBoard";
+import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpportunityDialog";
+import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
+import { DraftReviewSummary } from "@/components/scheduling/DraftReviewSummary";
 import {
   departments,
+  positions as allPositions,
+  scheduleEmployees,
   scheduleShifts as initialShifts,
   enhancedTimeOffRequests,
   enhancedShiftSwaps,
+  employeeAvailabilities,
+  shiftOpportunities as initialShiftOpportunities,
+  shiftOpportunityNotificationSettings as initialNotifSettings,
   getPositionsForDepartment,
   getDepartmentEmployees,
   calculateLaborCost,
@@ -27,6 +36,8 @@ import type {
   ScheduleShift,
   HolidayRate,
   TimeClockEntry,
+  ShiftOpportunity,
+  ShiftOpportunityNotificationSettings,
 } from "@/types/scheduling";
 
 // Mock holiday rates (dates near today: 2026-04-13)
@@ -54,6 +65,8 @@ const initialHolidayRates: HolidayRate[] = [
 // Scheduling settings (matching schedulingSettingsSchema)
 const schedulingSettings = {
   overtimeThresholdWeekly: 40,
+  minTimeBetweenShifts: 8,
+  maxConsecutiveDays: 6,
 };
 
 export function ScheduleView() {
@@ -69,6 +82,16 @@ export function ScheduleView() {
   const [holidayRates] = useState<HolidayRate[]>(initialHolidayRates);
   const [timeClockOpen, setTimeClockOpen] = useState(false);
   const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>([]);
+
+  // Shift opportunities state
+  const [shiftOpportunities, setShiftOpportunities] = useState<ShiftOpportunity[]>(
+    initialShiftOpportunities,
+  );
+  const [notifSettings, setNotifSettings] = useState<ShiftOpportunityNotificationSettings>(
+    initialNotifSettings,
+  );
+  const [showPostDialog, setShowPostDialog] = useState(false);
+  const [showNotifSettings, setShowNotifSettings] = useState(false);
 
   // Date range for the current view
   const dateRange = useMemo(() => {
@@ -343,7 +366,7 @@ export function ScheduleView() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full w-full min-w-0 flex-col overflow-x-hidden">
       <ScheduleHeader
         currentDate={currentDate}
         viewMode={viewMode}
@@ -371,7 +394,28 @@ export function ScheduleView() {
         overtimeAlerts={0}
       />
 
-      <div className="flex-1 overflow-hidden border-t">
+      <div className="min-w-0 space-y-2 border-t bg-muted/20 px-4 py-2">
+        <DraftReviewSummary
+          shifts={filteredShifts}
+          employees={deptEmployees}
+          availabilities={employeeAvailabilities}
+          timeOffRequests={enhancedTimeOffRequests}
+          settings={schedulingSettings}
+        />
+        <ShiftOpportunityBoard
+          opportunities={shiftOpportunities}
+          notificationSettings={notifSettings}
+          departments={departments}
+          positions={allPositions}
+          employees={scheduleEmployees}
+          onOpportunitiesChange={setShiftOpportunities}
+          onOpenPostDialog={() => setShowPostDialog(true)}
+          onOpenNotificationSettings={() => setShowNotifSettings(true)}
+          defaultExpanded={false}
+        />
+      </div>
+
+      <div className="min-w-0 flex-1 overflow-hidden border-t">
         <ScheduleCalendar
           viewMode={viewMode}
           currentDate={currentDate}
@@ -419,6 +463,10 @@ export function ScheduleView() {
         editingShift={editingShift}
         onSave={handleSaveShift}
         onDelete={handleDeleteShift}
+        allShifts={shifts}
+        availabilities={employeeAvailabilities}
+        timeOffRequests={enhancedTimeOffRequests}
+        schedulingSettings={schedulingSettings}
       />
 
       <TimeClock
@@ -431,6 +479,24 @@ export function ScheduleView() {
         onClockIn={handleClockIn}
         onClockOut={handleClockOut}
         department={selectedDepartment}
+      />
+
+      <PostShiftOpportunityDialog
+        open={showPostDialog}
+        onOpenChange={setShowPostDialog}
+        departments={departments}
+        positions={allPositions}
+        employees={scheduleEmployees}
+        onPost={(opp) => setShiftOpportunities((prev) => [opp, ...prev])}
+      />
+
+      <ShiftOpportunityNotificationSettingsDialog
+        open={showNotifSettings}
+        onOpenChange={setShowNotifSettings}
+        settings={notifSettings}
+        departments={departments}
+        employees={scheduleEmployees}
+        onSave={setNotifSettings}
       />
     </div>
   );

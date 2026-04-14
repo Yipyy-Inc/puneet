@@ -12,6 +12,8 @@ export const daycarePlayAreas: DaycarePlayArea[] = [
     description: "Climate-controlled indoor play space — open year-round",
     isActive: true,
     sortOrder: 1,
+    imageUrl:
+      "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&h=480&fit=crop",
   },
   {
     id: "area-outdoor",
@@ -20,6 +22,8 @@ export const daycarePlayAreas: DaycarePlayArea[] = [
     description: "Open-air supervised play area — seasonal",
     isActive: true,
     sortOrder: 2,
+    imageUrl:
+      "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&h=480&fit=crop",
   },
 ];
 

@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { PlayAreaCard } from "@/components/rooms/PlayAreaCard";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
 import { getMockUsage } from "@/lib/capacity-engine";
+import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import type { DaycarePlayArea, DaycareSection, RoomCategoryColor } from "@/types/rooms";
 
 const COLORS: RoomCategoryColor[] = [
@@ -36,8 +37,6 @@ const TODAY = new Date().toISOString().split("T")[0];
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
-  initialAreas: DaycarePlayArea[];
-  initialSections: DaycareSection[];
   facilityId?: number;
 }
 
@@ -75,13 +74,25 @@ function blankSection(
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function DaycareAreasClient({
-  initialAreas,
-  initialSections,
-  facilityId = 11,
-}: Props) {
-  const [areas, setAreas] = useState(initialAreas);
-  const [sections, setSections] = useState(initialSections);
+export function DaycareAreasClient({ facilityId = 11 }: Props) {
+  const {
+    areas: allAreas,
+    sections: allSections,
+    addArea,
+    updateArea,
+    deleteArea: removeArea,
+    toggleArea: toggleAreaInHook,
+    addSection,
+    updateSection,
+    deleteSection: removeSection,
+    toggleSection: toggleSectionInHook,
+  } = useDaycareAreas();
+
+  const areas = allAreas.filter((a) => a.facilityId === facilityId);
+  const areaIds = new Set(areas.map((a) => a.id));
+  const sections = allSections.filter(
+    (s) => s.facilityId === facilityId && areaIds.has(s.playAreaId),
+  );
 
   // Area dialog
   const [areaDialog, setAreaDialog] = useState<{
@@ -130,24 +141,23 @@ export function DaycareAreasClient({
       toast.error("Play area name is required");
       return;
     }
-    setAreas((prev) => {
-      const exists = prev.find((x) => x.id === a.id);
-      return exists ? prev.map((x) => (x.id === a.id ? a : x)) : [...prev, a];
-    });
-    toast.success(areas.find((x) => x.id === a.id) ? "Play area updated" : "Play area created");
+    const isExisting = areas.find((x) => x.id === a.id);
+    if (isExisting) {
+      updateArea(a);
+      toast.success("Play area updated");
+    } else {
+      addArea(a);
+      toast.success("Play area created");
+    }
     setAreaDialog(null);
   };
 
   const deleteArea = (id: string) => {
-    setAreas((prev) => prev.filter((a) => a.id !== id));
-    setSections((prev) => prev.filter((s) => s.playAreaId !== id));
+    removeArea(id);
     toast.success("Play area and its sections removed");
   };
 
-  const toggleArea = (id: string) =>
-    setAreas((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isActive: !a.isActive } : a)),
-    );
+  const toggleArea = (id: string) => toggleAreaInHook(id);
 
   // ── Section handlers ─────────────────────────────────────────────────────────
 
@@ -172,21 +182,20 @@ export function DaycareAreasClient({
       toast.error("Capacity must be at least 1");
       return;
     }
-    setSections((prev) => {
-      const exists = prev.find((x) => x.id === s.id);
-      return exists ? prev.map((x) => (x.id === s.id ? s : x)) : [...prev, s];
-    });
-    toast.success(sectionDialog.isNew ? "Section added" : "Section updated");
+    if (sectionDialog.isNew) {
+      addSection(s);
+      toast.success("Section added");
+    } else {
+      updateSection(s);
+      toast.success("Section updated");
+    }
     setSectionDialog(null);
   };
 
-  const toggleSection = (id: string) =>
-    setSections((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s)),
-    );
+  const toggleSection = (id: string) => toggleSectionInHook(id);
 
   const deleteSection = (id: string) => {
-    setSections((prev) => prev.filter((s) => s.id !== id));
+    removeSection(id);
     toast.success("Section removed");
   };
 

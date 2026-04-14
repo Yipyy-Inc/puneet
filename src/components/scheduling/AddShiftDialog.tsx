@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,17 +22,27 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Clock, User, Briefcase, Calendar, MessageSquare, UserX } from "lucide-react";
+import { Clock, User, Briefcase, Calendar, MessageSquare, UserX, ShieldCheck } from "lucide-react";
 import { RecurrenceSection } from "@/components/scheduling/RecurrenceSection";
+import { ConflictList } from "@/components/scheduling/ConflictList";
+import { SkillMultiSelect } from "@/components/scheduling/SkillMultiSelect";
+import { skillsCatalog } from "@/data/scheduling";
 import {
   parseLocalDate,
   generateRecurringDates,
 } from "@/lib/shift-recurrence";
+import {
+  detectShiftConflicts,
+  hasBlockingConflict,
+} from "@/lib/scheduling-conflicts";
 import type {
   ScheduleEmployee,
   Position,
   ScheduleShift,
   ShiftRecurrence,
+  EmployeeAvailability,
+  EnhancedTimeOffRequest,
+  SchedulingSettings,
 } from "@/types/scheduling";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -48,6 +58,14 @@ interface AddShiftDialogProps {
   editingShift?: ScheduleShift | null;
   onSave: (shifts: Omit<ScheduleShift, "id">[]) => void;
   onDelete?: (shiftId: string) => void;
+  /** Conflict-detection inputs — optional for backwards compat */
+  allShifts?: ScheduleShift[];
+  availabilities?: EmployeeAvailability[];
+  timeOffRequests?: EnhancedTimeOffRequest[];
+  schedulingSettings?: Pick<
+    SchedulingSettings,
+    "overtimeThresholdWeekly" | "minTimeBetweenShifts" | "maxConsecutiveDays"
+  >;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -63,6 +81,10 @@ export function AddShiftDialog({
   editingShift,
   onSave,
   onDelete,
+  allShifts,
+  availabilities,
+  timeOffRequests,
+  schedulingSettings,
 }: AddShiftDialogProps) {
   const isEditing = !!editingShift;
 
@@ -81,6 +103,9 @@ export function AddShiftDialog({
     editingShift?.breakMinutes?.toString() ?? "30",
   );
   const [notes, setNotes] = useState(editingShift?.notes ?? "");
+  const [requiredSkills, setRequiredSkills] = useState<string[]>(
+    editingShift?.requiredSkills ?? [],
+  );
 
   // ── Recurrence (new shifts only)
   const [isRecurring, setIsRecurring] = useState(false);
@@ -128,8 +153,64 @@ export function AddShiftDialog({
     }
   };
 
+  // ── Conflict detection (only runs when a real employee is assigned)
+  const conflicts = useMemo(() => {
+    if (
+      employeeId === "unassigned" ||
+      !selectedEmployee ||
+      !positionId ||
+      !date ||
+      !startTime ||
+      !endTime ||
+      !allShifts ||
+      !schedulingSettings
+    ) {
+      return [];
+    }
+    const availability = availabilities?.find(
+      (a) => a.employeeId === selectedEmployee.id,
+    );
+    return detectShiftConflicts({
+      shift: {
+        id: editingShift?.id,
+        employeeId: selectedEmployee.id,
+        departmentId: selectedEmployee.departmentIds[0] ?? departmentId,
+        positionId,
+        date,
+        startTime,
+        endTime,
+        breakMinutes: parseInt(breakMinutes) || 0,
+        status: "draft",
+        requiredSkills: requiredSkills.length > 0 ? requiredSkills : undefined,
+      },
+      employee: selectedEmployee,
+      allShifts,
+      availability,
+      timeOffRequests: timeOffRequests ?? [],
+      settings: schedulingSettings,
+    });
+  }, [
+    employeeId,
+    selectedEmployee,
+    positionId,
+    date,
+    startTime,
+    endTime,
+    breakMinutes,
+    editingShift?.id,
+    departmentId,
+    allShifts,
+    availabilities,
+    timeOffRequests,
+    schedulingSettings,
+    requiredSkills,
+  ]);
+
+  const blocked = hasBlockingConflict(conflicts);
+
   // ── Save
-  const canSave = !!positionId && !!date && !!startTime && !!endTime;
+  const canSave =
+    !!positionId && !!date && !!startTime && !!endTime && !blocked;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -149,6 +230,7 @@ export function AddShiftDialog({
       breakMinutes: parseInt(breakMinutes) || 0,
       notes: notes || undefined,
       status: "draft",
+      requiredSkills: requiredSkills.length > 0 ? requiredSkills : undefined,
     };
 
     if (isEditing) {
@@ -335,6 +417,25 @@ export function AddShiftDialog({
                   className="w-32"
                 />
               </div>
+
+              {/* Required skills / certifications */}
+              <div className="space-y-1.5">
+                <Label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <ShieldCheck className="size-3" /> Required skills / certifications
+                  <Badge
+                    variant="outline"
+                    className="ml-1 px-1.5 py-0 text-[9px]"
+                  >
+                    optional
+                  </Badge>
+                </Label>
+                <SkillMultiSelect
+                  skills={skillsCatalog}
+                  value={requiredSkills}
+                  onChange={setRequiredSkills}
+                  placeholder="e.g. Opener, Medication Cert"
+                />
+              </div>
             </div>
 
             {/* ── Recurrence (new shifts only) ────────────────────────── */}
@@ -354,6 +455,18 @@ export function AddShiftDialog({
                 onOccurrencesChange={setOccurrences}
                 startDate={date}
               />
+            )}
+
+            {conflicts.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                    Scheduling Conflicts
+                  </p>
+                  <ConflictList conflicts={conflicts} />
+                </div>
+              </>
             )}
 
             <Separator />

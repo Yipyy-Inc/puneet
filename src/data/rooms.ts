@@ -17,6 +17,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 2,
     defaultBasePrice: 125,
     visibleToClients: true,
+    imageUrl: "/rooms/room-3.jpg",
     rules: [
       {
         id: "rule-pcs-1",
@@ -46,6 +47,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 2,
     defaultBasePrice: 85,
     visibleToClients: true,
+    imageUrl: "/rooms/room-2.jpg",
     rules: [
       {
         id: "rule-ds-1",
@@ -76,6 +78,7 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 1,
     defaultBasePrice: 55,
     visibleToClients: true,
+    imageUrl: "/rooms/room-1.jpg",
     rules: [
       {
         id: "rule-s-1",
@@ -106,6 +109,8 @@ export const roomCategories: RoomCategory[] = [
     defaultCapacity: 1,
     defaultBasePrice: 38,
     visibleToClients: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1583511655826-05700d52f4d9?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-c-1",

@@ -2,6 +2,7 @@
 
 import { useState, use } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import {
@@ -10,6 +11,8 @@ import {
   reportCards,
   petRelationships,
 } from "@/data/pet-data";
+import { getFormsByFacility } from "@/data/forms";
+import { getSubmissionsForPet } from "@/data/form-submissions";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +56,8 @@ import {
   Ghost,
   Egg,
   PartyPopper,
+  ExternalLink,
+  ClipboardList,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import type { Client } from "@/types/client";
@@ -218,6 +223,16 @@ export default function PetDetailPage({
   const petBookings = bookings.filter((b) => b.petId === pet.id);
   const reports = reportCards.filter((r) => r.petId === pet.id);
   const relationships = petRelationships.filter((r) => r.petId === pet.id);
+
+  const FACILITY_ID = 11;
+  const petApplicableForms = getFormsByFacility(FACILITY_ID).filter(
+    (f) =>
+      !f.internal &&
+      f.status === "published" &&
+      (f.type === "pet" || f.type === "service"),
+  );
+  const petSubmissions = getSubmissionsForPet(FACILITY_ID, pet.id);
+  const petCompletedFormIds = new Set(petSubmissions.map((s) => s.formId));
   const friends = relationships.filter(
     (r) =>
       r.relationshipType === "friend" || r.relationshipType === "best_friend",
@@ -752,6 +767,102 @@ export default function PetDetailPage({
                       <p className="text-sm">{pet.specialNeeds}</p>
                     </div>
                   </>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pet & Service Forms */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                    <ClipboardList className="size-4" />
+                    Forms for {pet.name}
+                  </CardTitle>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Pet & service forms set up for this facility. Submissions
+                    linked to this pet appear below.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/facility/dashboard/forms">
+                    <ExternalLink className="mr-1 size-3.5" />
+                    Manage forms
+                  </Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {petApplicableForms.length === 0 ? (
+                  <p className="text-muted-foreground py-2 text-sm">
+                    No pet or service forms published yet.
+                  </p>
+                ) : (
+                  petApplicableForms.map((form) => {
+                    const sub = petSubmissions.find(
+                      (s) => s.formId === form.id,
+                    );
+                    const isDone = petCompletedFormIds.has(form.id);
+                    return (
+                      <div
+                        key={form.id}
+                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="text-muted-foreground size-4" />
+                          <div>
+                            <div className="text-sm font-medium">
+                              {form.name}
+                            </div>
+                            <div className="text-muted-foreground text-xs">
+                              <Badge
+                                variant="outline"
+                                className="mr-1.5 text-[10px] capitalize"
+                              >
+                                {form.type}
+                              </Badge>
+                              {form.questions.length} question
+                              {form.questions.length !== 1 ? "s" : ""}
+                              {sub &&
+                                ` · Submitted ${new Date(sub.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  },
+                                )}`}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isDone ? (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 text-[10px] text-emerald-600"
+                            >
+                              <CheckCircle className="size-3" />
+                              Completed
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] text-amber-700"
+                            >
+                              Pending
+                            </Badge>
+                          )}
+                          <Button size="sm" variant="outline" asChild>
+                            <Link
+                              href={`/forms/${form.slug}?petId=${pet.id}&customerId=${client.id}`}
+                            >
+                              <ExternalLink className="mr-1 size-3.5" />
+                              Open
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </CardContent>
             </Card>

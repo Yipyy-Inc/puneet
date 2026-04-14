@@ -53,20 +53,6 @@ import {
 import { OperationsCalendarToolbar } from "@/components/facility/operations/OperationsCalendarToolbar";
 import { useSettings } from "@/hooks/use-settings";
 import { OperationsCalendarSidePanel } from "@/components/facility/operations/OperationsCalendarSidePanel";
-import { ShiftOpportunityBoard } from "@/components/scheduling/ShiftOpportunityBoard";
-import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpportunityDialog";
-import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
-import {
-  shiftOpportunities as initialShiftOpportunities,
-  shiftOpportunityNotificationSettings as initialNotifSettings,
-  departments as scheduleDepartments,
-  positions as schedulePositions,
-  scheduleEmployees,
-} from "@/data/scheduling";
-import type {
-  ShiftOpportunity,
-  ShiftOpportunityNotificationSettings,
-} from "@/types/scheduling";
 import {
   type CalendarCardFieldKey,
   type CalendarAxisMode,
@@ -554,12 +540,6 @@ export function OperationsCalendar() {
   const [managerAlerts, setManagerAlerts] = useState<ManagerAlert[]>([]);
   const [calendarAuditLog, setCalendarAuditLog] = useState<CalendarAuditEntry[]>([]);
   const [clockTimestamp, setClockTimestamp] = useState(0);
-
-  // Shift opportunities state
-  const [shiftOpportunities, setShiftOpportunities] = useState<ShiftOpportunity[]>(initialShiftOpportunities);
-  const [notifSettings, setNotifSettings] = useState<ShiftOpportunityNotificationSettings>(initialNotifSettings);
-  const [showPostDialog, setShowPostDialog] = useState(false);
-  const [showNotifSettings, setShowNotifSettings] = useState(false);
 
   const [permissionLevel, setPermissionLevel] = useState<CalendarPermissionLevel>("admin");
   const [visibilityScope, setVisibilityScope] = useState<CalendarVisibilityScope>(
@@ -2701,43 +2681,7 @@ export function OperationsCalendar() {
           onMarkEventComplete={handleMarkEventComplete}
           onSlotCreate={onSlotCreate}
         />
-
-        {/* Shift Opportunities Section */}
-        <div className="rounded-xl border bg-white dark:bg-slate-900 p-4">
-          <ShiftOpportunityBoard
-            opportunities={shiftOpportunities}
-            notificationSettings={notifSettings}
-            departments={scheduleDepartments}
-            positions={schedulePositions}
-            employees={scheduleEmployees}
-            onOpportunitiesChange={setShiftOpportunities}
-            onOpenPostDialog={() => setShowPostDialog(true)}
-            onOpenNotificationSettings={() => setShowNotifSettings(true)}
-          />
-        </div>
       </div>
-
-      {/* Post Shift Opportunity Dialog */}
-      <PostShiftOpportunityDialog
-        open={showPostDialog}
-        onOpenChange={setShowPostDialog}
-        departments={scheduleDepartments}
-        positions={schedulePositions}
-        employees={scheduleEmployees}
-        onPost={(opp) =>
-          setShiftOpportunities((prev) => [opp, ...prev])
-        }
-      />
-
-      {/* Notification Settings Dialog */}
-      <ShiftOpportunityNotificationSettingsDialog
-        open={showNotifSettings}
-        onOpenChange={setShowNotifSettings}
-        settings={notifSettings}
-        departments={scheduleDepartments}
-        employees={scheduleEmployees}
-        onSave={setNotifSettings}
-      />
 
       <OperationsCalendarEventDrawer
         open={drawerOpen && Boolean(selectedEvent)}

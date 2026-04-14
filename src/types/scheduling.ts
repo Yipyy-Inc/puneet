@@ -51,6 +51,128 @@ export const employeeStatusEnum = z.enum([
 ]);
 export type EmployeeStatus = z.infer<typeof employeeStatusEnum>;
 
+// ─── RBAC role hierarchy ────────────────────────────────────────────────────
+
+export const userRoleEnum = z.enum([
+  "owner",
+  "general_manager",
+  "department_manager",
+  "supervisor",
+  "employee",
+]);
+export type UserRole = z.infer<typeof userRoleEnum>;
+
+// ─── Company profile ────────────────────────────────────────────────────────
+
+export const operatingHoursDaySchema = z.object({
+  dayOfWeek: z.number(),
+  isOpen: z.boolean(),
+  openTime: z.string().optional(),
+  closeTime: z.string().optional(),
+});
+export type OperatingHoursDay = z.infer<typeof operatingHoursDaySchema>;
+
+export const facilityLocationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  address: z.string(),
+  city: z.string(),
+  region: z.string(),
+  postalCode: z.string(),
+  country: z.string(),
+  phone: z.string().optional(),
+  timezone: z.string(),
+  operatingHours: z.array(operatingHoursDaySchema),
+  isPrimary: z.boolean(),
+});
+export type FacilityLocation = z.infer<typeof facilityLocationSchema>;
+
+export const companyProfileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  legalName: z.string().optional(),
+  industry: z.string(),
+  taxId: z.string().optional(),
+  contactEmail: z.string(),
+  contactPhone: z.string().optional(),
+  website: z.string().optional(),
+  defaultTimezone: z.string(),
+  weekStartsOn: z.number(),
+  payPeriod: z.enum(["weekly", "biweekly", "semimonthly", "monthly"]),
+  locations: z.array(facilityLocationSchema),
+  updatedAt: z.string(),
+});
+export type CompanyProfile = z.infer<typeof companyProfileSchema>;
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+export const notificationEventEnum = z.enum([
+  "schedule_published",
+  "shift_changed",
+  "shift_assigned",
+  "shift_cancelled",
+  "shift_reminder",
+  "swap_requested",
+  "swap_decision",
+  "timeoff_decision",
+  "availability_decision",
+  "open_shift_posted",
+  "open_shift_claimed",
+  "attendance_late",
+  "attendance_no_show",
+]);
+export type NotificationEvent = z.infer<typeof notificationEventEnum>;
+
+export const notificationChannelsSchema = z.object({
+  inApp: z.boolean(),
+  email: z.boolean(),
+  sms: z.boolean(),
+  push: z.boolean(),
+});
+export type NotificationChannels = z.infer<typeof notificationChannelsSchema>;
+
+export const notificationRuleSchema = z.object({
+  event: notificationEventEnum,
+  enabled: z.boolean(),
+  channels: notificationChannelsSchema,
+  /** Audience scope: "all" | "managers" | "involved" — who receives this. */
+  audience: z.enum(["all", "managers", "involved"]),
+  /** For reminders: how many minutes before the event to fire. */
+  leadTimeMinutes: z.number().optional(),
+});
+export type NotificationRule = z.infer<typeof notificationRuleSchema>;
+
+export const notificationPreferencesSchema = z.object({
+  facilityId: z.number(),
+  rules: z.array(notificationRuleSchema),
+  quietHoursStart: z.string().optional(),
+  quietHoursEnd: z.string().optional(),
+  updatedAt: z.string(),
+});
+export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
+
+export const broadcastAudienceEnum = z.enum([
+  "all_staff",
+  "department",
+  "location",
+  "individual",
+]);
+export type BroadcastAudience = z.infer<typeof broadcastAudienceEnum>;
+
+export const broadcastMessageSchema = z.object({
+  id: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  audience: broadcastAudienceEnum,
+  audienceTargetId: z.string().optional(),
+  channels: notificationChannelsSchema,
+  sentBy: z.string(),
+  sentByName: z.string(),
+  sentAt: z.string(),
+  recipientCount: z.number(),
+});
+export type BroadcastMessage = z.infer<typeof broadcastMessageSchema>;
+
 export const scheduleEmployeeSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -66,6 +188,19 @@ export const scheduleEmployeeSchema = z.object({
   maxHoursPerWeek: z.number(),
   employmentType: employmentTypeEnum,
   role: z.string(),
+  /** Skills / certifications the employee holds (e.g. "med-cert", "opener", "cpr") */
+  skills: z.array(z.string()).optional(),
+  /** Optional rich certifications with expiry tracking */
+  certifications: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        issuedAt: z.string(),
+        expiresAt: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 export type ScheduleEmployee = z.infer<typeof scheduleEmployeeSchema>;
 
@@ -109,8 +244,36 @@ export const scheduleShiftSchema = z.object({
   color: z.string().optional(),
   /** Links all shifts that belong to the same recurrence series */
   recurrenceId: z.string().optional(),
+  /** Skills / certifications required for this shift */
+  requiredSkills: z.array(z.string()).optional(),
+  /** When true, unassigned shift appears on open-shift board */
+  urgent: z.boolean().optional(),
+  /** Number of employees this shift slot needs (for multi-spot shifts) */
+  slots: z.number().optional(),
 });
 export type ScheduleShift = z.infer<typeof scheduleShiftSchema>;
+
+// ─── Skill catalog ───────────────────────────────────────────────────────────
+
+export const skillCategoryEnum = z.enum([
+  "certification",
+  "training",
+  "qualification",
+  "other",
+]);
+export type SkillCategory = z.infer<typeof skillCategoryEnum>;
+
+export const skillSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  category: skillCategoryEnum,
+  description: z.string().optional(),
+  /** Whether this skill has a renewal/expiry date */
+  expires: z.boolean(),
+  /** Default renewal window in days if expires is true */
+  renewalDays: z.number().optional(),
+});
+export type Skill = z.infer<typeof skillSchema>;
 
 // ============================================================================
 // Schedule Period (draft or published schedule block)
@@ -361,6 +524,37 @@ export const employeeAvailabilitySchema = z.object({
   updatedAt: z.string(),
 });
 export type EmployeeAvailability = z.infer<typeof employeeAvailabilitySchema>;
+
+// ─── Availability change request (self-service + manager approval) ──────────
+
+export const availabilityChangeStatusEnum = z.enum([
+  "pending",
+  "approved",
+  "denied",
+  "cancelled",
+]);
+export type AvailabilityChangeStatus = z.infer<typeof availabilityChangeStatusEnum>;
+
+export const availabilityChangeRequestSchema = z.object({
+  id: z.string(),
+  employeeId: z.string(),
+  employeeName: z.string(),
+  departmentId: z.string(),
+  /** Current availability at time of request (for side-by-side compare). */
+  currentAvailability: z.array(availabilityDaySchema),
+  /** Proposed replacement availability. */
+  proposedAvailability: z.array(availabilityDaySchema),
+  /** Date from which the new availability should apply once approved. */
+  effectiveFrom: z.string(),
+  reason: z.string(),
+  status: availabilityChangeStatusEnum,
+  requestedAt: z.string(),
+  reviewedBy: z.string().optional(),
+  reviewedByName: z.string().optional(),
+  reviewedAt: z.string().optional(),
+  reviewNotes: z.string().optional(),
+});
+export type AvailabilityChangeRequest = z.infer<typeof availabilityChangeRequestSchema>;
 
 // ============================================================================
 // Scheduling Settings

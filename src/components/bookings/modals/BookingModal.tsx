@@ -1788,13 +1788,13 @@ export function BookingModal({
         }
       }}
     >
-      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 [&>button]:hidden sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border">
+      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 [&>button]:hidden sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px]">
         <DialogTitle className="sr-only">
           {isEstimateMode ? "New Estimate" : "New Booking"}
         </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
-          <div className="bg-muted/30 hidden w-80 flex-col border-r md:flex">
+          <div className="bg-muted/30 hidden w-80 flex-col border-r lg:flex">
             {/* Title in Sidebar */}
             <div className="bg-background border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -2181,7 +2181,7 @@ export function BookingModal({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="bg-background border-b p-4">
               {/* Mobile-only progress strip (sidebar is hidden on small screens) */}
-              <div className="mb-3 flex items-center gap-3 md:hidden">
+              <div className="mb-3 flex items-center gap-3 lg:hidden">
                 <span className="text-muted-foreground shrink-0 text-[11px]">
                   {currentStep + 1}/{displayedSteps.length}
                 </span>

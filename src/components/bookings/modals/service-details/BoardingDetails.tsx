@@ -17,9 +17,9 @@ import {
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { defaultServiceAddOns } from "@/data/service-addons";
-import { roomCategories, facilityRooms } from "@/data/rooms";
 import { getBoardingCategoryAvailability } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
+import { useRooms } from "@/hooks/use-rooms";
 import type { ServiceAddOn } from "@/types/facility";
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
@@ -394,6 +394,19 @@ function BoardingRoomSelectionStep({
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [dragOverCatId, setDragOverCatId] = React.useState<string | null>(null);
 
+  const { categories: allCategories, rooms: allRooms } = useRooms();
+  const boardingCategories = React.useMemo(
+    () =>
+      allCategories.filter(
+        (c) => c.service === "boarding" && c.visibleToClients,
+      ),
+    [allCategories],
+  );
+  const boardingRooms = React.useMemo(() => {
+    const ids = new Set(boardingCategories.map((c) => c.id));
+    return allRooms.filter((r) => ids.has(r.categoryId));
+  }, [allRooms, boardingCategories]);
+
   const startDate = boardingRangeStart?.toISOString().split("T")[0] ?? "";
   const endDate = boardingRangeEnd?.toISOString().split("T")[0] ?? "";
 
@@ -405,12 +418,12 @@ function BoardingRoomSelectionStep({
     return getBoardingCategoryAvailability(
       startDate,
       endDate,
-      roomCategories,
-      facilityRooms,
+      boardingCategories,
+      boardingRooms,
       allBookings,
       focusPet,
     );
-  }, [startDate, endDate, focusPet]);
+  }, [startDate, endDate, focusPet, boardingCategories, boardingRooms]);
 
   function assignPet(pet: Pet, categoryId: string) {
     const newAssignments = [
@@ -563,6 +576,17 @@ function BoardingRoomSelectionStep({
       )}
 
       {/* Room category cards */}
+      {availability.length === 0 ? (
+        <div className="bg-muted/30 rounded-xl border border-dashed p-8 text-center">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-xl bg-muted">
+            <Bed className="text-muted-foreground/60 size-6" />
+          </div>
+          <p className="text-sm font-semibold">No room categories set up yet</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Add categories in Boarding → Rooms & Suites to enable bookings.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {availability.map(
           ({ category, totalActive, availableUnits, eligible, eligibilityMessage }) => {
@@ -729,6 +753,7 @@ function BoardingRoomSelectionStep({
           },
         )}
       </div>
+      )}
     </div>
   );
 }

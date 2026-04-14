@@ -15,7 +15,86 @@ import type {
   EmployeeDocumentSubmission,
   ShiftOpportunity,
   ShiftOpportunityNotificationSettings,
+  Skill,
+  AvailabilityChangeRequest,
+  TimeClockEntry,
+  CompanyProfile,
+  NotificationPreferences,
+  BroadcastMessage,
 } from "@/types/scheduling";
+
+// ============================================================================
+// Skills / Certifications
+// ============================================================================
+
+export const skillsCatalog: Skill[] = [
+  {
+    id: "opener",
+    name: "Opener",
+    category: "qualification",
+    description: "Trained on opening procedures (keys, alarm, register).",
+    expires: false,
+  },
+  {
+    id: "closer",
+    name: "Closer",
+    category: "qualification",
+    description: "Trained on closing procedures and cash-out.",
+    expires: false,
+  },
+  {
+    id: "med-cert",
+    name: "Medication Administration",
+    category: "certification",
+    description: "Certified to administer medication to boarded pets.",
+    expires: true,
+    renewalDays: 365,
+  },
+  {
+    id: "cpr",
+    name: "Pet First Aid / CPR",
+    category: "certification",
+    description: "Pet first-aid and CPR certification.",
+    expires: true,
+    renewalDays: 730,
+  },
+  {
+    id: "grooming-cert",
+    name: "Certified Groomer",
+    category: "certification",
+    description: "Formal grooming certification.",
+    expires: false,
+  },
+  {
+    id: "training-cert",
+    name: "Dog Training",
+    category: "certification",
+    description: "Certified dog trainer.",
+    expires: false,
+  },
+  {
+    id: "food-safe",
+    name: "Food Handler",
+    category: "certification",
+    description: "Food-safety / food-handler certification.",
+    expires: true,
+    renewalDays: 1825,
+  },
+  {
+    id: "barista-trained",
+    name: "Barista Trained",
+    category: "training",
+    description: "Completed in-house barista training.",
+    expires: false,
+  },
+  {
+    id: "senior-staff",
+    name: "Senior Staff",
+    category: "qualification",
+    description: "Trusted senior staff — can run a shift alone.",
+    expires: false,
+  },
+];
 
 // ============================================================================
 // Departments
@@ -201,6 +280,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 40,
     employmentType: "full_time",
     role: "Manager",
+    skills: ["opener", "closer", "senior-staff", "med-cert", "cpr"],
   },
   {
     id: "emp-2",
@@ -217,6 +297,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 40,
     employmentType: "full_time",
     role: "Staff",
+    skills: ["opener", "closer", "cpr"],
   },
   {
     id: "emp-3",
@@ -233,6 +314,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 35,
     employmentType: "full_time",
     role: "Staff",
+    skills: ["grooming-cert", "med-cert"],
   },
   {
     id: "emp-4",
@@ -265,6 +347,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 40,
     employmentType: "full_time",
     role: "Supervisor",
+    skills: ["opener", "closer", "senior-staff", "med-cert", "cpr"],
   },
   {
     id: "emp-6",
@@ -281,6 +364,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 30,
     employmentType: "part_time",
     role: "Staff",
+    skills: ["training-cert", "cpr"],
   },
   {
     id: "emp-7",
@@ -297,6 +381,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 40,
     employmentType: "full_time",
     role: "Manager",
+    skills: ["opener", "closer", "senior-staff", "food-safe", "barista-trained"],
   },
   {
     id: "emp-8",
@@ -313,6 +398,7 @@ export const scheduleEmployees: ScheduleEmployee[] = [
     maxHoursPerWeek: 35,
     employmentType: "full_time",
     role: "Staff",
+    skills: ["food-safe", "barista-trained", "grooming-cert"],
   },
   {
     id: "emp-9",
@@ -523,6 +609,289 @@ function generateAllShifts(): ScheduleShift[] {
 }
 
 export const scheduleShifts: ScheduleShift[] = generateAllShifts();
+
+// ============================================================================
+// Time Clock Entries (mock attendance for past shifts)
+// ============================================================================
+
+/**
+ * Generate plausible time-clock entries for shifts that fall before "today",
+ * mixing on-time, late, early-leave, and a no-show for realistic variance.
+ */
+function generateTimeClockEntries(): TimeClockEntry[] {
+  const entries: TimeClockEntry[] = [];
+  const todayStr = new Date().toISOString().split("T")[0];
+  const pastShifts = scheduleShifts
+    .filter((s) => s.date < todayStr && s.employeeId && s.status !== "cancelled")
+    .slice(0, 80); // cap to keep mock data reasonable
+
+  pastShifts.forEach((shift, idx) => {
+    // Variance pattern by index — gives a deterministic mix.
+    const variance = idx % 7;
+    if (variance === 5 && shift.id.endsWith("0")) {
+      // No-show (no entry)
+      return;
+    }
+
+    const [sh, sm] = shift.startTime.split(":").map(Number);
+    const [eh, em] = shift.endTime.split(":").map(Number);
+
+    // Late by N minutes for variance 1, early arrival for variance 2,
+    // early departure for variance 3, stayed late for variance 4, on-time otherwise.
+    let inOffsetMin = 0;
+    let outOffsetMin = 0;
+    if (variance === 1) inOffsetMin = 12;
+    if (variance === 2) inOffsetMin = -8;
+    if (variance === 3) outOffsetMin = -25;
+    if (variance === 4) outOffsetMin = 35;
+
+    const clockedIn = new Date(`${shift.date}T${shift.startTime}:00`);
+    clockedIn.setMinutes(clockedIn.getMinutes() + inOffsetMin);
+
+    const clockedOut = new Date(`${shift.date}T${shift.endTime}:00`);
+    clockedOut.setMinutes(clockedOut.getMinutes() + outOffsetMin);
+
+    const actualMinutes = Math.max(
+      0,
+      Math.round(
+        (clockedOut.getTime() - clockedIn.getTime()) / 60_000 - shift.breakMinutes,
+      ),
+    );
+
+    entries.push({
+      id: `tc-${shift.id}`,
+      shiftId: shift.id,
+      employeeId: shift.employeeId!,
+      date: shift.date,
+      clockedInAt: clockedIn.toISOString(),
+      clockedOutAt: clockedOut.toISOString(),
+      actualMinutes,
+      status: "clocked_out",
+    });
+  });
+
+  return entries;
+}
+
+export const timeClockEntries: TimeClockEntry[] = generateTimeClockEntries();
+
+// ============================================================================
+// Company Profile
+// ============================================================================
+
+export const companyProfile: CompanyProfile = {
+  id: "company-1",
+  name: "Doggieville",
+  legalName: "Doggieville Pet Services Inc.",
+  industry: "Pet care · daycare · boarding · grooming",
+  taxId: "QC-DOG-2025",
+  contactEmail: "hello@doggieville.com",
+  contactPhone: "+1-514-555-0100",
+  website: "https://doggieville.com",
+  defaultTimezone: "America/Toronto",
+  weekStartsOn: 1, // Monday
+  payPeriod: "biweekly",
+  locations: [
+    {
+      id: "loc-1",
+      name: "Doggieville MTL",
+      address: "1234 Rue Saint-Denis",
+      city: "Montréal",
+      region: "QC",
+      postalCode: "H2X 3J7",
+      country: "Canada",
+      phone: "+1-514-555-0101",
+      timezone: "America/Toronto",
+      operatingHours: [
+        { dayOfWeek: 0, isOpen: true, openTime: "08:00", closeTime: "18:00" },
+        { dayOfWeek: 1, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 2, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 3, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 4, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 5, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 6, isOpen: true, openTime: "08:00", closeTime: "18:00" },
+      ],
+      isPrimary: true,
+    },
+    {
+      id: "loc-2",
+      name: "Ruby Cafe MTL",
+      address: "789 Boulevard Saint-Laurent",
+      city: "Montréal",
+      region: "QC",
+      postalCode: "H2X 2T1",
+      country: "Canada",
+      phone: "+1-514-555-0201",
+      timezone: "America/Toronto",
+      operatingHours: [
+        { dayOfWeek: 0, isOpen: true, openTime: "09:00", closeTime: "17:00" },
+        { dayOfWeek: 1, isOpen: false },
+        { dayOfWeek: 2, isOpen: true, openTime: "07:00", closeTime: "17:00" },
+        { dayOfWeek: 3, isOpen: true, openTime: "07:00", closeTime: "17:00" },
+        { dayOfWeek: 4, isOpen: true, openTime: "07:00", closeTime: "17:00" },
+        { dayOfWeek: 5, isOpen: true, openTime: "07:00", closeTime: "20:00" },
+        { dayOfWeek: 6, isOpen: true, openTime: "08:00", closeTime: "20:00" },
+      ],
+      isPrimary: false,
+    },
+    {
+      id: "loc-3",
+      name: "Doggieville Laval",
+      address: "456 Boulevard Le Carrefour",
+      city: "Laval",
+      region: "QC",
+      postalCode: "H7T 1A5",
+      country: "Canada",
+      phone: "+1-450-555-0301",
+      timezone: "America/Toronto",
+      operatingHours: [
+        { dayOfWeek: 0, isOpen: false },
+        { dayOfWeek: 1, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 2, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 3, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 4, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 5, isOpen: true, openTime: "07:00", closeTime: "19:00" },
+        { dayOfWeek: 6, isOpen: true, openTime: "08:00", closeTime: "17:00" },
+      ],
+      isPrimary: false,
+    },
+  ],
+  updatedAt: "2026-04-01",
+};
+
+// ============================================================================
+// Notification Preferences
+// ============================================================================
+
+export const notificationPreferences: NotificationPreferences = {
+  facilityId: 1,
+  rules: [
+    {
+      event: "schedule_published",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: true },
+      audience: "all",
+    },
+    {
+      event: "shift_changed",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: true },
+      audience: "involved",
+    },
+    {
+      event: "shift_assigned",
+      enabled: true,
+      channels: { inApp: true, email: false, sms: false, push: true },
+      audience: "involved",
+    },
+    {
+      event: "shift_cancelled",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: true, push: true },
+      audience: "involved",
+    },
+    {
+      event: "shift_reminder",
+      enabled: true,
+      channels: { inApp: true, email: false, sms: false, push: true },
+      audience: "involved",
+      leadTimeMinutes: 60,
+    },
+    {
+      event: "swap_requested",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: true },
+      audience: "managers",
+    },
+    {
+      event: "swap_decision",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: true },
+      audience: "involved",
+    },
+    {
+      event: "timeoff_decision",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: true },
+      audience: "involved",
+    },
+    {
+      event: "availability_decision",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: false },
+      audience: "involved",
+    },
+    {
+      event: "open_shift_posted",
+      enabled: true,
+      channels: { inApp: true, email: false, sms: true, push: true },
+      audience: "all",
+    },
+    {
+      event: "open_shift_claimed",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: false, push: false },
+      audience: "managers",
+    },
+    {
+      event: "attendance_late",
+      enabled: true,
+      channels: { inApp: true, email: false, sms: false, push: true },
+      audience: "managers",
+    },
+    {
+      event: "attendance_no_show",
+      enabled: true,
+      channels: { inApp: true, email: true, sms: true, push: true },
+      audience: "managers",
+    },
+  ],
+  quietHoursStart: "21:00",
+  quietHoursEnd: "07:00",
+  updatedAt: "2026-04-01",
+};
+
+// ============================================================================
+// Broadcast Messages (sent log)
+// ============================================================================
+
+export const broadcastMessages: BroadcastMessage[] = [
+  {
+    id: "bc-1",
+    subject: "Snowstorm tomorrow — please confirm shifts",
+    body: "Heavy snow expected starting 5am. Please confirm you can make it in. Reply YES if covered, NO if you can't.",
+    audience: "all_staff",
+    channels: { inApp: true, email: true, sms: true, push: true },
+    sentBy: "emp-1",
+    sentByName: "Sarah Johnson",
+    sentAt: "2026-04-12T18:30:00Z",
+    recipientCount: 13,
+  },
+  {
+    id: "bc-2",
+    subject: "Welcome new hire — James Park",
+    body: "James is joining the cafe team this week. Please introduce yourselves on his first shift Friday.",
+    audience: "department",
+    audienceTargetId: "dept-2",
+    channels: { inApp: true, email: true, sms: false, push: false },
+    sentBy: "emp-7",
+    sentByName: "Sophie Martin",
+    sentAt: "2026-04-08T14:00:00Z",
+    recipientCount: 4,
+  },
+  {
+    id: "bc-3",
+    subject: "Reminder: complete CPR refresher by month-end",
+    body: "All certified animal-care staff need to complete the CPR refresher module before April 30.",
+    audience: "department",
+    audienceTargetId: "dept-1",
+    channels: { inApp: true, email: true, sms: false, push: true },
+    sentBy: "emp-1",
+    sentByName: "Sarah Johnson",
+    sentAt: "2026-04-05T10:15:00Z",
+    recipientCount: 6,
+  },
+];
 
 // ============================================================================
 // Schedule Periods
@@ -1101,6 +1470,101 @@ export const employeeAvailabilities: EmployeeAvailability[] = [
       { dayOfWeek: 6, isAvailable: true, startTime: "09:00", endTime: "17:00" },
     ],
     updatedAt: "2026-03-20",
+  },
+];
+
+// ============================================================================
+// Availability Change Requests
+// ============================================================================
+
+export const availabilityChangeRequests: AvailabilityChangeRequest[] = [
+  {
+    id: "ac-1",
+    employeeId: "emp-3",
+    employeeName: "Emily Davis",
+    departmentId: "dept-1",
+    currentAvailability: [
+      { dayOfWeek: 0, isAvailable: false },
+      { dayOfWeek: 1, isAvailable: true, startTime: "08:00", endTime: "18:00" },
+      { dayOfWeek: 2, isAvailable: true, startTime: "08:00", endTime: "18:00" },
+      { dayOfWeek: 3, isAvailable: true, startTime: "08:00", endTime: "18:00" },
+      { dayOfWeek: 4, isAvailable: true, startTime: "08:00", endTime: "18:00" },
+      { dayOfWeek: 5, isAvailable: false },
+      { dayOfWeek: 6, isAvailable: false },
+    ],
+    proposedAvailability: [
+      { dayOfWeek: 0, isAvailable: false },
+      { dayOfWeek: 1, isAvailable: true, startTime: "10:00", endTime: "18:00" },
+      { dayOfWeek: 2, isAvailable: false, notes: "School schedule change" },
+      { dayOfWeek: 3, isAvailable: true, startTime: "10:00", endTime: "18:00" },
+      { dayOfWeek: 4, isAvailable: false, notes: "School schedule change" },
+      { dayOfWeek: 5, isAvailable: true, startTime: "08:00", endTime: "18:00" },
+      { dayOfWeek: 6, isAvailable: true, startTime: "08:00", endTime: "16:00" },
+    ],
+    effectiveFrom: "2026-05-01",
+    reason: "Starting a new program at school. Need Tue/Thu off going forward.",
+    status: "pending",
+    requestedAt: "2026-04-12",
+  },
+  {
+    id: "ac-2",
+    employeeId: "emp-6",
+    employeeName: "Tom Anderson",
+    departmentId: "dept-1",
+    currentAvailability: [
+      { dayOfWeek: 0, isAvailable: false },
+      { dayOfWeek: 1, isAvailable: false },
+      { dayOfWeek: 2, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+      { dayOfWeek: 3, isAvailable: false },
+      { dayOfWeek: 4, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+      { dayOfWeek: 5, isAvailable: false },
+      { dayOfWeek: 6, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+    ],
+    proposedAvailability: [
+      { dayOfWeek: 0, isAvailable: true, startTime: "10:00", endTime: "16:00" },
+      { dayOfWeek: 1, isAvailable: false },
+      { dayOfWeek: 2, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+      { dayOfWeek: 3, isAvailable: false },
+      { dayOfWeek: 4, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+      { dayOfWeek: 5, isAvailable: true, startTime: "10:00", endTime: "16:00" },
+      { dayOfWeek: 6, isAvailable: true, startTime: "09:00", endTime: "17:00" },
+    ],
+    effectiveFrom: "2026-04-20",
+    reason: "Available for additional weekend shifts.",
+    status: "pending",
+    requestedAt: "2026-04-10",
+  },
+  {
+    id: "ac-3",
+    employeeId: "emp-9",
+    employeeName: "Marie Dubois",
+    departmentId: "dept-2",
+    currentAvailability: [
+      { dayOfWeek: 0, isAvailable: false },
+      { dayOfWeek: 1, isAvailable: true, startTime: "07:00", endTime: "15:00" },
+      { dayOfWeek: 2, isAvailable: true, startTime: "07:00", endTime: "15:00" },
+      { dayOfWeek: 3, isAvailable: true, startTime: "07:00", endTime: "15:00" },
+      { dayOfWeek: 4, isAvailable: true, startTime: "07:00", endTime: "15:00" },
+      { dayOfWeek: 5, isAvailable: false },
+      { dayOfWeek: 6, isAvailable: false },
+    ],
+    proposedAvailability: [
+      { dayOfWeek: 0, isAvailable: false },
+      { dayOfWeek: 1, isAvailable: true, startTime: "07:00", endTime: "13:00" },
+      { dayOfWeek: 2, isAvailable: true, startTime: "07:00", endTime: "13:00" },
+      { dayOfWeek: 3, isAvailable: true, startTime: "07:00", endTime: "13:00" },
+      { dayOfWeek: 4, isAvailable: true, startTime: "07:00", endTime: "13:00" },
+      { dayOfWeek: 5, isAvailable: true, startTime: "07:00", endTime: "13:00" },
+      { dayOfWeek: 6, isAvailable: false },
+    ],
+    effectiveFrom: "2026-04-01",
+    reason: "Reducing daily hours, adding Friday.",
+    status: "approved",
+    requestedAt: "2026-03-15",
+    reviewedBy: "emp-7",
+    reviewedByName: "Sophie Martin",
+    reviewedAt: "2026-03-18",
+    reviewNotes: "Approved — please update shift bids accordingly.",
   },
 ];
 

@@ -3,6 +3,7 @@
 import { FileEdit, Send, Undo2, Save, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
 interface DraftPublishBarProps {
@@ -20,6 +21,8 @@ export function DraftPublishBar({
   onSaveDraft,
   onDiscard,
 }: DraftPublishBarProps) {
+  const { can } = useCurrentUser();
+  if (!can("schedule.publish")) return null;
   if (draftCount === 0 && !hasChanges) return null;
 
   return (
