@@ -143,7 +143,8 @@ export function DataTable<T extends object>({
       {/* Results count */}
       {searchTerm && (
         <div className="text-muted-foreground text-sm">
-          {t("Showing")} {filteredData.length} {t("of")} {data.length} {t("results")}
+          {t("Showing")} {filteredData.length} {t("of")} {data.length}{" "}
+          {t("results")}
         </div>
       )}
     </div>

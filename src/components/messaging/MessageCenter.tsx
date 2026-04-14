@@ -15,8 +15,7 @@ export type MessageCenterMode = "facility" | "customer";
 function getLatestThreadId(items: Message[]): string | null {
   if (items.length === 0) return null;
   const latest = [...items].sort(
-    (a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
   )[0];
   return latest.threadId ?? latest.id;
 }
@@ -113,7 +112,11 @@ export function MessageCenter({
   );
 
   const threadIds = useMemo(
-    () => [...new Set(activeMessages.map((message) => message.threadId ?? message.id))],
+    () => [
+      ...new Set(
+        activeMessages.map((message) => message.threadId ?? message.id),
+      ),
+    ],
     [activeMessages],
   );
 

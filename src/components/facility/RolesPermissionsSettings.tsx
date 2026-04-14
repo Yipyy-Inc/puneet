@@ -292,9 +292,7 @@ export function RolesPermissionsSettings() {
 
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
-            <p className="text-muted-foreground text-xs font-medium">
-              Roles
-            </p>
+            <p className="text-muted-foreground text-xs font-medium">Roles</p>
             <p className="mt-1 text-xl font-semibold text-slate-900">
               {ALL_FACILITY_ROLES.length}
             </p>
@@ -422,7 +420,7 @@ export function RolesPermissionsSettings() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-white p-4 shadow-sm">
+              <div className="rounded-2xl border border-slate-200 bg-linear-to-r from-white via-slate-50 to-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div
@@ -444,9 +442,7 @@ export function RolesPermissionsSettings() {
                       })()}
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500">
-                        Role
-                      </p>
+                      <p className="text-xs font-medium text-slate-500">Role</p>
                       <p className="text-lg font-semibold text-slate-900">
                         {FACILITY_ROLE_LABELS[activeRole]}
                       </p>
@@ -461,7 +457,11 @@ export function RolesPermissionsSettings() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        applyRolePermissionBatch(activeRole, allPermissionKeys, true);
+                        applyRolePermissionBatch(
+                          activeRole,
+                          allPermissionKeys,
+                          true,
+                        );
                         toast.success(
                           `${FACILITY_ROLE_LABELS[activeRole]} granted all permissions`,
                         );
@@ -475,7 +475,11 @@ export function RolesPermissionsSettings() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        applyRolePermissionBatch(activeRole, allPermissionKeys, false);
+                        applyRolePermissionBatch(
+                          activeRole,
+                          allPermissionKeys,
+                          false,
+                        );
                         toast.success(
                           `${FACILITY_ROLE_LABELS[activeRole]} permissions cleared`,
                         );
@@ -503,13 +507,17 @@ export function RolesPermissionsSettings() {
                     </p>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-muted-foreground text-[11px]">Coverage</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Coverage
+                    </p>
                     <p className="text-base font-semibold text-slate-900">
                       {activeRoleCoverage}%
                     </p>
                   </div>
                   <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-muted-foreground text-[11px]">Search matches</p>
+                    <p className="text-muted-foreground text-[11px]">
+                      Search matches
+                    </p>
                     <p className="text-base font-semibold text-slate-900">
                       {filteredCategories.length} categories
                     </p>
@@ -530,7 +538,9 @@ export function RolesPermissionsSettings() {
                   const coverage =
                     permissions.length === 0
                       ? 0
-                      : Math.round((enabledInCategory / permissions.length) * 100);
+                      : Math.round(
+                          (enabledInCategory / permissions.length) * 100,
+                        );
                   const itemValue = `studio:${category}`;
 
                   return (
@@ -546,7 +556,8 @@ export function RolesPermissionsSettings() {
                               {category}
                             </p>
                             <p className="text-muted-foreground text-xs">
-                              {enabledInCategory} of {permissions.length} enabled
+                              {enabledInCategory} of {permissions.length}{" "}
+                              enabled
                             </p>
                           </div>
                           <Badge variant="secondary" className="text-xs">
@@ -562,7 +573,11 @@ export function RolesPermissionsSettings() {
                             size="sm"
                             className="h-7 px-2 text-[11px]"
                             onClick={() => {
-                              applyRolePermissionBatch(activeRole, permissions, true);
+                              applyRolePermissionBatch(
+                                activeRole,
+                                permissions,
+                                true,
+                              );
                               toast.success(
                                 `${FACILITY_ROLE_LABELS[activeRole]} granted all in ${category}`,
                               );
@@ -575,7 +590,11 @@ export function RolesPermissionsSettings() {
                             size="sm"
                             className="h-7 px-2 text-[11px]"
                             onClick={() => {
-                              applyRolePermissionBatch(activeRole, permissions, false);
+                              applyRolePermissionBatch(
+                                activeRole,
+                                permissions,
+                                false,
+                              );
                               toast.success(
                                 `${FACILITY_ROLE_LABELS[activeRole]} cleared in ${category}`,
                               );
@@ -587,7 +606,8 @@ export function RolesPermissionsSettings() {
 
                         <div className="grid gap-2 p-3">
                           {permissions.map((permission) => {
-                            const checked = permissionsByRole[activeRole].has(permission);
+                            const checked =
+                              permissionsByRole[activeRole].has(permission);
 
                             return (
                               <div
@@ -615,7 +635,11 @@ export function RolesPermissionsSettings() {
                                   <Switch
                                     checked={checked}
                                     onCheckedChange={(next) =>
-                                      handlePermissionChange(activeRole, permission, next)
+                                      handlePermissionChange(
+                                        activeRole,
+                                        permission,
+                                        next,
+                                      )
                                     }
                                     aria-label={`${FACILITY_ROLE_LABELS[activeRole]} can ${PERMISSION_LABELS[permission]}`}
                                   />

@@ -4,7 +4,6 @@ import { FileEdit, Send, Undo2, Save, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { cn } from "@/lib/utils";
 
 interface DraftPublishBarProps {
   draftCount: number;
@@ -33,9 +32,7 @@ export function DraftPublishBar({
             <FileEdit className="size-4 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <p className="text-sm font-medium">
-              Unpublished Changes
-            </p>
+            <p className="text-sm font-medium">Unpublished Changes</p>
             <p className="text-muted-foreground text-xs">
               {draftCount} draft shift{draftCount !== 1 ? "s" : ""} waiting to
               be published

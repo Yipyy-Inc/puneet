@@ -97,8 +97,8 @@ export function EmployeeDocumentSigningDialog({
   const progress = ((stepIndex + 1) / steps.length) * 100;
 
   const requiredFields = template.fields.filter((f) => f.required);
-  const allRequiredFilled = requiredFields.every(
-    (f) => fieldValues[f.id]?.trim(),
+  const allRequiredFilled = requiredFields.every((f) =>
+    fieldValues[f.id]?.trim(),
   );
 
   const stepLabel: Record<Step, string> = {
@@ -165,7 +165,7 @@ export function EmployeeDocumentSigningDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[620px] max-h-[92vh] flex flex-col overflow-hidden">
+      <DialogContent className="flex max-h-[92vh] flex-col overflow-hidden sm:max-w-[620px]">
         <DialogHeader className="shrink-0">
           {/* Document header */}
           <div className="flex items-start gap-3">
@@ -173,7 +173,7 @@ export function EmployeeDocumentSigningDialog({
               <FileText className="size-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="min-w-0 flex-1">
-              <DialogTitle className="text-base leading-tight">
+              <DialogTitle className="text-base/tight">
                 {template.title}
               </DialogTitle>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -186,10 +186,10 @@ export function EmployeeDocumentSigningDialog({
               </div>
             </div>
             {/* Employee chip */}
-            <div className="flex items-center gap-2 rounded-full border bg-muted/50 py-1 pl-1 pr-3 shrink-0">
+            <div className="bg-muted/50 flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1">
               <Avatar className="size-6">
                 <AvatarImage src={employee.avatar} alt={employee.name} />
-                <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-[8px] font-semibold">
+                <AvatarFallback className="bg-slate-100 text-[8px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   {employee.initials}
                 </AvatarFallback>
               </Avatar>
@@ -199,21 +199,23 @@ export function EmployeeDocumentSigningDialog({
 
           {/* Step progress */}
           <div className="mt-3 space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              {steps.filter((s) => s !== "done").map((s, i) => (
-                <span
-                  key={s}
-                  className={
-                    s === step
-                      ? "font-semibold text-foreground"
-                      : stepIndex > i
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : ""
-                  }
-                >
-                  {stepLabel[s]}
-                </span>
-              ))}
+            <div className="text-muted-foreground flex items-center justify-between text-[11px]">
+              {steps
+                .filter((s) => s !== "done")
+                .map((s, i) => (
+                  <span
+                    key={s}
+                    className={
+                      s === step
+                        ? "text-foreground font-semibold"
+                        : stepIndex > i
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : ""
+                    }
+                  >
+                    {stepLabel[s]}
+                  </span>
+                ))}
             </div>
             <Progress value={progress} className="h-1.5" />
           </div>
@@ -222,14 +224,14 @@ export function EmployeeDocumentSigningDialog({
         {/* ── Step: Read Document ── */}
         {step === "read" && (
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <ScrollArea className="flex-1 rounded-lg border bg-muted/20">
+            <ScrollArea className="bg-muted/20 flex-1 rounded-lg border">
               <div className="p-5">
-                <pre className="whitespace-pre-wrap font-sans text-sm/relaxed text-foreground">
+                <pre className="text-foreground font-sans text-sm/relaxed whitespace-pre-wrap">
                   {template.content}
                 </pre>
               </div>
             </ScrollArea>
-            <p className="shrink-0 text-xs text-muted-foreground">
+            <p className="text-muted-foreground shrink-0 text-xs">
               {template.description}
             </p>
             <div className="flex shrink-0 justify-between gap-2">
@@ -247,7 +249,7 @@ export function EmployeeDocumentSigningDialog({
         {/* ── Step: Fill Fields ── */}
         {step === "fill" && (
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-            <p className="shrink-0 text-sm text-muted-foreground">
+            <p className="text-muted-foreground shrink-0 text-sm">
               Please fill in your information accurately. Fields marked{" "}
               <span className="text-red-500">*</span> are required.
             </p>
@@ -327,7 +329,9 @@ export function EmployeeDocumentSigningDialog({
               </Button>
               <Button
                 onClick={
-                  template.requiresSignature ? nextStep : handleSubmitNoSignature
+                  template.requiresSignature
+                    ? nextStep
+                    : handleSubmitNoSignature
                 }
                 disabled={!allRequiredFilled}
               >
@@ -347,7 +351,7 @@ export function EmployeeDocumentSigningDialog({
         {/* ── Step: Sign ── */}
         {step === "sign" && (
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-            <p className="shrink-0 text-sm text-muted-foreground">
+            <p className="text-muted-foreground shrink-0 text-sm">
               Review the statement below and provide your electronic signature
               to confirm acceptance.
             </p>
@@ -385,11 +389,11 @@ export function EmployeeDocumentSigningDialog({
 
             {/* Audit trail summary */}
             {signedResult && (
-              <div className="w-full rounded-xl border bg-muted/30 p-4 text-left text-xs space-y-2">
-                <p className="font-semibold text-muted-foreground uppercase tracking-wider text-[10px]">
+              <div className="bg-muted/30 w-full space-y-2 rounded-xl border p-4 text-left text-xs">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Audit Trail
                 </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-muted-foreground">
+                <div className="text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1.5">
                   <span className="flex items-center gap-1.5">
                     <Clock className="size-3 shrink-0" />
                     {new Date(signedResult.signedAt).toLocaleString("en-CA", {
@@ -410,7 +414,7 @@ export function EmployeeDocumentSigningDialog({
               </div>
             )}
 
-            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+            <div className="bg-muted/30 text-muted-foreground flex items-center gap-1.5 rounded-lg border px-4 py-2 text-xs">
               <Shield className="size-3.5 shrink-0" />
               Signature, IP address, timestamp &amp; device fingerprint captured
             </div>

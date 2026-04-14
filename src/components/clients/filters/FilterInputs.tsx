@@ -342,9 +342,7 @@ export function DayRangePreset({
             </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="w-10 text-[11px] text-slate-500">
-                  From
-                </span>
+                <span className="w-10 text-[11px] text-slate-500">From</span>
                 <Input
                   type="number"
                   min={0}
@@ -355,9 +353,7 @@ export function DayRangePreset({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-10 text-[11px] text-slate-500">
-                  To
-                </span>
+                <span className="w-10 text-[11px] text-slate-500">To</span>
                 <Input
                   type="number"
                   min={0}

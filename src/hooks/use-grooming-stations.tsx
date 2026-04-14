@@ -43,7 +43,11 @@ function loadStored<T>(key: string, fallback: T): T {
   return fallback;
 }
 
-export function GroomingStationsProvider({ children }: { children: ReactNode }) {
+export function GroomingStationsProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [stations, setStations] = useState<GroomingStation[]>(() =>
     loadStored(STATIONS_KEY, defaultGroomingStations),
   );

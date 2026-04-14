@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { AlertTriangle, Clock, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -103,7 +102,8 @@ export function PostShiftOpportunityDialog({
   const handleSubmit = () => {
     if (!isValid) return;
 
-    const hasOriginal = form.originalEmployeeId && form.originalEmployeeId !== "none";
+    const hasOriginal =
+      form.originalEmployeeId && form.originalEmployeeId !== "none";
     const originalEmp = hasOriginal
       ? employees.find((e) => e.id === form.originalEmployeeId)
       : null;
@@ -158,234 +158,244 @@ export function PostShiftOpportunityDialog({
             <DialogTitle>Post Shift Opportunity</DialogTitle>
           </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          {/* Department & Position */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Department</Label>
-              <Select
-                value={form.departmentId}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, departmentId: v, positionId: "", originalEmployeeId: "" }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-4 py-2">
+            {/* Department & Position */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Department</Label>
+                <Select
+                  value={form.departmentId}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      departmentId: v,
+                      positionId: "",
+                      originalEmployeeId: "",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Position Needed</Label>
+                <Select
+                  value={form.positionId}
+                  onValueChange={(v) =>
+                    setForm((p) => ({ ...p, positionId: v }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deptPositions.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="size-2 rounded-full"
+                            style={{ backgroundColor: p.color }}
+                          />
+                          {p.name}
+                          {p.hourlyRate && (
+                            <span className="text-muted-foreground">
+                              ${p.hourlyRate}/hr
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Position Needed</Label>
-              <Select
-                value={form.positionId}
-                onValueChange={(v) => setForm((p) => ({ ...p, positionId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select position" />
-                </SelectTrigger>
-                <SelectContent>
-                  {deptPositions.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: p.color }}
-                        />
-                        {p.name}
-                        {p.hourlyRate && (
-                          <span className="text-muted-foreground">
-                            ${p.hourlyRate}/hr
-                          </span>
-                        )}
+
+            {/* Date & Times */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Date</Label>
+                <DatePicker
+                  value={form.date}
+                  onValueChange={(v) => setForm((p) => ({ ...p, date: v }))}
+                  displayMode="dialog"
+                  showQuickPresets={false}
+                  popoverClassName="!w-[300px]"
+                  calendarClassName="p-1 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Start Time</Label>
+                <Input
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, startTime: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>End Time</Label>
+                <Input
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, endTime: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Break & Urgency */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Break (minutes)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={120}
+                  step={15}
+                  value={form.breakMinutes}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      breakMinutes: Number(e.target.value),
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Urgency</Label>
+                <Select
+                  value={form.urgency}
+                  onValueChange={(v) =>
+                    setForm((p) => ({
+                      ...p,
+                      urgency: v as "normal" | "urgent" | "critical",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="normal">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="size-3 text-blue-500" />
+                        Normal
                       </div>
                     </SelectItem>
+                    <SelectItem value="urgent">
+                      <div className="flex items-center gap-1.5">
+                        <AlertTriangle className="size-3 text-amber-500" />
+                        Urgent
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="critical">
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="size-3 text-red-500" />
+                        Critical
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Original Employee (optional) */}
+            <div className="space-y-1.5">
+              <Label>Covering For (optional)</Label>
+              <Select
+                value={form.originalEmployeeId}
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, originalEmployeeId: v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee being replaced" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None — new shift</SelectItem>
+                  {deptEmployees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name} — {e.role}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Date & Times */}
-          <div className="grid grid-cols-3 gap-3">
+            {/* Reason */}
             <div className="space-y-1.5">
-              <Label>Date</Label>
-              <DatePicker
-                value={form.date}
-                onValueChange={(v) =>
-                  setForm((p) => ({ ...p, date: v }))
-                }
-                displayMode="dialog"
-                showQuickPresets={false}
-                popoverClassName="!w-[300px]"
-                calendarClassName="p-1 text-xs"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Start Time</Label>
-              <Input
-                type="time"
-                value={form.startTime}
+              <Label>Reason</Label>
+              <Textarea
+                value={form.reason}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, startTime: e.target.value }))
+                  setForm((p) => ({ ...p, reason: e.target.value }))
                 }
+                placeholder="Why is this shift available? e.g., Employee called in sick"
+                rows={2}
               />
             </div>
+
+            {/* Notes */}
             <div className="space-y-1.5">
-              <Label>End Time</Label>
+              <Label>Additional Notes (optional)</Label>
               <Input
-                type="time"
-                value={form.endTime}
+                value={form.notes}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, endTime: e.target.value }))
+                  setForm((p) => ({ ...p, notes: e.target.value }))
                 }
+                placeholder="Any special requirements or instructions"
               />
             </div>
-          </div>
 
-          {/* Break & Urgency */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Break (minutes)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={120}
-                step={15}
-                value={form.breakMinutes}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, breakMinutes: Number(e.target.value) }))
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Urgency</Label>
-              <Select
-                value={form.urgency}
-                onValueChange={(v) =>
-                  setForm((p) => ({
-                    ...p,
-                    urgency: v as "normal" | "urgent" | "critical",
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="size-3 text-blue-500" />
-                      Normal
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="urgent">
-                    <div className="flex items-center gap-1.5">
-                      <AlertTriangle className="size-3 text-amber-500" />
-                      Urgent
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="critical">
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="size-3 text-red-500" />
-                      Critical
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Expiry */}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Auto-expire</p>
+                <p className="text-muted-foreground text-xs">
+                  Automatically expire this opportunity before the shift starts
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {form.setExpiry && (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={48}
+                      value={form.expiryHours}
+                      onChange={(e) =>
+                        setForm((p) => ({
+                          ...p,
+                          expiryHours: Number(e.target.value),
+                        }))
+                      }
+                      className="h-7 w-16 text-xs"
+                    />
+                    <span className="text-muted-foreground text-xs">
+                      hrs before
+                    </span>
+                  </div>
+                )}
+                <Switch
+                  checked={form.setExpiry}
+                  onCheckedChange={(v) =>
+                    setForm((p) => ({ ...p, setExpiry: v }))
+                  }
+                />
+              </div>
             </div>
           </div>
-
-          {/* Original Employee (optional) */}
-          <div className="space-y-1.5">
-            <Label>Covering For (optional)</Label>
-            <Select
-              value={form.originalEmployeeId}
-              onValueChange={(v) =>
-                setForm((p) => ({ ...p, originalEmployeeId: v }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select employee being replaced" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None — new shift</SelectItem>
-                {deptEmployees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name} — {e.role}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Reason */}
-          <div className="space-y-1.5">
-            <Label>Reason</Label>
-            <Textarea
-              value={form.reason}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, reason: e.target.value }))
-              }
-              placeholder="Why is this shift available? e.g., Employee called in sick"
-              rows={2}
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-1.5">
-            <Label>Additional Notes (optional)</Label>
-            <Input
-              value={form.notes}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, notes: e.target.value }))
-              }
-              placeholder="Any special requirements or instructions"
-            />
-          </div>
-
-          {/* Expiry */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Auto-expire</p>
-              <p className="text-xs text-muted-foreground">
-                Automatically expire this opportunity before the shift starts
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {form.setExpiry && (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={48}
-                    value={form.expiryHours}
-                    onChange={(e) =>
-                      setForm((p) => ({
-                        ...p,
-                        expiryHours: Number(e.target.value),
-                      }))
-                    }
-                    className="h-7 w-16 text-xs"
-                  />
-                  <span className="text-xs text-muted-foreground">hrs before</span>
-                </div>
-              )}
-              <Switch
-                checked={form.setExpiry}
-                onCheckedChange={(v) =>
-                  setForm((p) => ({ ...p, setExpiry: v }))
-                }
-              />
-            </div>
-          </div>
-        </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={handleClose}>

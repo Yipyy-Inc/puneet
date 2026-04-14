@@ -22,7 +22,7 @@ interface StatPillProps {
 
 function StatPill({ icon: Icon, label, value, accent }: StatPillProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/50 bg-background/60 px-3 py-2 shadow-sm">
+    <div className="border-border/50 bg-background/60 flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2 shadow-sm">
       <div
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-lg",
@@ -32,10 +32,10 @@ function StatPill({ icon: Icon, label, value, accent }: StatPillProps) {
         <Icon className="size-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-muted-foreground truncate text-[10px] font-medium uppercase tracking-wider">
+        <p className="text-muted-foreground truncate text-[10px] font-medium tracking-wider uppercase">
           {label}
         </p>
-        <p className="truncate text-sm font-semibold leading-tight">{value}</p>
+        <p className="truncate text-sm/tight font-semibold">{value}</p>
       </div>
     </div>
   );

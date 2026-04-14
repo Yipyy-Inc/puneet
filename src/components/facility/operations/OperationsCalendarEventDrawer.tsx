@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  CheckCircle2,
-  MessageSquare,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { CheckCircle2, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +19,10 @@ import type { FacilityTask } from "@/data/facility-tasks";
 import type { Booking } from "@/types/booking";
 import type { Client } from "@/types/client";
 import type { Pet } from "@/types/pet";
-import type { ManualFacilityEvent, OperationsCalendarEvent } from "@/lib/operations-calendar";
+import type {
+  ManualFacilityEvent,
+  OperationsCalendarEvent,
+} from "@/lib/operations-calendar";
 import {
   canEditBookingNotes,
   canEditPersistentNotes,
@@ -90,7 +88,11 @@ interface OperationsCalendarEventDrawerProps {
   onOpenLinkedBooking: (bookingId: number) => void;
   onCheckInBooking: (bookingId: number) => void;
   onCheckOutBooking: (bookingId: number) => void;
-  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onAssignStaff: (
+    bookingId: number,
+    primary: string,
+    secondary?: string,
+  ) => void;
   onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
   onMarkAllBookingTasksComplete: (bookingId: number) => void;
   onAddBookingTask: (bookingId: number, task: Partial<FacilityTask>) => void;
@@ -109,11 +111,16 @@ interface OperationsCalendarEventDrawerProps {
   onMessageCustomer: (bookingId: number) => void;
   onRescheduleBooking: (bookingId: number) => void;
   onCancelBooking: (bookingId: number, reason: string) => void;
-  onUpdateManualEvent: (eventId: string, updates: Partial<ManualFacilityEvent>) => void;
+  onUpdateManualEvent: (
+    eventId: string,
+    updates: Partial<ManualFacilityEvent>,
+  ) => void;
   onDeleteManualEvent: (eventId: string) => void;
 }
 
-function resolvePrimaryBookingPetId(petId: Booking["petId"]): number | undefined {
+function resolvePrimaryBookingPetId(
+  petId: Booking["petId"],
+): number | undefined {
   if (Array.isArray(petId)) {
     return petId[0];
   }
@@ -198,7 +205,9 @@ export function OperationsCalendarEventDrawer({
         onClick={onClose}
         className="absolute inset-0 transition-all duration-300 ease-out"
         style={{
-          backgroundColor: visible ? "rgba(15, 23, 42, 0.4)" : "rgba(15, 23, 42, 0)",
+          backgroundColor: visible
+            ? "rgba(15, 23, 42, 0.4)"
+            : "rgba(15, 23, 42, 0)",
           backdropFilter: visible ? "blur(6px)" : "blur(0px)",
           WebkitBackdropFilter: visible ? "blur(6px)" : "blur(0px)",
         }}
@@ -207,10 +216,12 @@ export function OperationsCalendarEventDrawer({
       {/* Center card */}
       <aside
         ref={panelRef}
-        className="relative z-10 flex max-h-[85vh] w-full max-w-[580px] flex-col rounded-2xl border border-slate-200/60 bg-white shadow-2xl transition-all duration-300 ease-out overflow-hidden"
+        className="relative z-10 flex max-h-[85vh] w-full max-w-[580px] flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-2xl transition-all duration-300 ease-out"
         style={{
           opacity: visible ? 1 : 0,
-          transform: visible ? "scale(1) translateY(0)" : "scale(0.96) translateY(10px)",
+          transform: visible
+            ? "scale(1) translateY(0)"
+            : "scale(0.96) translateY(10px)",
         }}
       >
         <QuickActionCard
@@ -274,7 +285,11 @@ function QuickActionCard({
   onClose: () => void;
   onCheckInBooking: (bookingId: number) => void;
   onCheckOutBooking: (bookingId: number) => void;
-  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onAssignStaff: (
+    bookingId: number,
+    primary: string,
+    secondary?: string,
+  ) => void;
   onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
   onOpenLinkedBooking: (bookingId: number) => void;
   onRescheduleBooking: (bookingId: number) => void;
@@ -287,7 +302,10 @@ function QuickActionCard({
     : `${event.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} – ${event.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
   const rawStatus = event.bookingRawStatus ?? booking?.status ?? "";
-  const isCheckedOut = rawStatus === "completed" || rawStatus === "checked-out" || rawStatus === "checked_out";
+  const isCheckedOut =
+    rawStatus === "completed" ||
+    rawStatus === "checked-out" ||
+    rawStatus === "checked_out";
   const isCheckedIn = rawStatus === "in_progress" || rawStatus === "checked_in";
   const isConfirmed = rawStatus === "confirmed" || rawStatus === "scheduled";
   const isCancelled = rawStatus === "cancelled";
@@ -295,29 +313,41 @@ function QuickActionCard({
 
   const petName = pet?.name ?? event.petNames[0] ?? "-";
   const ownerName = client?.name ?? event.customerName ?? "-";
-  const staffName = event.staff && event.staff !== "Unassigned" ? event.staff : "Unassigned";
+  const staffName =
+    event.staff && event.staff !== "Unassigned" ? event.staff : "Unassigned";
   const location = event.location ?? "-";
 
   return (
     <>
       {/* ── Header ── */}
-      <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+      <div className="border-b border-slate-100 px-5 pt-5 pb-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900 truncate">{event.title}</h2>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <Badge variant="outline" className="text-[11px]">{event.service}</Badge>
-              <Badge variant="outline" className="text-[11px]">{event.status}</Badge>
+            <h2 className="truncate text-lg font-semibold text-slate-900">
+              {event.title}
+            </h2>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="text-[11px]">
+                {event.service}
+              </Badge>
+              <Badge variant="outline" className="text-[11px]">
+                {event.status}
+              </Badge>
             </div>
           </div>
-          <Button size="sm" variant="ghost" className="shrink-0 -mt-1 -mr-2" onClick={onClose}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="-mt-1 -mr-2 shrink-0"
+            onClick={onClose}
+          >
             Close
           </Button>
         </div>
       </div>
 
       {/* ── Info grid ── */}
-      <div className="px-5 py-4 space-y-2.5 overflow-y-auto flex-1">
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-5 py-4">
         <InfoRow label="Pet" value={petName} />
         <InfoRow label="Owner" value={ownerName} />
         <InfoRow label="Time" value={timeLabel} />
@@ -327,15 +357,21 @@ function QuickActionCard({
         {/* Add-ons */}
         {bookingAddOns.length > 0 && (
           <div className="pt-1">
-            <p className="text-xs font-medium text-slate-500 mb-1.5">Add-ons</p>
+            <p className="mb-1.5 text-xs font-medium text-slate-500">Add-ons</p>
             <div className="flex flex-wrap gap-1.5">
               {bookingAddOns.map((addOn) => (
                 <Badge
                   key={addOn.id}
                   variant="outline"
-                  className={addOn.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : ""}
+                  className={
+                    addOn.status === "completed"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                      : ""
+                  }
                 >
-                  {addOn.status === "completed" && <CheckCircle2 className="mr-1 size-3" />}
+                  {addOn.status === "completed" && (
+                    <CheckCircle2 className="mr-1 size-3" />
+                  )}
                   {addOn.name}
                 </Badge>
               ))}
@@ -360,31 +396,50 @@ function QuickActionCard({
       </div>
 
       {/* ── Action buttons ── */}
-      <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50">
+      <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3">
         <div className="flex flex-wrap gap-2">
           {/* Check-in / Check-out */}
           {supportsCheckInOut && isConfirmed && !isCancelled && (
-            <Button size="sm" disabled={!canCheckInOut || readOnlyMode} onClick={() => onCheckInBooking(eventNumericId)}>
+            <Button
+              size="sm"
+              disabled={!canCheckInOut || readOnlyMode}
+              onClick={() => onCheckInBooking(eventNumericId)}
+            >
               Check-in
             </Button>
           )}
           {supportsCheckInOut && isCheckedIn && (
-            <Button size="sm" disabled={!canCheckInOut || readOnlyMode} onClick={() => onCheckOutBooking(eventNumericId)}>
+            <Button
+              size="sm"
+              disabled={!canCheckInOut || readOnlyMode}
+              onClick={() => onCheckOutBooking(eventNumericId)}
+            >
               Check-out
             </Button>
           )}
 
           {/* Mark complete — tasks and add-ons */}
-          {event.type === "task" && event.taskId && event.status !== "Completed" && (
-            <Button size="sm" disabled={!canCompleteTasks || readOnlyMode} onClick={() => onMarkTaskComplete(event.taskId!)}>
-              <CheckCircle2 className="mr-1.5 size-3.5" />
-              Mark complete
-            </Button>
-          )}
+          {event.type === "task" &&
+            event.taskId &&
+            event.status !== "Completed" && (
+              <Button
+                size="sm"
+                disabled={!canCompleteTasks || readOnlyMode}
+                onClick={() => onMarkTaskComplete(event.taskId!)}
+              >
+                <CheckCircle2 className="mr-1.5 size-3.5" />
+                Mark complete
+              </Button>
+            )}
 
           {/* Reschedule */}
           {!isCheckedOut && !isCancelled && (
-            <Button size="sm" variant="outline" disabled={!canEditBookingActions || readOnlyMode} onClick={() => onRescheduleBooking(eventNumericId)}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canEditBookingActions || readOnlyMode}
+              onClick={() => onRescheduleBooking(eventNumericId)}
+            >
               Reschedule
             </Button>
           )}
@@ -396,14 +451,15 @@ function QuickActionCard({
               variant="destructive"
               disabled={!canEditBookingActions || readOnlyMode}
               onClick={() => {
-                const reason = window.prompt("Cancellation reason", "Customer request") ?? "Customer request";
+                const reason =
+                  window.prompt("Cancellation reason", "Customer request") ??
+                  "Customer request";
                 onCancelBooking(eventNumericId, reason);
               }}
             >
               Cancel
             </Button>
           )}
-
         </div>
       </div>
     </>
@@ -472,7 +528,11 @@ function BookingDrawerContent({
   staffOptions: string[];
   onCheckInBooking: (bookingId: number) => void;
   onCheckOutBooking: (bookingId: number) => void;
-  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onAssignStaff: (
+    bookingId: number,
+    primary: string,
+    secondary?: string,
+  ) => void;
   onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
   onMarkAllBookingTasksComplete: (bookingId: number) => void;
   onAddBookingTask: (bookingId: number, task: Partial<FacilityTask>) => void;
@@ -506,7 +566,9 @@ function BookingDrawerContent({
   const agreementStatus = getAgreementStatus(booking.clientId);
   const lastVisit = getLastVisitDate(bookingsForPet, bookingPetId);
   const history = getServiceHistorySummary(bookingsForPet, bookingPetId);
-  const assignedStaff = [booking.stylistPreference, booking.trainerId].filter(Boolean) as string[];
+  const assignedStaff = [booking.stylistPreference, booking.trainerId].filter(
+    Boolean,
+  ) as string[];
 
   const canEditBooking = canEditBookingNotes(userRole, assignedStaff);
   const canEditPersistent = canEditPersistentNotes(userRole);
@@ -516,21 +578,28 @@ function BookingDrawerContent({
       booking.service.toLowerCase(),
     );
 
-  const openTaskCount = bookingTasks.filter((task) => task.status !== "completed").length;
+  const openTaskCount = bookingTasks.filter(
+    (task) => task.status !== "completed",
+  ).length;
 
-  const statusLabel = booking.status === "in_progress"
-    ? "Checked-in"
-    : booking.status === "completed"
-      ? "Checked-out"
-      : booking.status === "cancelled"
-        ? "Cancelled"
-        : booking.status === "pending"
-          ? "Pending"
-          : "Confirmed";
+  const statusLabel =
+    booking.status === "in_progress"
+      ? "Checked-in"
+      : booking.status === "completed"
+        ? "Checked-out"
+        : booking.status === "cancelled"
+          ? "Cancelled"
+          : booking.status === "pending"
+            ? "Pending"
+            : "Confirmed";
 
   return (
     <>
-      <Tabs value={bookingTab} onValueChange={(value) => onBookingTabChange(value as BookingDrawerTab)} className="flex flex-1 flex-col overflow-hidden">
+      <Tabs
+        value={bookingTab}
+        onValueChange={(value) => onBookingTabChange(value as BookingDrawerTab)}
+        className="flex flex-1 flex-col overflow-hidden"
+      >
         <TabsList>
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="pet-details">Pet Details</TabsTrigger>
@@ -551,26 +620,49 @@ function BookingDrawerContent({
               }
             />
             <DetailRow label="Owner" value={client?.name ?? "Unknown"} />
-            <DetailRow label="Contact" value={client?.phone ?? client?.email ?? "-"} />
+            <DetailRow
+              label="Contact"
+              value={client?.phone ?? client?.email ?? "-"}
+            />
             <DetailRow label="Service" value={booking.service} />
-            <DetailRow label="Date" value={`${booking.startDate} to ${booking.endDate}`} />
-            <DetailRow label="Time" value={`${booking.checkInTime ?? "-"} to ${booking.checkOutTime ?? "-"}`} />
-            <DetailRow label="Assigned staff" value={assignedStaff.join(", ") || "Unassigned"} />
+            <DetailRow
+              label="Date"
+              value={`${booking.startDate} to ${booking.endDate}`}
+            />
+            <DetailRow
+              label="Time"
+              value={`${booking.checkInTime ?? "-"} to ${booking.checkOutTime ?? "-"}`}
+            />
+            <DetailRow
+              label="Assigned staff"
+              value={assignedStaff.join(", ") || "Unassigned"}
+            />
             <DetailRow label="Location" value={booking.kennel ?? "Facility"} />
             <DetailRow label="Booking ID" value={booking.id.toString()} />
-            <DetailRow label="Confirmation" value={booking.invoice?.id ?? "-"} />
+            <DetailRow
+              label="Confirmation"
+              value={booking.invoice?.id ?? "-"}
+            />
             <div>
-              <p className="text-xs font-medium text-slate-700">Add-on snapshot</p>
+              <p className="text-xs font-medium text-slate-700">
+                Add-on snapshot
+              </p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {bookingAddOns.slice(0, 5).map((addOn) => (
-                  <Badge key={addOn.id} variant="outline">{addOn.name}</Badge>
+                  <Badge key={addOn.id} variant="outline">
+                    {addOn.name}
+                  </Badge>
                 ))}
-                {bookingAddOns.length === 0 && <p className="text-xs text-slate-500">No add-ons</p>}
+                {bookingAddOns.length === 0 && (
+                  <p className="text-xs text-slate-500">No add-ons</p>
+                )}
               </div>
             </div>
             <div>
               <p className="text-xs font-medium text-slate-700">Open tasks</p>
-              <Badge className="mt-1" variant="outline">{openTaskCount}</Badge>
+              <Badge className="mt-1" variant="outline">
+                {openTaskCount}
+              </Badge>
             </div>
           </TabsContent>
 
@@ -579,7 +671,10 @@ function BookingDrawerContent({
             <DetailRow label="Age" value={pet ? `${pet.age} yrs` : "-"} />
             <DetailRow label="Weight" value={pet ? `${pet.weight} lb` : "-"} />
             <DetailRow label="Sex" value={pet?.sex ?? "-"} />
-            <DetailRow label="Altered" value={pet?.spayedNeutered ? "Yes" : "No"} />
+            <DetailRow
+              label="Altered"
+              value={pet?.spayedNeutered ? "Yes" : "No"}
+            />
 
             <div>
               <p className="text-xs font-medium text-slate-700">Pet tags</p>
@@ -587,7 +682,11 @@ function BookingDrawerContent({
                 {petTags.map((tag) => (
                   <Badge
                     key={tag.id}
-                    style={{ backgroundColor: `${tag.color}22`, borderColor: `${tag.color}66`, color: tag.color }}
+                    style={{
+                      backgroundColor: `${tag.color}22`,
+                      borderColor: `${tag.color}66`,
+                      color: tag.color,
+                    }}
                     variant="outline"
                   >
                     {tag.name}
@@ -597,12 +696,18 @@ function BookingDrawerContent({
             </div>
 
             <div>
-              <p className="text-xs font-medium text-slate-700">Customer tags</p>
+              <p className="text-xs font-medium text-slate-700">
+                Customer tags
+              </p>
               <div className="mt-1 flex flex-wrap gap-1">
                 {customerTags.map((tag) => (
                   <Badge
                     key={tag.id}
-                    style={{ backgroundColor: `${tag.color}22`, borderColor: `${tag.color}66`, color: tag.color }}
+                    style={{
+                      backgroundColor: `${tag.color}22`,
+                      borderColor: `${tag.color}66`,
+                      color: tag.color,
+                    }}
                     variant="outline"
                   >
                     {tag.name}
@@ -611,24 +716,55 @@ function BookingDrawerContent({
               </div>
             </div>
 
-            {(pet?.allergies || pet?.specialNeeds || petTags.some((tag) => tag.priority !== "informational")) && (
+            {(pet?.allergies ||
+              pet?.specialNeeds ||
+              petTags.some((tag) => tag.priority !== "informational")) && (
               <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3">
-                <p className="text-xs font-semibold text-amber-800">Active alerts</p>
-                {pet?.allergies && <p className="text-xs text-amber-700">Medical: {pet.allergies}</p>}
-                {pet?.specialNeeds && <p className="text-xs text-amber-700">Handling: {pet.specialNeeds}</p>}
-                {petTags.filter((tag) => tag.priority !== "informational").map((tag) => (
-                  <p key={tag.id} className="text-xs text-amber-700">Behavior: {tag.name}</p>
-                ))}
+                <p className="text-xs font-semibold text-amber-800">
+                  Active alerts
+                </p>
+                {pet?.allergies && (
+                  <p className="text-xs text-amber-700">
+                    Medical: {pet.allergies}
+                  </p>
+                )}
+                {pet?.specialNeeds && (
+                  <p className="text-xs text-amber-700">
+                    Handling: {pet.specialNeeds}
+                  </p>
+                )}
+                {petTags
+                  .filter((tag) => tag.priority !== "informational")
+                  .map((tag) => (
+                    <p key={tag.id} className="text-xs text-amber-700">
+                      Behavior: {tag.name}
+                    </p>
+                  ))}
               </div>
             )}
 
             <div className="space-y-1 rounded-md border border-slate-200 p-3">
-              <p className="text-xs font-semibold text-slate-700">Vaccine status</p>
+              <p className="text-xs font-semibold text-slate-700">
+                Vaccine status
+              </p>
               {vaccines.map((vaccine) => (
-                <div key={vaccine.vaccineName} className="flex items-center justify-between text-xs">
+                <div
+                  key={vaccine.vaccineName}
+                  className="flex items-center justify-between text-xs"
+                >
                   <span>{vaccine.vaccineName}</span>
-                  <span className={vaccine.status === "valid" ? "text-emerald-600" : "text-rose-600"}>
-                    {vaccine.status === "valid" ? "Valid" : vaccine.status === "expired" ? "Expired" : "Missing"}
+                  <span
+                    className={
+                      vaccine.status === "valid"
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {vaccine.status === "valid"
+                      ? "Valid"
+                      : vaccine.status === "expired"
+                        ? "Expired"
+                        : "Missing"}
                     {vaccine.expiryDate ? ` • ${vaccine.expiryDate}` : ""}
                   </span>
                 </div>
@@ -637,11 +773,18 @@ function BookingDrawerContent({
 
             <div className="rounded-md border border-slate-200 p-3 text-xs">
               <p className="font-semibold text-slate-700">Agreement / waiver</p>
-              <p className={agreementStatus.signed ? "text-emerald-600" : "text-rose-600"}>
+              <p
+                className={
+                  agreementStatus.signed ? "text-emerald-600" : "text-rose-600"
+                }
+              >
                 {agreementStatus.signed ? "Signed" : "Unsigned"}
               </p>
               {agreementStatus.latestSignedAt && (
-                <p className="text-slate-500">Signed on {formatLocalDateTime(agreementStatus.latestSignedAt)}</p>
+                <p className="text-slate-500">
+                  Signed on{" "}
+                  {formatLocalDateTime(agreementStatus.latestSignedAt)}
+                </p>
               )}
             </div>
 
@@ -653,85 +796,96 @@ function BookingDrawerContent({
 
           {showAddOnsTab && (
             <TabsContent value="addons" className="space-y-3 pt-3">
-            {bookingAddOns.map((addOn) => (
-              <div key={addOn.id} className="space-y-2 rounded-md border border-slate-200 p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-900">{addOn.name}</p>
-                  <Button variant="ghost" size="sm" onClick={() => onRemoveBookingAddOn(booking.id, addOn.id)}>
-                    <Trash2 className="size-3.5" />
-                  </Button>
+              {bookingAddOns.map((addOn) => (
+                <div
+                  key={addOn.id}
+                  className="space-y-2 rounded-md border border-slate-200 p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-slate-900">
+                      {addOn.name}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRemoveBookingAddOn(booking.id, addOn.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-3">
+                    <Input
+                      type="time"
+                      value={addOn.scheduledAt ?? ""}
+                      onChange={(event) =>
+                        onUpdateBookingAddOn(booking.id, addOn.id, {
+                          scheduledAt: event.target.value,
+                        })
+                      }
+                    />
+                    <Select
+                      value={addOn.assignedStaff || "Unassigned"}
+                      onValueChange={(value) =>
+                        onUpdateBookingAddOn(booking.id, addOn.id, {
+                          assignedStaff: value === "Unassigned" ? "" : value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Unassigned">Unassigned</SelectItem>
+                        {staffOptions.map((staff) => (
+                          <SelectItem key={staff} value={staff}>
+                            {staff}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={addOn.status}
+                      onValueChange={(value) =>
+                        onUpdateBookingAddOn(booking.id, addOn.id, {
+                          status: value as BookingDrawerAddOnItem["status"],
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2 md:grid-cols-3">
-                  <Input
-                    type="time"
-                    value={addOn.scheduledAt ?? ""}
-                    onChange={(event) =>
-                      onUpdateBookingAddOn(booking.id, addOn.id, {
-                        scheduledAt: event.target.value,
-                      })
-                    }
-                  />
-                  <Select
-                    value={addOn.assignedStaff || "Unassigned"}
-                    onValueChange={(value) =>
-                      onUpdateBookingAddOn(booking.id, addOn.id, {
-                        assignedStaff: value === "Unassigned" ? "" : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Unassigned">Unassigned</SelectItem>
-                      {staffOptions.map((staff) => (
-                        <SelectItem key={staff} value={staff}>{staff}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={addOn.status}
-                    onValueChange={(value) =>
-                      onUpdateBookingAddOn(booking.id, addOn.id, {
-                        status: value as BookingDrawerAddOnItem["status"],
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ))}
+              ))}
 
-            <div className="flex items-center gap-2 rounded-md border border-dashed border-slate-300 p-3">
-              <Input
-                placeholder="Add-on name"
-                value={newAddOnName}
-                onChange={(event) => setNewAddOnName(event.target.value)}
-              />
-              <Button
-                size="sm"
+              <div className="flex items-center gap-2 rounded-md border border-dashed border-slate-300 p-3">
+                <Input
+                  placeholder="Add-on name"
+                  value={newAddOnName}
+                  onChange={(event) => setNewAddOnName(event.target.value)}
+                />
+                <Button
+                  size="sm"
                   disabled={readOnlyMode || !canEditBookingActions}
-                onClick={() => {
-                  if (!newAddOnName.trim()) return;
-                  onAddBookingAddOn(booking.id, {
-                    id: `addon-${Date.now()}`,
-                    name: newAddOnName.trim(),
-                    status: "pending",
-                  });
-                  setNewAddOnName("");
-                }}
-              >
-                <Plus className="mr-1 size-3.5" />
-                Add
-              </Button>
-            </div>
+                  onClick={() => {
+                    if (!newAddOnName.trim()) return;
+                    onAddBookingAddOn(booking.id, {
+                      id: `addon-${Date.now()}`,
+                      name: newAddOnName.trim(),
+                      status: "pending",
+                    });
+                    setNewAddOnName("");
+                  }}
+                >
+                  <Plus className="mr-1 size-3.5" />
+                  Add
+                </Button>
+              </div>
             </TabsContent>
           )}
 
@@ -740,13 +894,16 @@ function BookingDrawerContent({
               <label
                 key={taskItem.id}
                 className={`flex items-start justify-between gap-3 rounded-md border p-3 text-sm ${
-                  taskItem.status === "overdue" ? "border-rose-300 bg-rose-50" : "border-slate-200"
+                  taskItem.status === "overdue"
+                    ? "border-rose-300 bg-rose-50"
+                    : "border-slate-200"
                 }`}
               >
                 <div className="space-y-1">
                   <p className="font-medium text-slate-900">{taskItem.name}</p>
                   <p className="text-xs text-slate-600">
-                    {taskItem.assignedToName ?? "Unassigned"} • {taskItem.scheduledTime}
+                    {taskItem.assignedToName ?? "Unassigned"} •{" "}
+                    {taskItem.scheduledTime}
                   </p>
                   {taskItem.completedAt && (
                     <p className="text-xs text-emerald-600">
@@ -756,7 +913,9 @@ function BookingDrawerContent({
                 </div>
                 <Button
                   size="sm"
-                  variant={taskItem.status === "completed" ? "secondary" : "outline"}
+                  variant={
+                    taskItem.status === "completed" ? "secondary" : "outline"
+                  }
                   disabled={!canCompleteTasks || readOnlyMode}
                   onClick={() => onMarkTaskComplete(taskItem.id)}
                 >
@@ -767,9 +926,17 @@ function BookingDrawerContent({
 
             {showTaskForm && (
               <div className="space-y-2 rounded-md border border-dashed border-slate-300 p-3">
-                <Input value={taskName} onChange={(event) => setTaskName(event.target.value)} placeholder="Task name" />
+                <Input
+                  value={taskName}
+                  onChange={(event) => setTaskName(event.target.value)}
+                  placeholder="Task name"
+                />
                 <div className="grid gap-2 md:grid-cols-2">
-                  <Input type="time" value={taskTime} onChange={(event) => setTaskTime(event.target.value)} />
+                  <Input
+                    type="time"
+                    value={taskTime}
+                    onChange={(event) => setTaskTime(event.target.value)}
+                  />
                   <Select value={taskAssignee} onValueChange={setTaskAssignee}>
                     <SelectTrigger>
                       <SelectValue />
@@ -777,7 +944,9 @@ function BookingDrawerContent({
                     <SelectContent>
                       <SelectItem value="Unassigned">Unassigned</SelectItem>
                       {staffOptions.map((staff) => (
-                        <SelectItem key={staff} value={staff}>{staff}</SelectItem>
+                        <SelectItem key={staff} value={staff}>
+                          {staff}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -790,7 +959,10 @@ function BookingDrawerContent({
                     onAddBookingTask(booking.id, {
                       name: taskName.trim(),
                       scheduledTime: taskTime,
-                      assignedToName: taskAssignee === "Unassigned" ? undefined : taskAssignee,
+                      assignedToName:
+                        taskAssignee === "Unassigned"
+                          ? undefined
+                          : taskAssignee,
                       category: "care",
                     });
                     setTaskName("");
@@ -811,7 +983,9 @@ function BookingDrawerContent({
               canEdit={canEditBooking && !readOnlyMode}
               lastEditedBy={notesState.booking.lastEditedBy}
               lastEditedAt={notesState.booking.lastEditedAt}
-              onSave={(content) => onUpdateNotes("booking", content, userDisplayName)}
+              onSave={(content) =>
+                onUpdateNotes("booking", content, userDisplayName)
+              }
             />
             <NotesEditor
               title="Pet notes"
@@ -820,7 +994,9 @@ function BookingDrawerContent({
               canEdit={canEditPersistent && !readOnlyMode}
               lastEditedBy={notesState.pet.lastEditedBy}
               lastEditedAt={notesState.pet.lastEditedAt}
-              onSave={(content) => onUpdateNotes("pet", content, userDisplayName)}
+              onSave={(content) =>
+                onUpdateNotes("pet", content, userDisplayName)
+              }
             />
             <NotesEditor
               title="Customer notes"
@@ -829,17 +1005,28 @@ function BookingDrawerContent({
               canEdit={canEditPersistent && !readOnlyMode}
               lastEditedBy={notesState.customer.lastEditedBy}
               lastEditedAt={notesState.customer.lastEditedAt}
-              onSave={(content) => onUpdateNotes("customer", content, userDisplayName)}
+              onSave={(content) =>
+                onUpdateNotes("customer", content, userDisplayName)
+              }
             />
           </TabsContent>
 
           <TabsContent value="billing" className="space-y-3 pt-3 text-sm">
-            <DetailRow label="Total value" value={formatCurrency(booking.invoice?.total)} />
+            <DetailRow
+              label="Total value"
+              value={formatCurrency(booking.invoice?.total)}
+            />
             <DetailRow
               label="Amount paid"
-              value={formatCurrency((booking.invoice?.total ?? 0) - (booking.invoice?.remainingDue ?? 0))}
+              value={formatCurrency(
+                (booking.invoice?.total ?? 0) -
+                  (booking.invoice?.remainingDue ?? 0),
+              )}
             />
-            <DetailRow label="Amount due" value={formatCurrency(booking.invoice?.remainingDue)} />
+            <DetailRow
+              label="Amount due"
+              value={formatCurrency(booking.invoice?.remainingDue)}
+            />
             <DetailRow
               label="Deposit status"
               value={
@@ -852,7 +1039,9 @@ function BookingDrawerContent({
             />
             <DetailRow
               label="Payment method"
-              value={booking.invoice?.payments.at(-1)?.method ?? "On file - unknown"}
+              value={
+                booking.invoice?.payments.at(-1)?.method ?? "On file - unknown"
+              }
             />
             {(booking.invoice?.remainingDue ?? 0) > 0 && (
               <div className="rounded-md border border-rose-300 bg-rose-50 p-2 text-xs text-rose-700">
@@ -862,7 +1051,12 @@ function BookingDrawerContent({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/facility/dashboard/services/retail?bookingId=${booking.id}`, "_blank")}
+              onClick={() =>
+                window.open(
+                  `/facility/dashboard/services/retail?bookingId=${booking.id}`,
+                  "_blank",
+                )
+              }
             >
               Open full invoice in POS
             </Button>
@@ -896,8 +1090,13 @@ function BookingDrawerContent({
             variant="outline"
             disabled={!canEditBookingActions || readOnlyMode}
             onClick={() => {
-              const primary = window.prompt("Primary staff", assignedStaff[0] ?? "Unassigned") ?? "Unassigned";
-              const secondary = window.prompt("Secondary staff (optional)", "") ?? "";
+              const primary =
+                window.prompt(
+                  "Primary staff",
+                  assignedStaff[0] ?? "Unassigned",
+                ) ?? "Unassigned";
+              const secondary =
+                window.prompt("Secondary staff (optional)", "") ?? "";
               onAssignStaff(booking.id, primary, secondary || undefined);
             }}
           >
@@ -955,7 +1154,9 @@ function BookingDrawerContent({
             variant="destructive"
             disabled={!canEditBookingActions || readOnlyMode}
             onClick={() => {
-              const reason = window.prompt("Cancellation reason", "Customer request") ?? "Customer request";
+              const reason =
+                window.prompt("Cancellation reason", "Customer request") ??
+                "Customer request";
               onCancelBooking(booking.id, reason);
             }}
           >
@@ -985,39 +1186,62 @@ function TaskDrawerContent({
   return (
     <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
       <div className="space-y-3">
-        <Button disabled={!canCompleteTasks} onClick={() => onMarkTaskComplete(task.id)}>
+        <Button
+          disabled={!canCompleteTasks}
+          onClick={() => onMarkTaskComplete(task.id)}
+        >
           <CheckCircle2 className="mr-2 size-4" />
           Mark complete
         </Button>
 
         <DetailRow label="Task type" value={task.category} />
         <DetailRow label="Linked pet" value={task.petName} />
-        <DetailRow label="Assigned staff" value={task.assignedToName ?? "Unassigned"} />
-        <DetailRow label="Due" value={`${task.scheduledDate} ${task.scheduledTime}`} />
+        <DetailRow
+          label="Assigned staff"
+          value={task.assignedToName ?? "Unassigned"}
+        />
+        <DetailRow
+          label="Due"
+          value={`${task.scheduledDate} ${task.scheduledTime}`}
+        />
         <DetailRow label="Status" value={task.status} />
 
         <div className="rounded-md border border-slate-200 p-3 text-xs text-slate-700">
           <p className="font-semibold">Instructions</p>
-          <p className="mt-1">{task.description ?? "No additional instructions"}</p>
+          <p className="mt-1">
+            {task.description ?? "No additional instructions"}
+          </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => onOpenLinkedBooking(task.bookingId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenLinkedBooking(task.bookingId)}
+        >
           Open linked booking
         </Button>
 
         {managerAlertCount > 0 && (
           <div className="rounded-md border border-rose-300 bg-rose-50 p-2 text-xs text-rose-700">
-            {managerAlertCount} overdue task alert(s) currently active for manager/admin review.
+            {managerAlertCount} overdue task alert(s) currently active for
+            manager/admin review.
           </div>
         )}
 
         <Separator />
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-slate-800">Next occurrences</p>
+          <p className="text-sm font-semibold text-slate-800">
+            Next occurrences
+          </p>
           {taskSeries.map((seriesItem) => (
-            <div key={seriesItem.id} className="flex items-center justify-between rounded-md border border-slate-200 p-2 text-xs">
+            <div
+              key={seriesItem.id}
+              className="flex items-center justify-between rounded-md border border-slate-200 p-2 text-xs"
+            >
               <div>
-                <p>{seriesItem.scheduledDate} {seriesItem.scheduledTime}</p>
+                <p>
+                  {seriesItem.scheduledDate} {seriesItem.scheduledTime}
+                </p>
                 <p className="text-slate-500">{seriesItem.status}</p>
               </div>
               {seriesItem.status !== "completed" && (
@@ -1032,7 +1256,11 @@ function TaskDrawerContent({
               )}
             </div>
           ))}
-          {taskSeries.length === 0 && <p className="text-xs text-slate-500">No recurring occurrences found.</p>}
+          {taskSeries.length === 0 && (
+            <p className="text-xs text-slate-500">
+              No recurring occurrences found.
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -1048,7 +1276,10 @@ function FacilityEventDrawerContent({
 }: {
   event: OperationsCalendarEvent;
   userRole: string;
-  onUpdateManualEvent: (eventId: string, updates: Partial<ManualFacilityEvent>) => void;
+  onUpdateManualEvent: (
+    eventId: string,
+    updates: Partial<ManualFacilityEvent>,
+  ) => void;
   onDeleteManualEvent: (eventId: string) => void;
   canManageCustomEvents: boolean;
 }) {
@@ -1064,24 +1295,33 @@ function FacilityEventDrawerContent({
   return (
     <div className="flex flex-1 flex-col overflow-y-auto px-4 py-3">
       <div className="space-y-3">
-        <Badge variant="outline">{parseManualEventLabel({
-          id: event.sourceId,
-          title: event.title,
-          subtype: event.subtype as ManualFacilityEvent["subtype"],
-          start: event.start.toISOString(),
-          end: event.end.toISOString(),
-          allDay: event.allDay,
-          location: event.location,
-          staff: event.staff,
-          status: event.status,
-        })}</Badge>
-        <DetailRow label="Time" value={`${event.start.toLocaleString()} - ${event.end.toLocaleString()}`} />
+        <Badge variant="outline">
+          {parseManualEventLabel({
+            id: event.sourceId,
+            title: event.title,
+            subtype: event.subtype as ManualFacilityEvent["subtype"],
+            start: event.start.toISOString(),
+            end: event.end.toISOString(),
+            allDay: event.allDay,
+            location: event.location,
+            staff: event.staff,
+            status: event.status,
+          })}
+        </Badge>
+        <DetailRow
+          label="Time"
+          value={`${event.start.toLocaleString()} - ${event.end.toLocaleString()}`}
+        />
         <DetailRow label="Location" value={event.location} />
         <DetailRow label="Staff" value={event.staff} />
         <DetailRow label="Customer" value={customerName || "Not linked"} />
         <DetailRow label="Pet" value={petName || "Not linked"} />
 
-        <Input value={title} onChange={(eventInput) => setTitle(eventInput.target.value)} disabled={!canEdit} />
+        <Input
+          value={title}
+          onChange={(eventInput) => setTitle(eventInput.target.value)}
+          disabled={!canEdit}
+        />
         <Input
           value={details}
           onChange={(eventInput) => setDetails(eventInput.target.value)}
@@ -1100,7 +1340,11 @@ function FacilityEventDrawerContent({
           disabled={!canEdit}
           placeholder="Pet"
         />
-        <Textarea value={notes} onChange={(eventInput) => setNotes(eventInput.target.value)} disabled={!canEdit} />
+        <Textarea
+          value={notes}
+          onChange={(eventInput) => setNotes(eventInput.target.value)}
+          disabled={!canEdit}
+        />
 
         {canEdit && (
           <div className="flex gap-2">
@@ -1172,10 +1416,20 @@ function NotesEditor({
       <p className="text-sm font-semibold text-slate-800">{title}</p>
       <p className="text-xs text-slate-500">{helper}</p>
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="outline" disabled={!canEdit} onClick={() => setDraft(`${draft} **bold**`)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!canEdit}
+          onClick={() => setDraft(`${draft} **bold**`)}
+        >
           Bold
         </Button>
-        <Button size="sm" variant="outline" disabled={!canEdit} onClick={() => setDraft(`${draft}\n`)}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!canEdit}
+          onClick={() => setDraft(`${draft}\n`)}
+        >
           New line
         </Button>
       </div>
@@ -1219,7 +1473,11 @@ function GenericEventContent({
   staffOptions: string[];
   onCheckInBooking: (bookingId: number) => void;
   onCheckOutBooking: (bookingId: number) => void;
-  onAssignStaff: (bookingId: number, primary: string, secondary?: string) => void;
+  onAssignStaff: (
+    bookingId: number,
+    primary: string,
+    secondary?: string,
+  ) => void;
   onMarkTaskComplete: (taskId: string, allowEarly?: boolean) => void;
   onOpenLinkedBooking: (bookingId: number) => void;
   onRescheduleBooking: (bookingId: number) => void;
@@ -1230,14 +1488,21 @@ function GenericEventContent({
     : `${event.start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} – ${event.end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 
   const eventNumericId = event.bookingId ?? (Number(event.sourceId) || 0);
-  const isCheckedOut = event.bookingRawStatus === "completed" || event.bookingRawStatus === "checked-out" || event.bookingRawStatus === "checked_out";
-  const isCheckedIn = event.bookingRawStatus === "in_progress" || event.bookingRawStatus === "checked_in";
-  const isConfirmed = event.bookingRawStatus === "confirmed" || event.bookingRawStatus === "scheduled";
+  const isCheckedOut =
+    event.bookingRawStatus === "completed" ||
+    event.bookingRawStatus === "checked-out" ||
+    event.bookingRawStatus === "checked_out";
+  const isCheckedIn =
+    event.bookingRawStatus === "in_progress" ||
+    event.bookingRawStatus === "checked_in";
+  const isConfirmed =
+    event.bookingRawStatus === "confirmed" ||
+    event.bookingRawStatus === "scheduled";
   const supportsCheckInOut = event.requiresCheckInOut !== false;
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">
-      <div className="px-4 py-3 space-y-3">
+      <div className="space-y-3 px-4 py-3">
         {/* Status */}
         <Badge variant="outline">{event.status}</Badge>
 
@@ -1269,7 +1534,9 @@ function GenericEventContent({
             <p className="text-xs font-medium text-slate-700">Add-ons</p>
             <div className="mt-1 flex flex-wrap gap-1">
               {event.addOns.map((addOn) => (
-                <Badge key={addOn.id} variant="outline">{addOn.name}</Badge>
+                <Badge key={addOn.id} variant="outline">
+                  {addOn.name}
+                </Badge>
               ))}
             </div>
           </div>
@@ -1298,7 +1565,7 @@ function GenericEventContent({
       </div>
 
       {/* Sticky action bar at bottom */}
-      <div className="border-t border-slate-200 bg-white px-4 py-3 mt-auto">
+      <div className="mt-auto border-t border-slate-200 bg-white px-4 py-3">
         <div className="flex flex-wrap gap-2">
           {/* Check-in / Check-out */}
           {supportsCheckInOut && isConfirmed && (
@@ -1321,16 +1588,18 @@ function GenericEventContent({
           )}
 
           {/* Mark complete for tasks */}
-          {event.type === "task" && event.taskId && event.status !== "Completed" && (
-            <Button
-              size="sm"
-              disabled={!canCompleteTasks || readOnlyMode}
-              onClick={() => onMarkTaskComplete(event.taskId!)}
-            >
-              <CheckCircle2 className="mr-1.5 size-3.5" />
-              Mark complete
-            </Button>
-          )}
+          {event.type === "task" &&
+            event.taskId &&
+            event.status !== "Completed" && (
+              <Button
+                size="sm"
+                disabled={!canCompleteTasks || readOnlyMode}
+                onClick={() => onMarkTaskComplete(event.taskId!)}
+              >
+                <CheckCircle2 className="mr-1.5 size-3.5" />
+                Mark complete
+              </Button>
+            )}
 
           {/* Assign staff */}
           <Button
@@ -1338,9 +1607,14 @@ function GenericEventContent({
             variant="outline"
             disabled={!canEditBookingActions || readOnlyMode}
             onClick={() => {
-              const primary = window.prompt("Assign primary staff", event.staff !== "Unassigned" ? event.staff : "") ?? "";
+              const primary =
+                window.prompt(
+                  "Assign primary staff",
+                  event.staff !== "Unassigned" ? event.staff : "",
+                ) ?? "";
               if (!primary) return;
-              const secondary = window.prompt("Secondary staff (optional)", "") ?? "";
+              const secondary =
+                window.prompt("Secondary staff (optional)", "") ?? "";
               onAssignStaff(eventNumericId, primary, secondary || undefined);
             }}
           >
@@ -1366,7 +1640,9 @@ function GenericEventContent({
               variant="destructive"
               disabled={!canEditBookingActions || readOnlyMode}
               onClick={() => {
-                const reason = window.prompt("Cancellation reason", "Customer request") ?? "Customer request";
+                const reason =
+                  window.prompt("Cancellation reason", "Customer request") ??
+                  "Customer request";
                 onCancelBooking(eventNumericId, reason);
               }}
             >

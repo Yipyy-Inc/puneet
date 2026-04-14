@@ -6,18 +6,13 @@ import {
   Plus,
   AlertTriangle,
   Search,
-  MoreHorizontal,
-  Edit2,
   MessageSquare,
   Calendar,
   User,
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -37,12 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { toast } from "sonner";
 import {
   employeeWarnings as initialWarnings,
@@ -51,14 +41,39 @@ import {
 } from "@/data/scheduling";
 import type { EmployeeWarning } from "@/types/scheduling";
 
-const typeColors: Record<string, { bg: string; text: string; label: string }> = {
-  verbal: { bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-400", label: "Verbal Warning" },
-  written: { bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-700 dark:text-orange-400", label: "Written Warning" },
-  final: { bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-700 dark:text-red-400", label: "Final Warning" },
-  suspension: { bg: "bg-red-200 dark:bg-red-900/50", text: "text-red-800 dark:text-red-300", label: "Suspension" },
-  termination: { bg: "bg-red-300 dark:bg-red-900/70", text: "text-red-900 dark:text-red-200", label: "Termination" },
-  custom: { bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-700 dark:text-gray-400", label: "Custom" },
-};
+const typeColors: Record<string, { bg: string; text: string; label: string }> =
+  {
+    verbal: {
+      bg: "bg-amber-100 dark:bg-amber-900/30",
+      text: "text-amber-700 dark:text-amber-400",
+      label: "Verbal Warning",
+    },
+    written: {
+      bg: "bg-orange-100 dark:bg-orange-900/30",
+      text: "text-orange-700 dark:text-orange-400",
+      label: "Written Warning",
+    },
+    final: {
+      bg: "bg-red-100 dark:bg-red-900/30",
+      text: "text-red-700 dark:text-red-400",
+      label: "Final Warning",
+    },
+    suspension: {
+      bg: "bg-red-200 dark:bg-red-900/50",
+      text: "text-red-800 dark:text-red-300",
+      label: "Suspension",
+    },
+    termination: {
+      bg: "bg-red-300 dark:bg-red-900/70",
+      text: "text-red-900 dark:text-red-200",
+      label: "Termination",
+    },
+    custom: {
+      bg: "bg-gray-100 dark:bg-gray-800",
+      text: "text-gray-700 dark:text-gray-400",
+      label: "Custom",
+    },
+  };
 
 const statusLabels: Record<string, string> = {
   issued: "Issued",
@@ -172,7 +187,7 @@ export default function WarningsPage() {
 
       {/* Search */}
       <div className="relative max-w-xs">
-        <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -184,9 +199,7 @@ export default function WarningsPage() {
       {/* Warning Cards */}
       <div className="space-y-3">
         {filtered.map((warn) => {
-          const emp = scheduleEmployees.find(
-            (e) => e.id === warn.employeeId,
-          );
+          const emp = scheduleEmployees.find((e) => e.id === warn.employeeId);
           const typeInfo = typeColors[warn.type] || typeColors.custom;
           const dept = departments.find((d) => d.id === warn.departmentId);
           const totalWarnings = warningsByEmployee.get(warn.employeeId) || 0;
@@ -198,9 +211,9 @@ export default function WarningsPage() {
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
-                  <Avatar className="size-10 ring-2 ring-background shadow">
+                  <Avatar className="ring-background size-10 shadow-sm ring-2">
                     <AvatarImage src={emp?.avatar} alt={emp?.name} />
-                    <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-xs font-semibold">
+                    <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {emp?.initials || "??"}
                     </AvatarFallback>
                   </Avatar>
@@ -208,47 +221,48 @@ export default function WarningsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{warn.employeeName}</p>
-                      <Badge className={`text-[10px] ${typeInfo.bg} ${typeInfo.text}`}>
+                      <Badge
+                        className={`text-[10px] ${typeInfo.bg} ${typeInfo.text}`}
+                      >
                         {typeInfo.label}
                       </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px]"
-                      >
+                      <Badge variant="outline" className="text-[10px]">
                         {statusLabels[warn.status]}
                       </Badge>
                       {totalWarnings >= 3 && (
-                        <Badge className="bg-red-100 text-red-700 text-[10px] dark:bg-red-900/30 dark:text-red-400">
+                        <Badge className="bg-red-100 text-[10px] text-red-700 dark:bg-red-900/30 dark:text-red-400">
                           <AlertTriangle className="mr-0.5 size-2.5" />
                           {totalWarnings} warnings
                         </Badge>
                       )}
                     </div>
 
-                    <p className="mt-1 text-sm font-medium text-muted-foreground">
+                    <p className="text-muted-foreground mt-1 text-sm font-medium">
                       {warn.reason}
                     </p>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       {warn.description}
                     </p>
 
-                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3" /> {warn.issuedAt}
                       </span>
                       <span className="flex items-center gap-1">
-                        <User className="size-3" /> Issued by {warn.issuedByName}
+                        <User className="size-3" /> Issued by{" "}
+                        {warn.issuedByName}
                       </span>
                       {warn.witnessName && (
                         <span className="flex items-center gap-1">
-                          <User className="size-3" /> Witness: {warn.witnessName}
+                          <User className="size-3" /> Witness:{" "}
+                          {warn.witnessName}
                         </span>
                       )}
                     </div>
 
                     {warn.managerNotes && (
-                      <div className="mt-2 rounded-md bg-muted/50 px-3 py-2">
-                        <p className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground mb-0.5">
+                      <div className="bg-muted/50 mt-2 rounded-md px-3 py-2">
+                        <p className="text-muted-foreground mb-0.5 flex items-center gap-1 text-[10px] font-medium">
                           <MessageSquare className="size-2.5" /> Manager Notes
                         </p>
                         <p className="text-xs">{warn.managerNotes}</p>
@@ -293,45 +307,79 @@ export default function WarningsPage() {
             <div className="space-y-1.5">
               <Label>Employee</Label>
               <Select value={formEmployeeId} onValueChange={setFormEmployeeId}>
-                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
                 <SelectContent>
-                  {scheduleEmployees.filter((e) => e.status === "active").map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                  ))}
+                  {scheduleEmployees
+                    .filter((e) => e.status === "active")
+                    .map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Warning Type</Label>
               <Select value={formType} onValueChange={setFormType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {Object.entries(typeColors).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    <SelectItem key={k} value={k}>
+                      {v.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Reason</Label>
-              <Input value={formReason} onChange={(e) => setFormReason(e.target.value)} placeholder="e.g., Tardiness, Policy violation" />
+              <Input
+                value={formReason}
+                onChange={(e) => setFormReason(e.target.value)}
+                placeholder="e.g., Tardiness, Policy violation"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
-              <Textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="Detailed description of the incident..." rows={3} />
+              <Textarea
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Detailed description of the incident..."
+                rows={3}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Manager Notes</Label>
-              <Textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Internal notes, action items, follow-up..." rows={2} />
+              <Textarea
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+                placeholder="Internal notes, action items, follow-up..."
+                rows={2}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Witness (optional)</Label>
-              <Input value={formWitness} onChange={(e) => setFormWitness(e.target.value)} placeholder="Witness name" />
+              <Input
+                value={formWitness}
+                onChange={(e) => setFormWitness(e.target.value)}
+                placeholder="Witness name"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!formEmployeeId || !formReason.trim()} className="bg-red-600 hover:bg-red-700 text-white">
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!formEmployeeId || !formReason.trim()}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
               <AlertTriangle className="mr-1.5 size-3.5" />
               Issue Warning
             </Button>

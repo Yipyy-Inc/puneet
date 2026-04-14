@@ -42,9 +42,9 @@ export function StepIncluded({ data, update }: Props) {
     if (!refId) return;
     const label =
       kind === "service"
-        ? services.find((s) => s.id === refId)?.name ?? refId
+        ? (services.find((s) => s.id === refId)?.name ?? refId)
         : kind === "addon"
-          ? defaultServiceAddOns.find((a) => a.id === refId)?.name ?? refId
+          ? (defaultServiceAddOns.find((a) => a.id === refId)?.name ?? refId)
           : refId;
     const item: MembershipIncludedItem = {
       id: `ii-${Date.now()}`,
@@ -58,10 +58,7 @@ export function StepIncluded({ data, update }: Props) {
     setRefId("");
   };
 
-  const updateItem = (
-    id: string,
-    patch: Partial<MembershipIncludedItem>,
-  ) => {
+  const updateItem = (id: string, patch: Partial<MembershipIncludedItem>) => {
     update({
       includedItems: data.includedItems.map((it) =>
         it.id === id ? { ...it, ...patch } : it,
@@ -81,10 +78,12 @@ export function StepIncluded({ data, update }: Props) {
 
   return (
     <div className="space-y-5">
-      <section className="space-y-3 rounded-xl border bg-linear-to-br from-purple-50/40 to-background p-4 dark:from-purple-950/20">
+      <section className="to-background space-y-3 rounded-xl border bg-linear-to-br from-purple-50/40 p-4 dark:from-purple-950/20">
         <div className="flex items-center gap-2">
           <Gift className="size-4 text-purple-700 dark:text-purple-400" />
-          <h4 className="text-sm font-semibold">Included complimentary items</h4>
+          <h4 className="text-sm font-semibold">
+            Included complimentary items
+          </h4>
         </div>
         <p className="text-muted-foreground text-sm">
           Members receive these items automatically each billing cycle.

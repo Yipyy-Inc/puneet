@@ -44,7 +44,9 @@ function useTimer(clockedInAt: string | undefined): string {
       return;
     }
     const update = () => {
-      const diff = Math.floor((Date.now() - new Date(clockedInAt).getTime()) / 1000);
+      const diff = Math.floor(
+        (Date.now() - new Date(clockedInAt).getTime()) / 1000,
+      );
       setElapsed(Math.max(0, diff));
     };
     update();
@@ -88,9 +90,9 @@ function ShiftRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium truncate">{employee.name}</p>
+          <p className="truncate text-sm font-medium">{employee.name}</p>
           {isClockedIn && (
-            <Badge className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 text-[10px]">
+            <Badge className="bg-green-100 text-[10px] text-green-700 dark:bg-green-950/40 dark:text-green-400">
               Live · {timer}
             </Badge>
           )}
@@ -105,14 +107,20 @@ function ShiftRow({
         </p>
         {isClockedOut && entry?.actualMinutes !== undefined && (
           <p className="text-muted-foreground text-xs">
-            Worked: {Math.floor(entry.actualMinutes / 60)}h {entry.actualMinutes % 60}m
+            Worked: {Math.floor(entry.actualMinutes / 60)}h{" "}
+            {entry.actualMinutes % 60}m
           </p>
         )}
       </div>
 
       <div className="shrink-0">
         {!entry && (
-          <Button size="sm" variant="outline" onClick={onClockIn} className="gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onClockIn}
+            className="gap-1.5"
+          >
             <LogIn className="size-3.5" />
             Clock In
           </Button>
@@ -173,7 +181,7 @@ export function TimeClock({
             <DialogTitle className="flex items-center gap-2">
               <Clock className="size-4" />
               Time Clock
-              <span className="text-muted-foreground text-sm font-normal ml-1">
+              <span className="text-muted-foreground ml-1 text-sm font-normal">
                 — {department.name}
               </span>
             </DialogTitle>
@@ -190,21 +198,21 @@ export function TimeClock({
                     "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
                   )}
                 >
-                  <span className="size-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                  <span className="inline-block size-1.5 animate-pulse rounded-full bg-green-500" />
                   {activeCount} clocked in
                 </span>
               )}
             </p>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+          <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
             {todayShifts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Clock className="size-10 text-muted-foreground/30 mb-3" />
+                <Clock className="text-muted-foreground/30 mb-3 size-10" />
                 <p className="text-muted-foreground text-sm">
                   No published shifts today
                 </p>
-                <p className="text-muted-foreground/60 text-xs mt-1">
+                <p className="text-muted-foreground/60 mt-1 text-xs">
                   Publish shifts to enable time clock
                 </p>
               </div>

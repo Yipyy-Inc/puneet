@@ -51,11 +51,11 @@ const DateInputBridge = React.forwardRef<
       }
     };
 
-    const currentValue = isControlled ? normalizeDateValue(value) : internalValue;
-    const minValue =
-      typeof min === "number" ? String(min) : (min ?? undefined);
-    const maxValue =
-      typeof max === "number" ? String(max) : (max ?? undefined);
+    const currentValue = isControlled
+      ? normalizeDateValue(value)
+      : internalValue;
+    const minValue = typeof min === "number" ? String(min) : (min ?? undefined);
+    const maxValue = typeof max === "number" ? String(max) : (max ?? undefined);
 
     const handleValueChange = (nextValue: string) => {
       if (!isControlled) {
@@ -67,7 +67,8 @@ const DateInputBridge = React.forwardRef<
       }
 
       if (onChange) {
-        const target = hiddenInputRef.current ??
+        const target =
+          hiddenInputRef.current ??
           ({
             value: nextValue,
             name: name ?? "",
@@ -125,10 +126,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         ref={ref}
         type={type}
         data-slot="input"
-        className={cn(
-          INPUT_BASE_CLASSES,
-          className,
-        )}
+        className={cn(INPUT_BASE_CLASSES, className)}
         {...props}
       />
     );

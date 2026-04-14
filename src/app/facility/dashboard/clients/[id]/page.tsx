@@ -1237,7 +1237,10 @@ export default function ClientDetailPage({
                                       {pet.name}
                                     </h4>
                                     {pet.petStatus === "inactive" && (
-                                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs">
+                                      <Badge
+                                        variant="secondary"
+                                        className="bg-amber-100 text-xs text-amber-800 hover:bg-amber-100"
+                                      >
                                         Inactive
                                       </Badge>
                                     )}
@@ -1247,10 +1250,17 @@ export default function ClientDetailPage({
                                     {pet.age === 1 ? "year" : "years"}
                                   </p>
                                   <div className="mt-2 flex flex-wrap gap-2">
-                                    <Badge variant="secondary">{pet.type}</Badge>
-                                    <Badge variant="outline">{pet.weight} kg</Badge>
+                                    <Badge variant="secondary">
+                                      {pet.type}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      {pet.weight} kg
+                                    </Badge>
                                     {petData.banRecord && (
-                                      <Badge variant="destructive" className="gap-1">
+                                      <Badge
+                                        variant="destructive"
+                                        className="gap-1"
+                                      >
                                         <AlertTriangle className="size-3" />
                                         Banned
                                       </Badge>
@@ -1362,7 +1372,10 @@ export default function ClientDetailPage({
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <h4 className="font-medium">{pet.name}</h4>
-                                <Badge variant="destructive" className="text-xs">
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
                                   Deceased
                                 </Badge>
                               </div>

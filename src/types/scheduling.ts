@@ -40,7 +40,11 @@ export type Position = z.infer<typeof positionSchema>;
 // Schedule Employee (extended for scheduling)
 // ============================================================================
 
-export const employmentTypeEnum = z.enum(["full_time", "part_time", "contract"]);
+export const employmentTypeEnum = z.enum([
+  "full_time",
+  "part_time",
+  "contract",
+]);
 export type EmploymentType = z.infer<typeof employmentTypeEnum>;
 
 export const employeeStatusEnum = z.enum([
@@ -149,7 +153,9 @@ export const notificationPreferencesSchema = z.object({
   quietHoursEnd: z.string().optional(),
   updatedAt: z.string(),
 });
-export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
+export type NotificationPreferences = z.infer<
+  typeof notificationPreferencesSchema
+>;
 
 export const broadcastAudienceEnum = z.enum([
   "all_staff",
@@ -533,7 +539,9 @@ export const availabilityChangeStatusEnum = z.enum([
   "denied",
   "cancelled",
 ]);
-export type AvailabilityChangeStatus = z.infer<typeof availabilityChangeStatusEnum>;
+export type AvailabilityChangeStatus = z.infer<
+  typeof availabilityChangeStatusEnum
+>;
 
 export const availabilityChangeRequestSchema = z.object({
   id: z.string(),
@@ -554,7 +562,9 @@ export const availabilityChangeRequestSchema = z.object({
   reviewedAt: z.string().optional(),
   reviewNotes: z.string().optional(),
 });
-export type AvailabilityChangeRequest = z.infer<typeof availabilityChangeRequestSchema>;
+export type AvailabilityChangeRequest = z.infer<
+  typeof availabilityChangeRequestSchema
+>;
 
 // ============================================================================
 // Scheduling Settings
@@ -589,7 +599,9 @@ export const documentTemplateFieldTypeEnum = z.enum([
   "textarea",
   "select",
 ]);
-export type DocumentTemplateFieldType = z.infer<typeof documentTemplateFieldTypeEnum>;
+export type DocumentTemplateFieldType = z.infer<
+  typeof documentTemplateFieldTypeEnum
+>;
 
 export const documentTemplateFieldSchema = z.object({
   id: z.string(),
@@ -611,7 +623,9 @@ export const employeeDocTemplateTypeEnum = z.enum([
   "tax_form",
   "custom",
 ]);
-export type EmployeeDocTemplateType = z.infer<typeof employeeDocTemplateTypeEnum>;
+export type EmployeeDocTemplateType = z.infer<
+  typeof employeeDocTemplateTypeEnum
+>;
 
 export const employeeDocumentTemplateSchema = z.object({
   id: z.string(),
@@ -627,7 +641,9 @@ export const employeeDocumentTemplateSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 });
-export type EmployeeDocumentTemplate = z.infer<typeof employeeDocumentTemplateSchema>;
+export type EmployeeDocumentTemplate = z.infer<
+  typeof employeeDocumentTemplateSchema
+>;
 
 export const employeeDocumentSubmissionSchema = z.object({
   id: z.string(),
@@ -647,7 +663,9 @@ export const employeeDocumentSubmissionSchema = z.object({
   facilityId: z.number(),
   submittedAt: z.string(),
 });
-export type EmployeeDocumentSubmission = z.infer<typeof employeeDocumentSubmissionSchema>;
+export type EmployeeDocumentSubmission = z.infer<
+  typeof employeeDocumentSubmissionSchema
+>;
 
 // ============================================================================
 // Shift Opportunity
@@ -666,7 +684,9 @@ export const shiftOpportunityUrgencyEnum = z.enum([
   "urgent",
   "critical",
 ]);
-export type ShiftOpportunityUrgency = z.infer<typeof shiftOpportunityUrgencyEnum>;
+export type ShiftOpportunityUrgency = z.infer<
+  typeof shiftOpportunityUrgencyEnum
+>;
 
 export const shiftOpportunitySchema = z.object({
   id: z.string(),

@@ -65,11 +65,16 @@ export function hoursByEmployee(
   return employees
     .map((employee) => {
       const empShifts = scoped.filter((s) => s.employeeId === employee.id);
-      const empRecords = records.filter((r) => r.shift.employeeId === employee.id);
+      const empRecords = records.filter(
+        (r) => r.shift.employeeId === employee.id,
+      );
       return {
         employee,
         scheduledHours: empShifts.reduce((sum, s) => sum + shiftHours(s), 0),
-        actualHours: empRecords.reduce((sum, r) => sum + (r.actualHours ?? 0), 0),
+        actualHours: empRecords.reduce(
+          (sum, r) => sum + (r.actualHours ?? 0),
+          0,
+        ),
         overtimeHours: empRecords.reduce((sum, r) => sum + r.overtimeHours, 0),
         shiftCount: empShifts.length,
         cost: empShifts.reduce((sum, s) => sum + shiftCost(s, positions), 0),
@@ -108,7 +113,10 @@ export function hoursByDepartment(
         department,
         scheduledHours: deptShifts.reduce((sum, s) => sum + shiftHours(s), 0),
         shiftCount: deptShifts.length,
-        laborCost: deptShifts.reduce((sum, s) => sum + shiftCost(s, positions), 0),
+        laborCost: deptShifts.reduce(
+          (sum, s) => sum + shiftCost(s, positions),
+          0,
+        ),
         uniqueEmployees: employees.size,
       };
     })
@@ -166,7 +174,8 @@ export function timeOffByType(
   range: { start: string; end: string },
 ): { type: string; count: number; days: number }[] {
   const scoped = requests.filter(
-    (r) => r.status === "approved" && inRange(r.startDate, range.start, range.end),
+    (r) =>
+      r.status === "approved" && inRange(r.startDate, range.start, range.end),
   );
   const map = new Map<string, { count: number; days: number }>();
   for (const r of scoped) {
@@ -201,7 +210,9 @@ export function frequentSwappers(
       const emp = employees.find((e) => e.id === id);
       return emp ? { employee: emp, count } : null;
     })
-    .filter((x): x is { employee: ScheduleEmployee; count: number } => x !== null)
+    .filter(
+      (x): x is { employee: ScheduleEmployee; count: number } => x !== null,
+    )
     .sort((a, b) => b.count - a.count);
 }
 

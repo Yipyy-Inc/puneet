@@ -662,12 +662,7 @@ function Row({
   return (
     <div className="flex items-center justify-between py-1">
       <span className={cn("text-sm", bold && "font-semibold")}>{label}</span>
-      <span
-        className={cn(
-          "price-value text-sm",
-          green && "text-emerald-600",
-        )}
-      >
+      <span className={cn("price-value text-sm", green && "text-emerald-600")}>
         {amount < 0
           ? `-$${Math.abs(amount).toFixed(2)}`
           : `$${amount.toFixed(2)}`}

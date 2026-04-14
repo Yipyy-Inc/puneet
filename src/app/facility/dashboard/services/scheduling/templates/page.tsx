@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  FileText,
   Plus,
   Copy,
   Trash2,
@@ -11,7 +10,6 @@ import {
   Clock,
   Users,
   Upload,
-  Edit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,8 +48,6 @@ import { toast } from "sonner";
 import {
   scheduleTemplates as initialTemplates,
   departments,
-  scheduleEmployees,
-  positions,
 } from "@/data/scheduling";
 import type { ScheduleTemplate } from "@/types/scheduling";
 
@@ -133,9 +129,8 @@ export default function TemplatesPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {templates.map((tmpl) => {
           const dept = departments.find((d) => d.id === tmpl.departmentId);
-          const uniqueEmployees = new Set(
-            tmpl.shifts.map((s) => s.employeeId),
-          ).size;
+          const uniqueEmployees = new Set(tmpl.shifts.map((s) => s.employeeId))
+            .size;
           const uniqueDays = new Set(tmpl.shifts.map((s) => s.dayOfWeek)).size;
 
           return (
@@ -172,9 +167,7 @@ export default function TemplatesPage() {
                       >
                         <Upload className="mr-2 size-3.5" /> Apply to Schedule
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDuplicate(tmpl)}
-                      >
+                      <DropdownMenuItem onClick={() => handleDuplicate(tmpl)}>
                         <Copy className="mr-2 size-3.5" /> Duplicate
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -203,7 +196,7 @@ export default function TemplatesPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="text-muted-foreground flex items-center gap-4 text-xs">
                   <span className="flex items-center gap-1">
                     <Clock className="size-3" />
                     {tmpl.shifts.length} shifts
@@ -227,7 +220,7 @@ export default function TemplatesPage() {
                     return (
                       <div
                         key={day}
-                        className={`flex size-7 items-center justify-center rounded text-[10px] font-medium ${
+                        className={`flex size-7 items-center justify-center rounded-sm text-[10px] font-medium ${
                           hasShifts
                             ? "bg-primary/10 text-primary"
                             : "bg-muted text-muted-foreground"
@@ -263,7 +256,8 @@ export default function TemplatesPage() {
           <DialogHeader>
             <DialogTitle>Create Template</DialogTitle>
             <DialogDescription>
-              Create a new schedule template. You can populate it with shifts later.
+              Create a new schedule template. You can populate it with shifts
+              later.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -317,8 +311,8 @@ export default function TemplatesPage() {
           <DialogHeader>
             <DialogTitle>Apply Template</DialogTitle>
             <DialogDescription>
-              This will add all shifts from &quot;{selectedTemplate?.name}&quot; as
-              draft shifts to the current schedule period. You can review and
+              This will add all shifts from &quot;{selectedTemplate?.name}&quot;
+              as draft shifts to the current schedule period. You can review and
               modify them before publishing.
             </DialogDescription>
           </DialogHeader>

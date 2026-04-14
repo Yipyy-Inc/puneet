@@ -72,24 +72,29 @@ const schedulingSettings = {
 export function ScheduleView() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
-  const [selectedDepartment, setSelectedDepartment] = useState<Department>(departments[0]);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department>(
+    departments[0],
+  );
   const [shifts, setShifts] = useState<ScheduleShift[]>(initialShifts);
   const [addShiftOpen, setAddShiftOpen] = useState(false);
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   const [editingShift, setEditingShift] = useState<ScheduleShift | null>(null);
   const [defaultShiftDate, setDefaultShiftDate] = useState<string>();
-  const [defaultShiftEmployee, setDefaultShiftEmployee] = useState<string | undefined>();
+  const [defaultShiftEmployee, setDefaultShiftEmployee] = useState<
+    string | undefined
+  >();
   const [holidayRates] = useState<HolidayRate[]>(initialHolidayRates);
   const [timeClockOpen, setTimeClockOpen] = useState(false);
-  const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>([]);
+  const [timeClockEntries, setTimeClockEntries] = useState<TimeClockEntry[]>(
+    [],
+  );
 
   // Shift opportunities state
-  const [shiftOpportunities, setShiftOpportunities] = useState<ShiftOpportunity[]>(
-    initialShiftOpportunities,
-  );
-  const [notifSettings, setNotifSettings] = useState<ShiftOpportunityNotificationSettings>(
-    initialNotifSettings,
-  );
+  const [shiftOpportunities, setShiftOpportunities] = useState<
+    ShiftOpportunity[]
+  >(initialShiftOpportunities);
+  const [notifSettings, setNotifSettings] =
+    useState<ShiftOpportunityNotificationSettings>(initialNotifSettings);
   const [showPostDialog, setShowPostDialog] = useState(false);
   const [showNotifSettings, setShowNotifSettings] = useState(false);
 
@@ -162,14 +167,16 @@ export function ScheduleView() {
   const totalHours = useMemo(
     () =>
       filteredShifts.reduce(
-        (sum, s) => sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
+        (sum, s) =>
+          sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
         0,
       ),
     [filteredShifts],
   );
 
   const laborCost = useMemo(
-    () => calculateLaborCost(selectedDepartment.id, dateRange.start, dateRange.end),
+    () =>
+      calculateLaborCost(selectedDepartment.id, dateRange.start, dateRange.end),
     [selectedDepartment.id, dateRange],
   );
 
@@ -186,7 +193,8 @@ export function ScheduleView() {
       filteredShifts
         .filter((s) => s.employeeId === employeeId)
         .reduce(
-          (sum, s) => sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
+          (sum, s) =>
+            sum + computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
           0,
         ),
     [filteredShifts],
@@ -195,12 +203,19 @@ export function ScheduleView() {
   // Date range label
   const dateRangeLabel = useMemo(() => {
     const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-    const yearOpts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+    const yearOpts: Intl.DateTimeFormatOptions = {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    };
     return `${new Date(dateRange.start + "T00:00:00").toLocaleDateString("en-US", opts)} – ${new Date(dateRange.end + "T00:00:00").toLocaleDateString("en-US", yearOpts)}`;
   }, [dateRange]);
 
   const deptTimeOff = useMemo(
-    () => enhancedTimeOffRequests.filter((r) => r.departmentId === selectedDepartment.id),
+    () =>
+      enhancedTimeOffRequests.filter(
+        (r) => r.departmentId === selectedDepartment.id,
+      ),
     [selectedDepartment.id],
   );
 
@@ -229,7 +244,9 @@ export function ScheduleView() {
     if (editingShift) {
       const shiftData = shiftsData[0];
       setShifts((prev) =>
-        prev.map((s) => (s.id === editingShift.id ? { ...s, ...shiftData } : s)),
+        prev.map((s) =>
+          s.id === editingShift.id ? { ...s, ...shiftData } : s,
+        ),
       );
       toast.success("Shift updated");
     } else {
@@ -258,7 +275,9 @@ export function ScheduleView() {
     (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
       setShifts((prev) =>
         prev.map((s) =>
-          s.id === shiftId ? { ...s, employeeId: newEmployeeId, date: newDate } : s,
+          s.id === shiftId
+            ? { ...s, employeeId: newEmployeeId, date: newDate }
+            : s,
         ),
       );
       toast.success("Shift moved");
@@ -322,7 +341,8 @@ export function ScheduleView() {
   const handleDiscard = () => {
     setShifts((prev) =>
       prev.filter(
-        (s) => !(s.departmentId === selectedDepartment.id && s.status === "draft"),
+        (s) =>
+          !(s.departmentId === selectedDepartment.id && s.status === "draft"),
       ),
     );
     toast.info("Draft changes discarded");
@@ -357,9 +377,18 @@ export function ScheduleView() {
         if (e.id !== entryId) return e;
         const clockedOutAt = new Date().toISOString();
         const actualMinutes = e.clockedInAt
-          ? Math.round((new Date(clockedOutAt).getTime() - new Date(e.clockedInAt).getTime()) / 60000)
+          ? Math.round(
+              (new Date(clockedOutAt).getTime() -
+                new Date(e.clockedInAt).getTime()) /
+                60000,
+            )
           : 0;
-        return { ...e, clockedOutAt, actualMinutes, status: "clocked_out" as const };
+        return {
+          ...e,
+          clockedOutAt,
+          actualMinutes,
+          status: "clocked_out" as const,
+        };
       }),
     );
     toast.success("Clocked out");
@@ -394,7 +423,7 @@ export function ScheduleView() {
         overtimeAlerts={0}
       />
 
-      <div className="min-w-0 space-y-2 border-t bg-muted/20 px-4 py-2">
+      <div className="bg-muted/20 min-w-0 space-y-2 border-t px-4 py-2">
         <DraftReviewSummary
           shifts={filteredShifts}
           employees={deptEmployees}
@@ -452,7 +481,10 @@ export function ScheduleView() {
       />
 
       <AddShiftDialog
-        key={editingShift?.id ?? `new-${defaultShiftDate ?? ""}-${defaultShiftEmployee ?? ""}`}
+        key={
+          editingShift?.id ??
+          `new-${defaultShiftDate ?? ""}-${defaultShiftEmployee ?? ""}`
+        }
         open={addShiftOpen}
         onOpenChange={setAddShiftOpen}
         employees={deptEmployees}

@@ -3,7 +3,13 @@
 import { useCallback, useMemo } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useSettings } from "@/hooks/use-settings";
 import {
   BRAND_COLOR_PALETTE,
@@ -35,7 +41,7 @@ function StatusColorRow({
             className="size-3.5 rounded-full ring-1 ring-black/10"
             style={{ backgroundColor: currentColor }}
           />
-          <span className="text-sm font-semibold capitalize text-slate-700">
+          <span className="text-sm font-semibold text-slate-700 capitalize">
             {label}
           </span>
         </div>
@@ -54,7 +60,7 @@ function StatusColorRow({
       </div>
       <RateColorPicker value={currentColor} onChange={onColorChange} label="" />
       {hasOverride && (
-        <p className="text-[10px] text-slate-400 px-0.5">
+        <p className="px-0.5 text-[10px] text-slate-400">
           Default:{" "}
           <span className="font-semibold">
             {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)?.name ??
@@ -123,7 +129,7 @@ export function StatusColorSettings() {
               variant="ghost"
               size="sm"
               onClick={resetAll}
-              className="gap-1.5 h-8 rounded-lg text-xs text-slate-500 hover:text-slate-700"
+              className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
             >
               <RotateCcw className="size-3" />
               Reset all

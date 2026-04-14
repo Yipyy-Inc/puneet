@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Check, Palette, RotateCcw, X } from "lucide-react";
+import { Check, Palette, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -23,7 +23,6 @@ import {
   BUILTIN_SERVICE_COLORS,
   EMPTY_COLOR_OVERRIDES,
   STATUS_COLOR_MAP,
-  hexToRgba,
 } from "@/lib/operations-calendar";
 
 interface OperationsCalendarColorPanelProps {
@@ -52,15 +51,17 @@ function ColorSwatch({
             type="button"
             onClick={onSelect}
             className={cn(
-              "size-7 rounded-lg transition-all duration-200 flex items-center justify-center",
-              "hover:scale-110 active:scale-95 ring-1",
+              "flex size-7 items-center justify-center rounded-lg transition-all duration-200",
+              "ring-1 hover:scale-110 active:scale-95",
               selected
-                ? "ring-2 ring-offset-2 ring-slate-900 shadow-md"
-                : "ring-slate-200/60 hover:ring-slate-300 shadow-sm hover:shadow-md",
+                ? "shadow-md ring-2 ring-slate-900 ring-offset-2"
+                : "shadow-sm ring-slate-200/60 hover:shadow-md hover:ring-slate-300",
             )}
             style={{ backgroundColor: hex }}
           >
-            {selected && <Check className="size-3.5 text-white drop-shadow-md" />}
+            {selected && (
+              <Check className="size-3.5 text-white drop-shadow-md" />
+            )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs font-medium">
@@ -94,14 +95,19 @@ function ColorRow({
         role="button"
         tabIndex={0}
         onClick={() => setExpanded((prev) => !prev)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded((prev) => !prev); } }}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((prev) => !prev);
+          }
+        }}
+        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50"
       >
         <span
-          className="size-5 rounded-lg shrink-0 shadow-sm ring-1 ring-black/10"
+          className="size-5 shrink-0 rounded-lg shadow-sm ring-1 ring-black/10"
           style={{ backgroundColor: currentColor }}
         />
-        <span className="flex-1 text-left text-[13px] font-semibold text-slate-700 truncate capitalize">
+        <span className="flex-1 truncate text-left text-[13px] font-semibold text-slate-700 capitalize">
           {label}
         </span>
         {hasOverride && (
@@ -111,7 +117,7 @@ function ColorRow({
               e.stopPropagation();
               onReset();
             }}
-            className="opacity-0 group-hover:opacity-100 size-6 flex items-center justify-center rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-all"
+            className="flex size-6 items-center justify-center rounded-md text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-200 hover:text-slate-600"
             title="Reset to default"
           >
             <RotateCcw className="size-3" />
@@ -120,8 +126,8 @@ function ColorRow({
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-50/80 border border-slate-100">
+        <div className="animate-in fade-in slide-in-from-top-2 px-3 pt-1 pb-3 duration-200">
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-slate-100 bg-slate-50/80 p-2.5">
             {BRAND_COLOR_PALETTE.map((color) => (
               <ColorSwatch
                 key={color.hex}
@@ -133,8 +139,12 @@ function ColorRow({
             ))}
           </div>
           {hasOverride && (
-            <p className="text-[10px] text-slate-400 mt-1.5 px-1">
-              Default: <span className="font-semibold">{BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)?.name ?? defaultColor}</span>
+            <p className="mt-1.5 px-1 text-[10px] text-slate-400">
+              Default:{" "}
+              <span className="font-semibold">
+                {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)
+                  ?.name ?? defaultColor}
+              </span>
             </p>
           )}
         </div>
@@ -151,7 +161,8 @@ export function OperationsCalendarColorPanel({
   const [open, setOpen] = useState(false);
 
   const serviceEntries = useMemo(() => {
-    const entries: Array<{ key: string; label: string; defaultColor: string }> = [];
+    const entries: Array<{ key: string; label: string; defaultColor: string }> =
+      [];
     for (const [name, color] of Object.entries(BUILTIN_SERVICE_COLORS)) {
       entries.push({ key: name, label: name, defaultColor: color });
     }
@@ -225,29 +236,32 @@ export function OperationsCalendarColorPanel({
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          className="gap-2 h-10 rounded-full px-5 transition-all duration-300 border shadow-sm bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 border-slate-200/60 hover:border-slate-300 hover:shadow-md"
+          className="h-10 gap-2 rounded-full border border-slate-200/60 bg-white/80 px-5 text-slate-600 shadow-sm transition-all duration-300 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-md"
         >
           <Palette className="size-4 text-slate-400" />
           <span className="font-medium">Colors</span>
           {overrideCount > 0 && (
-            <span className="flex items-center justify-center h-5 min-w-5 px-1.5 ml-1 text-[11px] font-bold rounded-full bg-indigo-500 text-white shadow-inner">
+            <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1.5 text-[11px] font-bold text-white shadow-inner">
               {overrideCount}
             </span>
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[380px] sm:w-[420px] p-0 flex flex-col">
-        <SheetHeader className="px-5 pt-5 pb-4 border-b border-slate-100 shrink-0">
+      <SheetContent
+        side="right"
+        className="flex w-[380px] flex-col p-0 sm:w-[420px]"
+      >
+        <SheetHeader className="shrink-0 border-b border-slate-100 px-5 pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-100 ring-1 ring-indigo-200/60">
                 <Palette className="size-4.5 text-indigo-600" />
               </div>
               <div>
-                <SheetTitle className="text-sm font-black text-slate-800 tracking-tight leading-none">
+                <SheetTitle className="text-sm leading-none font-black tracking-tight text-slate-800">
                   Event Colors
                 </SheetTitle>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="mt-0.5 text-[11px] text-slate-400">
                   Customize calendar event colors
                 </p>
               </div>
@@ -257,7 +271,7 @@ export function OperationsCalendarColorPanel({
                 variant="ghost"
                 size="sm"
                 onClick={resetAll}
-                className="text-xs text-slate-500 hover:text-slate-700 gap-1.5 h-8 rounded-lg"
+                className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
               >
                 <RotateCcw className="size-3" />
                 Reset all
@@ -266,10 +280,10 @@ export function OperationsCalendarColorPanel({
           </div>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
           {/* Services section */}
           <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+            <p className="mb-2 px-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">
               Services
             </p>
             <div className="space-y-0.5">
@@ -292,7 +306,7 @@ export function OperationsCalendarColorPanel({
 
           {/* Statuses section */}
           <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+            <p className="mb-2 px-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">
               Statuses
             </p>
             <div className="space-y-0.5">

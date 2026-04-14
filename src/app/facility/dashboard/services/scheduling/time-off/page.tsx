@@ -1,26 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import {
-  CalendarOff,
-  Check,
-  X,
-  Clock,
-  Filter,
-  Search,
-  Plus,
-} from "lucide-react";
+import { CalendarOff, Check, X, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -28,14 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+
 import { toast } from "sonner";
 import {
   enhancedTimeOffRequests as initialRequests,
@@ -47,11 +26,13 @@ import type { EnhancedTimeOffRequest } from "@/types/scheduling";
 const statusBadge: Record<string, { label: string; class: string }> = {
   pending: {
     label: "Pending",
-    class: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    class:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   },
   approved: {
     label: "Approved",
-    class: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    class:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   },
   denied: {
     label: "Denied",
@@ -170,7 +151,9 @@ export default function TimeOffPage() {
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
             {departments.map((d) => (
-              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -183,15 +166,25 @@ export default function TimeOffPage() {
           const dept = departments.find((d) => d.id === req.departmentId);
           const typeInfo = typeLabels[req.type] || typeLabels.other;
           const status = statusBadge[req.status] || statusBadge.pending;
-          const startDate = new Date(req.startDate).toLocaleDateString("en-US", {
-            month: "short", day: "numeric", year: "numeric",
-          });
+          const startDate = new Date(req.startDate).toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            },
+          );
           const endDate = new Date(req.endDate).toLocaleDateString("en-US", {
-            month: "short", day: "numeric", year: "numeric",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
           });
-          const dayCount = Math.ceil(
-            (new Date(req.endDate).getTime() - new Date(req.startDate).getTime()) / (1000 * 60 * 60 * 24),
-          ) + 1;
+          const dayCount =
+            Math.ceil(
+              (new Date(req.endDate).getTime() -
+                new Date(req.startDate).getTime()) /
+                (1000 * 60 * 60 * 24),
+            ) + 1;
 
           return (
             <Card
@@ -199,9 +192,9 @@ export default function TimeOffPage() {
               className={`transition-shadow hover:shadow-md ${req.status === "pending" ? "border-amber-200 dark:border-amber-800" : ""}`}
             >
               <CardContent className="flex items-center gap-4 p-4">
-                <Avatar className="size-10 ring-2 ring-background shadow">
+                <Avatar className="ring-background size-10 shadow-sm ring-2">
                   <AvatarImage src={emp?.avatar} alt={emp?.name} />
-                  <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-xs font-semibold">
+                  <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     {emp?.initials || "??"}
                   </AvatarFallback>
                 </Avatar>
@@ -215,7 +208,10 @@ export default function TimeOffPage() {
                     <Badge
                       variant="outline"
                       className="text-[10px]"
-                      style={{ borderColor: typeInfo.color, color: typeInfo.color }}
+                      style={{
+                        borderColor: typeInfo.color,
+                        color: typeInfo.color,
+                      }}
                     >
                       {typeInfo.label}
                     </Badge>
@@ -244,12 +240,12 @@ export default function TimeOffPage() {
                           placeholder="Notes (optional)"
                           value={reviewNotes}
                           onChange={(e) => setReviewNotes(e.target.value)}
-                          className="w-48 h-8 text-xs"
+                          className="h-8 w-48 text-xs"
                         />
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                           onClick={() => handleApprove(req.id)}
                         >
                           <Check className="mr-1 size-3.5" /> Approve
@@ -257,7 +253,7 @@ export default function TimeOffPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
+                          className="border-red-200 text-red-600 hover:bg-red-50"
                           onClick={() => handleDeny(req.id)}
                         >
                           <X className="mr-1 size-3.5" /> Deny
@@ -286,7 +282,7 @@ export default function TimeOffPage() {
                 )}
 
                 {req.reviewedByName && (
-                  <div className="text-right text-xs text-muted-foreground">
+                  <div className="text-muted-foreground text-right text-xs">
                     <p>Reviewed by {req.reviewedByName}</p>
                     {req.reviewedAt && <p>{req.reviewedAt}</p>}
                   </div>
@@ -300,9 +296,7 @@ export default function TimeOffPage() {
           <div className="text-muted-foreground flex flex-col items-center py-12 text-center">
             <CalendarOff className="mb-3 size-10 opacity-30" />
             <p className="font-medium">No time off requests</p>
-            <p className="text-sm">
-              Requests from employees will appear here
-            </p>
+            <p className="text-sm">Requests from employees will appear here</p>
           </div>
         )}
       </div>

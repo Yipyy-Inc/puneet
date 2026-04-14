@@ -22,15 +22,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Clock, User, Briefcase, Calendar, MessageSquare, UserX, ShieldCheck } from "lucide-react";
+import {
+  Clock,
+  User,
+  Briefcase,
+  Calendar,
+  MessageSquare,
+  UserX,
+  ShieldCheck,
+} from "lucide-react";
 import { RecurrenceSection } from "@/components/scheduling/RecurrenceSection";
 import { ConflictList } from "@/components/scheduling/ConflictList";
 import { SkillMultiSelect } from "@/components/scheduling/SkillMultiSelect";
 import { skillsCatalog } from "@/data/scheduling";
-import {
-  parseLocalDate,
-  generateRecurringDates,
-} from "@/lib/shift-recurrence";
+import { parseLocalDate, generateRecurringDates } from "@/lib/shift-recurrence";
 import {
   detectShiftConflicts,
   hasBlockingConflict,
@@ -97,7 +102,9 @@ export function AddShiftDialog({
   );
   const [positionId, setPositionId] = useState(editingShift?.positionId ?? "");
   const [date, setDate] = useState(initialDate);
-  const [startTime, setStartTime] = useState(editingShift?.startTime ?? "09:00");
+  const [startTime, setStartTime] = useState(
+    editingShift?.startTime ?? "09:00",
+  );
   const [endTime, setEndTime] = useState(editingShift?.endTime ?? "17:00");
   const [breakMinutes, setBreakMinutes] = useState(
     editingShift?.breakMinutes?.toString() ?? "30",
@@ -261,7 +268,7 @@ export function AddShiftDialog({
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[520px]">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-indigo-500 to-purple-500">
               <Clock className="size-4 text-white" />
             </div>
             {isEditing ? "Edit Shift" : "Add New Shift"}
@@ -273,7 +280,7 @@ export function AddShiftDialog({
           <div className="space-y-5 py-2 pr-1">
             {/* ── Shift Details ───────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                 Shift Details
               </p>
 
@@ -329,8 +336,8 @@ export function AddShiftDialog({
                   <SelectContent>
                     <SelectItem value="unassigned">
                       <div className="flex items-center gap-2">
-                        <div className="flex size-5 items-center justify-center rounded-full border border-dashed border-muted-foreground/50">
-                          <UserX className="size-3 text-muted-foreground" />
+                        <div className="border-muted-foreground/50 flex size-5 items-center justify-center rounded-full border border-dashed">
+                          <UserX className="text-muted-foreground size-3" />
                         </div>
                         <span className="text-muted-foreground">
                           Unassigned — Open Shift
@@ -343,7 +350,7 @@ export function AddShiftDialog({
                         <SelectItem key={emp.id} value={emp.id}>
                           <div className="flex items-center gap-2">
                             <Avatar className="size-5">
-                              <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-[8px] text-white">
+                              <AvatarFallback className="bg-linear-to-br from-indigo-400 to-purple-500 text-[8px] text-white">
                                 {emp.initials}
                               </AvatarFallback>
                             </Avatar>
@@ -360,7 +367,7 @@ export function AddShiftDialog({
 
             {/* ── Schedule ────────────────────────────────────────────── */}
             <div className="space-y-3">
-              <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+              <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                 Schedule
               </p>
 
@@ -421,7 +428,8 @@ export function AddShiftDialog({
               {/* Required skills / certifications */}
               <div className="space-y-1.5">
                 <Label className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                  <ShieldCheck className="size-3" /> Required skills / certifications
+                  <ShieldCheck className="size-3" /> Required skills /
+                  certifications
                   <Badge
                     variant="outline"
                     className="ml-1 px-1.5 py-0 text-[9px]"
@@ -461,7 +469,7 @@ export function AddShiftDialog({
               <>
                 <Separator />
                 <div className="space-y-2">
-                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                     Scheduling Conflicts
                   </p>
                   <ConflictList conflicts={conflicts} />
@@ -512,7 +520,7 @@ export function AddShiftDialog({
               <Button
                 onClick={handleSave}
                 disabled={!canSave}
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600"
+                className="bg-linear-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600"
               >
                 {isEditing
                   ? "Update Shift"

@@ -192,9 +192,27 @@ function isValidPhoneNumber(value: string): boolean {
 }
 
 const DEFAULT_VACCINES: VaccineEntry[] = [
-  { name: "Rabies", expiryDate: "", proofFile: null, proofPreview: "", addLater: false },
-  { name: "DHPP", expiryDate: "", proofFile: null, proofPreview: "", addLater: false },
-  { name: "Bordetella", expiryDate: "", proofFile: null, proofPreview: "", addLater: false },
+  {
+    name: "Rabies",
+    expiryDate: "",
+    proofFile: null,
+    proofPreview: "",
+    addLater: false,
+  },
+  {
+    name: "DHPP",
+    expiryDate: "",
+    proofFile: null,
+    proofPreview: "",
+    addLater: false,
+  },
+  {
+    name: "Bordetella",
+    expiryDate: "",
+    proofFile: null,
+    proofPreview: "",
+    addLater: false,
+  },
 ];
 
 const DEFAULT_AGREEMENTS = {
@@ -241,7 +259,12 @@ function VaccineStep({
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const handleProofUpload = (index: number, file: File) => {
-    const validTypes = ["image/jpeg", "image/png", "image/jpg", "application/pdf"];
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "application/pdf",
+    ];
     if (!validTypes.includes(file.type)) {
       toast.error("Please upload a PDF or image file (JPG, PNG)");
       return;
@@ -258,7 +281,12 @@ function VaccineStep({
         setVaccines((prev) =>
           prev.map((v, i) =>
             i === index
-              ? { ...v, proofFile: file, proofPreview: e.target?.result as string, addLater: false }
+              ? {
+                  ...v,
+                  proofFile: file,
+                  proofPreview: e.target?.result as string,
+                  addLater: false,
+                }
               : v,
           ),
         );
@@ -289,7 +317,12 @@ function VaccineStep({
     setVaccines((prev) =>
       prev.map((v, i) =>
         i === index
-          ? { ...v, addLater: !v.addLater, proofFile: v.addLater ? v.proofFile : null, proofPreview: v.addLater ? v.proofPreview : "" }
+          ? {
+              ...v,
+              addLater: !v.addLater,
+              proofFile: v.addLater ? v.proofFile : null,
+              proofPreview: v.addLater ? v.proofPreview : "",
+            }
           : v,
       ),
     );
@@ -305,8 +338,8 @@ function VaccineStep({
     <div className="animate-in fade-in space-y-4 py-2 duration-200">
       <p className="text-muted-foreground text-sm">
         Vaccine information for{" "}
-        <span className="text-foreground font-medium">your pet</span>.
-        Upload proof of vaccination (photos of certificates) so staff can verify.
+        <span className="text-foreground font-medium">your pet</span>. Upload
+        proof of vaccination (photos of certificates) so staff can verify.
         Bookings may be blocked until records are verified.
       </p>
 
@@ -315,7 +348,8 @@ function VaccineStep({
           key={`${v.name}-${i}`}
           className={cn(
             "rounded-lg border p-3 transition-colors",
-            v.addLater && "border-dashed border-muted-foreground/30 bg-muted/30",
+            v.addLater &&
+              "border-muted-foreground/30 bg-muted/30 border-dashed",
           )}
         >
           <div className="mb-2 flex items-center justify-between">
@@ -324,13 +358,19 @@ function VaccineStep({
               <p className="text-sm font-medium">{v.name}</p>
             </div>
             {v.proofFile && !v.addLater && (
-              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-[10px]">
+              <Badge
+                variant="secondary"
+                className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+              >
                 <Check className="mr-0.5 size-2.5" />
                 Uploaded
               </Badge>
             )}
             {v.addLater && (
-              <Badge variant="outline" className="text-muted-foreground text-[10px] border-dashed">
+              <Badge
+                variant="outline"
+                className="text-muted-foreground border-dashed text-[10px]"
+              >
                 <Clock className="mr-0.5 size-2.5" />
                 Adding later
               </Badge>
@@ -362,16 +402,16 @@ function VaccineStep({
 
               {/* Upload proof section */}
               <div className="mt-3">
-                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                <Label className="text-muted-foreground mb-1.5 block text-xs">
                   Proof of Vaccination
                 </Label>
 
                 {!v.proofFile ? (
-                  <label
-                    className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 transition-colors hover:border-muted-foreground/50 hover:bg-muted/50"
-                  >
+                  <label className="border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors">
                     <input
-                      ref={(el) => { fileInputRefs.current[i] = el; }}
+                      ref={(el) => {
+                        fileInputRefs.current[i] = el;
+                      }}
                       type="file"
                       accept=".jpg,.jpeg,.png,.pdf"
                       className="hidden"
@@ -381,19 +421,19 @@ function VaccineStep({
                       }}
                     />
                     <div className="flex flex-col items-center gap-1.5">
-                      <div className="rounded-full bg-muted p-2">
+                      <div className="bg-muted rounded-full p-2">
                         <Upload className="text-muted-foreground size-4" />
                       </div>
                       <p className="text-xs font-medium">
                         Upload vaccine certificate
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-muted-foreground text-[10px]">
                         JPG, PNG, or PDF — max 10MB
                       </p>
                     </div>
                   </label>
                 ) : (
-                  <div className="rounded-lg border bg-muted/30 p-2">
+                  <div className="bg-muted/30 rounded-lg border p-2">
                     {v.proofPreview ? (
                       <div className="relative mb-2 overflow-hidden rounded-md">
                         <img
@@ -406,7 +446,7 @@ function VaccineStep({
                         </div>
                       </div>
                     ) : (
-                      <div className="mb-2 flex h-20 items-center justify-center rounded-md bg-muted">
+                      <div className="bg-muted mb-2 flex h-20 items-center justify-center rounded-md">
                         <FileImage className="text-muted-foreground size-8 opacity-50" />
                       </div>
                     )}
@@ -415,11 +455,12 @@ function VaccineStep({
                         <p className="truncate text-xs font-medium">
                           {v.proofFile.name}
                         </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {formatFileSize(v.proofFile.size)} — Pending staff verification
+                        <p className="text-muted-foreground text-[10px]">
+                          {formatFileSize(v.proofFile.size)} — Pending staff
+                          verification
                         </p>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <div className="ml-2 flex shrink-0 items-center gap-1">
                         <Button
                           type="button"
                           variant="ghost"
@@ -435,7 +476,7 @@ function VaccineStep({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-6 w-6 p-0"
                           onClick={() => removeProof(i)}
                         >
                           <X className="size-3" />
@@ -455,7 +496,7 @@ function VaccineStep({
             className={cn(
               "mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs transition-colors",
               v.addLater
-                ? "text-primary font-medium hover:bg-primary/5"
+                ? "text-primary hover:bg-primary/5 font-medium"
                 : "text-muted-foreground hover:bg-muted/50",
             )}
           >
@@ -480,7 +521,13 @@ function VaccineStep({
         onClick={() =>
           setVaccines([
             ...vaccines,
-            { name: "Other", expiryDate: "", proofFile: null, proofPreview: "", addLater: false },
+            {
+              name: "Other",
+              expiryDate: "",
+              proofFile: null,
+              proofPreview: "",
+              addLater: false,
+            },
           ])
         }
       >
@@ -489,9 +536,9 @@ function VaccineStep({
       </Button>
 
       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-        <AlertTriangle className="mb-1 inline size-3" /> Vaccination
-        records can be added later, but some services may require proof
-        before check-in. Uploaded documents will be reviewed by staff.
+        <AlertTriangle className="mb-1 inline size-3" /> Vaccination records can
+        be added later, but some services may require proof before check-in.
+        Uploaded documents will be reviewed by staff.
       </div>
     </div>
   );
@@ -566,7 +613,7 @@ function Field({
       {(error || reserveErrorSpace) && (
         <p
           className={cn(
-            "text-destructive flex items-center gap-1 text-xs leading-tight",
+            "text-destructive flex items-center gap-1 text-xs/tight",
             error ? "visible" : "invisible h-4",
           )}
           aria-live="polite"
@@ -590,9 +637,8 @@ export function CreateClientModal({
   facilityName,
 }: CreateClientModalProps) {
   const { languageSettings } = useSettings();
-  const customerLanguageOptions = getEnabledCustomerLanguageOptions(
-    languageSettings,
-  );
+  const customerLanguageOptions =
+    getEnabledCustomerLanguageOptions(languageSettings);
   const showPreferredLanguageField = customerLanguageOptions.length > 0;
   const fallbackPreferredLanguage =
     customerLanguageOptions[0]?.code ?? DEFAULT_CLIENT.language;
@@ -655,8 +701,7 @@ export function CreateClientModal({
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.email))
         e.email = "Invalid email format";
       if (!client.phone.trim()) e.phone = "Phone number is required";
-      else if (!isValidPhoneNumber(client.phone))
-        e.phone = "Use 10-15 digits";
+      else if (!isValidPhoneNumber(client.phone)) e.phone = "Use 10-15 digits";
       if (!client.street.trim()) e.street = "Street address is required";
       if (!client.city.trim()) e.city = "City is required";
       if (!client.state.trim()) e.state = "Province/State is required";
@@ -675,7 +720,11 @@ export function CreateClientModal({
       }
     }
 
-    if (s === 3 && client.vetPhone.trim() && !isValidPhoneNumber(client.vetPhone)) {
+    if (
+      s === 3 &&
+      client.vetPhone.trim() &&
+      !isValidPhoneNumber(client.vetPhone)
+    ) {
       e.vetPhone = "Use 10-15 digits";
     }
 
@@ -1338,7 +1387,10 @@ export function CreateClientModal({
                   type="tel"
                   value={client.vetPhone}
                   onChange={(e) =>
-                    updateClient("vetPhone", normalizePhoneInput(e.target.value))
+                    updateClient(
+                      "vetPhone",
+                      normalizePhoneInput(e.target.value),
+                    )
                   }
                   placeholder="123-456-7890"
                 />
@@ -1349,10 +1401,7 @@ export function CreateClientModal({
 
         {/* ── Step 4: Vaccinations ── */}
         {step === 4 && (
-          <VaccineStep
-            vaccines={vaccines}
-            setVaccines={setVaccines}
-          />
+          <VaccineStep vaccines={vaccines} setVaccines={setVaccines} />
         )}
 
         {/* ── Step 5: Agreements ── */}
@@ -1485,7 +1534,8 @@ export function CreateClientModal({
               </p>
               {showPreferredLanguageField && (
                 <p className="text-muted-foreground text-xs">
-                  Preferred language: {getCustomerLanguageLabel(selectedPreferredLanguage)}
+                  Preferred language:{" "}
+                  {getCustomerLanguageLabel(selectedPreferredLanguage)}
                 </p>
               )}
               <p className="text-muted-foreground mt-1 text-xs">
@@ -1539,14 +1589,21 @@ export function CreateClientModal({
                   Edit
                 </Button>
               </div>
-              {vaccines.filter((v) => v.expiryDate || v.proofFile || v.addLater).length > 0 ? (
+              {vaccines.filter((v) => v.expiryDate || v.proofFile || v.addLater)
+                .length > 0 ? (
                 vaccines.map((v) => {
                   if (!v.expiryDate && !v.proofFile && !v.addLater) return null;
                   return (
-                    <div key={v.name} className="flex items-center gap-2 py-0.5">
+                    <div
+                      key={v.name}
+                      className="flex items-center gap-2 py-0.5"
+                    >
                       <span className="text-xs font-medium">{v.name}:</span>
                       {v.addLater ? (
-                        <Badge variant="outline" className="text-[10px] border-dashed text-muted-foreground">
+                        <Badge
+                          variant="outline"
+                          className="text-muted-foreground border-dashed text-[10px]"
+                        >
                           <Clock className="mr-0.5 size-2.5" />
                           Adding later
                         </Badge>
@@ -1558,7 +1615,10 @@ export function CreateClientModal({
                             </span>
                           )}
                           {v.proofFile && (
-                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-[10px]">
+                            <Badge
+                              variant="secondary"
+                              className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                            >
                               <FileImage className="mr-0.5 size-2.5" />
                               Proof uploaded
                             </Badge>

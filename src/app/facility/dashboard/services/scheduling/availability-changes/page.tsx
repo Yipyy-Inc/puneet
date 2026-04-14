@@ -30,7 +30,8 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const statusBadge: Record<string, { label: string; class: string }> = {
   pending: {
     label: "Pending",
-    class: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    class:
+      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   },
   approved: {
     label: "Approved",
@@ -70,11 +71,11 @@ function AvailabilityGrid({
             key={idx}
             className={`rounded-md border p-1.5 text-[10px] ${
               !day?.isAvailable
-                ? "bg-slate-50 text-muted-foreground dark:bg-slate-900"
+                ? "text-muted-foreground bg-slate-50 dark:bg-slate-900"
                 : "bg-emerald-50 dark:bg-emerald-950/30"
             } ${changed ? "ring-2 ring-amber-400" : ""}`}
           >
-            <div className="font-medium text-foreground">{label}</div>
+            <div className="text-foreground font-medium">{label}</div>
             {day?.isAvailable ? (
               <div className="mt-0.5 tabular-nums">
                 {day.startTime}
@@ -82,7 +83,7 @@ function AvailabilityGrid({
                 {day.endTime}
               </div>
             ) : (
-              <div className="mt-0.5 text-muted-foreground">Off</div>
+              <div className="text-muted-foreground mt-0.5">Off</div>
             )}
           </div>
         );
@@ -148,7 +149,8 @@ export default function AvailabilityChangesPage() {
             Availability Change Requests
           </h2>
           <p className="text-muted-foreground text-sm">
-            Review and approve employee requests to change their default weekly availability.
+            Review and approve employee requests to change their default weekly
+            availability.
           </p>
         </div>
         {pendingCount > 0 && (
@@ -204,7 +206,7 @@ export default function AvailabilityChangesPage() {
             >
               <CardContent className="space-y-4 p-4">
                 <div className="flex items-center gap-3">
-                  <Avatar className="size-10 ring-2 ring-background shadow">
+                  <Avatar className="ring-background size-10 shadow-sm ring-2">
                     <AvatarImage src={emp?.avatar} alt={emp?.name} />
                     <AvatarFallback className="bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {emp?.initials ?? "??"}
@@ -224,7 +226,7 @@ export default function AvailabilityChangesPage() {
                     </div>
                     <p className="text-muted-foreground mt-0.5 text-xs">
                       Effective from{" "}
-                      <span className="font-medium text-foreground">
+                      <span className="text-foreground font-medium">
                         {req.effectiveFrom}
                       </span>
                       {" · "}requested {req.requestedAt}
@@ -235,16 +237,16 @@ export default function AvailabilityChangesPage() {
 
                 <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr]">
                   <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                       Current
                     </p>
                     <AvailabilityGrid days={req.currentAvailability} />
                   </div>
                   <div className="hidden items-center justify-center lg:flex">
-                    <ArrowRight className="size-5 text-muted-foreground" />
+                    <ArrowRight className="text-muted-foreground size-5" />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                       Proposed
                     </p>
                     <AvailabilityGrid
@@ -307,7 +309,7 @@ export default function AvailabilityChangesPage() {
                   </div>
                 ) : (
                   req.reviewedByName && (
-                    <div className="border-t pt-2 text-xs text-muted-foreground">
+                    <div className="text-muted-foreground border-t pt-2 text-xs">
                       Reviewed by {req.reviewedByName} on {req.reviewedAt}
                       {req.reviewNotes ? ` — ${req.reviewNotes}` : ""}
                     </div>
@@ -323,7 +325,8 @@ export default function AvailabilityChangesPage() {
             <Calendar className="mb-3 size-10 opacity-30" />
             <p className="font-medium">No availability change requests</p>
             <p className="text-sm">
-              When employees request availability updates, they'll appear here.
+              When employees request availability updates, they&apos;ll appear
+              here.
             </p>
           </div>
         )}

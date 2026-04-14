@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import {
   FolderOpen,
-  Plus,
   Search,
   FileText,
   Eye,
@@ -17,13 +16,9 @@ import {
   CreditCard,
   Award,
   File,
-  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -94,8 +89,14 @@ export default function DocumentsPage() {
 
   const filtered = useMemo(() => {
     return documents.filter((d) => {
-      if (searchQuery && !d.name.toLowerCase().includes(searchQuery.toLowerCase()) && !d.employeeName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (filterEmployee !== "all" && d.employeeId !== filterEmployee) return false;
+      if (
+        searchQuery &&
+        !d.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !d.employeeName.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+        return false;
+      if (filterEmployee !== "all" && d.employeeId !== filterEmployee)
+        return false;
       return true;
     });
   }, [documents, searchQuery, filterEmployee]);
@@ -127,9 +128,7 @@ export default function DocumentsPage() {
   const handleToggleVisibility = (docId: string) => {
     setDocuments((prev) =>
       prev.map((d) =>
-        d.id === docId
-          ? { ...d, visibleToEmployee: !d.visibleToEmployee }
-          : d,
+        d.id === docId ? { ...d, visibleToEmployee: !d.visibleToEmployee } : d,
       ),
     );
     toast.success("Visibility updated");
@@ -174,7 +173,7 @@ export default function DocumentsPage() {
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative max-w-xs flex-1">
-          <Search className="text-muted-foreground absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -206,9 +205,12 @@ export default function DocumentsPage() {
           const dept = departments.find((d) => d.id === doc.departmentId);
 
           return (
-            <Card key={doc.id} className="group transition-shadow hover:shadow-md">
+            <Card
+              key={doc.id}
+              className="group transition-shadow hover:shadow-md"
+            >
               <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
+                <div className="bg-muted flex size-10 items-center justify-center rounded-lg">
                   <TypeIcon className="text-muted-foreground size-5" />
                 </div>
 
@@ -219,22 +221,33 @@ export default function DocumentsPage() {
                       {typeLabels[doc.type] || doc.type}
                     </Badge>
                     {expired && (
-                      <Badge className="bg-red-100 text-red-700 text-[10px] dark:bg-red-900/30 dark:text-red-400">
+                      <Badge className="bg-red-100 text-[10px] text-red-700 dark:bg-red-900/30 dark:text-red-400">
                         <AlertTriangle className="mr-0.5 size-2.5" /> Expired
                       </Badge>
                     )}
                     {expiring && !expired && (
-                      <Badge className="bg-amber-100 text-amber-700 text-[10px] dark:bg-amber-900/30 dark:text-amber-400">
+                      <Badge className="bg-amber-100 text-[10px] text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                         <Calendar className="mr-0.5 size-2.5" /> Expiring Soon
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="text-muted-foreground mt-0.5 flex items-center gap-3 text-xs">
                     <span className="flex items-center gap-1">
                       <Avatar className="size-4">
-                        <AvatarImage src={scheduleEmployees.find((e) => e.id === doc.employeeId)?.avatar} alt={doc.employeeName} />
-                        <AvatarFallback className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 text-[6px]">
-                          {scheduleEmployees.find((e) => e.id === doc.employeeId)?.initials}
+                        <AvatarImage
+                          src={
+                            scheduleEmployees.find(
+                              (e) => e.id === doc.employeeId,
+                            )?.avatar
+                          }
+                          alt={doc.employeeName}
+                        />
+                        <AvatarFallback className="bg-slate-100 text-[6px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {
+                            scheduleEmployees.find(
+                              (e) => e.id === doc.employeeId,
+                            )?.initials
+                          }
                         </AvatarFallback>
                       </Avatar>
                       {doc.employeeName}
@@ -306,15 +319,23 @@ export default function DocumentsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Document Name</Label>
-              <Input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="e.g., Work Permit" />
+              <Input
+                value={docName}
+                onChange={(e) => setDocName(e.target.value)}
+                placeholder="e.g., Work Permit"
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Type</Label>
               <Select value={docType} onValueChange={setDocType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   {Object.entries(typeLabels).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -322,17 +343,25 @@ export default function DocumentsPage() {
             <div className="space-y-1.5">
               <Label>Employee</Label>
               <Select value={docEmployee} onValueChange={setDocEmployee}>
-                <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select employee" />
+                </SelectTrigger>
                 <SelectContent>
                   {scheduleEmployees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Expiry Date (optional)</Label>
-              <Input type="date" value={docExpires} onChange={(e) => setDocExpires(e.target.value)} />
+              <Input
+                type="date"
+                value={docExpires}
+                onChange={(e) => setDocExpires(e.target.value)}
+              />
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={docVisible} onCheckedChange={setDocVisible} />
@@ -349,8 +378,15 @@ export default function DocumentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadOpen(false)}>Cancel</Button>
-            <Button onClick={handleUpload} disabled={!docName.trim() || !docEmployee}>Upload</Button>
+            <Button variant="outline" onClick={() => setUploadOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpload}
+              disabled={!docName.trim() || !docEmployee}
+            >
+              Upload
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

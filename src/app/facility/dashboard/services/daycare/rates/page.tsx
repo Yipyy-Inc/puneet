@@ -128,7 +128,7 @@ export default function DaycareRatesPage() {
       render: (item) => (
         <div className="flex items-center gap-2">
           <span
-            className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+            className="size-3 shrink-0 rounded-full ring-1 ring-black/10"
             style={{ backgroundColor: item.color ?? "#0284c7" }}
           />
           <span className="font-medium">{item.name}</span>

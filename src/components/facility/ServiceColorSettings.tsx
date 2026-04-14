@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import {
-  type CalendarColorOverrides,
   BRAND_COLOR_PALETTE,
   BUILTIN_SERVICE_COLORS,
   EMPTY_COLOR_OVERRIDES,
@@ -46,11 +45,11 @@ function ColorSwatch({
             type="button"
             onClick={onSelect}
             className={cn(
-              "size-7 rounded-lg transition-all duration-200 flex items-center justify-center",
-              "hover:scale-110 active:scale-95 ring-1",
+              "flex size-7 items-center justify-center rounded-lg transition-all duration-200",
+              "ring-1 hover:scale-110 active:scale-95",
               selected
-                ? "ring-2 ring-offset-2 ring-slate-900 shadow-md"
-                : "ring-slate-200/60 hover:ring-slate-300 shadow-sm hover:shadow-md",
+                ? "shadow-md ring-2 ring-slate-900 ring-offset-2"
+                : "shadow-sm ring-slate-200/60 hover:shadow-md hover:ring-slate-300",
             )}
             style={{ backgroundColor: hex }}
           >
@@ -96,13 +95,13 @@ function ColorRow({
             setExpanded((prev) => !prev);
           }
         }}
-        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50"
       >
         <span
-          className="size-5 rounded-lg shrink-0 shadow-sm ring-1 ring-black/10"
+          className="size-5 shrink-0 rounded-lg shadow-sm ring-1 ring-black/10"
           style={{ backgroundColor: currentColor }}
         />
-        <span className="flex-1 text-left text-[13px] font-semibold text-slate-700 truncate capitalize">
+        <span className="flex-1 truncate text-left text-[13px] font-semibold text-slate-700 capitalize">
           {label}
         </span>
         {hasOverride && (
@@ -112,7 +111,7 @@ function ColorRow({
               e.stopPropagation();
               onReset();
             }}
-            className="opacity-0 group-hover:opacity-100 size-6 flex items-center justify-center rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-all"
+            className="flex size-6 items-center justify-center rounded-md text-slate-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-slate-200 hover:text-slate-600"
             title="Reset to default"
           >
             <RotateCcw className="size-3" />
@@ -121,8 +120,8 @@ function ColorRow({
       </div>
 
       {expanded && (
-        <div className="px-3 pb-3 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-50/80 border border-slate-100">
+        <div className="animate-in fade-in slide-in-from-top-2 px-3 pt-1 pb-3 duration-200">
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-slate-100 bg-slate-50/80 p-2.5">
             {BRAND_COLOR_PALETTE.map((color) => (
               <ColorSwatch
                 key={color.hex}
@@ -134,7 +133,7 @@ function ColorRow({
             ))}
           </div>
           {hasOverride && (
-            <p className="text-[10px] text-slate-400 mt-1.5 px-1">
+            <p className="mt-1.5 px-1 text-[10px] text-slate-400">
               Default:{" "}
               <span className="font-semibold">
                 {BRAND_COLOR_PALETTE.find((c) => c.hex === defaultColor)
@@ -299,9 +298,9 @@ export function ServiceColorSettings() {
               <div>
                 <CardTitle>Service Colors</CardTitle>
                 <CardDescription>
-                  Assign colors to each service. These colors are used across the
-                  system — calendar, badges, and reports — to identify services at
-                  a glance.
+                  Assign colors to each service. These colors are used across
+                  the system — calendar, badges, and reports — to identify
+                  services at a glance.
                 </CardDescription>
               </div>
             </div>
@@ -310,7 +309,7 @@ export function ServiceColorSettings() {
                 variant="ghost"
                 size="sm"
                 onClick={resetAll}
-                className="text-xs text-slate-500 hover:text-slate-700 gap-1.5 h-8 rounded-lg"
+                className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
               >
                 <RotateCcw className="size-3" />
                 Reset overrides
@@ -321,7 +320,7 @@ export function ServiceColorSettings() {
         <CardContent className="space-y-6">
           {/* Built-in Services — colors stored on ModuleConfig */}
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+            <p className="mb-2 px-3 text-[10px] font-black tracking-widest text-slate-400 uppercase">
               Built-in Services
             </p>
             <div className="space-y-0.5">
@@ -360,13 +359,12 @@ export function ServiceColorSettings() {
           {/* Other built-in services (Evaluation, Retail / POS, Facility) */}
           {otherServices.length > 0 && (
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+              <p className="mb-2 px-3 text-[10px] font-black tracking-widest text-slate-400 uppercase">
                 Other Services
               </p>
               <div className="space-y-0.5">
                 {otherServices.map((entry) => {
-                  const overridden =
-                    serviceColorOverrides.services[entry.key];
+                  const overridden = serviceColorOverrides.services[entry.key];
                   return (
                     <ColorRow
                       key={entry.key}
@@ -388,13 +386,12 @@ export function ServiceColorSettings() {
           {/* Custom Services */}
           {customServices.length > 0 && (
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+              <p className="mb-2 px-3 text-[10px] font-black tracking-widest text-slate-400 uppercase">
                 Custom Services
               </p>
               <div className="space-y-0.5">
                 {customServices.map((entry) => {
-                  const overridden =
-                    serviceColorOverrides.services[entry.key];
+                  const overridden = serviceColorOverrides.services[entry.key];
                   return (
                     <ColorRow
                       key={entry.key}
@@ -415,13 +412,12 @@ export function ServiceColorSettings() {
 
           {/* Status Colors */}
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-3">
+            <p className="mb-2 px-3 text-[10px] font-black tracking-widest text-slate-400 uppercase">
               Status Colors
             </p>
             <div className="space-y-0.5">
               {statusEntries.map((entry) => {
-                const overridden =
-                  serviceColorOverrides.statuses[entry.key];
+                const overridden = serviceColorOverrides.statuses[entry.key];
                 return (
                   <ColorRow
                     key={entry.key}

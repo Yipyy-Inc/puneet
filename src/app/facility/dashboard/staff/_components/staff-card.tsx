@@ -1,0 +1,186 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  MoreVertical,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  ClipboardList,
+  CalendarClock,
+  UserPlus,
+  ArrowLeftRight,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import type { StaffProfile } from "@/types/facility-staff";
+import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import {
+  RolePill,
+  ServiceChip,
+  StaffAvatar,
+  fullNameOf,
+  formatRelative,
+} from "./staff-shared";
+
+interface StaffCardProps {
+  profile: StaffProfile;
+  onView: (p: StaffProfile) => void;
+  onEdit: (p: StaffProfile) => void;
+  onInvite: (p: StaffProfile) => void;
+  onTransfer: (p: StaffProfile) => void;
+  onDelete: (p: StaffProfile) => void;
+}
+
+export function StaffCard({
+  profile,
+  onView,
+  onEdit,
+  onInvite,
+  onTransfer,
+  onDelete,
+}: StaffCardProps) {
+  const locationLabels = profile.assignedLocations
+    .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
+    .filter(Boolean) as string[];
+
+  return (
+    <div
+      onClick={() => onView(profile)}
+      className={cn(
+        "group bg-card relative cursor-pointer overflow-hidden rounded-2xl border",
+        "transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl",
+      )}
+    >
+      <div className="relative p-5">
+        <div className="flex items-start gap-3">
+          <StaffAvatar profile={profile} size="lg" />
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate font-semibold tracking-tight">
+                  {fullNameOf(profile)}
+                </div>
+                <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
+                  <Clock className="size-3" />
+                  Active {formatRelative(profile.lastActive)}
+                </div>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DropdownMenuItem onClick={() => onView(profile)}>
+                    <Eye className="size-4" /> View details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onEdit(profile)}>
+                    <Pencil className="size-4" /> Edit profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onInvite(profile)}>
+                    <UserPlus className="size-4" />
+                    {profile.status === "invited"
+                      ? "Resend invitation"
+                      : "Send invitation link"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onTransfer(profile)}>
+                    <ArrowLeftRight className="size-4" />
+                    Transfer appointments
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => onDelete(profile)}
+                  >
+                    <Trash2 className="size-4" /> Delete profile
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <RolePill role={profile.primaryRole} />
+              {profile.additionalRoles.map((r) => (
+                <RolePill key={r} role={r} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Services strip */}
+        {profile.serviceAssignments.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1">
+            {profile.serviceAssignments.map((s) => (
+              <ServiceChip key={s} module={s} />
+            ))}
+          </div>
+        )}
+
+        {/* Contact + location */}
+        <div className="text-muted-foreground mt-4 grid grid-cols-1 gap-1.5 text-xs">
+          <div className="flex items-center gap-2 truncate">
+            <Mail className="size-3 shrink-0" /> {profile.email}
+          </div>
+          <div className="flex items-center gap-2 truncate">
+            <Phone className="size-3 shrink-0" /> {profile.phone}
+          </div>
+          <div className="flex items-center gap-2 truncate">
+            <MapPin className="size-3 shrink-0" />
+            {locationLabels.length === FACILITY_LOCATIONS.length
+              ? "All locations"
+              : locationLabels.join(" · ") || "No locations"}
+          </div>
+        </div>
+
+        {/* Footer metrics */}
+        <div className="border-border/60 mt-4 grid grid-cols-2 gap-2 border-t pt-3">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary/10 rounded-md p-1.5">
+              <CalendarClock className="text-primary size-3.5" />
+            </div>
+            <div className="leading-tight">
+              <div className="text-sm font-semibold">
+                {profile.upcomingAppointments}
+              </div>
+              <div className="text-muted-foreground text-[10px]">Upcoming</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="rounded-md bg-amber-500/10 p-1.5">
+              <ClipboardList className="size-3.5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="leading-tight">
+              <div className="text-sm font-semibold">{profile.openTasks}</div>
+              <div className="text-muted-foreground text-[10px]">
+                Open tasks
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

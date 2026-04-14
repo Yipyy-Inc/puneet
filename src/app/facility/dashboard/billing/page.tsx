@@ -302,7 +302,9 @@ export default function FacilityBillingPage() {
       render: (inv) => (
         <span
           className={
-            inv.amountDue > 0 ? "price-value text-amber-600" : "price-value text-green-600"
+            inv.amountDue > 0
+              ? "price-value text-amber-600"
+              : "price-value text-green-600"
           }
         >
           ${inv.amountDue.toFixed(2)}
@@ -800,7 +802,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground">
                               Remaining:
                             </span>
-                            <span className="ml-1 price-value">
+                            <span className="price-value ml-1">
                               ${credit.remainingAmount.toFixed(2)}
                             </span>
                           </div>
@@ -808,7 +810,7 @@ export default function FacilityBillingPage() {
                             <span className="text-muted-foreground">
                               Original:
                             </span>
-                            <span className="ml-1 price-value">
+                            <span className="price-value ml-1">
                               ${credit.amount.toFixed(2)}
                             </span>
                           </div>
@@ -1629,7 +1631,10 @@ export default function FacilityBillingPage() {
                                 {tx.amount.toFixed(2)}
                               </p>
                               <p className="text-muted-foreground text-xs">
-                                Balance: <span className="price-value">${tx.balanceAfter.toFixed(2)}</span>
+                                Balance:{" "}
+                                <span className="price-value">
+                                  ${tx.balanceAfter.toFixed(2)}
+                                </span>
                               </p>
                             </div>
                           </div>

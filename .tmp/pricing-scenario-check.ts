@@ -21,7 +21,8 @@ class LocalStorageMock {
 }
 
 const localStorageMock = new LocalStorageMock();
-(globalThis as { localStorage?: LocalStorageMock }).localStorage = localStorageMock;
+(globalThis as { localStorage?: LocalStorageMock }).localStorage =
+  localStorageMock;
 (globalThis as { window?: { localStorage: LocalStorageMock } }).window = {
   localStorage: localStorageMock,
 };
@@ -69,11 +70,17 @@ function setRules(rules: StoredPricingRules): void {
   localStorageMock.setItem(PRICING_RULES_STORAGE_KEY, JSON.stringify(rules));
 }
 
-function summarize(name: string, result: ReturnType<typeof applyDynamicPricingRules>): void {
+function summarize(
+  name: string,
+  result: ReturnType<typeof applyDynamicPricingRules>,
+): void {
   const adjustmentSummary =
     result.adjustments.length > 0
       ? result.adjustments
-          .map((adjustment) => `${adjustment.label}:${adjustment.amount.toFixed(2)}`)
+          .map(
+            (adjustment) =>
+              `${adjustment.label}:${adjustment.amount.toFixed(2)}`,
+          )
           .join(" | ")
       : "none";
 
@@ -136,7 +143,10 @@ const basePet = {
     basePrice: 400,
     existingExtraServices: [],
     selectedPetIds: [1, 2],
-    pets: [{ ...basePet, id: 1 }, { ...basePet, id: 2 }],
+    pets: [
+      { ...basePet, id: 1 },
+      { ...basePet, id: 2 },
+    ],
     addOnsCatalog: [],
     boardingNights: 2,
     sessionUnits: 2,
@@ -242,7 +252,10 @@ const basePet = {
 {
   const rules = emptyRules();
   const halfDay = pickRule(defaults.latePickupFees, "late-window-half-day");
-  const extraNight = pickRule(defaults.latePickupFees, "late-window-extra-night");
+  const extraNight = pickRule(
+    defaults.latePickupFees,
+    "late-window-extra-night",
+  );
   halfDay.enabled = true;
   extraNight.enabled = true;
   rules.latePickupFees = [halfDay, extraNight];

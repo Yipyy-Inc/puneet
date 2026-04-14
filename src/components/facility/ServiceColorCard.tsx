@@ -67,7 +67,7 @@ export function ServiceColorCard({ service }: ServiceColorCardProps) {
               variant="ghost"
               size="sm"
               onClick={() => update({ ...config, color: defaultColor })}
-              className="gap-1.5 h-8 rounded-lg text-xs text-slate-500 hover:text-slate-700"
+              className="h-8 gap-1.5 rounded-lg text-xs text-slate-500 hover:text-slate-700"
             >
               <RotateCcw className="size-3" />
               Reset

@@ -25,7 +25,7 @@ export function RateColorPicker({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+      <div className="flex flex-wrap gap-1.5 rounded-xl border border-slate-100 bg-slate-50 p-2.5">
         {BRAND_COLOR_PALETTE.map((color) => (
           <TooltipProvider key={color.hex} delayDuration={200}>
             <Tooltip>
@@ -34,11 +34,11 @@ export function RateColorPicker({
                   type="button"
                   onClick={() => onChange(color.hex)}
                   className={cn(
-                    "size-7 rounded-lg transition-all duration-200 flex items-center justify-center",
-                    "hover:scale-110 active:scale-95 ring-1",
+                    "flex size-7 items-center justify-center rounded-lg transition-all duration-200",
+                    "ring-1 hover:scale-110 active:scale-95",
                     value === color.hex
-                      ? "ring-2 ring-offset-2 ring-slate-900 shadow-md"
-                      : "ring-slate-200/60 hover:ring-slate-300 shadow-sm hover:shadow-md",
+                      ? "shadow-md ring-2 ring-slate-900 ring-offset-2"
+                      : "shadow-sm ring-slate-200/60 hover:shadow-md hover:ring-slate-300",
                   )}
                   style={{ backgroundColor: color.hex }}
                 >

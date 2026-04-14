@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
@@ -73,14 +72,20 @@ function eventHoverSummary(
 
 function getStatusBadgeStyle(status: string, type: string) {
   if (type === "task" || type === "add-on") {
-    if (status === "Completed") return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
-    if (status === "Overdue") return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
+    if (status === "Completed")
+      return "bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100";
+    if (status === "Overdue")
+      return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
     return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
   }
-  if (status === "Cancelled") return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
-  if (status === "Confirmed") return "bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-100";
-  if (status === "Checked In" || status === "checked-in") return "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100";
-  if (status === "Checked Out" || status === "checked-out") return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
+  if (status === "Cancelled")
+    return "bg-red-100 text-red-700 border-red-200 hover:bg-red-100";
+  if (status === "Confirmed")
+    return "bg-sky-100 text-sky-700 border-sky-200 hover:bg-sky-100";
+  if (status === "Checked In" || status === "checked-in")
+    return "bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100";
+  if (status === "Checked Out" || status === "checked-out")
+    return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
   return "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100";
 }
 
@@ -99,10 +104,12 @@ export function EventChip({
   const petLabel = formatPetLabel(event.petNames) || event.title;
   const timeLabel = eventDurationLabel(event);
   const isCompletedTask = event.type === "task" && event.status === "Completed";
-  const isCompletedAddOn = event.type === "add-on" && event.status === "Completed";
+  const isCompletedAddOn =
+    event.type === "add-on" && event.status === "Completed";
   const isCompletedEvent = isCompletedTask || isCompletedAddOn;
   const isOverdueTask = event.type === "task" && event.status === "Overdue";
-  const isCancelledBooking = event.type === "booking" && event.status === "Cancelled";
+  const isCancelledBooking =
+    event.type === "booking" && event.status === "Cancelled";
 
   const accentColor = resolveEventColor(
     event,
@@ -113,15 +120,22 @@ export function EventChip({
 
   // No left-border stripe — use tinted background + colored dot
   const chipStyle: CSSProperties = isCompletedEvent
-    ? { backgroundColor: "rgba(100,116,139,0.07)", borderColor: "rgba(100,116,139,0.18)" }
+    ? {
+        backgroundColor: "rgba(100,116,139,0.07)",
+        borderColor: "rgba(100,116,139,0.18)",
+      }
     : isOverdueTask
-    ? { backgroundColor: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.28)" }
-    : {
-        backgroundColor: hexToRgba(accentColor, 0.09),
-        borderColor: hexToRgba(accentColor, 0.25),
-      };
+      ? {
+          backgroundColor: "rgba(239,68,68,0.08)",
+          borderColor: "rgba(239,68,68,0.28)",
+        }
+      : {
+          backgroundColor: hexToRgba(accentColor, 0.09),
+          borderColor: hexToRgba(accentColor, 0.25),
+        };
 
-  const serviceLabel = event.service ?? (event.type === "task" ? "Task" : "Booking");
+  const serviceLabel =
+    event.service ?? (event.type === "task" ? "Task" : "Booking");
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -134,33 +148,41 @@ export function EventChip({
             e.stopPropagation();
             setOpen((v) => !v);
           }}
-          title={eventHoverSummary(event, petLabel, event.customerName ?? "No customer linked")}
+          title={eventHoverSummary(
+            event,
+            petLabel,
+            event.customerName ?? "No customer linked",
+          )}
           className={cn(
             "group relative block w-full rounded-xl border px-2.5 py-2 text-left",
             "transition-all duration-200 hover:scale-[1.015] active:scale-[0.98]",
-            "overflow-hidden cursor-pointer",
+            "cursor-pointer overflow-hidden",
             event.isSubEvent && "ml-3 border-dashed opacity-80",
             isCancelledBooking && "opacity-50",
           )}
         >
           {/* Hover glow overlay */}
           <div
-            className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"
-            style={{ boxShadow: `inset 0 0 0 1px ${hexToRgba(accentColor, 0.35)}` }}
+            className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              boxShadow: `inset 0 0 0 1px ${hexToRgba(accentColor, 0.35)}`,
+            }}
           />
 
           {/* Top row: colored dot + pet name */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
             <span
               className="size-2 shrink-0 rounded-full ring-1 ring-white/80"
               style={{
                 backgroundColor: isCompletedEvent ? "#94a3b8" : accentColor,
-                boxShadow: isCompletedEvent ? "none" : `0 0 5px ${hexToRgba(accentColor, 0.55)}`,
+                boxShadow: isCompletedEvent
+                  ? "none"
+                  : `0 0 5px ${hexToRgba(accentColor, 0.55)}`,
               }}
             />
             <p
               className={cn(
-                "truncate text-[11px] font-bold leading-tight text-slate-900",
+                "truncate text-[11px] leading-tight font-bold text-slate-900",
                 isCancelledBooking && "line-through",
                 isCompletedEvent && "text-slate-400 line-through",
               )}
@@ -170,28 +192,32 @@ export function EventChip({
           </div>
 
           {/* Bottom row: service badge + time + completed indicator */}
-          <div className="flex items-center gap-1.5 mt-1 pl-3.5 min-w-0">
+          <div className="mt-1 flex min-w-0 items-center gap-1.5 pl-3.5">
             {isCompletedEvent ? (
-              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none bg-slate-100 text-slate-400">
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-[9px] leading-none font-bold tracking-wide text-slate-400 uppercase">
                 <Check className="size-2.5" />
                 Done
               </span>
             ) : (
               <span
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide leading-none"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] leading-none font-bold tracking-wide uppercase"
                 style={{
                   backgroundColor: hexToRgba(accentColor, 0.15),
                   color: accentColor,
                 }}
               >
-                {serviceLabel.length > 12 ? serviceLabel.slice(0, 12) + "…" : serviceLabel}
+                {serviceLabel.length > 12
+                  ? serviceLabel.slice(0, 12) + "…"
+                  : serviceLabel}
               </span>
             )}
             {!event.allDay && (
-              <span className={cn(
-                "truncate text-[10px] font-medium leading-tight",
-                isCompletedEvent ? "text-slate-300" : "text-slate-400",
-              )}>
+              <span
+                className={cn(
+                  "truncate text-[10px] leading-tight font-medium",
+                  isCompletedEvent ? "text-slate-300" : "text-slate-400",
+                )}
+              >
                 {timeLabel}
               </span>
             )}
@@ -200,7 +226,7 @@ export function EventChip({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-72 p-0 shadow-2xl border-0 overflow-hidden rounded-2xl z-50"
+        className="z-50 w-72 overflow-hidden rounded-2xl border-0 p-0 shadow-2xl"
         side="right"
         align="start"
         onClick={(e) => e.stopPropagation()}
@@ -215,19 +241,21 @@ export function EventChip({
           <div className="flex items-start gap-3">
             {/* Pet avatar */}
             <div
-              className="flex size-12 shrink-0 items-center justify-center rounded-xl shadow-md border-2 border-white"
+              className="flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-white shadow-md"
               style={{ backgroundColor: hexToRgba(accentColor, 0.18) }}
             >
               <PawPrint className="size-5" style={{ color: accentColor }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 text-sm leading-tight truncate">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm/tight font-bold text-slate-900">
                 {petLabel}
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5 truncate">{event.service}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                {event.service}
+              </p>
               <Badge
                 className={cn(
-                  "mt-1.5 text-[10px] px-2 py-0 font-semibold border",
+                  "mt-1.5 border px-2 py-0 text-[10px] font-semibold",
                   getStatusBadgeStyle(event.status, event.type),
                 )}
               >
@@ -238,7 +266,7 @@ export function EventChip({
         </div>
 
         {/* Detail rows */}
-        <div className="bg-white px-4 pb-3 space-y-2 pt-3">
+        <div className="space-y-2 bg-white px-4 pt-3 pb-3">
           {!event.allDay && (
             <div className="flex items-center gap-2.5 text-[12px] text-slate-600">
               <Clock className="size-3.5 shrink-0 text-slate-400" />
@@ -270,41 +298,46 @@ export function EventChip({
             </div>
           )}
           {event.notes && (
-            <div className="flex items-start gap-2.5 text-[12px] text-slate-600 mt-1">
-              <FileText className="size-3.5 shrink-0 text-slate-400 mt-0.5" />
+            <div className="mt-1 flex items-start gap-2.5 text-[12px] text-slate-600">
+              <FileText className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
               <span className="line-clamp-2">{event.notes}</span>
             </div>
           )}
           {event.completedAt && (
-            <div className="flex items-center gap-2.5 text-[12px] text-emerald-600 mt-1">
+            <div className="mt-1 flex items-center gap-2.5 text-[12px] text-emerald-600">
               <Check className="size-3.5 shrink-0 text-emerald-500" />
               <span>
-                Completed by {event.completedByName ?? "Staff"}{" "}
-                at {new Date(event.completedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                Completed by {event.completedByName ?? "Staff"} at{" "}
+                {new Date(event.completedAt).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
               </span>
             </div>
           )}
         </div>
 
         {/* Quick actions */}
-        {(event.type === "task" || event.type === "add-on") && !isCompletedEvent && onMarkEventComplete && (
-          <div className="bg-white border-t border-slate-100 px-4 py-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMarkEventComplete(event);
-                setOpen(false);
-              }}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:bg-emerald-600 hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
-            >
-              <Check className="size-3.5" />
-              Mark Complete
-            </button>
-          </div>
-        )}
+        {(event.type === "task" || event.type === "add-on") &&
+          !isCompletedEvent &&
+          onMarkEventComplete && (
+            <div className="border-t border-slate-100 bg-white px-4 py-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkEventComplete(event);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:scale-[1.01] hover:bg-emerald-600 hover:shadow-md active:scale-[0.98]"
+              >
+                <Check className="size-3.5" />
+                Mark Complete
+              </button>
+            </div>
+          )}
         {isCompletedEvent && (
-          <div className="bg-emerald-50 border-t border-emerald-100 px-4 py-2">
+          <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-2">
             <div className="flex items-center justify-center gap-1.5 text-[12px] font-semibold text-emerald-600">
               <Check className="size-3.5" />
               Completed
@@ -313,11 +346,11 @@ export function EventChip({
         )}
 
         {/* Footer actions */}
-        <div className="bg-white border-t border-slate-100 p-3 flex gap-2">
+        <div className="flex gap-2 border-t border-slate-100 bg-white p-3">
           {event.href && (
             <Link
               href={event.href}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:shadow-md hover:scale-[1.02] active:scale-95"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-[12px] font-semibold text-white shadow-sm transition-all hover:scale-[1.02] hover:shadow-md active:scale-95"
               style={{ backgroundColor: accentColor }}
               onClick={() => setOpen(false)}
             >
@@ -327,8 +360,11 @@ export function EventChip({
           )}
           <button
             type="button"
-            onClick={() => { setOpen(false); onEventClick?.(event); }}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-medium text-slate-700 hover:bg-slate-100 transition-colors whitespace-nowrap"
+            onClick={() => {
+              setOpen(false);
+              onEventClick?.(event);
+            }}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] font-medium whitespace-nowrap text-slate-700 transition-colors hover:bg-slate-100"
           >
             Open Panel
           </button>
@@ -353,16 +389,21 @@ export function FilterSection({
 
   return (
     <div className="space-y-2 rounded-xl border border-slate-200/70 bg-white/90 p-3 shadow-sm">
-      <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{title}</h3>
+      <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+        {title}
+      </h3>
       <div className="grid gap-1.5 sm:grid-cols-2">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
           return (
             <label
               key={option.value}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50"
             >
-              <Checkbox checked={checked} onCheckedChange={() => onToggle(option.value)} />
+              <Checkbox
+                checked={checked}
+                onCheckedChange={() => onToggle(option.value)}
+              />
               <span className="text-xs text-slate-700">{option.label}</span>
             </label>
           );
@@ -390,7 +431,9 @@ export function DayTimeline({
   onSlotCreate?: (slot: Date) => void;
 }) {
   const hours = Array.from({ length: 15 }, (_, i) => i + 7);
-  const slotHeight = getTimelineSlotHeight(renderSettings.visualConfig.zoomLevel);
+  const slotHeight = getTimelineSlotHeight(
+    renderSettings.visualConfig.zoomLevel,
+  );
   const now = new Date();
   const todayView = isSameDay(day, now);
   const nowHour = now.getHours();
@@ -431,7 +474,7 @@ export function DayTimeline({
               })}
             </div>
             <div
-              className="space-y-1.5 p-2 relative"
+              className="relative space-y-1.5 p-2"
               style={{ minHeight: slotHeight }}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
@@ -442,11 +485,11 @@ export function DayTimeline({
               {/* Live current-time indicator */}
               {isCurrentHour && (
                 <div
-                  className="pointer-events-none absolute left-0 right-0 flex items-center z-10"
+                  className="pointer-events-none absolute right-0 left-0 z-10 flex items-center"
                   style={{ top: `${nowMinutePercent}%` }}
                 >
-                  <div className="size-2.5 rounded-full bg-rose-500 shadow-[0_0_6px_2px_rgba(244,63,94,0.4)] -ml-1.5 shrink-0" />
-                  <div className="flex-1 h-px bg-rose-400/70" />
+                  <div className="-ml-1.5 size-2.5 shrink-0 rounded-full bg-rose-500 shadow-[0_0_6px_2px_rgba(244,63,94,0.4)]" />
+                  <div className="h-px flex-1 bg-rose-400/70" />
                 </div>
               )}
               {slotEvents.map((ev) => (
@@ -493,7 +536,10 @@ export function DayColumns({
       {days.map((day) => {
         const dayEvents = getEventsForDay(events, day);
         const visibleEvents = dayEvents.slice(0, visibleLimit);
-        const overflowCount = Math.max(0, dayEvents.length - visibleEvents.length);
+        const overflowCount = Math.max(
+          0,
+          dayEvents.length - visibleEvents.length,
+        );
         const isToday = isSameDay(day, today);
         const inCurrentMonth =
           !showMonthMask || !anchorDate || isCurrentMonthDay(day, anchorDate);
@@ -502,23 +548,24 @@ export function DayColumns({
           <div
             key={formatDateKey(day)}
             className={cn(
-              "group relative flex flex-col rounded-2xl border overflow-hidden transition-all duration-200",
-              "hover:shadow-lg hover:-translate-y-0.5",
+              "group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200",
+              "hover:-translate-y-0.5 hover:shadow-lg",
               inCurrentMonth
-                ? "bg-white border-slate-200/60 shadow-sm"
-                : "bg-slate-50/60 border-slate-100/80",
-              isToday && "ring-2 ring-sky-400/40 shadow-sky-100/60 shadow-md border-sky-200/60",
+                ? "border-slate-200/60 bg-white shadow-sm"
+                : "border-slate-100/80 bg-slate-50/60",
+              isToday &&
+                "border-sky-200/60 shadow-md ring-2 shadow-sky-100/60 ring-sky-400/40",
             )}
           >
             {/* Day header */}
             <div
               className={cn(
-                "flex items-center justify-between px-3 py-2 border-b cursor-pointer",
+                "flex cursor-pointer items-center justify-between border-b px-3 py-2",
                 isToday
-                  ? "bg-sky-600 border-sky-700/30"
+                  ? "border-sky-700/30 bg-sky-600"
                   : inCurrentMonth
-                  ? "bg-slate-50 border-slate-100"
-                  : "bg-slate-50/60 border-slate-100/60",
+                    ? "border-slate-100 bg-slate-50"
+                    : "border-slate-100/60 bg-slate-50/60",
               )}
               onClick={() => {
                 const slot = new Date(day);
@@ -529,7 +576,11 @@ export function DayColumns({
               <span
                 className={cn(
                   "text-[11px] font-bold tracking-tight",
-                  isToday ? "text-white" : inCurrentMonth ? "text-slate-700" : "text-slate-400",
+                  isToday
+                    ? "text-white"
+                    : inCurrentMonth
+                      ? "text-slate-700"
+                      : "text-slate-400",
                 )}
               >
                 {day.toLocaleDateString("en-US", {
@@ -573,12 +624,12 @@ export function DayColumns({
                 />
               ))}
               {overflowCount > 0 && (
-                <p className="text-[10px] font-semibold text-indigo-400 pl-2 pt-0.5">
+                <p className="pt-0.5 pl-2 text-[10px] font-semibold text-indigo-400">
                   +{overflowCount} more
                 </p>
               )}
               {dayEvents.length === 0 && (
-                <p className="text-[10px] text-slate-300 text-center py-3 select-none">
+                <p className="py-3 text-center text-[10px] text-slate-300 select-none">
                   No events
                 </p>
               )}
@@ -627,7 +678,11 @@ export function ResourceColumnsView({
         let conflictCount = 0;
         for (let i = 0; i < laneEvents.length; i++) {
           const cur = laneEvents[i];
-          if (laneEvents.some((c, ci) => ci > i && cur.start < c.end && cur.end > c.start)) {
+          if (
+            laneEvents.some(
+              (c, ci) => ci > i && cur.start < c.end && cur.end > c.start,
+            )
+          ) {
             conflictCount++;
           }
         }
@@ -635,17 +690,24 @@ export function ResourceColumnsView({
         return (
           <div
             key={resource.id}
-            className="flex flex-col rounded-2xl border border-slate-200/60 bg-white shadow-sm overflow-hidden hover:shadow-md transition-all duration-200"
+            className="flex flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
           >
-            <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-800 line-clamp-1">{resource.name}</span>
-              <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2.5">
+              <span className="line-clamp-1 text-sm font-bold text-slate-800">
+                {resource.name}
+              </span>
+              <Badge
+                variant="outline"
+                className="shrink-0 text-[10px] font-normal"
+              >
                 {resource.type}
               </Badge>
             </div>
             {conflictCount > 0 && (
-              <div className="px-3 py-1 bg-rose-50 border-b border-rose-100">
-                <p className="text-[11px] text-rose-600 font-medium">⚠ {conflictCount} conflict(s)</p>
+              <div className="border-b border-rose-100 bg-rose-50 px-3 py-1">
+                <p className="text-[11px] font-medium text-rose-600">
+                  ⚠ {conflictCount} conflict(s)
+                </p>
               </div>
             )}
             <div
@@ -668,7 +730,9 @@ export function ResourceColumnsView({
                 />
               ))}
               {laneEvents.length === 0 && (
-                <p className="text-[10px] text-slate-300 text-center py-3">No events assigned</p>
+                <p className="py-3 text-center text-[10px] text-slate-300">
+                  No events assigned
+                </p>
               )}
             </div>
           </div>
@@ -698,8 +762,11 @@ export function ListView({
         if (dayEvents.length === 0) return null;
 
         return (
-          <div key={formatDateKey(day)} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
-            <div className="bg-slate-50 border-b border-slate-100 px-4 py-3">
+          <div
+            key={formatDateKey(day)}
+            className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm"
+          >
+            <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
               <h3 className="text-sm font-bold text-slate-800">
                 {day.toLocaleDateString("en-US", {
                   weekday: "long",

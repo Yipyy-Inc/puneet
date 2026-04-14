@@ -63,9 +63,8 @@ export function BulkPriceLabelPrint({
   const [includeVariants, setIncludeVariants] = useState(false);
   const [includeBarcode, setIncludeBarcode] = useState(true);
   const [quantityPerItem, setQuantityPerItem] = useState(1);
-  const [labelSize, setLabelSize] = useState<(typeof LABEL_SIZES)[number]["value"]>(
-    "standard",
-  );
+  const [labelSize, setLabelSize] =
+    useState<(typeof LABEL_SIZES)[number]["value"]>("standard");
 
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -88,7 +87,9 @@ export function BulkPriceLabelPrint({
 
     if (mode === "new") {
       const days = parseInt(newWindowDays, 10);
-      return products.filter((product) => isCreatedWithinDays(product.createdAt, days));
+      return products.filter((product) =>
+        isCreatedWithinDays(product.createdAt, days),
+      );
     }
 
     return products.filter((product) => customSelected.has(product.id));
@@ -105,7 +106,11 @@ export function BulkPriceLabelPrint({
     }> = [];
 
     for (const product of selectedProducts) {
-      if (includeVariants && product.hasVariants && product.variants.length > 0) {
+      if (
+        includeVariants &&
+        product.hasVariants &&
+        product.variants.length > 0
+      ) {
         for (const variant of product.variants) {
           for (let i = 0; i < quantityPerItem; i++) {
             rows.push({
@@ -303,7 +308,8 @@ export function BulkPriceLabelPrint({
             Bulk Price Label Printing
           </DialogTitle>
           <DialogDescription>
-            Print labels by selected products, newly added products, or custom picks.
+            Print labels by selected products, newly added products, or custom
+            picks.
           </DialogDescription>
         </DialogHeader>
 
@@ -313,7 +319,7 @@ export function BulkPriceLabelPrint({
               role="button"
               tabIndex={0}
               className={cn(
-                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300",
+                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:outline-none",
                 mode === "selected"
                   ? "border-sky-400 bg-sky-50"
                   : "border-slate-200 hover:bg-slate-50",
@@ -334,7 +340,7 @@ export function BulkPriceLabelPrint({
               role="button"
               tabIndex={0}
               className={cn(
-                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300",
+                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:outline-none",
                 mode === "new"
                   ? "border-emerald-400 bg-emerald-50"
                   : "border-slate-200 hover:bg-slate-50",
@@ -348,7 +354,10 @@ export function BulkPriceLabelPrint({
               </p>
               <div className="mt-2">
                 <Select value={newWindowDays} onValueChange={setNewWindowDays}>
-                  <SelectTrigger className="h-8 text-xs" onClick={(e) => e.stopPropagation()}>
+                  <SelectTrigger
+                    className="h-8 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,7 +374,7 @@ export function BulkPriceLabelPrint({
               role="button"
               tabIndex={0}
               className={cn(
-                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300",
+                "cursor-pointer rounded-lg border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:outline-none",
                 mode === "custom"
                   ? "border-violet-400 bg-violet-50"
                   : "border-slate-200 hover:bg-slate-50",
@@ -403,7 +412,9 @@ export function BulkPriceLabelPrint({
                     className="flex cursor-pointer items-center justify-between rounded-md border border-slate-200 px-3 py-2 hover:bg-slate-50"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{product.name}</p>
+                      <p className="truncate text-sm font-medium">
+                        {product.name}
+                      </p>
                       <p className="text-muted-foreground text-xs">
                         {product.sku} · ${product.basePrice.toFixed(2)}
                       </p>
@@ -426,7 +437,12 @@ export function BulkPriceLabelPrint({
           <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-4">
             <div>
               <Label className="text-xs">Label Size</Label>
-              <Select value={labelSize} onValueChange={(v) => setLabelSize(v as (typeof LABEL_SIZES)[number]["value"])}>
+              <Select
+                value={labelSize}
+                onValueChange={(v) =>
+                  setLabelSize(v as (typeof LABEL_SIZES)[number]["value"])
+                }
+              >
                 <SelectTrigger className="mt-1 h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -447,7 +463,11 @@ export function BulkPriceLabelPrint({
                 min={1}
                 max={100}
                 value={quantityPerItem}
-                onChange={(e) => setQuantityPerItem(Math.max(1, parseInt(e.target.value || "1", 10)))}
+                onChange={(e) =>
+                  setQuantityPerItem(
+                    Math.max(1, parseInt(e.target.value || "1", 10)),
+                  )
+                }
                 className="mt-1 h-8 text-sm"
               />
             </div>
@@ -455,7 +475,9 @@ export function BulkPriceLabelPrint({
             <label className="mt-5 flex items-center gap-2">
               <Checkbox
                 checked={includeVariants}
-                onCheckedChange={(checked) => setIncludeVariants(Boolean(checked))}
+                onCheckedChange={(checked) =>
+                  setIncludeVariants(Boolean(checked))
+                }
               />
               <span className="text-xs">Include Variants</span>
             </label>
@@ -463,7 +485,9 @@ export function BulkPriceLabelPrint({
             <label className="mt-5 flex items-center gap-2">
               <Checkbox
                 checked={includeBarcode}
-                onCheckedChange={(checked) => setIncludeBarcode(Boolean(checked))}
+                onCheckedChange={(checked) =>
+                  setIncludeBarcode(Boolean(checked))
+                }
               />
               <span className="text-xs">Include Barcode</span>
             </label>
@@ -475,8 +499,12 @@ export function BulkPriceLabelPrint({
               <span className="text-sm font-medium">Print Summary</span>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold">{selectedProducts.length} products</p>
-              <p className="text-muted-foreground text-xs">{labelRows.length} labels total</p>
+              <p className="text-sm font-semibold">
+                {selectedProducts.length} products
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {labelRows.length} labels total
+              </p>
             </div>
           </div>
         </div>

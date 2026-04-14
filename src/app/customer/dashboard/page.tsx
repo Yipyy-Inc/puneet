@@ -424,12 +424,12 @@ export default function CustomerDashboardPage() {
     <div className="from-background via-muted/20 to-background relative min-h-screen overflow-hidden bg-linear-to-br p-4 md:p-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="bg-primary/10 absolute -top-32 right-0 h-80 w-80 rounded-full blur-3xl" />
-        <div className="absolute left-0 top-1/3 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+        <div className="absolute top-1/3 left-0 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-7xl space-y-6">
         {/* Header */}
         <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/75 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm md:p-6">
-          <div className="bg-primary/10 pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl" />
+          <div className="bg-primary/10 pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full blur-2xl" />
           <div className="relative flex items-center gap-4">
             {selectedFacility?.logo && (
               <Image
@@ -442,7 +442,8 @@ export default function CustomerDashboardPage() {
             )}
             <div className="space-y-1">
               <h1 className="text-3xl font-bold tracking-tight">
-                Welcome back{customer ? `, ${customer.name.split(" ")[0]}` : ""}!
+                Welcome back{customer ? `, ${customer.name.split(" ")[0]}` : ""}
+                !
               </h1>
               <p className="text-muted-foreground">
                 {isMounted && selectedFacility
@@ -527,7 +528,9 @@ export default function CustomerDashboardPage() {
                 <FileText className="size-4 text-rose-600 transition-transform duration-300 group-hover:scale-110" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{reportCardsData.total}</div>
+                <div className="text-2xl font-bold">
+                  {reportCardsData.total}
+                </div>
                 <p className="text-muted-foreground text-xs">
                   {reportCardsData.latest
                     ? `Latest: ${formatDateShort(reportCardsData.latest)}`
@@ -540,8 +543,8 @@ export default function CustomerDashboardPage() {
 
         {/* Loyalty Rewards Section */}
         {loyaltyData && (
-          <Card className="from-primary/95 relative overflow-hidden border-0 bg-linear-to-br via-primary/85 to-sky-100 shadow-xl shadow-primary/20">
-            <div className="pointer-events-none absolute -bottom-12 right-6 h-40 w-40 rounded-full bg-white/25 blur-3xl" />
+          <Card className="from-primary/95 via-primary/85 shadow-primary/20 relative overflow-hidden border-0 bg-linear-to-br to-sky-100 shadow-xl">
+            <div className="pointer-events-none absolute right-6 -bottom-12 h-40 w-40 rounded-full bg-white/25 blur-3xl" />
             <CardContent className="relative p-6">
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="flex items-center gap-4">

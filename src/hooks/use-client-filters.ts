@@ -343,7 +343,8 @@ export function useClientFilters() {
             petIds.some(
               (petId) => !records.some((record) => record.petId === petId),
             );
-          const hasExpiredOrMissing = hasExpiredVaccine || hasMissingVaccineRecord;
+          const hasExpiredOrMissing =
+            hasExpiredVaccine || hasMissingVaccineRecord;
 
           if (filters.vaccineExpired === "yes" && !hasExpiredOrMissing)
             return false;

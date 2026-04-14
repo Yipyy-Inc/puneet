@@ -64,7 +64,7 @@ export function RecurrenceSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Repeat2 className="text-muted-foreground size-3.5" />
-            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+            <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
               Recurrence
             </p>
           </div>
@@ -84,7 +84,7 @@ export function RecurrenceSection({
 
         {/* Expanded recurrence options */}
         {isRecurring && (
-          <div className="space-y-4 rounded-lg border bg-muted/20 p-3">
+          <div className="bg-muted/20 space-y-4 rounded-lg border p-3">
             {/* Frequency */}
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-xs">Repeat</Label>

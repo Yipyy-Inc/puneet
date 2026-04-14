@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { DataTable, type ColumnDef, type FilterDef } from "@/components/ui/DataTable";
+import {
+  DataTable,
+  type ColumnDef,
+  type FilterDef,
+} from "@/components/ui/DataTable";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +25,12 @@ import {
   Inbox,
   Settings2,
 } from "lucide-react";
-import type { UnfinishedBooking, UnfinishedBookingNote, AbandonmentStep, UnfinishedBookingStatus } from "@/types/unfinished-booking";
+import type {
+  UnfinishedBooking,
+  UnfinishedBookingNote,
+  AbandonmentStep,
+  UnfinishedBookingStatus,
+} from "@/types/unfinished-booking";
 import {
   ABANDONMENT_STEP_LABELS,
   UNFINISHED_STATUS_LABELS,
@@ -36,9 +45,9 @@ interface Props {
 function StepProgressBadge({ step }: { step: AbandonmentStep }) {
   const config = ABANDONMENT_STEP_LABELS[step];
   return (
-    <div className="flex flex-col gap-1 min-w-[130px]">
+    <div className="flex min-w-[130px] flex-col gap-1">
       <span className="text-xs font-medium">{config.label}</span>
-      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div
           className="h-full rounded-full bg-amber-400 transition-all"
           style={{ width: `${config.progress}%` }}
@@ -51,7 +60,11 @@ function StepProgressBadge({ step }: { step: AbandonmentStep }) {
   );
 }
 
-function StatusBadgeUnfinished({ status }: { status: UnfinishedBookingStatus }) {
+function StatusBadgeUnfinished({
+  status,
+}: {
+  status: UnfinishedBookingStatus;
+}) {
   const config = UNFINISHED_STATUS_LABELS[status];
   return (
     <span
@@ -74,10 +87,9 @@ function formatRelativeTime(isoString: string): string {
 }
 
 function formatShortDate(iso: string): string {
-  return new Date(iso + (iso.includes("T") ? "" : "T00:00:00")).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric" },
-  );
+  return new Date(
+    iso + (iso.includes("T") ? "" : "T00:00:00"),
+  ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function UnfinishedBookingsTable({ data: initialData }: Props) {
@@ -135,14 +147,14 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       sortable: true,
       sortValue: (r) => r.clientName,
       render: (r) => (
-        <div className="flex flex-col gap-0.5 min-w-[160px]">
-          <span className="font-medium text-sm">{r.clientName}</span>
-          <span className="text-muted-foreground text-xs flex items-center gap-1">
+        <div className="flex min-w-[160px] flex-col gap-0.5">
+          <span className="text-sm font-medium">{r.clientName}</span>
+          <span className="text-muted-foreground flex items-center gap-1 text-xs">
             <Mail className="size-3 shrink-0" />
             {r.clientEmail}
           </span>
           {r.clientPhone && (
-            <span className="text-muted-foreground text-xs flex items-center gap-1">
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <Phone className="size-3 shrink-0" />
               {r.clientPhone}
             </span>
@@ -179,7 +191,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       render: (r) =>
         r.service ? (
           <div className="flex flex-col gap-0.5">
-            <Badge variant="outline" className="capitalize w-fit">
+            <Badge variant="outline" className="w-fit capitalize">
               {r.service}
             </Badge>
             {r.serviceType && (
@@ -254,7 +266,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
             </span>
           )}
           {(r.notes?.length ?? 0) > 0 && (
-            <span className="text-muted-foreground text-[10px] flex items-center gap-0.5">
+            <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
               <MessageSquare className="size-3" />
               {r.notes!.length} note{r.notes!.length > 1 ? "s" : ""}
             </span>
@@ -267,7 +279,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       label: "Actions",
       defaultVisible: true,
       render: (r) => (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             size="sm"
             variant="outline"
@@ -277,7 +289,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
               handleSchedule(r);
             }}
           >
-            <CalendarDays className="size-3 mr-1" />
+            <CalendarDays className="mr-1 size-3" />
             Schedule
           </Button>
           {r.status !== "recovered" && (
@@ -290,7 +302,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
                 handleSendEmail(r);
               }}
             >
-              <MessageSquare className="size-3 mr-1" />
+              <MessageSquare className="mr-1 size-3" />
               Email
             </Button>
           )}
@@ -304,7 +316,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
                 markAs(r.id, "contacted");
               }}
             >
-              <CheckCircle2 className="size-3 mr-1" />
+              <CheckCircle2 className="mr-1 size-3" />
               Mark Contacted
             </Button>
           )}
@@ -318,7 +330,7 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
                 markAs(r.id, "recovered");
               }}
             >
-              <RefreshCw className="size-3 mr-1" />
+              <RefreshCw className="mr-1 size-3" />
               Recovered
             </Button>
           )}
@@ -378,9 +390,10 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-20">
           <Inbox className="text-muted-foreground/40 mb-4 size-16" />
-          <h3 className="text-lg font-semibold mb-1">No unfinished bookings</h3>
-          <p className="text-muted-foreground text-sm text-center max-w-sm">
-            When clients start but don't complete a reservation, they'll appear here so you can follow up.
+          <h3 className="mb-1 text-lg font-semibold">No unfinished bookings</h3>
+          <p className="text-muted-foreground max-w-sm text-center text-sm">
+            When clients start but don&apos;t complete a reservation,
+            they&apos;ll appear here so you can follow up.
           </p>
         </CardContent>
       </Card>
@@ -408,32 +421,32 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       {/* Header row: summary strip + settings button */}
       <div className="flex items-start justify-between gap-3">
         <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Abandoned
-          </p>
-          <p className="text-2xl font-bold text-amber-600">{abandoned}</p>
-        </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Contacted
-          </p>
-          <p className="text-2xl font-bold text-blue-600">{contacted}</p>
-        </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Recovered
-          </p>
-          <p className="text-2xl font-bold text-emerald-600">{recovered}</p>
-        </div>
-        <div className="rounded-xl border bg-card px-4 py-3">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-            Revenue at Risk
-          </p>
-          <p className="price-value text-2xl font-bold">
-            ${totalEstimated.toLocaleString()}
-          </p>
-        </div>
+          <div className="bg-card rounded-xl border px-4 py-3">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Abandoned
+            </p>
+            <p className="text-2xl font-bold text-amber-600">{abandoned}</p>
+          </div>
+          <div className="bg-card rounded-xl border px-4 py-3">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Contacted
+            </p>
+            <p className="text-2xl font-bold text-blue-600">{contacted}</p>
+          </div>
+          <div className="bg-card rounded-xl border px-4 py-3">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Recovered
+            </p>
+            <p className="text-2xl font-bold text-emerald-600">{recovered}</p>
+          </div>
+          <div className="bg-card rounded-xl border px-4 py-3">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Revenue at Risk
+            </p>
+            <p className="price-value text-2xl font-bold">
+              ${totalEstimated.toLocaleString()}
+            </p>
+          </div>
         </div>
 
         {/* Settings button */}
@@ -451,11 +464,11 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
       {/* Recovery tip */}
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/20">
         <ShoppingBag className="mt-0.5 size-4 shrink-0 text-amber-600" />
-        <p className="text-amber-800 dark:text-amber-300 text-sm">
-          <span className="font-semibold">Recovery tip:</span> Clients who abandoned at the{" "}
-          <span className="font-medium">payment</span> or{" "}
-          <span className="font-medium">review</span> step are most likely to complete their
-          booking — reach out to them first.
+        <p className="text-sm text-amber-800 dark:text-amber-300">
+          <span className="font-semibold">Recovery tip:</span> Clients who
+          abandoned at the <span className="font-medium">payment</span> or{" "}
+          <span className="font-medium">review</span> step are most likely to
+          complete their booking — reach out to them first.
         </p>
       </div>
 

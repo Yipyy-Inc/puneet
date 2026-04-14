@@ -17,12 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,12 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   broadcastMessages as initialBroadcasts,
@@ -55,7 +45,10 @@ import type {
   NotificationRule,
 } from "@/types/scheduling";
 
-const EVENT_LABELS: Record<NotificationEvent, { label: string; description: string }> = {
+const EVENT_LABELS: Record<
+  NotificationEvent,
+  { label: string; description: string }
+> = {
   schedule_published: {
     label: "Schedule published",
     description: "Sent when a new schedule period goes live.",
@@ -110,7 +103,10 @@ const EVENT_LABELS: Record<NotificationEvent, { label: string; description: stri
   },
 };
 
-const audienceLabels: Record<BroadcastAudience, { label: string; icon: typeof User }> = {
+const audienceLabels: Record<
+  BroadcastAudience,
+  { label: string; icon: typeof User }
+> = {
   all_staff: { label: "All staff", icon: Users },
   department: { label: "Department", icon: Building2 },
   location: { label: "Location", icon: Building2 },
@@ -119,7 +115,8 @@ const audienceLabels: Record<BroadcastAudience, { label: string; icon: typeof Us
 
 export function NotificationsView() {
   const [prefs, setPrefs] = useState<NotificationPreferences>(initialPrefs);
-  const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>(initialBroadcasts);
+  const [broadcasts, setBroadcasts] =
+    useState<BroadcastMessage[]>(initialBroadcasts);
 
   // Compose-broadcast form
   const [subject, setSubject] = useState("");
@@ -133,7 +130,10 @@ export function NotificationsView() {
     push: true,
   });
 
-  const updateRule = (event: NotificationEvent, patch: Partial<NotificationRule>) => {
+  const updateRule = (
+    event: NotificationEvent,
+    patch: Partial<NotificationRule>,
+  ) => {
     setPrefs((p) => ({
       ...p,
       rules: p.rules.map((r) => (r.event === event ? { ...r, ...patch } : r)),
@@ -214,7 +214,9 @@ export function NotificationsView() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Notifications</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Notifications
+          </h2>
           <p className="text-muted-foreground text-sm">
             Configure automatic notifications and send broadcasts to the team.
           </p>
@@ -293,7 +295,7 @@ export function NotificationsView() {
                         onClick={() =>
                           updateRule(rule.event, { enabled: !rule.enabled })
                         }
-                        className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded ${
+                        className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-sm ${
                           rule.enabled
                             ? "bg-emerald-500 text-white"
                             : "bg-muted text-muted-foreground"
@@ -312,7 +314,7 @@ export function NotificationsView() {
                         </div>
                         {rule.event === "shift_reminder" && rule.enabled && (
                           <div className="mt-1.5 flex items-center gap-1.5">
-                            <Label className="text-[11px] text-muted-foreground">
+                            <Label className="text-muted-foreground text-[11px]">
                               Lead time
                             </Label>
                             <Input
@@ -323,12 +325,13 @@ export function NotificationsView() {
                               value={rule.leadTimeMinutes ?? 60}
                               onChange={(e) =>
                                 updateRule(rule.event, {
-                                  leadTimeMinutes: parseInt(e.target.value) || 60,
+                                  leadTimeMinutes:
+                                    parseInt(e.target.value) || 60,
                                 })
                               }
                               className="h-6 w-20 text-xs"
                             />
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-muted-foreground text-[11px]">
                               min before shift
                             </span>
                           </div>
@@ -360,7 +363,11 @@ export function NotificationsView() {
                         active={rule.channels.inApp}
                         disabled={!rule.enabled}
                         onClick={() =>
-                          updateRuleChannel(rule.event, "inApp", !rule.channels.inApp)
+                          updateRuleChannel(
+                            rule.event,
+                            "inApp",
+                            !rule.channels.inApp,
+                          )
                         }
                         icon={Bell}
                         label="In-app"
@@ -369,7 +376,11 @@ export function NotificationsView() {
                         active={rule.channels.email}
                         disabled={!rule.enabled}
                         onClick={() =>
-                          updateRuleChannel(rule.event, "email", !rule.channels.email)
+                          updateRuleChannel(
+                            rule.event,
+                            "email",
+                            !rule.channels.email,
+                          )
                         }
                         icon={Mail}
                         label="Email"
@@ -378,7 +389,11 @@ export function NotificationsView() {
                         active={rule.channels.sms}
                         disabled={!rule.enabled}
                         onClick={() =>
-                          updateRuleChannel(rule.event, "sms", !rule.channels.sms)
+                          updateRuleChannel(
+                            rule.event,
+                            "sms",
+                            !rule.channels.sms,
+                          )
                         }
                         icon={MessageSquare}
                         label="SMS"
@@ -387,7 +402,11 @@ export function NotificationsView() {
                         active={rule.channels.push}
                         disabled={!rule.enabled}
                         onClick={() =>
-                          updateRuleChannel(rule.event, "push", !rule.channels.push)
+                          updateRuleChannel(
+                            rule.event,
+                            "push",
+                            !rule.channels.push,
+                          )
                         }
                         icon={Smartphone}
                         label="Push"
@@ -423,7 +442,9 @@ export function NotificationsView() {
                     <SelectContent>
                       <SelectItem value="all_staff">All staff</SelectItem>
                       <SelectItem value="department">Department</SelectItem>
-                      <SelectItem value="individual">Individual employee</SelectItem>
+                      <SelectItem value="individual">
+                        Individual employee
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -511,9 +532,7 @@ export function NotificationsView() {
                   />
                   <ChannelToggle
                     active={channels.sms}
-                    onClick={() =>
-                      setChannels((c) => ({ ...c, sms: !c.sms }))
-                    }
+                    onClick={() => setChannels((c) => ({ ...c, sms: !c.sms }))}
                     icon={MessageSquare}
                     label="SMS"
                   />
@@ -531,11 +550,13 @@ export function NotificationsView() {
               <div className="flex items-center justify-between border-t pt-3">
                 <p className="text-muted-foreground text-xs">
                   Will reach{" "}
-                  <span className="font-medium text-foreground">
+                  <span className="text-foreground font-medium">
                     {recipientCountFor(audience, audienceTargetId)}
                   </span>{" "}
                   recipient
-                  {recipientCountFor(audience, audienceTargetId) === 1 ? "" : "s"}
+                  {recipientCountFor(audience, audienceTargetId) === 1
+                    ? ""
+                    : "s"}
                 </p>
                 <Button onClick={handleSendBroadcast}>
                   <Send className="mr-1.5 size-3.5" />
@@ -556,7 +577,8 @@ export function NotificationsView() {
                 m.audience === "department"
                   ? departments.find((d) => d.id === m.audienceTargetId)?.name
                   : m.audience === "individual"
-                    ? scheduleEmployees.find((e) => e.id === m.audienceTargetId)?.name
+                    ? scheduleEmployees.find((e) => e.id === m.audienceTargetId)
+                        ?.name
                     : "";
 
               return (
@@ -592,12 +614,12 @@ export function NotificationsView() {
                           {target ? ` · ${target}` : ""}
                         </Badge>
                         <Badge variant="secondary" className="text-[10px]">
-                          {m.recipientCount}{" "}
-                          recipient{m.recipientCount === 1 ? "" : "s"}
+                          {m.recipientCount} recipient
+                          {m.recipientCount === 1 ? "" : "s"}
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{m.body}</p>
+                    <p className="text-muted-foreground text-sm">{m.body}</p>
                     <div className="flex items-center gap-1 border-t pt-2">
                       {m.channels.inApp && (
                         <Badge variant="outline" className="text-[10px]">
@@ -658,7 +680,7 @@ function ChannelToggle({
       onClick={onClick}
       className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors ${
         disabled
-          ? "border-dashed bg-muted/30 text-muted-foreground/50"
+          ? "bg-muted/30 text-muted-foreground/50 border-dashed"
           : active
             ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
             : "border-border bg-background text-muted-foreground hover:bg-muted"

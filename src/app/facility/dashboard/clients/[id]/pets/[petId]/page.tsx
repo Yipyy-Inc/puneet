@@ -367,7 +367,12 @@ export default function PetDetailPage({
                     <Badge variant="destructive">Deceased</Badge>
                   )}
                   {pet.petStatus === "inactive" && (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">Inactive</Badge>
+                    <Badge
+                      variant="secondary"
+                      className="bg-amber-100 text-amber-800 hover:bg-amber-100"
+                    >
+                      Inactive
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -424,7 +429,8 @@ export default function PetDetailPage({
                 {pet.name} has been marked as deceased
               </p>
               <p className="text-xs text-red-600 dark:text-red-400">
-                This pet is no longer shown in active pet lists. Profile is preserved for records.
+                This pet is no longer shown in active pet lists. Profile is
+                preserved for records.
               </p>
             </div>
           </div>
@@ -641,9 +647,9 @@ export default function PetDetailPage({
                       <Label htmlFor="petStatus">Status</Label>
                       <Select
                         value={editedPet.petStatus || "active"}
-                        onValueChange={(value: "active" | "inactive" | "deceased") =>
-                          setEditedPet({ ...editedPet, petStatus: value })
-                        }
+                        onValueChange={(
+                          value: "active" | "inactive" | "deceased",
+                        ) => setEditedPet({ ...editedPet, petStatus: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -823,14 +829,13 @@ export default function PetDetailPage({
                               {form.questions.length} question
                               {form.questions.length !== 1 ? "s" : ""}
                               {sub &&
-                                ` · Submitted ${new Date(sub.createdAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}`}
+                                ` · Submitted ${new Date(
+                                  sub.createdAt,
+                                ).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}`}
                             </div>
                           </div>
                         </div>

@@ -58,8 +58,7 @@ const colorOptions = [
 ];
 
 export default function DepartmentsPage() {
-  const [departments, setDepartments] =
-    useState<Department[]>(initialDepts);
+  const [departments, setDepartments] = useState<Department[]>(initialDepts);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Department | null>(null);
   const [name, setName] = useState("");
@@ -87,9 +86,7 @@ export default function DepartmentsPage() {
     if (editing) {
       setDepartments((prev) =>
         prev.map((d) =>
-          d.id === editing.id
-            ? { ...d, name, description, color }
-            : d,
+          d.id === editing.id ? { ...d, name, description, color } : d,
         ),
       );
       toast.success("Department updated");

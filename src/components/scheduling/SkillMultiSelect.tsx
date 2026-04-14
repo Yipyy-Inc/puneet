@@ -26,12 +26,19 @@ interface Props {
   placeholder?: string;
 }
 
-export function SkillMultiSelect({ skills, value, onChange, placeholder }: Props) {
+export function SkillMultiSelect({
+  skills,
+  value,
+  onChange,
+  placeholder,
+}: Props) {
   const [open, setOpen] = useState(false);
   const selected = skills.filter((s) => value.includes(s.id));
 
   const toggle = (id: string) => {
-    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+    onChange(
+      value.includes(id) ? value.filter((v) => v !== id) : [...value, id],
+    );
   };
 
   return (
@@ -59,7 +66,7 @@ export function SkillMultiSelect({ skills, value, onChange, placeholder }: Props
                   <span
                     role="button"
                     tabIndex={0}
-                    className="inline-flex size-3.5 items-center justify-center rounded hover:bg-muted-foreground/20"
+                    className="hover:bg-muted-foreground/20 inline-flex size-3.5 items-center justify-center rounded-sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggle(s.id);
@@ -95,7 +102,7 @@ export function SkillMultiSelect({ skills, value, onChange, placeholder }: Props
                     onSelect={() => toggle(s.id)}
                   >
                     <div
-                      className={`mr-2 flex size-4 items-center justify-center rounded border ${
+                      className={`mr-2 flex size-4 items-center justify-center rounded-sm border ${
                         checked
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-input"

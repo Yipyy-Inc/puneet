@@ -9,7 +9,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { isHoliday } from "@/lib/scheduling-utils";
-import { getDatesForView, formatDateStr, isToday, isWeekend } from "./ScheduleCalendarHelpers";
+import {
+  getDatesForView,
+  formatDateStr,
+  isToday,
+  isWeekend,
+} from "./ScheduleCalendarHelpers";
 import type {
   ScheduleShift,
   ScheduleEmployee,
@@ -91,12 +96,12 @@ export function ScheduleMonthView({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Day-of-week header */}
-      <div className="grid grid-cols-7 border-b border-border/60 bg-muted/20">
+      <div className="border-border/60 bg-muted/20 grid grid-cols-7 border-b">
         {WEEK_DAYS.map((d, i) => (
           <div
             key={d}
             className={cn(
-              "py-3 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground",
+              "text-muted-foreground py-3 text-center text-[11px] font-semibold tracking-[0.08em] uppercase",
               i >= 5 && "text-muted-foreground/70",
             )}
           >
@@ -127,7 +132,7 @@ export function ScheduleMonthView({
             <div
               key={idx}
               className={cn(
-                "group relative flex min-h-[120px] cursor-pointer flex-col border-b border-r border-border/50 p-2 transition-colors hover:bg-muted/30",
+                "group border-border/50 hover:bg-muted/30 relative flex min-h-[120px] cursor-pointer flex-col border-r border-b p-2 transition-colors",
                 weekend && "bg-muted/10",
                 !inCurrentMonth && "bg-muted/5",
                 todayFlag && "bg-indigo-50/40 dark:bg-indigo-950/20",
@@ -239,7 +244,7 @@ export function ScheduleMonthView({
                 })}
 
                 {assignedShifts.length > maxPreview && (
-                  <span className="px-1 text-[10px] font-medium text-muted-foreground">
+                  <span className="text-muted-foreground px-1 text-[10px] font-medium">
                     +{assignedShifts.length - maxPreview} more
                   </span>
                 )}
@@ -247,7 +252,7 @@ export function ScheduleMonthView({
                 {assignedShifts.length === 0 &&
                   openShifts.length === 0 &&
                   inCurrentMonth && (
-                    <span className="mt-auto text-[10px] italic text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="text-muted-foreground/50 mt-auto text-[10px] italic opacity-0 transition-opacity group-hover:opacity-100">
                       + Add shift
                     </span>
                   )}

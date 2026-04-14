@@ -684,8 +684,8 @@ export default function AutomationsPage() {
                 Abandonment Recovery
               </CardTitle>
               <p className="text-muted-foreground mt-1 text-sm">
-                Automated outreach for clients who started but didn't complete a
-                booking. Configure per-step templates in{" "}
+                Automated outreach for clients who started but didn&apos;t
+                complete a booking. Configure per-step templates in{" "}
                 <a
                   href="/facility/dashboard/online-booking"
                   className="text-primary underline-offset-4 hover:underline"
@@ -740,7 +740,11 @@ export default function AutomationsPage() {
                           <p className="text-muted-foreground mt-1 text-xs">
                             Sent {rule.stats.totalSent} times
                             {rule.stats.lastTriggered && (
-                              <> · Last triggered {formatTimestamp(rule.stats.lastTriggered)}</>
+                              <>
+                                {" "}
+                                · Last triggered{" "}
+                                {formatTimestamp(rule.stats.lastTriggered)}
+                              </>
                             )}
                           </p>
                         </div>

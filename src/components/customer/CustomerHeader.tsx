@@ -113,7 +113,9 @@ export function CustomerHeader() {
             <div className="text-sm font-semibold" suppressHydrationWarning>
               {selectedFacility?.name ?? "Yipyy"}
             </div>
-            <div className="text-muted-foreground text-xs">{t("Customer Portal")}</div>
+            <div className="text-muted-foreground text-xs">
+              {t("Customer Portal")}
+            </div>
           </div>
         </Link>
       </div>

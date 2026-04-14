@@ -238,12 +238,20 @@ export function saveStoredPricingRulesForScope(
   scopeKey?: string | number,
 ): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(getPricingRulesStorageKey(scopeKey), JSON.stringify(rules));
+  localStorage.setItem(
+    getPricingRulesStorageKey(scopeKey),
+    JSON.stringify(rules),
+  );
 }
 
-export function getStoredServiceAddOns(scopeKey?: string | number): ServiceAddOn[] {
+export function getStoredServiceAddOns(
+  scopeKey?: string | number,
+): ServiceAddOn[] {
   const parsed = parseStoredJsonFromKeys<ServiceAddOn[]>(
-    uniqueKeys([getServiceAddOnsStorageKey(scopeKey), getServiceAddOnsStorageKey()]),
+    uniqueKeys([
+      getServiceAddOnsStorageKey(scopeKey),
+      getServiceAddOnsStorageKey(),
+    ]),
   );
   if (Array.isArray(parsed)) return parsed;
   return defaultServiceAddOns;

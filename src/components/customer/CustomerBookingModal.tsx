@@ -79,10 +79,7 @@ import type { Pet } from "@/types/pet";
 import { toast } from "sonner";
 import { vaccinationRecords } from "@/data/pet-data";
 import { bookings as historicalBookings } from "@/data/bookings";
-import {
-  facilityConfig,
-  isApprovalRequired,
-} from "@/data/facility-config";
+import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 import { clientDocuments } from "@/data/documents";
 import { vaccinationRules, evaluationConfig } from "@/data/settings";
 import { getFormById } from "@/data/forms";

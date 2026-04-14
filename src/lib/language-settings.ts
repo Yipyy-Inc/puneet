@@ -134,9 +134,7 @@ export function isCustomerLanguageEnabled(
     .includes(languageCode.toLowerCase());
 }
 
-export function getEnabledLocales(
-  settings: AppLanguageSettings,
-): AppLocale[] {
+export function getEnabledLocales(settings: AppLanguageSettings): AppLocale[] {
   if (!settings.secondaryEnabled) return [settings.primaryLocale];
   return [settings.primaryLocale, settings.secondaryLocale];
 }
@@ -164,9 +162,7 @@ export function getCookieValue(
 ): string | undefined {
   if (!cookieString) return undefined;
   const cookies = cookieString.split(";");
-  const raw = cookies.find((cookie) =>
-    cookie.trim().startsWith(`${key}=`),
-  );
+  const raw = cookies.find((cookie) => cookie.trim().startsWith(`${key}=`));
   return raw ? raw.split("=").slice(1).join("=") : undefined;
 }
 
@@ -221,7 +217,10 @@ export function setClientLocaleCookie(locale: AppLocale): void {
 export function loadLanguageSettingsFromCookies(
   cookieString: string | undefined,
 ): AppLanguageSettings {
-  const primaryLocale = getCookieValue(cookieString, APP_LANGUAGE_PRIMARY_COOKIE);
+  const primaryLocale = getCookieValue(
+    cookieString,
+    APP_LANGUAGE_PRIMARY_COOKIE,
+  );
   const secondaryLocale = getCookieValue(
     cookieString,
     APP_LANGUAGE_SECONDARY_COOKIE,

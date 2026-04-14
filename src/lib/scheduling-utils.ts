@@ -10,7 +10,7 @@ export function computeShiftHours(
 ): number {
   const [sh, sm] = startTime.split(":").map(Number);
   const [eh, em] = endTime.split(":").map(Number);
-  const totalMinutes = (eh * 60 + em) - (sh * 60 + sm) - breakMinutes;
+  const totalMinutes = eh * 60 + em - (sh * 60 + sm) - breakMinutes;
   return Math.max(0, totalMinutes / 60);
 }
 

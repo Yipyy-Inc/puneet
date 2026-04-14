@@ -49,7 +49,10 @@ import {
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 
-function formatDayRangeFilter(label: string, range: DayRange | null): string | null {
+function formatDayRangeFilter(
+  label: string,
+  range: DayRange | null,
+): string | null {
   if (!range) return null;
 
   if (range.preset != null) {
@@ -281,7 +284,9 @@ export default function FacilityClientsPage() {
               <span
                 className={cn(
                   "size-1.5 rounded-full",
-                  client.status === "active" ? "bg-emerald-500" : "bg-slate-400",
+                  client.status === "active"
+                    ? "bg-emerald-500"
+                    : "bg-slate-400",
                 )}
               />
               <span className="text-muted-foreground">
@@ -438,7 +443,10 @@ export default function FacilityClientsPage() {
   const activeClientCount = facilityClients.filter(
     (c) => c.status === "active",
   ).length;
-  const inactiveClientCount = Math.max(0, facilityClients.length - activeClientCount);
+  const inactiveClientCount = Math.max(
+    0,
+    facilityClients.length - activeClientCount,
+  );
   const shouldShowFiltersPanel = filtersExpanded || activeCount > 0;
 
   return (
@@ -450,7 +458,10 @@ export default function FacilityClientsPage() {
 
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
-            <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-[11px] uppercase">
+            <Badge
+              variant="secondary"
+              className="w-fit rounded-full px-3 py-1 text-[11px] uppercase"
+            >
               Customer Management
             </Badge>
             <div>
@@ -484,7 +495,11 @@ export default function FacilityClientsPage() {
               <Download className="mr-2 size-4" />
               Export
             </Button>
-            <Button size="sm" className="shadow-sm" onClick={() => setCreatingClient(true)}>
+            <Button
+              size="sm"
+              className="shadow-sm"
+              onClick={() => setCreatingClient(true)}
+            >
               <Plus className="mr-2 size-4" />
               New Client
             </Button>
@@ -580,14 +595,15 @@ export default function FacilityClientsPage() {
           <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
             <CardTitle className="text-base">Client Directory</CardTitle>
             <p className="text-muted-foreground text-xs">
-              Showing {filteredClients.length} of {facilityClients.length} clients
+              Showing {filteredClients.length} of {facilityClients.length}{" "}
+              clients
             </p>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="relative rounded-xl border border-slate-200/80 bg-linear-to-br from-sky-50/60 via-white to-indigo-50/50 p-2.5">
             <div className="overflow-hidden rounded-lg border border-white/90 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-              <div className="[&_thead_th]:bg-slate-50/90 [&_thead_th]:text-[11px] [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-slate-500 [&_thead_th]:uppercase [&_tbody_td]:align-middle [&_tbody_td]:py-3 [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-200">
+              <div className="[&_tbody_td]:py-3 [&_tbody_td]:align-middle [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-200 [&_thead_th]:bg-slate-50/90 [&_thead_th]:text-[11px] [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-slate-500 [&_thead_th]:uppercase">
                 <DataTable
                   data={filteredClients}
                   columns={columns}
@@ -605,7 +621,7 @@ export default function FacilityClientsPage() {
                     cn(
                       "border-b border-slate-100/80 [&>td]:py-3",
                       selectedIds.has(client.id)
-                        ? "!bg-sky-50/80"
+                        ? "bg-sky-50/80!"
                         : client.status === "active"
                           ? "bg-white/95 !hover:bg-emerald-50/40"
                           : "bg-slate-50/60 !hover:bg-slate-100/80",
@@ -696,7 +712,9 @@ export default function FacilityClientsPage() {
             </Button>
             <Button
               onClick={handleCreateEmailSegment}
-              disabled={!segmentName.trim() || selectedClientsWithEmail.length === 0}
+              disabled={
+                !segmentName.trim() || selectedClientsWithEmail.length === 0
+              }
             >
               Create Email Segment
             </Button>

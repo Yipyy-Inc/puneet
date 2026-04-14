@@ -14,7 +14,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   owner: "Full access to every module and setting.",
-  general_manager: "Full access to schedules, staff, reports across all departments.",
+  general_manager:
+    "Full access to schedules, staff, reports across all departments.",
   department_manager: "Manage their department's schedule, staff, requests.",
   supervisor: "View their team, post open shifts, approve simple requests.",
   employee: "View own schedule, request swaps and time off.",

@@ -327,7 +327,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
                 <p className="text-sm font-semibold text-slate-900">
                   Pricing Rules
                 </p>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                <p className="text-muted-foreground mt-1 text-xs/relaxed">
                   Configure discounts, surcharges, and bundles with clear,
                   category-based controls.
                 </p>
@@ -388,7 +388,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
                                 className={cn(
                                   "group relative flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all duration-200",
                                   isActive
-                                    ? "border-primary/45 bg-primary/[0.08] shadow-sm"
+                                    ? "border-primary/45 bg-primary/8 shadow-sm"
                                     : "border-slate-200/80 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm",
                                 )}
                               >
@@ -450,7 +450,7 @@ export function PricingRulesSettings({ facilityId }: { facilityId?: number }) {
             <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-4 sm:px-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.1em] uppercase">
+                  <p className="text-muted-foreground text-[11px] font-semibold tracking-widest uppercase">
                     {activeCategory.group}
                   </p>
                   <h3 className="mt-1 text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">

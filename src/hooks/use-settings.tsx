@@ -198,7 +198,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [languageSettings, setLanguageSettings] = useState<AppLanguageSettings>(
     () =>
       normalizeLanguageSettings(
-        loadStored(APP_LANGUAGE_SETTINGS_STORAGE_KEY, DEFAULT_APP_LANGUAGE_SETTINGS),
+        loadStored(
+          APP_LANGUAGE_SETTINGS_STORAGE_KEY,
+          DEFAULT_APP_LANGUAGE_SETTINGS,
+        ),
       ),
   );
   const [rules, setRules] = useState<BookingRules>(() =>

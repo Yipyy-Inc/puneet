@@ -83,7 +83,8 @@ export function DraftReviewSummary({
     0,
   );
   const warningCount = analyzed.reduce(
-    (sum, a) => sum + a.conflicts.filter((c) => c.severity === "warning").length,
+    (sum, a) =>
+      sum + a.conflicts.filter((c) => c.severity === "warning").length,
     0,
   );
 
@@ -101,17 +102,17 @@ export function DraftReviewSummary({
   }
 
   return (
-    <div className="rounded-md border bg-card">
+    <div className="bg-card rounded-md border">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/40"
+        className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
       >
         <div className="flex items-center gap-2">
           {expanded ? (
-            <ChevronDown className="size-4 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground size-4" />
           ) : (
-            <ChevronRight className="size-4 text-muted-foreground" />
+            <ChevronRight className="text-muted-foreground size-4" />
           )}
           <span className="text-sm font-medium">Schedule review</span>
           {errorCount > 0 && (
@@ -146,7 +147,7 @@ export function DraftReviewSummary({
       {expanded && (
         <div className="divide-y border-t text-xs">
           {analyzed.length === 0 && unfilledCount === 0 && (
-            <div className="px-3 py-4 text-center text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-4 text-center">
               No conflicts.
             </div>
           )}
@@ -170,7 +171,7 @@ export function DraftReviewSummary({
                   return (
                     <li
                       key={`${c.kind}-${i}`}
-                      className="flex items-start gap-1.5 text-muted-foreground"
+                      className="text-muted-foreground flex items-start gap-1.5"
                     >
                       <Icon className={`mt-0.5 size-3 shrink-0 ${color}`} />
                       <span>{c.message}</span>
@@ -182,7 +183,7 @@ export function DraftReviewSummary({
           ))}
 
           {unfilledCount > 0 && (
-            <div className="px-3 py-2 text-muted-foreground">
+            <div className="text-muted-foreground px-3 py-2">
               {unfilledCount} shift{unfilledCount === 1 ? "" : "s"} still need
               an assignee.
             </div>

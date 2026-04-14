@@ -78,7 +78,8 @@ export function getReminderHistoryForCustomer({
         status: message.status,
       }))
       .sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
   }
 
@@ -170,19 +171,28 @@ function ReminderColumn({
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.7)] backdrop-blur-sm">
       <div className="flex items-center justify-between">
-        <div className={cn("rounded-full border px-2.5 py-1 text-[11px] font-semibold", titleTone)}>
+        <div
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+            titleTone,
+          )}
+        >
           <span className="inline-flex items-center gap-1.5">
             <Icon className="size-3.5" />
             {title}
           </span>
         </div>
-        <p className="text-xs font-semibold text-slate-500">{items.length} sent</p>
+        <p className="text-xs font-semibold text-slate-500">
+          {items.length} sent
+        </p>
       </div>
 
       <div className="mt-3 space-y-2">
         {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center">
-            <p className="text-sm font-medium text-slate-500">No {title.toLowerCase()} yet</p>
+            <p className="text-sm font-medium text-slate-500">
+              No {title.toLowerCase()} yet
+            </p>
             <p className="mt-1 text-xs text-slate-400">
               New reminders for this customer will appear here automatically.
             </p>
@@ -191,14 +201,14 @@ function ReminderColumn({
           items.map((item) => (
             <article
               key={item.id}
-              className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
+              className="rounded-xl border border-slate-200/90 bg-linear-to-br from-white to-slate-50 px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-slate-800">
                     {item.subject ?? "Automated reminder"}
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">{item.body}</p>
+                  <p className="mt-1 text-xs/5 text-slate-600">{item.body}</p>
                 </div>
                 <span
                   className={cn(
@@ -248,9 +258,9 @@ export function ReminderHistoryPanel({
   );
 
   return (
-    <div className="h-full overflow-y-auto bg-gradient-to-b from-amber-50/40 via-white to-slate-50/60">
+    <div className="h-full overflow-y-auto bg-linear-to-b from-amber-50/40 via-white to-slate-50/60">
       <div className="mx-auto w-full max-w-5xl px-6 py-6">
-        <div className="relative overflow-hidden rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50 px-5 py-4 shadow-[0_26px_70px_-48px_rgba(120,53,15,0.8)]">
+        <div className="relative overflow-hidden rounded-3xl border border-amber-200/70 bg-linear-to-br from-amber-50 via-white to-orange-50 px-5 py-4 shadow-[0_26px_70px_-48px_rgba(120,53,15,0.8)]">
           <div className="pointer-events-none absolute -top-20 -right-12 h-48 w-48 rounded-full bg-amber-300/30 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-orange-300/25 blur-3xl" />
 
@@ -260,7 +270,7 @@ export function ReminderHistoryPanel({
                 Reminder Concierge
               </p>
               <h4
-                className="mt-1 text-2xl leading-tight font-semibold text-slate-900"
+                className="mt-1 text-2xl/tight font-semibold text-slate-900"
                 style={{
                   fontFamily: '"Cormorant Garamond", "Times New Roman", serif',
                 }}
@@ -280,7 +290,9 @@ export function ReminderHistoryPanel({
                 Total reminders
               </p>
               <p className="mt-1 text-right text-2xl font-bold text-slate-900 tabular-nums">
-                {isCustomerMode ? customerReminders.length : reminderHistory.length}
+                {isCustomerMode
+                  ? customerReminders.length
+                  : reminderHistory.length}
               </p>
             </div>
           </div>
@@ -291,23 +303,28 @@ export function ReminderHistoryPanel({
             <div className="space-y-2">
               {customerReminders.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-5 text-center">
-                  <p className="text-sm font-medium text-slate-500">No reminders yet</p>
+                  <p className="text-sm font-medium text-slate-500">
+                    No reminders yet
+                  </p>
                   <p className="mt-1 text-xs text-slate-400">
-                    New reminders for this facility will appear here automatically.
+                    New reminders for this facility will appear here
+                    automatically.
                   </p>
                 </div>
               ) : (
                 customerReminders.map((item) => (
                   <article
                     key={item.id}
-                    className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-white to-slate-50 px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
+                    className="rounded-xl border border-slate-200/90 bg-linear-to-br from-white to-slate-50 px-3.5 py-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
                           {item.subject ?? "Automated reminder"}
                         </p>
-                        <p className="mt-1 text-xs leading-5 text-slate-600">{item.body}</p>
+                        <p className="mt-1 text-xs/5 text-slate-600">
+                          {item.body}
+                        </p>
                       </div>
                       <span
                         className={cn(

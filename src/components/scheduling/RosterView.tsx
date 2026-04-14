@@ -194,7 +194,11 @@ export function RosterView() {
             {dateLabel}
             {isToday && (
               <span className="ml-2 tabular-nums">
-                · {now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                ·{" "}
+                {now.toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
               </span>
             )}
           </p>
@@ -239,10 +243,30 @@ export function RosterView() {
 
       {/* Stat strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="On the floor" value={totals.active} icon={UserCheck} accent="emerald" />
-        <StatCard label="Coming next" value={totals.upcoming} icon={Timer} accent="blue" />
-        <StatCard label="Unfilled" value={totals.unfilled} icon={UserX} accent="amber" />
-        <StatCard label="Finished" value={totals.finished} icon={CheckCircle2} accent="slate" />
+        <StatCard
+          label="On the floor"
+          value={totals.active}
+          icon={UserCheck}
+          accent="emerald"
+        />
+        <StatCard
+          label="Coming next"
+          value={totals.upcoming}
+          icon={Timer}
+          accent="blue"
+        />
+        <StatCard
+          label="Unfilled"
+          value={totals.unfilled}
+          icon={UserX}
+          accent="amber"
+        />
+        <StatCard
+          label="Finished"
+          value={totals.finished}
+          icon={CheckCircle2}
+          accent="slate"
+        />
       </div>
 
       {/* Buckets */}
@@ -269,8 +293,12 @@ export function RosterView() {
                       const emp = scheduleEmployees.find(
                         (e) => e.id === shift.employeeId,
                       );
-                      const pos = allPositions.find((p) => p.id === shift.positionId);
-                      const dept = departments.find((d) => d.id === shift.departmentId);
+                      const pos = allPositions.find(
+                        (p) => p.id === shift.positionId,
+                      );
+                      const dept = departments.find(
+                        (d) => d.id === shift.departmentId,
+                      );
                       const hours = computeShiftHours(
                         shift.startTime,
                         shift.endTime,
@@ -332,7 +360,10 @@ export function RosterView() {
                                 </Badge>
                               )}
                               {dept && departmentFilter === "all" && (
-                                <Badge variant="secondary" className="text-[10px]">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
                                   {dept.name}
                                 </Badge>
                               )}
@@ -352,18 +383,20 @@ export function RosterView() {
                                   </span>
                                 </>
                               )}
-                              {bucket === "upcoming" && isToday && startsInMin > 0 && (
-                                <>
-                                  <span>·</span>
-                                  <span className="text-blue-600 dark:text-blue-400">
-                                    starts in {Math.floor(startsInMin / 60)}h{" "}
-                                    {startsInMin % 60}m
-                                  </span>
-                                </>
-                              )}
+                              {bucket === "upcoming" &&
+                                isToday &&
+                                startsInMin > 0 && (
+                                  <>
+                                    <span>·</span>
+                                    <span className="text-blue-600 dark:text-blue-400">
+                                      starts in {Math.floor(startsInMin / 60)}h{" "}
+                                      {startsInMin % 60}m
+                                    </span>
+                                  </>
+                                )}
                             </div>
                             {inProgress && (
-                              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
+                              <div className="bg-muted mt-1.5 h-1 overflow-hidden rounded-full">
                                 <div
                                   className="h-full bg-emerald-500 transition-all"
                                   style={{ width: `${elapsedPct}%` }}
@@ -388,7 +421,9 @@ export function RosterView() {
                                   size="icon"
                                   variant="ghost"
                                   className="size-7"
-                                  onClick={() => handleNotify(shift, "Reminder")}
+                                  onClick={() =>
+                                    handleNotify(shift, "Reminder")
+                                  }
                                   title="Send reminder"
                                 >
                                   <Bell className="size-3.5" />
@@ -448,15 +483,19 @@ function StatCard({
   accent: "emerald" | "blue" | "amber" | "slate";
 }) {
   const accentMap = {
-    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
+    emerald:
+      "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30",
     blue: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30",
-    amber: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
+    amber:
+      "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30",
     slate: "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800",
   };
   return (
     <Card>
       <CardContent className="flex items-center gap-3 p-4">
-        <div className={`flex size-9 items-center justify-center rounded-lg ${accentMap[accent]}`}>
+        <div
+          className={`flex size-9 items-center justify-center rounded-lg ${accentMap[accent]}`}
+        >
           <Icon className="size-4" />
         </div>
         <div>

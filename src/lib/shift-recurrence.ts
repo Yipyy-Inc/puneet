@@ -55,7 +55,7 @@ export function generateRecurringDates(
     endBoundary ? d <= endBoundary : true;
 
   if (recurrence.frequency === "daily") {
-    let cur = new Date(start);
+    const cur = new Date(start);
     while (dates.length < maxCount && inBounds(cur)) {
       dates.push(formatDateLocal(cur));
       cur.setDate(cur.getDate() + 1);
@@ -91,7 +91,7 @@ export function generateRecurringDates(
       weekMonday.setDate(weekMonday.getDate() + 7 * weekInterval);
     }
   } else if (recurrence.frequency === "monthly") {
-    let cur = new Date(start);
+    const cur = new Date(start);
     while (dates.length < maxCount && inBounds(cur)) {
       dates.push(formatDateLocal(cur));
       cur.setMonth(cur.getMonth() + 1);
@@ -116,7 +116,10 @@ export function getRecurrenceSummary(
     monthly: "Every month",
   };
   let summary = freqLabels[frequency];
-  if ((frequency === "weekly" || frequency === "biweekly") && daysOfWeek.length) {
+  if (
+    (frequency === "weekly" || frequency === "biweekly") &&
+    daysOfWeek.length
+  ) {
     const dayNames = DOW_VALUES.map((v, i) =>
       daysOfWeek.includes(v) ? DOW_LABELS[i] : null,
     ).filter(Boolean);

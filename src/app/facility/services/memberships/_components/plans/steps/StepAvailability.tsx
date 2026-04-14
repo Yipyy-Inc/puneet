@@ -37,11 +37,13 @@ export function StepAvailability({ data, update }: Props) {
       <section className="space-y-3 rounded-xl border p-4">
         <div className="flex items-center gap-2">
           <Globe className="size-4" />
-          <h4 className="text-sm font-semibold">Applicable service categories</h4>
+          <h4 className="text-sm font-semibold">
+            Applicable service categories
+          </h4>
         </div>
         <p className="text-muted-foreground text-sm">
-          Restrict this plan&apos;s benefits to certain service categories. Leave
-          empty to apply site-wide.
+          Restrict this plan&apos;s benefits to certain service categories.
+          Leave empty to apply site-wide.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {categories.map((c) => {
@@ -128,8 +130,8 @@ export function StepAvailability({ data, update }: Props) {
               }
             />
             <p className="text-muted-foreground text-xs">
-              Displayed on the plan card. Discount rules above define the
-              actual behavior.
+              Displayed on the plan card. Discount rules above define the actual
+              behavior.
             </p>
           </div>
         </div>

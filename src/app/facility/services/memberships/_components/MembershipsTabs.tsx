@@ -26,9 +26,9 @@ const InsightsTab = dynamic(
 );
 
 export function MembershipsTabs() {
-  const [tab, setTab] = useState<"plans" | "subscribers" | "credits" | "insights">(
-    "plans",
-  );
+  const [tab, setTab] = useState<
+    "plans" | "subscribers" | "credits" | "insights"
+  >("plans");
 
   return (
     <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>

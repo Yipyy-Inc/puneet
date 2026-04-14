@@ -135,8 +135,7 @@ We can't wait to meet {{pet_name}}!
         enabled: true,
         channel: "both", // Highest recovery rate — use both channels
         delayHours: 1, // Act fast — payment intent is high
-        emailSubject:
-          "Complete your payment to secure {{pet_name}}'s booking",
+        emailSubject: "Complete your payment to secure {{pet_name}}'s booking",
         emailBody: `Hi {{client_name}},
 
 Your {{service}} booking for {{pet_name}} is almost confirmed — just complete the payment to lock it in!

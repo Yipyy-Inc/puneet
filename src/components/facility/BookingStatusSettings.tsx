@@ -14,7 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Trash2, Zap, Palette, Shield, Lock, WandSparkles } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Zap,
+  Palette,
+  Shield,
+  Lock,
+  WandSparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { facilities } from "@/data/facilities";
@@ -81,7 +89,10 @@ const SYSTEM_STATUS_OPTIONS = SYSTEM_STATUSES.map((s) => ({
   label: s.label,
 }));
 
-const TRANSITION_EVENT_OPTIONS: { value: AutoTransitionAction; label: string }[] = [
+const TRANSITION_EVENT_OPTIONS: {
+  value: AutoTransitionAction;
+  label: string;
+}[] = [
   { value: "onDepositPaid", label: "Deposit is paid" },
   { value: "onPaymentComplete", label: "Full payment is received" },
   { value: "onCheckIn", label: "Pet is checked in" },
@@ -504,14 +515,18 @@ export function BookingStatusSettings() {
               <TransitionRule
                 label="When pet is checked in"
                 value={autoTransitions.onCheckIn}
-                onChange={(v) => setAutoTransitions((p) => ({ ...p, onCheckIn: v }))}
+                onChange={(v) =>
+                  setAutoTransitions((p) => ({ ...p, onCheckIn: v }))
+                }
                 options={statusOptions}
               />
               <Separator />
               <TransitionRule
                 label="When checkout completes"
                 value={autoTransitions.onCheckout}
-                onChange={(v) => setAutoTransitions((p) => ({ ...p, onCheckout: v }))}
+                onChange={(v) =>
+                  setAutoTransitions((p) => ({ ...p, onCheckout: v }))
+                }
                 options={statusOptions}
               />
             </div>

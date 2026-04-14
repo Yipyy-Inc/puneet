@@ -306,9 +306,9 @@ export function ConfirmStep({
             <p className="font-medium">This service requires approval</p>
             <p className="mt-0.5 text-blue-700">
               Your booking will be submitted as a request and our team will
-              review it within{" "}
-              {getEstimatedResponseTime(selectedService)} hours.
-              You&apos;ll receive a notification once it&apos;s been reviewed.
+              review it within {getEstimatedResponseTime(selectedService)}{" "}
+              hours. You&apos;ll receive a notification once it&apos;s been
+              reviewed.
             </p>
           </div>
         </div>

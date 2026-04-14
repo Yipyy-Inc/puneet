@@ -58,10 +58,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
-import {
-  facilityConfig,
-  isApprovalRequired,
-} from "@/data/facility-config";
+import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 
 import type { Client } from "@/types/client";
 import type { FeedingScheduleItem, MedicationItem } from "@/types/booking";
@@ -309,7 +306,8 @@ export function BookingModal({
   const approvalRequired = useMemo(() => {
     if (!selectedService) return false;
     // Built-in services: check facility config
-    if (isBuiltinService(selectedService)) return isApprovalRequired(selectedService);
+    if (isBuiltinService(selectedService))
+      return isApprovalRequired(selectedService);
     // Custom services: check module's onlineBooking.approvalRequired
     const mod = getModuleBySlug(selectedService);
     return mod?.onlineBooking?.approvalRequired ?? false;
@@ -524,13 +522,7 @@ export function BookingModal({
     const hasAtLeastOnePet = guestPetSummary.length > 0;
 
     return hasName && hasValidEmail && hasAtLeastOnePet;
-  }, [
-    isEstimateMode,
-    isGuestEstimate,
-    guestName,
-    guestEmail,
-    guestPetSummary,
-  ]);
+  }, [isEstimateMode, isGuestEstimate, guestName, guestEmail, guestPetSummary]);
 
   const guestPricingPetNames = useMemo(() => {
     if (!(isEstimateMode && isGuestEstimate)) return [];
@@ -644,8 +636,7 @@ export function BookingModal({
   );
 
   const storedAddOns = useMemo(
-    () =>
-      getStoredServiceAddOns(facilityId).filter((addOn) => addOn.isActive),
+    () => getStoredServiceAddOns(facilityId).filter((addOn) => addOn.isActive),
     [open, facilityId, pricingStorageVersion],
   );
 
@@ -671,9 +662,11 @@ export function BookingModal({
     } else if (selectedService === "boarding") {
       basePrice = boarding.basePrice * Math.max(boardingNights, 1);
     } else if (selectedService === "grooming") {
-      basePrice = grooming.basePrice * Math.max(pricingSelectedPetIds.length, 1);
+      basePrice =
+        grooming.basePrice * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "training") {
-      basePrice = training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
+      basePrice =
+        training.basePrice * Math.max(pricingSelectedPetIds.length, 1);
     } else if (selectedService === "evaluation") {
       basePrice = evaluationConfig.price;
     } else if (selectedService && !isBuiltinService(selectedService)) {
@@ -716,16 +709,16 @@ export function BookingModal({
       newPetIds: effectiveNewPetIds,
       customer:
         selectedClient && !(isEstimateMode && isGuestEstimate)
-        ? {
-            status: selectedClient.status,
-            membershipPlan: selectedClient.membership?.plan,
-            membershipStatus: selectedClient.membership?.status,
-            storeCreditBalance: selectedClient.storeCredit?.balance,
-            hasPackageCredits: (selectedClient.packages ?? []).some(
-              (pkg) => pkg.remainingCredits > 0,
-            ),
-          }
-        : undefined,
+          ? {
+              status: selectedClient.status,
+              membershipPlan: selectedClient.membership?.plan,
+              membershipStatus: selectedClient.membership?.status,
+              storeCreditBalance: selectedClient.storeCredit?.balance,
+              hasPackageCredits: (selectedClient.packages ?? []).some(
+                (pkg) => pkg.remainingCredits > 0,
+              ),
+            }
+          : undefined,
       pets: pricingPets,
       addOnsCatalog: storedAddOns,
       roomAssignments,
@@ -819,7 +812,11 @@ export function BookingModal({
       const amt = sfConfig.feeding.daycare.amount;
       if (scope === "per_pet") {
         const feedingPetCount =
-          new Set(feedingSchedule.filter((f) => f.occasions.length > 0).map((f) => f.petId)).size || 1;
+          new Set(
+            feedingSchedule
+              .filter((f) => f.occasions.length > 0)
+              .map((f) => f.petId),
+          ).size || 1;
         feedingFeeTotal = amt * feedingPetCount;
       } else if (scope === "per_meal") {
         const totalMeals = feedingSchedule.reduce(
@@ -1788,7 +1785,7 @@ export function BookingModal({
         }
       }}
     >
-      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 [&>button]:hidden sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px]">
+      <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px] [&>button]:hidden">
         <DialogTitle className="sr-only">
           {isEstimateMode ? "New Estimate" : "New Booking"}
         </DialogTitle>
@@ -2152,7 +2149,9 @@ export function BookingModal({
                 {calculatePrice.medicationFeeTotal > 0 && (
                   <div className="text-muted-foreground flex justify-between text-xs">
                     <span>Medication fees</span>
-                    <span>+${calculatePrice.medicationFeeTotal.toFixed(2)}</span>
+                    <span>
+                      +${calculatePrice.medicationFeeTotal.toFixed(2)}
+                    </span>
                   </div>
                 )}
                 {calculatePrice.feedingFeeTotal > 0 && (
@@ -2197,7 +2196,10 @@ export function BookingModal({
                   />
                 </div>
                 <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-                  ${(calculatePrice.total + (isEstimateMode ? 0 : tipAmount)).toFixed(2)}
+                  $
+                  {(
+                    calculatePrice.total + (isEstimateMode ? 0 : tipAmount)
+                  ).toFixed(2)}
                 </span>
               </div>
               <h2 className="text-lg font-semibold">
@@ -2333,7 +2335,9 @@ export function BookingModal({
                             The estimate has been sent to{" "}
                             <span className="font-medium text-slate-700">
                               {isGuestEstimate
-                                ? guestEmail || guestName || "the inquiry contact"
+                                ? guestEmail ||
+                                  guestName ||
+                                  "the inquiry contact"
                                 : selectedClient?.name}
                             </span>
                             .

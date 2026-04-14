@@ -14,7 +14,10 @@ import {
   Dog,
   Inbox,
 } from "lucide-react";
-import type { UnfinishedBooking, AbandonmentStep } from "@/types/unfinished-booking";
+import type {
+  UnfinishedBooking,
+  AbandonmentStep,
+} from "@/types/unfinished-booking";
 import { ABANDONMENT_STEP_LABELS } from "@/data/unfinished-bookings";
 
 interface Props {
@@ -41,12 +44,14 @@ function ProgressBar({ step }: { step: AbandonmentStep }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Left at: <span className="font-medium text-foreground">{label}</span></span>
+        <span className="text-muted-foreground">
+          Left at: <span className="text-foreground font-medium">{label}</span>
+        </span>
         <span className="text-muted-foreground">{progress}%</span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-500 transition-all"
+          className="h-full rounded-full bg-linear-to-r from-amber-400 to-amber-500 transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -80,7 +85,7 @@ export function CustomerUnfinishedBookings({ bookings }: Props) {
         <Inbox className="text-muted-foreground mx-auto mb-4 size-12" />
         <h3 className="mb-2 text-lg font-semibold">No unfinished bookings</h3>
         <p className="text-muted-foreground text-sm">
-          Any reservation you start but don't complete will appear here.
+          Any reservation you start but don&apos;t complete will appear here.
         </p>
       </div>
     );
@@ -91,9 +96,10 @@ export function CustomerUnfinishedBookings({ bookings }: Props) {
       {/* Contextual nudge */}
       <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/20">
         <Clock className="mt-0.5 size-4 shrink-0 text-amber-600" />
-        <p className="text-amber-800 dark:text-amber-300 text-sm">
-          You have <span className="font-semibold">{bookings.length}</span> unfinished{" "}
-          {bookings.length === 1 ? "reservation" : "reservations"}. Pick up where you left off — your details are saved.
+        <p className="text-sm text-amber-800 dark:text-amber-300">
+          You have <span className="font-semibold">{bookings.length}</span>{" "}
+          unfinished {bookings.length === 1 ? "reservation" : "reservations"}.
+          Pick up where you left off — your details are saved.
         </p>
       </div>
 
@@ -109,24 +115,24 @@ export function CustomerUnfinishedBookings({ bookings }: Props) {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   {/* Service icon + info */}
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="bg-amber-50 dark:bg-amber-950/30 flex size-12 shrink-0 items-center justify-center rounded-xl border border-amber-200 dark:border-amber-800">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
                       <ServiceIcon className="size-5 text-amber-600" />
                     </div>
 
-                    <div className="flex-1 min-w-0 space-y-2">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold capitalize">
                           {booking.service ?? "Reservation"}
                           {booking.serviceType && (
-                            <span className="text-muted-foreground font-normal ml-1">
+                            <span className="text-muted-foreground ml-1 font-normal">
                               · {booking.serviceType.replace(/_/g, " ")}
                             </span>
                           )}
                         </h3>
                         <Badge
                           variant="outline"
-                          className="border-amber-200 bg-amber-50 text-amber-700 text-[10px] dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                          className="border-amber-200 bg-amber-50 text-[10px] text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
                         >
                           Unfinished
                         </Badge>
@@ -134,19 +140,26 @@ export function CustomerUnfinishedBookings({ bookings }: Props) {
 
                       {booking.petName && (
                         <p className="text-muted-foreground text-sm">
-                          For <span className="font-medium text-foreground">{booking.petName}</span>
+                          For{" "}
+                          <span className="text-foreground font-medium">
+                            {booking.petName}
+                          </span>
                           {booking.petType && (
-                            <span className="capitalize"> · {booking.petType}</span>
+                            <span className="capitalize">
+                              {" "}
+                              · {booking.petType}
+                            </span>
                           )}
                         </p>
                       )}
 
                       {booking.requestedStartDate && (
-                        <p className="text-muted-foreground text-sm flex items-center gap-1">
+                        <p className="text-muted-foreground flex items-center gap-1 text-sm">
                           <Calendar className="size-3.5" />
                           {formatDate(booking.requestedStartDate)}
                           {booking.requestedEndDate &&
-                            booking.requestedEndDate !== booking.requestedStartDate && (
+                            booking.requestedEndDate !==
+                              booking.requestedStartDate && (
                               <> → {formatDate(booking.requestedEndDate)}</>
                             )}
                         </p>

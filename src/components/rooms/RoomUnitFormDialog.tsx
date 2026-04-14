@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,9 +39,17 @@ interface Props {
 }
 
 export function RoomUnitFormDialog({
-  open, editing, categoryId, categoryName, facilityId = 11, onClose, onSave,
+  open,
+  editing,
+  categoryId,
+  categoryName,
+  facilityId = 11,
+  onClose,
+  onSave,
 }: Props) {
-  const [form, setForm] = useState<FacilityRoom>(() => blank(categoryId, facilityId));
+  const [form, setForm] = useState<FacilityRoom>(() =>
+    blank(categoryId, facilityId),
+  );
 
   useEffect(() => {
     setForm(editing ? { ...editing } : blank(categoryId, facilityId));
@@ -44,17 +58,26 @@ export function RoomUnitFormDialog({
   const valid = form.name.trim().length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {editing ? "Edit Room Unit" : `Add Unit${categoryName ? ` — ${categoryName}` : ""}`}
+            {editing
+              ? "Edit Room Unit"
+              : `Add Unit${categoryName ? ` — ${categoryName}` : ""}`}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           <div className="space-y-1.5">
-            <Label>Room Name <span className="text-destructive">*</span></Label>
+            <Label>
+              Room Name <span className="text-destructive">*</span>
+            </Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -66,7 +89,8 @@ export function RoomUnitFormDialog({
           <div className="space-y-1.5">
             <Label>Capacity Override</Label>
             <Input
-              type="number" min={1}
+              type="number"
+              min={1}
               value={form.capacity ?? ""}
               onChange={(e) => {
                 const v = parseInt(e.target.value);
@@ -103,7 +127,7 @@ export function RoomUnitFormDialog({
               checked={form.active}
               onCheckedChange={(v) => setForm({ ...form, active: v })}
             />
-            <Label className="cursor-pointer font-normal text-sm">
+            <Label className="cursor-pointer text-sm font-normal">
               {form.active
                 ? "Active — available for booking"
                 : "Inactive — hidden from bookings"}
@@ -112,7 +136,9 @@ export function RoomUnitFormDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button disabled={!valid} onClick={() => onSave(form)}>
             {editing ? "Save Changes" : "Add Room"}
           </Button>

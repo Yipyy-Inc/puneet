@@ -1,22 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Briefcase,
-  Plus,
-  Edit2,
-  Trash2,
-  DollarSign,
-  MoreHorizontal,
-  Building2,
-} from "lucide-react";
+import { Plus, Edit2, Trash2, DollarSign, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -41,12 +28,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   positions as initialPositions,
@@ -56,8 +37,16 @@ import {
 import type { Position } from "@/types/scheduling";
 
 const colorOptions = [
-  "#818cf8", "#34d399", "#f472b6", "#fbbf24", "#f97316",
-  "#a78bfa", "#2dd4bf", "#fb923c", "#6366f1", "#ec4899",
+  "#818cf8",
+  "#34d399",
+  "#f472b6",
+  "#fbbf24",
+  "#f97316",
+  "#a78bfa",
+  "#2dd4bf",
+  "#fb923c",
+  "#6366f1",
+  "#ec4899",
 ];
 
 export default function PositionsPage() {
@@ -76,7 +65,9 @@ export default function PositionsPage() {
   const openCreate = () => {
     setEditing(null);
     setName("");
-    setDepartmentId(filterDept !== "all" ? filterDept : departments[0]?.id || "");
+    setDepartmentId(
+      filterDept !== "all" ? filterDept : departments[0]?.id || "",
+    );
     setPayType("hourly");
     setHourlyRate("");
     setSalary("");
@@ -108,8 +99,14 @@ export default function PositionsPage() {
                 name,
                 departmentId,
                 payType,
-                hourlyRate: payType === "hourly" ? parseFloat(hourlyRate) || undefined : undefined,
-                salary: payType === "salary" ? parseFloat(salary) || undefined : undefined,
+                hourlyRate:
+                  payType === "hourly"
+                    ? parseFloat(hourlyRate) || undefined
+                    : undefined,
+                salary:
+                  payType === "salary"
+                    ? parseFloat(salary) || undefined
+                    : undefined,
                 description,
                 color,
               }
@@ -123,8 +120,12 @@ export default function PositionsPage() {
         name,
         departmentId,
         payType,
-        hourlyRate: payType === "hourly" ? parseFloat(hourlyRate) || undefined : undefined,
-        salary: payType === "salary" ? parseFloat(salary) || undefined : undefined,
+        hourlyRate:
+          payType === "hourly"
+            ? parseFloat(hourlyRate) || undefined
+            : undefined,
+        salary:
+          payType === "salary" ? parseFloat(salary) || undefined : undefined,
         description,
         color,
         isActive: true,
@@ -250,10 +251,7 @@ export default function PositionsPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-3">
-                        <Badge
-                          variant="outline"
-                          className="gap-1 text-xs"
-                        >
+                        <Badge variant="outline" className="gap-1 text-xs">
                           <DollarSign className="size-2.5" />
                           {pos.payType === "hourly"
                             ? `$${pos.hourlyRate?.toFixed(2)}/hr`

@@ -3,7 +3,6 @@ import { vaccinationRecords } from "@/data/pet-data";
 import { vaccinationRules } from "@/data/settings";
 import { getNotesForEntity, getTagsForEntity } from "@/data/tags-notes";
 import type { Booking } from "@/types/booking";
-import type { Client } from "@/types/client";
 import type { ManualFacilityEvent } from "@/lib/operations-calendar";
 
 export interface VaccineCheckRow {
@@ -49,7 +48,10 @@ export function getRequiredVaccines(service: string): string[] {
     .map((rule) => rule.vaccineName);
 }
 
-export function getVaccineRows(petId: number | undefined, service: string): VaccineCheckRow[] {
+export function getVaccineRows(
+  petId: number | undefined,
+  service: string,
+): VaccineCheckRow[] {
   if (!petId) return [];
 
   const now = Date.now();
@@ -58,7 +60,9 @@ export function getVaccineRows(petId: number | undefined, service: string): Vacc
 
   return required.map((requiredName) => {
     const match = records.find((record) =>
-      record.vaccineName.toLowerCase().includes(requiredName.toLowerCase().split(" ")[0]),
+      record.vaccineName
+        .toLowerCase()
+        .includes(requiredName.toLowerCase().split(" ")[0]),
     );
 
     if (!match) {
@@ -79,7 +83,9 @@ export function getVaccineRows(petId: number | undefined, service: string): Vacc
   });
 }
 
-export function getAgreementStatus(clientId: number | undefined): AgreementStatusSummary {
+export function getAgreementStatus(
+  clientId: number | undefined,
+): AgreementStatusSummary {
   if (!clientId) {
     return { signed: false };
   }
@@ -109,12 +115,18 @@ export function getAgreementStatus(clientId: number | undefined): AgreementStatu
   };
 }
 
-export function getServiceHistorySummary(bookings: Booking[], petId: number | undefined): string {
+export function getServiceHistorySummary(
+  bookings: Booking[],
+  petId: number | undefined,
+): string {
   if (!petId) return "No visit history available";
 
   const history = bookings
     .filter((booking) => booking.petId === petId)
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+    );
 
   if (history.length === 0) return "No visit history available";
 
@@ -126,12 +138,18 @@ export function getServiceHistorySummary(bookings: Booking[], petId: number | un
   return summary;
 }
 
-export function getLastVisitDate(bookings: Booking[], petId: number | undefined): string | null {
+export function getLastVisitDate(
+  bookings: Booking[],
+  petId: number | undefined,
+): string | null {
   if (!petId) return null;
 
   const history = bookings
     .filter((booking) => booking.petId === petId)
-    .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+    );
 
   return history[0]?.startDate ?? null;
 }
@@ -164,11 +182,16 @@ export function getCustomerNotes(clientId: number | undefined): string {
   return notes[0]?.content ?? "";
 }
 
-export function canEditBookingNotes(role: string, assignedStaff: string[]): boolean {
+export function canEditBookingNotes(
+  role: string,
+  assignedStaff: string[],
+): boolean {
   if (isManagerOrAdminRole(role)) return true;
   const normalizedRole = role.toLowerCase();
-  return assignedStaff.some((staffName) =>
-    staffName.toLowerCase().includes(normalizedRole) || normalizedRole.includes("staff"),
+  return assignedStaff.some(
+    (staffName) =>
+      staffName.toLowerCase().includes(normalizedRole) ||
+      normalizedRole.includes("staff"),
   );
 }
 

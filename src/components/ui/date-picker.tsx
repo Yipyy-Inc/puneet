@@ -209,12 +209,16 @@ export function DatePicker({
 
     if (!withinLimits(typedDate)) {
       if (minDate && typedDate < startOfDay(minDate)) {
-        setManualInputError(`Date must be on or after ${toISODateString(minDate)}`);
+        setManualInputError(
+          `Date must be on or after ${toISODateString(minDate)}`,
+        );
         return;
       }
 
       if (maxDate && typedDate > startOfDay(maxDate)) {
-        setManualInputError(`Date must be on or before ${toISODateString(maxDate)}`);
+        setManualInputError(
+          `Date must be on or before ${toISODateString(maxDate)}`,
+        );
         return;
       }
     }
@@ -384,12 +388,14 @@ export function DatePicker({
   if (displayMode === "dialog") {
     return (
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-        <DialogPrimitive.Trigger asChild>{triggerButton}</DialogPrimitive.Trigger>
+        <DialogPrimitive.Trigger asChild>
+          {triggerButton}
+        </DialogPrimitive.Trigger>
 
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className={cn(
-              "fixed inset-0 z-[70] bg-black/55 backdrop-blur-[1px]",
+              "fixed inset-0 z-70 bg-black/55 backdrop-blur-[1px]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 duration-300",
             )}
@@ -397,8 +403,8 @@ export function DatePicker({
 
           <DialogPrimitive.Content
             className={cn(
-              "fixed left-1/2 top-1/2 z-[71] -translate-x-1/2 -translate-y-1/2",
-              "w-[380px] max-w-[calc(100vw-1rem)] max-h-[90vh] overflow-y-auto",
+              "fixed top-1/2 left-1/2 z-71 -translate-x-1/2 -translate-y-1/2",
+              "max-h-[90vh] w-[380px] max-w-[calc(100vw-1rem)] overflow-y-auto",
               "rounded-xl border border-slate-200 bg-white p-0",
               "shadow-[0_32px_80px_-12px_rgba(0,0,0,0.45)]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -407,7 +413,7 @@ export function DatePicker({
               "data-[state=open]:slide-in-from-bottom-3 duration-200 ease-out",
               popoverClassName,
               isNarrowViewport &&
-                "!w-[min(92vw,340px)] !max-w-[calc(100vw-1rem)]",
+                "w-[min(92vw,340px)]! max-w-[calc(100vw-1rem)]!",
             )}
           >
             <DialogPrimitive.Title className="sr-only">
@@ -431,16 +437,14 @@ export function DatePicker({
           <div
             aria-hidden="true"
             className={cn(
-              "pointer-events-none fixed z-[60] h-0 w-0",
+              "pointer-events-none fixed z-60 h-0 w-0",
               desktopFixedAnchorClassName,
             )}
           />
         </PopoverAnchor>
       )}
 
-      <PopoverTrigger asChild>
-        {triggerButton}
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
 
       <PopoverContent
         align={effectivePopoverAlign}
@@ -451,8 +455,7 @@ export function DatePicker({
         className={cn(
           "w-[380px] max-w-[calc(100vw-1rem)] overflow-hidden border-slate-200 p-0 max-sm:w-[calc(100vw-1rem)]",
           popoverClassName,
-          isNarrowViewport &&
-            "!w-[min(92vw,340px)] !max-w-[calc(100vw-1rem)]",
+          isNarrowViewport && "w-[min(92vw,340px)]! max-w-[calc(100vw-1rem)]!",
         )}
       >
         {calendarPanel}

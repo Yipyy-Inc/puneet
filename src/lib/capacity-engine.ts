@@ -7,7 +7,13 @@
  *  - Grooming (stations, per-time-slot)
  */
 
-import type { RoomRule, DaycareSection, FacilityRoom, RoomCategory, GroomingStation } from "@/types/rooms";
+import type {
+  RoomRule,
+  DaycareSection,
+  FacilityRoom,
+  RoomCategory,
+  GroomingStation,
+} from "@/types/rooms";
 import type { Booking } from "@/types/booking";
 import type { Pet } from "@/types/pet";
 
@@ -19,10 +25,12 @@ export function petMatchesRules(pet: Pet, rules: RoomRule[]): boolean {
     if (!rule.enabled) continue;
     switch (rule.type) {
       case "max_weight":
-        if (typeof rule.value === "number" && pet.weight > rule.value) return false;
+        if (typeof rule.value === "number" && pet.weight > rule.value)
+          return false;
         break;
       case "min_weight":
-        if (typeof rule.value === "number" && pet.weight < rule.value) return false;
+        if (typeof rule.value === "number" && pet.weight < rule.value)
+          return false;
         break;
       case "pet_type":
         if (
@@ -49,11 +57,15 @@ export function petMatchesRules(pet: Pet, rules: RoomRule[]): boolean {
  * Used to simulate realistic partial occupancy without touching booking data.
  * Range: 20–55% of capacity.
  */
-export function getMockUsage(id: string, date: string, capacity: number): number {
+export function getMockUsage(
+  id: string,
+  date: string,
+  capacity: number,
+): number {
   const hash = (id + date)
     .split("")
     .reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) & 0xffff, 0);
-  const pct = 0.2 + ((hash % 35) / 100); // 20–55%
+  const pct = 0.2 + (hash % 35) / 100; // 20–55%
   return Math.floor(pct * capacity);
 }
 
@@ -105,7 +117,12 @@ export function autoAssignDaycareSection(
   let bestRemaining = -1;
 
   for (const section of eligible) {
-    const used = getDaycareSectionUsage(section.id, date, section.capacity, bookings);
+    const used = getDaycareSectionUsage(
+      section.id,
+      date,
+      section.capacity,
+      bookings,
+    );
     const remaining = section.capacity - used;
     if (remaining > 0 && remaining > bestRemaining) {
       best = section;
@@ -145,7 +162,12 @@ export function getDaycareAvailabilitySummary(
       let minRemaining = section.capacity;
 
       for (const date of dates) {
-        const used = getDaycareSectionUsage(section.id, date, section.capacity, bookings);
+        const used = getDaycareSectionUsage(
+          section.id,
+          date,
+          section.capacity,
+          bookings,
+        );
         usageByDate[date] = used;
         const remaining = section.capacity - used;
         if (remaining < minRemaining) minRemaining = remaining;
@@ -214,7 +236,9 @@ export function getBoardingCategoryAvailability(
     .filter((c) => c.service === "boarding" && c.visibleToClients)
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((cat) => {
-      const activeUnits = units.filter((u) => u.categoryId === cat.id && u.active);
+      const activeUnits = units.filter(
+        (u) => u.categoryId === cat.id && u.active,
+      );
       const eligible = pet ? petMatchesRules(pet, cat.rules) : true;
       const failingRule =
         pet && !eligible
@@ -223,7 +247,12 @@ export function getBoardingCategoryAvailability(
 
       const availableUnits = activeUnits.filter((unit) => {
         const cap = unit.capacity ?? cat.defaultCapacity;
-        const used = getBoardingUnitUsage(unit.id, startDate, endDate, bookings);
+        const used = getBoardingUnitUsage(
+          unit.id,
+          startDate,
+          endDate,
+          bookings,
+        );
         return used < cap;
       }).length;
 
@@ -266,7 +295,9 @@ export function autoAssignBoardingUnit(
     : eligibleCategories;
 
   for (const cat of orderedCategories) {
-    const activeUnits = units.filter((u) => u.categoryId === cat.id && u.active);
+    const activeUnits = units.filter(
+      (u) => u.categoryId === cat.id && u.active,
+    );
     for (const unit of activeUnits) {
       const cap = unit.capacity ?? cat.defaultCapacity;
       const used = getBoardingUnitUsage(unit.id, startDate, endDate, bookings);
@@ -311,10 +342,7 @@ export function getAvailableGroomingStations(
 ): GroomingStation[] {
   return stations.filter((station) => {
     if (!station.active) return false;
-    if (
-      station.maxWeightLbs != null &&
-      pet.weight > station.maxWeightLbs
-    )
+    if (station.maxWeightLbs != null && pet.weight > station.maxWeightLbs)
       return false;
     if (
       station.petTypes &&
@@ -322,7 +350,13 @@ export function getAvailableGroomingStations(
       !station.petTypes.includes(pet.type.toLowerCase() as "dog" | "cat")
     )
       return false;
-    return !isGroomingStationBooked(station.id, date, startTime, endTime, bookings);
+    return !isGroomingStationBooked(
+      station.id,
+      date,
+      startTime,
+      endTime,
+      bookings,
+    );
   });
 }
 
@@ -347,7 +381,5 @@ export function autoAssignGroomingStation(
     bookings,
   );
   // Prefer table stations first
-  return (
-    available.find((s) => s.type === "table") ?? available[0] ?? null
-  );
+  return available.find((s) => s.type === "table") ?? available[0] ?? null;
 }

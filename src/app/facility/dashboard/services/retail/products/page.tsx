@@ -166,7 +166,9 @@ export default function ProductsPage() {
 
   const stats = useMemo(() => {
     const totalProducts = productList.length;
-    const activeProducts = productList.filter((p) => p.status === "active").length;
+    const activeProducts = productList.filter(
+      (p) => p.status === "active",
+    ).length;
 
     let inventoryRetailValue = 0;
     let inventoryCostValue = 0;
@@ -185,7 +187,9 @@ export default function ProductsPage() {
 
     const lowStockCount = productList.filter((product) => {
       if (product.hasVariants && product.variants.length > 0) {
-        return product.variants.some((variant) => variant.stock <= variant.minStock);
+        return product.variants.some(
+          (variant) => variant.stock <= variant.minStock,
+        );
       }
       return product.stock <= product.minStock;
     }).length;

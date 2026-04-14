@@ -128,12 +128,11 @@ export default function CustomerSettingsPage() {
     language: defaultNotificationLanguage,
   });
 
-  const selectedNotificationLanguage =
-    customerLanguageOptions.some(
-      (option) => option.code === notificationPreferences.language,
-    )
-      ? notificationPreferences.language
-      : defaultNotificationLanguage;
+  const selectedNotificationLanguage = customerLanguageOptions.some(
+    (option) => option.code === notificationPreferences.language,
+  )
+    ? notificationPreferences.language
+    : defaultNotificationLanguage;
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -187,7 +186,10 @@ export default function CustomerSettingsPage() {
 
       // TODO: Replace with actual API call
       // This should update the customer profile and sync to all facilities
-      await updateCustomerProfile(profileData, normalizedNotificationPreferences);
+      await updateCustomerProfile(
+        profileData,
+        normalizedNotificationPreferences,
+      );
       setIsEditing(false);
       toast.success(
         "Profile updated successfully! Changes will reflect on the facility side.",

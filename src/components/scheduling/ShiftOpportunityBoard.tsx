@@ -119,8 +119,10 @@ export function ShiftOpportunityBoard({
   const sortedOpps = [...filtered].sort((a, b) => {
     const urgencyOrder = { critical: 0, urgent: 1, normal: 2 };
     const statusOrder = { open: 0, claimed: 1, expired: 2, cancelled: 3 };
-    if (a.status !== b.status) return statusOrder[a.status] - statusOrder[b.status];
-    if (a.urgency !== b.urgency) return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+    if (a.status !== b.status)
+      return statusOrder[a.status] - statusOrder[b.status];
+    if (a.urgency !== b.urgency)
+      return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
     return new Date(a.date).getTime() - new Date(b.date).getTime();
   });
 
@@ -182,18 +184,18 @@ export function ShiftOpportunityBoard({
   };
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="bg-card rounded-lg border">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 px-4 py-2.5">
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 text-left -ml-1 rounded px-1 py-0.5 hover:bg-muted/50"
+          className="hover:bg-muted/50 -ml-1 flex items-center gap-2 rounded-sm px-1 py-0.5 text-left"
         >
           {expanded ? (
-            <ChevronDown className="size-4 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground size-4" />
           ) : (
-            <ChevronRight className="size-4 text-muted-foreground" />
+            <ChevronRight className="text-muted-foreground size-4" />
           )}
           <Hand className="size-4 text-amber-600 dark:text-amber-400" />
           <span className="text-sm font-semibold">Shift Opportunities</span>
@@ -249,7 +251,7 @@ export function ShiftOpportunityBoard({
                   {notificationSettings.enabled ? (
                     <Bell className="size-4 text-emerald-600" />
                   ) : (
-                    <BellOff className="size-4 text-muted-foreground" />
+                    <BellOff className="text-muted-foreground size-4" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -266,7 +268,7 @@ export function ShiftOpportunityBoard({
       {expanded && (
         <div className="border-t">
           {sortedOpps.length === 0 ? (
-            <div className="flex items-center justify-center gap-2 px-3 py-6 text-center text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex items-center justify-center gap-2 px-3 py-6 text-center text-xs">
               <Hand className="size-4 opacity-40" />
               <span>
                 {statusFilter === "open"
@@ -294,7 +296,7 @@ export function ShiftOpportunityBoard({
                 return (
                   <div
                     key={opp.id}
-                    className={`group flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-muted/40 ${
+                    className={`group hover:bg-muted/40 flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                       dimmed ? "opacity-70" : ""
                     }`}
                   >
@@ -320,17 +322,19 @@ export function ShiftOpportunityBoard({
                         className="size-2 shrink-0 rounded-full"
                         style={{ backgroundColor: pos?.color ?? "#94a3b8" }}
                       />
-                      <span className="truncate font-medium text-foreground">
+                      <span className="text-foreground truncate font-medium">
                         {pos?.name ?? "Unknown"}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="text-muted-foreground shrink-0 text-xs">
                         · {dept?.name ?? "—"}
                       </span>
                     </div>
 
                     {/* Date & time */}
-                    <div className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground md:flex">
-                      <span className="tabular-nums">{formatDate(opp.date)}</span>
+                    <div className="text-muted-foreground hidden shrink-0 items-center gap-1.5 text-xs md:flex">
+                      <span className="tabular-nums">
+                        {formatDate(opp.date)}
+                      </span>
                       <span>·</span>
                       <span className="tabular-nums">
                         {opp.startTime}–{opp.endTime}
@@ -419,7 +423,7 @@ export function ShiftOpportunityBoard({
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="size-7 text-muted-foreground opacity-0 group-hover:opacity-100"
+                                className="text-muted-foreground size-7 opacity-0 group-hover:opacity-100"
                                 onClick={() => handleCancel(opp.id)}
                               >
                                 <XCircle className="size-4" />

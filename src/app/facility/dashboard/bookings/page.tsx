@@ -468,9 +468,7 @@ export default function FacilityBookingsPage() {
       sortable: true,
       sortValue: (booking) => booking.totalCost,
       render: (booking) => (
-        <span className="price-value">
-          ${booking.totalCost.toFixed(2)}
-        </span>
+        <span className="price-value">${booking.totalCost.toFixed(2)}</span>
       ),
     },
   ];
@@ -718,7 +716,7 @@ export default function FacilityBookingsPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
           <p className="text-muted-foreground text-sm">{facility.name}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <BookingDateRangeFilter
             rangeStart={filterStart}
             rangeEnd={filterEnd}
@@ -787,70 +785,70 @@ export default function FacilityBookingsPage() {
 
       {/* Table View */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-auto">
-            <TabsTrigger value="all">
-              All
-              <span className="text-muted-foreground ml-1.5 text-xs">
-                {allBookings.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="today">
-              Today
-              <span className="text-muted-foreground ml-1.5 text-xs">
-                {todayBookings.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="upcoming">
-              Upcoming
-              <span className="text-muted-foreground ml-1.5 text-xs">
-                {upcomingBookings.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="past">
-              Past
-              <span className="text-muted-foreground ml-1.5 text-xs">
-                {pastBookings.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              Pending
-              <span className="text-muted-foreground ml-1.5 text-xs">
-                {pendingBookings.length}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value={activeTab} className="mt-4">
-            {getDataForTab().length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <CalendarX className="text-muted-foreground/50 mb-4 h-16 w-16" />
-                  <h3 className="mb-2 text-lg font-semibold">
-                    {"No bookings found"}
-                  </h3>
-                  <p className="text-muted-foreground max-w-md text-center">
-                    {"There are no bookings in this category yet."}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <DataTable
-                data={getDataForTab() as unknown as Record<string, unknown>[]}
-                columns={
-                  columns as unknown as ColumnDef<Record<string, unknown>>[]
-                }
-                filters={filters}
-                searchKey="id"
-                searchPlaceholder={"Search by booking ID, client, or pet..."}
-                itemsPerPage={15}
-                onRowClick={(booking) =>
-                  router.push(
-                    `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
-                  )
-                }
-              />
-            )}
-          </TabsContent>
-        </Tabs>
+        <TabsList className="w-auto">
+          <TabsTrigger value="all">
+            All
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {allBookings.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="today">
+            Today
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {todayBookings.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="upcoming">
+            Upcoming
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {upcomingBookings.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="past">
+            Past
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {pastBookings.length}
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="pending">
+            Pending
+            <span className="text-muted-foreground ml-1.5 text-xs">
+              {pendingBookings.length}
+            </span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value={activeTab} className="mt-4">
+          {getDataForTab().length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <CalendarX className="text-muted-foreground/50 mb-4 h-16 w-16" />
+                <h3 className="mb-2 text-lg font-semibold">
+                  {"No bookings found"}
+                </h3>
+                <p className="text-muted-foreground max-w-md text-center">
+                  {"There are no bookings in this category yet."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <DataTable
+              data={getDataForTab() as unknown as Record<string, unknown>[]}
+              columns={
+                columns as unknown as ColumnDef<Record<string, unknown>>[]
+              }
+              filters={filters}
+              searchKey="id"
+              searchPlaceholder={"Search by booking ID, client, or pet..."}
+              itemsPerPage={15}
+              onRowClick={(booking) =>
+                router.push(
+                  `/facility/dashboard/clients/${booking.clientId}/bookings/${booking.id}`,
+                )
+              }
+            />
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Cancel Booking Modal */}
       {cancellingBooking && (

@@ -242,7 +242,7 @@ export default function TrainingCourseCatalogPage() {
                     <TableCell>
                       <div className="flex items-center gap-2 font-medium">
                         <span
-                          className="size-3 rounded-full shrink-0 ring-1 ring-black/10"
+                          className="size-3 shrink-0 rounded-full ring-1 ring-black/10"
                           style={{ backgroundColor: course.color ?? "#f97316" }}
                         />
                         {course.name}

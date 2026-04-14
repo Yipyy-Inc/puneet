@@ -124,13 +124,7 @@ export interface ManualFacilityEvent {
   notes?: string;
   linkedCustomerName?: string;
   linkedPetName?: string;
-  recurrence?:
-    | "none"
-    | "daily"
-    | "weekly"
-    | "biweekly"
-    | "monthly"
-    | "custom";
+  recurrence?: "none" | "daily" | "weekly" | "biweekly" | "monthly" | "custom";
   affects?: "facility" | "resource" | "staff";
   affectedResource?: string;
   affectedStaff?: string;
@@ -555,7 +549,10 @@ function getPrimaryBookingPetId(petId: Booking["petId"]): number | undefined {
   return petId;
 }
 
-function toDateOrFallback(value: string | null | undefined, fallback: Date): Date {
+function toDateOrFallback(
+  value: string | null | undefined,
+  fallback: Date,
+): Date {
   if (!value) return fallback;
   const parsed = parseDateInput(value);
   return parsed ?? fallback;
@@ -563,7 +560,9 @@ function toDateOrFallback(value: string | null | undefined, fallback: Date): Dat
 
 function toStatusLabel(raw: string | undefined, fallback = "Pending"): string {
   if (!raw) return fallback;
-  return BOOKING_STATUS_LABELS[raw] ?? TASK_STATUS_LABELS[raw] ?? titleCase(raw);
+  return (
+    BOOKING_STATUS_LABELS[raw] ?? TASK_STATUS_LABELS[raw] ?? titleCase(raw)
+  );
 }
 
 function resolveRoleGroup(
@@ -627,14 +626,21 @@ function mapBookingSubtype(booking: Booking): string {
   return "custom-service";
 }
 
-function inferResourceTypeFromText(value: string | undefined): string | undefined {
+function inferResourceTypeFromText(
+  value: string | undefined,
+): string | undefined {
   if (!value) return undefined;
   const normalized = value.toLowerCase();
   if (normalized.includes("pool")) return "pool";
-  if (normalized.includes("room") || normalized.includes("suite") || normalized.includes("kennel")) {
+  if (
+    normalized.includes("room") ||
+    normalized.includes("suite") ||
+    normalized.includes("kennel")
+  ) {
     return "room";
   }
-  if (normalized.includes("van") || normalized.includes("vehicle")) return "van";
+  if (normalized.includes("van") || normalized.includes("vehicle"))
+    return "van";
   if (normalized.includes("yard") || normalized.includes("play")) return "yard";
   if (normalized.includes("equipment")) return "equipment";
   return undefined;
@@ -643,7 +649,8 @@ function inferResourceTypeFromText(value: string | undefined): string | undefine
 function inferBookingResourceType(booking: Booking): string | undefined {
   const service = booking.service.toLowerCase();
 
-  if (service.includes("groom") || service.includes("evaluation")) return "room";
+  if (service.includes("groom") || service.includes("evaluation"))
+    return "room";
   if (service.includes("train") || service.includes("daycare")) return "yard";
   if (service.includes("board")) return "room";
 
@@ -708,10 +715,13 @@ function getRateColor(service: string, basePrice: number): string | undefined {
 
 function getAddOnIconKey(name: string): CalendarAddOn["iconKey"] {
   const normalized = name.toLowerCase();
-  if (normalized.includes("tooth") || normalized.includes("brush")) return "tooth-brushing";
+  if (normalized.includes("tooth") || normalized.includes("brush"))
+    return "tooth-brushing";
   if (normalized.includes("med")) return "medication";
-  if (normalized.includes("treat") || normalized.includes("kong")) return "treats";
-  if (normalized.includes("enrich") || normalized.includes("play")) return "enrichment";
+  if (normalized.includes("treat") || normalized.includes("kong"))
+    return "treats";
+  if (normalized.includes("enrich") || normalized.includes("play"))
+    return "enrichment";
   if (normalized.includes("nail")) return "nail-trim";
   if (normalized.includes("yogurt")) return "yogurt";
   if (
@@ -730,7 +740,10 @@ function inferAddOnScheduledAt(
   index: number,
 ): Date | undefined {
   const normalized = addOnName.toLowerCase();
-  const bookingStart = makeDateTime(booking.startDate, booking.checkInTime ?? "09:00");
+  const bookingStart = makeDateTime(
+    booking.startDate,
+    booking.checkInTime ?? "09:00",
+  );
 
   if (normalized.includes("med")) {
     const firstDose = booking.medicationInstructions
@@ -811,7 +824,10 @@ function extractBookingAddOns(booking: Booking): CalendarAddOn[] {
 }
 
 function buildClientLookups(clients: Client[]) {
-  const petLookup = new Map<number, { petName: string; ownerName: string; clientId: number }>();
+  const petLookup = new Map<
+    number,
+    { petName: string; ownerName: string; clientId: number }
+  >();
   const clientLookup = new Map<number, Client>();
 
   for (const client of clients) {
@@ -830,7 +846,10 @@ function buildClientLookups(clients: Client[]) {
   return { petLookup, clientLookup };
 }
 
-function buildTagNames(entityType: "pet" | "customer" | "booking", entityId?: number): string[] {
+function buildTagNames(
+  entityType: "pet" | "customer" | "booking",
+  entityId?: number,
+): string[] {
   if (!entityId) return [];
   return getTagsForEntity(entityType, entityId).map((tag) => tag.name);
 }
@@ -846,16 +865,21 @@ function buildBookingEvents(
     .filter((booking) => booking.facilityId === facilityId)
     .map((booking) => {
       const primaryPetId = getPrimaryBookingPetId(booking.petId);
-      const petContext = primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
+      const petContext =
+        primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
       const serviceLabel = normalizeServiceLabel(booking.service);
       const bookingStatus = toStatusLabel(booking.status, "Confirmed");
-      const start = makeDateTime(booking.startDate, booking.checkInTime ?? "09:00");
+      const start = makeDateTime(
+        booking.startDate,
+        booking.checkInTime ?? "09:00",
+      );
       const rawEnd = makeDateTime(
         booking.endDate ?? booking.startDate,
         booking.checkOutTime ?? booking.checkInTime ?? "10:00",
       );
       const end = rawEnd <= start ? addMinutes(start, 60) : rawEnd;
-      const staff = booking.stylistPreference ?? booking.trainerId ?? "Unassigned";
+      const staff =
+        booking.stylistPreference ?? booking.trainerId ?? "Unassigned";
       const staffRole = resolveStaffRole(staff);
       const roleGroup = resolveRoleGroup(staffRole, serviceLabel);
       const addOns = extractBookingAddOns(booking);
@@ -911,10 +935,14 @@ function buildEvaluationEvents(
   const { petLookup } = buildClientLookups(clients);
 
   return inputBookings
-    .filter((booking) => booking.facilityId === facilityId && booking.includesEvaluation)
+    .filter(
+      (booking) =>
+        booking.facilityId === facilityId && booking.includesEvaluation,
+    )
     .map((booking) => {
       const primaryPetId = getPrimaryBookingPetId(booking.petId);
-      const petContext = primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
+      const petContext =
+        primaryPetId !== undefined ? petLookup.get(primaryPetId) : undefined;
       const serviceLabel = "Evaluation";
       const start = addMinutes(
         makeDateTime(booking.startDate, booking.checkInTime ?? "09:00"),
@@ -1009,51 +1037,53 @@ function buildCustomServiceEvents(
     const roleGroup = resolveRoleGroup(staffRole, checkIn.moduleName);
 
     const location = workflow?.requiresResource
-      ? checkIn.resourceName ?? "Unassigned resource"
+      ? (checkIn.resourceName ?? "Unassigned resource")
       : "Open time";
 
-    return [{
-      id: `custom-service-${checkIn.id}`,
-      sourceId: checkIn.id,
-      type: "booking" as const,
-      subtype: "custom-service",
-      title: `${checkIn.moduleName} - ${checkIn.petName}`,
-      start: displayStart,
-      end: displayEnd,
-      allDay,
-      status,
-      service: checkIn.moduleName,
-      module: checkIn.moduleName,
-      moduleId: checkIn.moduleId,
-      staff,
-      staffRole,
-      roleGroup,
-      location,
-      resource: location,
-      resourceId: workflow?.resourceIds?.[0],
-      resourceType:
-        workflow?.requiresResource
+    return [
+      {
+        id: `custom-service-${checkIn.id}`,
+        sourceId: checkIn.id,
+        type: "booking" as const,
+        subtype: "custom-service",
+        title: `${checkIn.moduleName} - ${checkIn.petName}`,
+        start: displayStart,
+        end: displayEnd,
+        allDay,
+        status,
+        service: checkIn.moduleName,
+        module: checkIn.moduleName,
+        moduleId: checkIn.moduleId,
+        staff,
+        staffRole,
+        roleGroup,
+        location,
+        resource: location,
+        resourceId: workflow?.resourceIds?.[0],
+        resourceType: workflow?.requiresResource
           ? workflow.resourceType
           : inferResourceTypeFromText(checkIn.resourceName),
-      unassigned: staff === "Unassigned",
-      petId: checkIn.petId,
-      clientId: checkIn.ownerId,
-      petNames: [checkIn.petName],
-      customerName: checkIn.ownerName,
-      bookingRawStatus: checkIn.status,
-      petTags: buildTagNames("pet", checkIn.petId),
-      customerTags: buildTagNames("customer", checkIn.ownerId),
-      bookingTags: [],
-      addOns: [],
-      calendarCardDisplayMode:
-        workflow?.calendarCardDisplayMode ?? "full-block",
-      requiresCheckInOut: workflow?.requiresCheckInOut ?? true,
-      allowsAddOns: workflow?.allowsAddOns ?? true,
-      affectsCapacityHeatmap: workflow?.affectsCapacityHeatmap ?? true,
-      capacityCeilingPerHour: workflow?.capacityCeilingPerHour,
-      onlineBookable: workflow?.bookableOnline ?? customModule?.onlineBooking.enabled,
-      href: `/facility/dashboard/services/custom-modules/${checkIn.moduleSlug}`,
-    }];
+        unassigned: staff === "Unassigned",
+        petId: checkIn.petId,
+        clientId: checkIn.ownerId,
+        petNames: [checkIn.petName],
+        customerName: checkIn.ownerName,
+        bookingRawStatus: checkIn.status,
+        petTags: buildTagNames("pet", checkIn.petId),
+        customerTags: buildTagNames("customer", checkIn.ownerId),
+        bookingTags: [],
+        addOns: [],
+        calendarCardDisplayMode:
+          workflow?.calendarCardDisplayMode ?? "full-block",
+        requiresCheckInOut: workflow?.requiresCheckInOut ?? true,
+        allowsAddOns: workflow?.allowsAddOns ?? true,
+        affectsCapacityHeatmap: workflow?.affectsCapacityHeatmap ?? true,
+        capacityCeilingPerHour: workflow?.capacityCeilingPerHour,
+        onlineBookable:
+          workflow?.bookableOnline ?? customModule?.onlineBooking.enabled,
+        href: `/facility/dashboard/services/custom-modules/${checkIn.moduleSlug}`,
+      },
+    ];
   });
 }
 
@@ -1061,9 +1091,7 @@ function buildTaskEvents(
   tasks: FacilityTask[],
   bookings: Booking[],
 ): OperationsCalendarEvent[] {
-  const bookingClientLookup = new Map(
-    bookings.map((b) => [b.id, b.clientId]),
-  );
+  const bookingClientLookup = new Map(bookings.map((b) => [b.id, b.clientId]));
 
   return tasks.map((task) => {
     const start = makeDateTime(task.scheduledDate, task.scheduledTime);
@@ -1235,9 +1263,14 @@ function buildFacilityEvents(
     });
 }
 
-function buildRetailPosEvents(transactions: Transaction[]): OperationsCalendarEvent[] {
+function buildRetailPosEvents(
+  transactions: Transaction[],
+): OperationsCalendarEvent[] {
   return transactions
-    .filter((transaction) => (transaction.bookingId || transaction.petId) && transaction.status)
+    .filter(
+      (transaction) =>
+        (transaction.bookingId || transaction.petId) && transaction.status,
+    )
     .map((transaction) => {
       const start = toDateOrFallback(transaction.createdAt, new Date());
       const end = addMinutes(start, 20);
@@ -1268,7 +1301,9 @@ function buildRetailPosEvents(transactions: Transaction[]): OperationsCalendarEv
         customerName: transaction.customerName,
         bookingId: transaction.bookingId,
         confirmationNumber: transaction.transactionNumber,
-        petTags: transaction.petId ? buildTagNames("pet", transaction.petId) : [],
+        petTags: transaction.petId
+          ? buildTagNames("pet", transaction.petId)
+          : [],
         customerTags: transaction.customerId
           ? buildTagNames("customer", Number(transaction.customerId))
           : [],
@@ -1291,7 +1326,10 @@ function buildAddOnSubEvents(
   if (view !== "day" && view !== "week") return [];
 
   const completedLookup = new Map(
-    (completedAddOns ?? []).map((entry) => [`${entry.bookingId}-${entry.addOnName.toLowerCase()}`, entry]),
+    (completedAddOns ?? []).map((entry) => [
+      `${entry.bookingId}-${entry.addOnName.toLowerCase()}`,
+      entry,
+    ]),
   );
 
   return bookingEvents.flatMap((event) => {
@@ -1301,7 +1339,9 @@ function buildAddOnSubEvents(
         const start = addOn.scheduledAt ?? event.start;
         const end = addMinutes(start, 20);
         const addOnEventId = `addon-${event.id}-${index}`;
-        const completionEntry = completedLookup.get(`${event.bookingId}-${addOn.name.toLowerCase()}`);
+        const completionEntry = completedLookup.get(
+          `${event.bookingId}-${addOn.name.toLowerCase()}`,
+        );
         const isCompleted = !!completionEntry;
 
         return {
@@ -1357,7 +1397,10 @@ function buildStayAddOnCalendarEvents(
   completedAddOns?: CompletedAddOnEntry[],
 ): OperationsCalendarEvent[] {
   const completedLookup = new Map(
-    (completedAddOns ?? []).map((entry) => [`${entry.bookingId}-${entry.addOnName.toLowerCase()}`, entry]),
+    (completedAddOns ?? []).map((entry) => [
+      `${entry.bookingId}-${entry.addOnName.toLowerCase()}`,
+      entry,
+    ]),
   );
   const { petLookup } = buildClientLookups(clients);
 
@@ -1402,7 +1445,9 @@ function buildStayAddOnCalendarEvents(
 
         // Check if this add-on has been marked completed
         const addOnEventId = `stay-addon-${booking.id}-${index}`;
-        const completionEntry = completedLookup.get(`${booking.id}-${item.name.toLowerCase()}`);
+        const completionEntry = completedLookup.get(
+          `${booking.id}-${item.name.toLowerCase()}`,
+        );
         const isCompleted = !!completionEntry;
 
         return {
@@ -1446,7 +1491,9 @@ function buildStayAddOnCalendarEvents(
     });
 }
 
-export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCalendarEvent[] {
+export function buildUnifiedEvents(
+  input: BuildUnifiedEventsInput,
+): OperationsCalendarEvent[] {
   // Split bookings: stay-type services (boarding/daycare) are hidden as full
   // blocks; only their add-ons surface as discrete scheduled events.
   const stayBookings = input.bookings.filter((b) =>
@@ -1460,7 +1507,10 @@ export function buildUnifiedEvents(input: BuildUnifiedEventsInput): OperationsCa
     ...buildBookingEvents(schedulableBookings, input.clients, input.facilityId),
     // Evaluations still surface for ALL bookings (including boarding/daycare)
     ...buildEvaluationEvents(input.bookings, input.clients, input.facilityId),
-    ...buildCustomServiceEvents(input.customServiceCheckIns, input.customModules),
+    ...buildCustomServiceEvents(
+      input.customServiceCheckIns,
+      input.customModules,
+    ),
   ];
 
   // Add-on sub-events for schedulable services (respects nested/separate mode)
@@ -1514,7 +1564,15 @@ export function addMonths(date: Date, months: number): Date {
 }
 
 export function startOfDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    0,
+    0,
+    0,
+    0,
+  );
 }
 
 export function endOfDay(date: Date): Date {
@@ -1586,10 +1644,15 @@ export function isSameDay(a: Date, b: Date): boolean {
 }
 
 export function isCurrentMonthDay(day: Date, anchorDate: Date): boolean {
-  return day.getMonth() === anchorDate.getMonth() && day.getFullYear() === anchorDate.getFullYear();
+  return (
+    day.getMonth() === anchorDate.getMonth() &&
+    day.getFullYear() === anchorDate.getFullYear()
+  );
 }
 
-export function isCalendarView(value: string | null): value is OperationsCalendarView {
+export function isCalendarView(
+  value: string | null,
+): value is OperationsCalendarView {
   return OPERATIONS_CALENDAR_VIEWS.some((item) => item.value === value);
 }
 
@@ -1712,10 +1775,14 @@ export function getDaysForView(
 
   const monthStart = startOfMonth(anchorDate);
   const daysInMonth = endOfMonth(anchorDate).getDate();
-  return Array.from({ length: daysInMonth }, (_, index) => addDays(monthStart, index));
+  return Array.from({ length: daysInMonth }, (_, index) =>
+    addDays(monthStart, index),
+  );
 }
 
-export function sortEvents(events: OperationsCalendarEvent[]): OperationsCalendarEvent[] {
+export function sortEvents(
+  events: OperationsCalendarEvent[],
+): OperationsCalendarEvent[] {
   return [...events].sort((a, b) => {
     if (a.start.getTime() !== b.start.getTime()) {
       return a.start.getTime() - b.start.getTime();
@@ -1823,18 +1890,28 @@ export function deriveFilterOptions(
   );
 
   const bookingStatuses = Array.from(
-    new Set(events.filter((event) => event.type === "booking").map((event) => event.status)),
+    new Set(
+      events
+        .filter((event) => event.type === "booking")
+        .map((event) => event.status),
+    ),
   );
 
   const taskStatuses = Array.from(
-    new Set(events.filter((event) => event.type === "task").map((event) => event.status)),
+    new Set(
+      events
+        .filter((event) => event.type === "task")
+        .map((event) => event.status),
+    ),
   );
 
   const staffRoles = Array.from(
     new Set(
       events.flatMap((event) => [
         event.staffRole ?? "",
-        event.roleGroup ? ROLE_GROUP_LABELS[event.roleGroup] ?? event.roleGroup : "",
+        event.roleGroup
+          ? (ROLE_GROUP_LABELS[event.roleGroup] ?? event.roleGroup)
+          : "",
       ]),
     ),
   ).filter(Boolean);
@@ -1844,12 +1921,18 @@ export function deriveFilterOptions(
 
   return {
     types: types.map((type) => ({ value: type, label: titleCase(type) })),
-    modules: mapOptions(Array.from(new Set([...modulesFromEvents, ...dynamicCustomModules]))),
+    modules: mapOptions(
+      Array.from(new Set([...modulesFromEvents, ...dynamicCustomModules])),
+    ),
     taskTypes: mapOptions(taskTypes),
     staff: mapOptions(Array.from(new Set(events.map((event) => event.staff)))),
     staffRoles: mapOptions(staffRoles),
-    locations: mapOptions(Array.from(new Set(events.map((event) => event.location)))),
-    statuses: mapOptions(Array.from(new Set(events.map((event) => event.status)))),
+    locations: mapOptions(
+      Array.from(new Set(events.map((event) => event.location))),
+    ),
+    statuses: mapOptions(
+      Array.from(new Set(events.map((event) => event.status))),
+    ),
     bookingStatuses: mapOptions(bookingStatuses),
     taskStatuses: mapOptions(taskStatuses),
     petTags: mapOptions(petTags),
@@ -1988,7 +2071,11 @@ export function resolveEventColor(
   colorOverrides?: CalendarColorOverrides,
 ): string {
   if (colorMode === "status") {
-    return colorOverrides?.statuses[event.status] ?? STATUS_COLOR_MAP[event.status] ?? "#64748b";
+    return (
+      colorOverrides?.statuses[event.status] ??
+      STATUS_COLOR_MAP[event.status] ??
+      "#64748b"
+    );
   }
 
   if (colorMode === "staff-member") {
@@ -2001,7 +2088,12 @@ export function resolveEventColor(
     if (addOnColor) return addOnColor;
   }
 
-  return event.rateColor ?? serviceColorMap[event.module] ?? serviceColorMap[event.service] ?? "#64748b";
+  return (
+    event.rateColor ??
+    serviceColorMap[event.module] ??
+    serviceColorMap[event.service] ??
+    "#64748b"
+  );
 }
 
 export function hexToRgba(hexColor: string, opacity: number): string {

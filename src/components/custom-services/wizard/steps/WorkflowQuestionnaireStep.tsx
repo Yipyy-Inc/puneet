@@ -86,7 +86,9 @@ function nextWorkflowState(
     questionnaireCompleted: updates.questionnaireCompleted ?? false,
     questionnaireCompletedAt:
       updates.questionnaireCompletedAt ??
-      (updates.questionnaireCompleted ? current.questionnaireCompletedAt : undefined),
+      (updates.questionnaireCompleted
+        ? current.questionnaireCompletedAt
+        : undefined),
   };
 }
 
@@ -142,13 +144,12 @@ export function WorkflowQuestionnaireStep({
     });
   };
 
-  const resourceOptions = resources.filter(
-    (resource) =>
-      workflow.resourceType === "custom" ||
-      workflow.resourceType === "other" ||
-      !workflow.resourceType
-        ? true
-        : resource.type === workflow.resourceType,
+  const resourceOptions = resources.filter((resource) =>
+    workflow.resourceType === "custom" ||
+    workflow.resourceType === "other" ||
+    !workflow.resourceType
+      ? true
+      : resource.type === workflow.resourceType,
   );
 
   const addTaskTemplate = () => {
@@ -212,11 +213,11 @@ export function WorkflowQuestionnaireStep({
 
   const hasRequiredFollowUps =
     (!workflow.appearsOnCalendar ||
-      Boolean(workflow.calendarColor) && Boolean(workflow.calendarCardDisplayMode)) &&
+      (Boolean(workflow.calendarColor) &&
+        Boolean(workflow.calendarCardDisplayMode))) &&
     (!workflow.requiresResource ||
       (Boolean(workflow.resourceType) && workflow.resourceIds.length > 0)) &&
-    (!workflow.generatesTasks ||
-      workflow.taskTemplates.length > 0) &&
+    (!workflow.generatesTasks || workflow.taskTemplates.length > 0) &&
     (!workflow.allowsAddOns || workflow.allowedAddOnIds.length > 0) &&
     (!workflow.affectsCapacityHeatmap ||
       (workflow.capacityCeilingPerHour ?? 0) > 0);
@@ -224,9 +225,9 @@ export function WorkflowQuestionnaireStep({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs text-sky-700">
-        Every custom service must complete this setup before activation. The answers
-        automatically configure calendar, booking, task, resource, online, and
-        reporting behavior.
+        Every custom service must complete this setup before activation. The
+        answers automatically configure calendar, booking, task, resource,
+        online, and reporting behavior.
       </div>
 
       <QuestionCard title="Question 1 — Does this service appear on the Calendar?">
@@ -326,12 +327,15 @@ export function WorkflowQuestionnaireStep({
                     checked={workflow.resourceIds.includes(resource.id)}
                     onCheckedChange={() => toggleResource(resource.id)}
                   />
-                  <span className="text-xs text-slate-700">{resource.name}</span>
+                  <span className="text-xs text-slate-700">
+                    {resource.name}
+                  </span>
                 </label>
               ))}
               {resourceOptions.length === 0 && (
                 <p className="text-xs text-slate-500">
-                  No resources match this type yet. Add resources in facility settings.
+                  No resources match this type yet. Add resources in facility
+                  settings.
                 </p>
               )}
             </div>
@@ -420,9 +424,13 @@ export function WorkflowQuestionnaireStep({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="before_start">Before service start</SelectItem>
+                      <SelectItem value="before_start">
+                        Before service start
+                      </SelectItem>
                       <SelectItem value="at_check_in">At check-in</SelectItem>
-                      <SelectItem value="after_check_out">After check-out</SelectItem>
+                      <SelectItem value="after_check_out">
+                        After check-out
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -476,7 +484,12 @@ export function WorkflowQuestionnaireStep({
               </div>
             ))}
 
-            <Button type="button" variant="outline" size="sm" onClick={addTaskTemplate}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addTaskTemplate}
+            >
               <Plus className="mr-1 size-3.5" />
               Add task template
             </Button>
@@ -591,7 +604,9 @@ export function WorkflowQuestionnaireStep({
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-700">Questionnaire status</span>
+          <span className="text-xs font-medium text-slate-700">
+            Questionnaire status
+          </span>
           {workflow.questionnaireCompleted ? (
             <Badge className="bg-emerald-100 text-emerald-700">Complete</Badge>
           ) : (

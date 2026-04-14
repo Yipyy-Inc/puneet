@@ -153,7 +153,9 @@ export function ConversationThread({
     [counterpartyId, isCustomerMode, messages],
   );
 
-  const activeTab = threadId ? tabsByThreadId[threadId] ?? "conversation" : "conversation";
+  const activeTab = threadId
+    ? (tabsByThreadId[threadId] ?? "conversation")
+    : "conversation";
 
   if (!threadId) {
     return (
@@ -241,18 +243,19 @@ export function ConversationThread({
               </p>
               <p className="text-[11px] text-slate-400">
                 {isCustomerMode
-                  ? (((counterpartyContact as Record<string, unknown>)?.email as
-                      | string
-                      | undefined) ?? "")
+                  ? (((counterpartyContact as Record<string, unknown>)
+                      ?.email as string | undefined) ?? "")
                   : (client?.email ?? "")}{" "}
-                {(isCustomerMode
-                  ? ((counterpartyContact as Record<string, unknown>)?.phone as
-                      | string
-                      | undefined)
-                  : client?.phone)
+                {(
+                  isCustomerMode
+                    ? ((counterpartyContact as Record<string, unknown>)
+                        ?.phone as string | undefined)
+                    : client?.phone
+                )
                   ? `- ${
                       isCustomerMode
-                        ? ((counterpartyContact as Record<string, unknown>)?.phone as string)
+                        ? ((counterpartyContact as Record<string, unknown>)
+                            ?.phone as string)
                         : client?.phone
                     }`
                   : ""}
@@ -335,7 +338,9 @@ export function ConversationThread({
 
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">{counterpartyName}</h3>
+              <h3 className="text-sm font-bold text-slate-800">
+                {counterpartyName}
+              </h3>
               {preferredLanguageLabel && (
                 <Badge
                   variant="outline"
@@ -402,7 +407,9 @@ export function ConversationThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem>
-                {isCustomerMode ? "View facility profile" : "View client profile"}
+                {isCustomerMode
+                  ? "View facility profile"
+                  : "View client profile"}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 {isCustomerMode ? "My booking history" : "Booking history"}
@@ -410,7 +417,9 @@ export function ConversationThread({
               <DropdownMenuSeparator />
               <DropdownMenuItem>Pin conversation</DropdownMenuItem>
               <DropdownMenuItem>Mark as unread</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-500">Archive</DropdownMenuItem>
+              <DropdownMenuItem className="text-red-500">
+                Archive
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -447,7 +456,10 @@ export function ConversationThread({
           {conversationPanel}
         </TabsContent>
 
-        <TabsContent value="reminders" className="min-h-0 flex-1 overflow-hidden">
+        <TabsContent
+          value="reminders"
+          className="min-h-0 flex-1 overflow-hidden"
+        >
           <ReminderHistoryPanel
             counterpartyName={counterpartyName}
             reminderHistory={reminderHistory}

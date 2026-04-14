@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Calendar,
-  Users,
   Briefcase,
   Building2,
   Clock,
@@ -26,10 +25,7 @@ import {
   Building,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  CurrentUserProvider,
-  useCurrentUser,
-} from "@/hooks/use-current-user";
+import { CurrentUserProvider, useCurrentUser } from "@/hooks/use-current-user";
 import { ROLE_LABELS } from "@/lib/rbac";
 import {
   Select,
@@ -69,12 +65,6 @@ const navItems: NavItem[] = [
     href: "/facility/dashboard/services/scheduling/attendance",
     icon: ClipboardCheck,
     requires: "attendance.view",
-  },
-  {
-    label: "Employees",
-    href: "/facility/dashboard/services/scheduling/employees",
-    icon: Users,
-    requires: "employee.view",
   },
   {
     label: "Departments",
@@ -164,13 +154,7 @@ const ROLES_FOR_SWITCH: UserRole[] = [
   "employee",
 ];
 
-function NavTabs({
-  items,
-  pathname,
-}: {
-  items: NavItem[];
-  pathname: string;
-}) {
+function NavTabs({ items, pathname }: { items: NavItem[]; pathname: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(false);
@@ -203,10 +187,7 @@ function NavTabs({
     if (!active) return;
     const elRect = el.getBoundingClientRect();
     const activeRect = active.getBoundingClientRect();
-    if (
-      activeRect.left < elRect.left ||
-      activeRect.right > elRect.right
-    ) {
+    if (activeRect.left < elRect.left || activeRect.right > elRect.right) {
       active.scrollIntoView({
         behavior: "smooth",
         inline: "center",
@@ -232,10 +213,10 @@ function NavTabs({
         aria-label="Scroll tabs left"
         onClick={() => scrollByDir("left")}
         className={cn(
-          "absolute left-2 top-1/2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground shadow-md transition-all duration-200 hover:bg-accent hover:text-foreground hover:scale-105",
+          "border-border/60 bg-background text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1/2 left-2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border shadow-md transition-all duration-200 hover:scale-105",
           canLeft
-            ? "translate-x-0 scale-100 opacity-100 pointer-events-auto"
-            : "-translate-x-2 pointer-events-none scale-90 opacity-0",
+            ? "pointer-events-auto translate-x-0 scale-100 opacity-100"
+            : "pointer-events-none -translate-x-2 scale-90 opacity-0",
         )}
       >
         <ChevronLeft className="size-4" />
@@ -245,10 +226,10 @@ function NavTabs({
         aria-label="Scroll tabs right"
         onClick={() => scrollByDir("right")}
         className={cn(
-          "absolute right-2 top-1/2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground shadow-md transition-all duration-200 hover:bg-accent hover:text-foreground hover:scale-105",
+          "border-border/60 bg-background text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1/2 right-2 z-20 flex size-7 -translate-y-1/2 items-center justify-center rounded-full border shadow-md transition-all duration-200 hover:scale-105",
           canRight
-            ? "translate-x-0 scale-100 opacity-100 pointer-events-auto"
-            : "translate-x-2 pointer-events-none scale-90 opacity-0",
+            ? "pointer-events-auto translate-x-0 scale-100 opacity-100"
+            : "pointer-events-none translate-x-2 scale-90 opacity-0",
         )}
       >
         <ChevronRight className="size-4" />
@@ -258,14 +239,14 @@ function NavTabs({
       <div
         aria-hidden
         className={cn(
-          "from-background/95 pointer-events-none absolute left-0 top-0 bottom-0 z-10 w-8 bg-linear-to-r to-transparent transition-opacity",
+          "from-background/95 pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-8 bg-linear-to-r to-transparent transition-opacity",
           canLeft ? "opacity-100" : "opacity-0",
         )}
       />
       <div
         aria-hidden
         className={cn(
-          "from-background/95 pointer-events-none absolute right-0 top-0 bottom-0 z-10 w-8 bg-linear-to-l to-transparent transition-opacity",
+          "from-background/95 pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-8 bg-linear-to-l to-transparent transition-opacity",
           canRight ? "opacity-100" : "opacity-0",
         )}
       />
@@ -290,10 +271,10 @@ function NavTabs({
               href={item.href}
               data-active={isActive}
               className={cn(
-                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-lg border-b-2 px-3 py-2.5 text-sm font-medium transition-all",
+                "flex shrink-0 items-center gap-1.5 rounded-t-lg border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all",
                 isActive
                   ? "border-primary bg-primary/5 text-primary"
-                  : "text-muted-foreground hover:text-foreground border-transparent hover:bg-muted/50",
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-transparent",
               )}
             >
               <Icon className="size-3.5" />
@@ -334,7 +315,9 @@ function SchedulingLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="text-muted-foreground hidden text-xs sm:inline">Viewing as</span>
+              <span className="text-muted-foreground hidden text-xs sm:inline">
+                Viewing as
+              </span>
               <Select
                 value={user.role}
                 onValueChange={(v) => setRole(v as UserRole)}
@@ -359,7 +342,9 @@ function SchedulingLayoutInner({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Content */}
-      <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">{children}</div>
+      <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        {children}
+      </div>
     </div>
   );
 }
