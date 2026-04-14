@@ -17,9 +17,9 @@ import {
   MedicationAutoPopulate,
 } from "@/components/booking/shared/PetCareAutoPopulate";
 import { defaultServiceAddOns } from "@/data/service-addons";
-import { daycarePlayAreas, daycareSections } from "@/data/daycare-areas";
 import { getDaycareAvailabilitySummary } from "@/lib/capacity-engine";
 import { bookings as allBookings } from "@/data/bookings";
+import { useDaycareAreas } from "@/hooks/use-daycare-areas";
 import type { ServiceAddOn } from "@/types/facility";
 
 interface DaycareDetailsProps {
@@ -354,6 +354,8 @@ function DaycareSectionAssignmentStep({
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = React.useState<string | null>(null);
 
+  const { areas: daycarePlayAreas, sections: daycareSections } = useDaycareAreas();
+
   // Compute availability for the first selected pet (or no pet)
   const focusPet = selectedPet ?? draggedPet ?? selectedPets[0] ?? null;
   const dates = daycareSelectedDates.map((d) => d.toISOString().split("T")[0]);
@@ -373,7 +375,7 @@ function DaycareSectionAssignmentStep({
             daycareSections,
             allBookings,
           ),
-    [focusPet, dates],
+    [focusPet, dates, daycareSections],
   );
 
   const availabilityBySectionId = React.useMemo(() => {

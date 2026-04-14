@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, Scissors, Droplets, Wind, Zap } from "lucide-react";
+import { Plus, Pencil, Trash2, Scissors, Droplets, Wind, Zap, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { GroomingStation, GroomingStationType } from "@/types/rooms";
 import { RoomImageUpload } from "@/components/rooms/RoomImageUpload";
+import { useGroomingStations } from "@/hooks/use-grooming-stations";
 
 // ── Station type config ────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ type StationType = {
   iconBg: string;
   iconColor: string;
   statColor: string;
+  defaultImage: string;
 };
 
 const STATION_TYPES: StationType[] = [
@@ -34,6 +36,7 @@ const STATION_TYPES: StationType[] = [
     iconBg:    "bg-pink-100 dark:bg-pink-950/40",
     iconColor: "text-pink-600 dark:text-pink-300",
     statColor: "text-pink-600 dark:text-pink-400",
+    defaultImage: "https://images.unsplash.com/photo-1591769225440-811ad7d6eab3?w=600&h=450&fit=crop",
   },
   {
     value: "tub",         label: "Bathing Tub",    plural: "Tubs",
@@ -41,6 +44,7 @@ const STATION_TYPES: StationType[] = [
     iconBg:    "bg-blue-100 dark:bg-blue-950/40",
     iconColor: "text-blue-600 dark:text-blue-300",
     statColor: "text-blue-600 dark:text-blue-400",
+    defaultImage: "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=600&h=450&fit=crop",
   },
   {
     value: "cage_dryer",  label: "Cage Dryer",      plural: "Cage Dryers",
@@ -48,6 +52,7 @@ const STATION_TYPES: StationType[] = [
     iconBg:    "bg-amber-100 dark:bg-amber-950/40",
     iconColor: "text-amber-600 dark:text-amber-300",
     statColor: "text-amber-600 dark:text-amber-400",
+    defaultImage: "https://images.unsplash.com/photo-1587559070757-f72da2f829a8?w=600&h=450&fit=crop",
   },
   {
     value: "stand_dryer", label: "Stand Dryer",     plural: "Stand Dryers",
@@ -55,6 +60,7 @@ const STATION_TYPES: StationType[] = [
     iconBg:    "bg-violet-100 dark:bg-violet-950/40",
     iconColor: "text-violet-600 dark:text-violet-300",
     statColor: "text-violet-600 dark:text-violet-400",
+    defaultImage: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=450&fit=crop",
   },
 ];
 
@@ -65,14 +71,21 @@ function blank(facilityId: number): GroomingStation {
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
-  initialStations: GroomingStation[];
   facilityId?: number;
 }
 
 // ── Client ─────────────────────────────────────────────────────────────────────
 
-export function GroomingStationsClient({ initialStations, facilityId = 11 }: Props) {
-  const [stations, setStations] = useState(initialStations);
+export function GroomingStationsClient({ facilityId = 11 }: Props) {
+  const {
+    stations: allStations,
+    addStation,
+    updateStation,
+    deleteStation,
+    toggleStation,
+  } = useGroomingStations();
+  const stations = allStations.filter((s) => s.facilityId === facilityId);
+
   const [dialog, setDialog] = useState<{ open: boolean; editing: GroomingStation | null }>({ open: false, editing: null });
   const [form, setForm] = useState<GroomingStation>(() => blank(facilityId));
 
@@ -84,22 +97,22 @@ export function GroomingStationsClient({ initialStations, facilityId = 11 }: Pro
 
   const save = () => {
     if (!form.name.trim()) return;
-    setStations((prev) => {
-      const exists = prev.find((s) => s.id === form.id);
-      if (exists) return prev.map((s) => (s.id === form.id ? form : s));
-      return [...prev, form];
-    });
-    toast.success(dialog.editing ? "Station updated" : "Station added");
+    if (dialog.editing) {
+      updateStation(form);
+      toast.success("Station updated");
+    } else {
+      addStation(form);
+      toast.success("Station added");
+    }
     closeDialog();
   };
 
   const remove = (id: string) => {
-    setStations((prev) => prev.filter((s) => s.id !== id));
+    deleteStation(id);
     toast.success("Station removed");
   };
 
-  const toggle = (id: string) =>
-    setStations((prev) => prev.map((s) => (s.id === id ? { ...s, active: !s.active } : s)));
+  const toggle = (id: string) => toggleStation(id);
 
   const activeCount = stations.filter((s) => s.active).length;
   const tableCount  = stations.filter((s) => s.type === "table" && s.active).length;
@@ -193,26 +206,42 @@ function StationSection({
   onDelete: (id: string) => void;
 }) {
   const { Icon, iconBg, iconColor, plural } = sType;
+  const [expanded, setExpanded] = useState(false);
   const active = stations.filter((s) => s.active).length;
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <div className={cn("flex size-9 items-center justify-center rounded-xl", iconBg)}>
+    <div className="rounded-xl border bg-card overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+      >
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg hover:bg-muted transition-colors">
+          {expanded ? (
+            <ChevronDown className="text-muted-foreground size-4" />
+          ) : (
+            <ChevronRight className="text-muted-foreground size-4" />
+          )}
+        </div>
+        <div className={cn("flex size-9 items-center justify-center rounded-xl shrink-0", iconBg)}>
           <Icon className={cn("size-4", iconColor)} />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-sm">{plural}</h3>
           <p className="text-muted-foreground text-xs">{stations.length} total · {active} active</p>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {stations.map((s) => (
-          <StationCard
-            key={s.id} station={s} sType={sType}
-            onEdit={() => onEdit(s)} onToggle={() => onToggle(s.id)} onDelete={() => onDelete(s.id)}
-          />
-        ))}
-      </div>
+      </button>
+      {expanded && (
+        <div className="border-t border-border/40 p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {stations.map((s) => (
+              <StationCard
+                key={s.id} station={s} sType={sType}
+                onEdit={() => onEdit(s)} onToggle={() => onToggle(s.id)} onDelete={() => onDelete(s.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -228,33 +257,23 @@ function StationCard({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  const { Icon, iconBg, iconColor } = sType;
+  const { Icon, iconBg, iconColor, defaultImage } = sType;
+  const displayImage = station.imageUrl ?? defaultImage;
   return (
     <div className={cn(
       "group rounded-xl border bg-card overflow-hidden transition-all hover:shadow-md",
       !station.active && "opacity-60",
     )}>
       {/* Station photo */}
-      {station.imageUrl ? (
-        <div className="aspect-[4/3] relative">
-          <img src={station.imageUrl} alt={station.name} className="absolute inset-0 size-full object-cover" />
-          <div className="absolute top-2 right-2">
-            <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75" />
-          </div>
-          <div className={cn("absolute top-2 left-2 flex size-7 items-center justify-center rounded-lg shadow-sm", iconBg)}>
-            <Icon className={cn("size-3.5", iconColor)} />
-          </div>
+      <div className="aspect-[4/3] relative">
+        <img src={displayImage} alt={station.name} className="absolute inset-0 size-full object-cover" />
+        <div className="absolute top-2 right-2">
+          <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75" />
         </div>
-      ) : (
-        <div className="p-4 pb-0">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div className={cn("flex size-9 items-center justify-center rounded-lg", iconBg)}>
-              <Icon className={cn("size-4", iconColor)} />
-            </div>
-            <Switch checked={station.active} onCheckedChange={onToggle} className="scale-75 -mt-0.5" />
-          </div>
+        <div className={cn("absolute top-2 left-2 flex size-7 items-center justify-center rounded-lg shadow-sm", iconBg)}>
+          <Icon className={cn("size-3.5", iconColor)} />
         </div>
-      )}
+      </div>
       <div className="p-4 pt-2">
         <p className="font-semibold text-sm truncate">{station.name}</p>
         <p className={cn("text-xs mt-0.5", station.active ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>

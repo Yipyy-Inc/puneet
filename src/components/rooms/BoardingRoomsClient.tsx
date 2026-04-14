@@ -8,16 +8,33 @@ import type { RoomCategory, FacilityRoom } from "@/types/rooms";
 import { RoomCategoryCard } from "@/components/rooms/RoomCategoryCard";
 import { CategoryFormDialog } from "@/components/rooms/CategoryFormDialog";
 import { RoomUnitFormDialog } from "@/components/rooms/RoomUnitFormDialog";
+import { useRooms } from "@/hooks/use-rooms";
 
 interface Props {
-  initialCategories: RoomCategory[];
-  initialRooms: FacilityRoom[];
   facilityId?: number;
 }
 
-export function BoardingRoomsClient({ initialCategories, initialRooms, facilityId = 11 }: Props) {
-  const [categories, setCategories] = useState(initialCategories);
-  const [rooms, setRooms] = useState(initialRooms);
+export function BoardingRoomsClient({ facilityId = 11 }: Props) {
+  const {
+    categories: allCategories,
+    rooms: allRooms,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addRoom,
+    updateRoom,
+    deleteRoom,
+    toggleRoom,
+  } = useRooms();
+
+  // Scope to this facility + boarding service
+  const categories = allCategories.filter(
+    (c) => c.facilityId === facilityId && c.service === "boarding",
+  );
+  const categoryIds = new Set(categories.map((c) => c.id));
+  const rooms = allRooms.filter(
+    (r) => r.facilityId === facilityId && categoryIds.has(r.categoryId),
+  );
 
   const [catDialog, setCatDialog] = useState<{ open: boolean; editing: RoomCategory | null }>({ open: false, editing: null });
   const [unitDialog, setUnitDialog] = useState<{ open: boolean; editing: FacilityRoom | null; categoryId: string }>({
@@ -35,53 +52,38 @@ export function BoardingRoomsClient({ initialCategories, initialRooms, facilityI
   // ── Handlers ─────────────────────────────────────────────────────────────────
   const saveCategory = (cat: RoomCategory, unitCount: number) => {
     const isNew = !catDialog.editing;
-    setCategories((prev) => {
-      const exists = prev.find((c) => c.id === cat.id);
-      if (exists) return prev.map((c) => (c.id === cat.id ? cat : c));
-      return [...prev, { ...cat, sortOrder: prev.length + 1 }];
-    });
-
-    // Auto-generate units when creating a new category
-    if (isNew && unitCount > 0) {
-      const newUnits = Array.from({ length: unitCount }, (_, i) => ({
-        id: `room-${Date.now()}-${i}`,
-        categoryId: cat.id,
-        facilityId: cat.facilityId,
-        name: `${cat.name} ${String(i + 1).padStart(2, "0")}`,
-        active: true,
-        capacity: undefined as number | undefined,
-        staffNotes: "",
-        imageUrl: cat.imageUrl,
-      }));
-      setRooms((prev) => [...prev, ...newUnits]);
-      toast.success(`Category created with ${unitCount} unit${unitCount > 1 ? "s" : ""}`);
+    if (isNew) {
+      addCategory(cat, unitCount);
+      toast.success(
+        unitCount > 0
+          ? `Category created with ${unitCount} unit${unitCount > 1 ? "s" : ""}`
+          : "Category created",
+      );
     } else {
-      toast.success(isNew ? "Category created" : "Category updated");
+      updateCategory(cat);
+      toast.success("Category updated");
     }
     setCatDialog({ open: false, editing: null });
   };
 
-  const deleteCategory = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-    setRooms((prev) => prev.filter((r) => r.categoryId !== id));
+  const handleDeleteCategory = (id: string) => {
+    deleteCategory(id);
     toast.success("Category and its units removed");
   };
 
   const saveUnit = (room: FacilityRoom) => {
-    setRooms((prev) => {
-      const exists = prev.find((r) => r.id === room.id);
-      if (exists) return prev.map((r) => (r.id === room.id ? room : r));
-      return [...prev, room];
-    });
-    toast.success(unitDialog.editing ? "Room updated" : "Room added");
+    if (unitDialog.editing) {
+      updateRoom(room);
+      toast.success("Room updated");
+    } else {
+      addRoom(room);
+      toast.success("Room added");
+    }
     setUnitDialog({ open: false, editing: null, categoryId: "" });
   };
 
-  const toggleUnit = (id: string) =>
-    setRooms((prev) => prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
-
-  const deleteUnit = (id: string) => {
-    setRooms((prev) => prev.filter((r) => r.id !== id));
+  const handleDeleteUnit = (id: string) => {
+    deleteRoom(id);
     toast.success("Room removed");
   };
 
@@ -123,11 +125,11 @@ export function BoardingRoomsClient({ initialCategories, initialRooms, facilityI
                 category={cat}
                 rooms={rooms.filter((r) => r.categoryId === cat.id)}
                 onEditCategory={() => setCatDialog({ open: true, editing: cat })}
-                onDeleteCategory={() => deleteCategory(cat.id)}
+                onDeleteCategory={() => handleDeleteCategory(cat.id)}
                 onAddUnit={() => setUnitDialog({ open: true, editing: null, categoryId: cat.id })}
                 onEditUnit={(room) => setUnitDialog({ open: true, editing: room, categoryId: cat.id })}
-                onToggleUnit={toggleUnit}
-                onDeleteUnit={deleteUnit}
+                onToggleUnit={toggleRoom}
+                onDeleteUnit={handleDeleteUnit}
               />
             ))
         )}

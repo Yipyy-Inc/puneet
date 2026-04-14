@@ -67,7 +67,7 @@ export function RoomCategoryCard({
   onEditCategory, onDeleteCategory,
   onAddUnit, onEditUnit, onToggleUnit, onDeleteUnit,
 }: Props) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const colors = COLOR_CONFIG[category.color];
   const activeRooms = rooms.filter((r) => r.active);
   const totalCapacity = activeRooms.reduce(
@@ -75,7 +75,7 @@ export function RoomCategoryCard({
   );
 
   return (
-    <div className={cn("rounded-xl border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow border-l-4", colors.border)}>
+    <div className="rounded-xl border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
       <div className={cn("px-5 py-4", colors.headerBg)}>
         <div className="flex items-center gap-3">
@@ -170,6 +170,7 @@ export function RoomCategoryCard({
                   key={room.id}
                   room={room}
                   defaultCapacity={category.defaultCapacity}
+                  categoryImageUrl={category.imageUrl}
                   onEdit={() => onEditUnit(room)}
                   onToggle={() => onToggleUnit(room.id)}
                   onDelete={() => onDeleteUnit(room.id)}
@@ -186,30 +187,32 @@ export function RoomCategoryCard({
 // ── Unit tile ──────────────────────────────────────────────────────────────────
 
 function UnitTile({
-  room, defaultCapacity, onEdit, onToggle, onDelete,
+  room, defaultCapacity, categoryImageUrl, onEdit, onToggle, onDelete,
 }: {
   room: FacilityRoom;
   defaultCapacity: number;
+  categoryImageUrl?: string;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
 }) {
   const capacity = room.capacity ?? defaultCapacity;
+  const displayImage = room.imageUrl ?? categoryImageUrl;
   return (
     <div className={cn(
       "group relative rounded-lg border overflow-hidden transition-all hover:border-foreground/20",
       room.active ? "bg-card" : "bg-muted/30 opacity-60",
     )}>
       {/* Room photo */}
-      {room.imageUrl ? (
+      {displayImage ? (
         <div className="aspect-[4/3] relative">
-          <img src={room.imageUrl} alt={room.name} className="absolute inset-0 size-full object-cover" />
+          <img src={displayImage} alt={room.name} className="absolute inset-0 size-full object-cover" />
           <div className="absolute top-1.5 right-1.5">
             <Switch checked={room.active} onCheckedChange={onToggle} className="scale-[0.65]" />
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center aspect-[4/3] bg-muted/40">
+        <div className="flex items-center justify-center aspect-[4/3] bg-muted/40 relative">
           <ImageIcon className="size-5 text-muted-foreground/25" />
           <div className="absolute top-1.5 right-1.5">
             <Switch checked={room.active} onCheckedChange={onToggle} className="scale-[0.65]" />

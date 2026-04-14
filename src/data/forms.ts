@@ -934,6 +934,206 @@ formFields = [
 ];
 formOptions = [];
 logicRules = [];
+
+// ----- Additional seed forms for facility 11 (one per category for demo) -----
+const petFormId = "form-pet-profile-demo";
+const petVerId = "ver-pet-profile-demo";
+const petSecId = "sec-pet-profile-demo";
+formRecords.push({
+  id: petFormId,
+  facilityId: 11,
+  name: "Pet Profile Questionnaire",
+  slug: "pet-profile-questionnaire",
+  type: "pet",
+  status: "published",
+  audience: "customer",
+  createdAt: now,
+  updatedAt: now,
+});
+formVersions.push({
+  id: petVerId,
+  formId: petFormId,
+  versionNumber: 1,
+  publishedAt: now,
+  createdAt: now,
+});
+formSections.push({
+  id: petSecId,
+  formVersionId: petVerId,
+  title: "Default",
+  order: 0,
+});
+formFields.push(
+  {
+    id: "pp-q1",
+    sectionId: petSecId,
+    label: "Favorite activities",
+    fieldType: "short_text",
+    required: false,
+    order: 0,
+  },
+  {
+    id: "pp-q2",
+    sectionId: petSecId,
+    label: "Energy level (1-5)",
+    fieldType: "number",
+    required: false,
+    order: 1,
+  },
+  {
+    id: "pp-q3",
+    sectionId: petSecId,
+    label: "Allergies or medical conditions",
+    fieldType: "long_text",
+    required: false,
+    order: 2,
+    mappingTarget: "pet.allergies",
+  },
+  {
+    id: "pp-q4",
+    sectionId: petSecId,
+    label: "Feeding schedule",
+    fieldType: "long_text",
+    required: false,
+    order: 3,
+  },
+  {
+    id: "pp-q5",
+    sectionId: petSecId,
+    label: "Is the pet spayed/neutered?",
+    fieldType: "yes_no",
+    required: true,
+    order: 4,
+  },
+);
+
+const ownerFormId = "form-owner-update-demo";
+const ownerVerId = "ver-owner-update-demo";
+const ownerSecId = "sec-owner-update-demo";
+formRecords.push({
+  id: ownerFormId,
+  facilityId: 11,
+  name: "Annual Contact Info Update",
+  slug: "annual-contact-info-update",
+  type: "owner",
+  status: "published",
+  audience: "customer",
+  createdAt: now,
+  updatedAt: now,
+});
+formVersions.push({
+  id: ownerVerId,
+  formId: ownerFormId,
+  versionNumber: 1,
+  publishedAt: now,
+  createdAt: now,
+});
+formSections.push({
+  id: ownerSecId,
+  formVersionId: ownerVerId,
+  title: "Default",
+  order: 0,
+});
+formFields.push(
+  {
+    id: "ou-q1",
+    sectionId: ownerSecId,
+    label: "Primary phone",
+    fieldType: "phone",
+    required: true,
+    order: 0,
+    mappingTarget: "customer.phone",
+  },
+  {
+    id: "ou-q2",
+    sectionId: ownerSecId,
+    label: "Home address",
+    fieldType: "address",
+    required: true,
+    order: 1,
+    mappingTarget: "customer.address",
+  },
+  {
+    id: "ou-q3",
+    sectionId: ownerSecId,
+    label: "Emergency contact name",
+    fieldType: "short_text",
+    required: true,
+    order: 2,
+  },
+  {
+    id: "ou-q4",
+    sectionId: ownerSecId,
+    label: "Emergency contact phone",
+    fieldType: "phone",
+    required: true,
+    order: 3,
+  },
+);
+
+const svcFormId = "form-boarding-intake-demo";
+const svcVerId = "ver-boarding-intake-demo";
+const svcSecId = "sec-boarding-intake-demo";
+formRecords.push({
+  id: svcFormId,
+  facilityId: 11,
+  name: "Boarding Stay Intake",
+  slug: "boarding-stay-intake",
+  type: "service",
+  status: "published",
+  audience: "customer",
+  appliesTo: { serviceTypes: ["boarding"] },
+  createdAt: now,
+  updatedAt: now,
+});
+formVersions.push({
+  id: svcVerId,
+  formId: svcFormId,
+  versionNumber: 1,
+  publishedAt: now,
+  createdAt: now,
+});
+formSections.push({
+  id: svcSecId,
+  formVersionId: svcVerId,
+  title: "Default",
+  order: 0,
+});
+formFields.push(
+  {
+    id: "bs-q1",
+    sectionId: svcSecId,
+    label: "Feeding instructions for the stay",
+    fieldType: "long_text",
+    required: true,
+    order: 0,
+  },
+  {
+    id: "bs-q2",
+    sectionId: svcSecId,
+    label: "Medications during stay",
+    fieldType: "long_text",
+    required: false,
+    order: 1,
+  },
+  {
+    id: "bs-q3",
+    sectionId: svcSecId,
+    label: "May we share space with other dogs?",
+    fieldType: "yes_no",
+    required: true,
+    order: 2,
+  },
+  {
+    id: "bs-q4",
+    sectionId: svcSecId,
+    label: "Emergency vet contact",
+    fieldType: "phone",
+    required: false,
+    order: 3,
+  },
+);
+
 // Starter templates (facilityId 0): ship with app; facilities duplicate and edit
 const starterTpl = (
   id: string,

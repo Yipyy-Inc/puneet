@@ -217,12 +217,8 @@ export default function CustomerPetDetailPage({
     );
   }
 
-  const facilityForms = allFacilityForms.filter(
-    (f) => f.type === "intake" || f.type === "pet",
-  );
-  const optionalForms = allFacilityForms.filter(
-    (f) => f.type === "service" || f.type === "owner",
-  );
+  const facilityForms = allFacilityForms.filter((f) => f.type === "pet");
+  const optionalForms = allFacilityForms.filter((f) => f.type === "service");
   const requiredForms = facilityForms.filter(
     (f) => !completedFormIds.has(f.id),
   );

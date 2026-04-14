@@ -117,7 +117,7 @@ export function PlayAreaCard({
   onToggleSection,
   onDeleteSection,
 }: PlayAreaCardProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const activeSections = sections.filter((s) => s.isActive);
   const totalCapacity = activeSections.reduce((sum, s) => sum + s.capacity, 0);
@@ -254,6 +254,7 @@ export function PlayAreaCard({
                     key={section.id}
                     section={section}
                     used={mockUsage[section.id] ?? 0}
+                    areaImageUrl={area.imageUrl}
                     onEdit={() => onEditSection(section)}
                     onToggle={() => onToggleSection(section.id)}
                     onDelete={() => onDeleteSection(section.id)}
@@ -272,37 +273,46 @@ export function PlayAreaCard({
 function SectionTile({
   section,
   used,
+  areaImageUrl,
   onEdit,
   onToggle,
   onDelete,
 }: {
   section: DaycareSection;
   used: number;
+  areaImageUrl?: string;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
 }) {
   const colors = COLOR_CONFIG[section.color];
   const pct = section.capacity > 0 ? (used / section.capacity) * 100 : 0;
+  const displayImage = section.imageUrl ?? areaImageUrl;
 
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-xl border-2 transition-all",
-        colors.border,
+        "group relative overflow-hidden rounded-xl border transition-all",
         !section.isActive && "opacity-50",
       )}
     >
       {/* Photo or color band */}
-      {section.imageUrl ? (
+      {displayImage ? (
         <div className="relative h-28 w-full overflow-hidden">
           <img
-            src={section.imageUrl}
+            src={displayImage}
             alt={section.name}
             className="size-full object-cover"
           />
           <div className="from-background/80 absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent px-3 pb-2 pt-6">
             <p className="text-sm font-semibold">{section.name}</p>
+          </div>
+          <div className="absolute top-2 right-2">
+            <Switch
+              checked={section.isActive}
+              onCheckedChange={onToggle}
+              className="scale-75"
+            />
           </div>
         </div>
       ) : (
