@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -163,65 +165,68 @@ export function TimeClock({
   const activeCount = entries.filter((e) => e.status === "clocked_in").length;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
-            <Clock className="size-4" />
-            Time Clock
-            <span className="text-muted-foreground text-sm font-normal ml-1">
-              — {department.name}
-            </span>
-          </SheetTitle>
-          <p className="text-muted-foreground text-sm">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-            {activeCount > 0 && (
-              <span
-                className={cn(
-                  "ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                  "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
-                )}
-              >
-                <span className="size-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-                {activeCount} clocked in
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogOverlay className="bg-black/20 backdrop-blur-[2px]" />
+        <DialogContent className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="size-4" />
+              Time Clock
+              <span className="text-muted-foreground text-sm font-normal ml-1">
+                — {department.name}
               </span>
-            )}
-          </p>
-        </SheetHeader>
+            </DialogTitle>
+            <p className="text-muted-foreground text-sm">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+              {activeCount > 0 && (
+                <span
+                  className={cn(
+                    "ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                    "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400",
+                  )}
+                >
+                  <span className="size-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
+                  {activeCount} clocked in
+                </span>
+              )}
+            </p>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-          {todayShifts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Clock className="size-10 text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground text-sm">
-                No published shifts today
-              </p>
-              <p className="text-muted-foreground/60 text-xs mt-1">
-                Publish shifts to enable time clock
-              </p>
-            </div>
-          ) : (
-            todayShifts.map((shift) => (
-              <ShiftRow
-                key={shift.id}
-                shift={shift}
-                employee={employeeMap.get(shift.employeeId!)}
-                position={positionMap.get(shift.positionId)}
-                entry={getEntry(shift.id)}
-                onClockIn={() => onClockIn(shift.id, shift.employeeId!)}
-                onClockOut={() => {
-                  const entry = getEntry(shift.id);
-                  if (entry) onClockOut(entry.id);
-                }}
-              />
-            ))
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+            {todayShifts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Clock className="size-10 text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground text-sm">
+                  No published shifts today
+                </p>
+                <p className="text-muted-foreground/60 text-xs mt-1">
+                  Publish shifts to enable time clock
+                </p>
+              </div>
+            ) : (
+              todayShifts.map((shift) => (
+                <ShiftRow
+                  key={shift.id}
+                  shift={shift}
+                  employee={employeeMap.get(shift.employeeId!)}
+                  position={positionMap.get(shift.positionId)}
+                  entry={getEntry(shift.id)}
+                  onClockIn={() => onClockIn(shift.id, shift.employeeId!)}
+                  onClockOut={() => {
+                    const entry = getEntry(shift.id);
+                    if (entry) onClockOut(entry.id);
+                  }}
+                />
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   );
 }

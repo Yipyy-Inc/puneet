@@ -9,8 +9,86 @@ export type ServiceCategory =
 export type PetSize = "small" | "medium" | "large" | "giant";
 export type ServiceStatus = "active" | "inactive" | "seasonal";
 export type PricingType = "flat" | "per_hour" | "per_day" | "per_session";
-export type MembershipStatus = "active" | "paused" | "cancelled" | "expired";
-export type MembershipBillingCycle = "monthly" | "quarterly" | "annually";
+export type MembershipStatus =
+  | "active"
+  | "paused"
+  | "cancelled"
+  | "expired"
+  | "pending";
+export type MembershipBillingCycle =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "annually"
+  | "yearly";
+export type WeeklyBillingDay =
+  | "mon"
+  | "tue"
+  | "wed"
+  | "thu"
+  | "fri"
+  | "sat"
+  | "sun";
+export type CancellationPolicy = "immediate" | "end_of_cycle";
+export type IncludedItemKind = "service" | "addon" | "product";
+
+export type IncludedItemExpiry =
+  | { type: "end_of_cycle" }
+  | { type: "days_after_purchase"; days: number }
+  | { type: "never" };
+
+export interface MembershipIncludedItem {
+  id: string;
+  kind: IncludedItemKind;
+  refId: string;
+  label: string;
+  quantity: number; // -1 = unlimited
+  expiry: IncludedItemExpiry;
+}
+
+export interface MembershipDiscountRule {
+  id: string;
+  target: "services" | "addons" | "products";
+  categories?: ServiceCategory[]; // empty or undefined = all
+  discountType: "percentage" | "flat";
+  discountValue: number;
+  label?: string;
+}
+
+export interface MembershipActivityEvent {
+  id: string;
+  type:
+    | "created"
+    | "renewed"
+    | "paused"
+    | "resumed"
+    | "cancelled"
+    | "payment_failed"
+    | "payment_retried"
+    | "perk_redeemed"
+    | "credit_used"
+    | "reminder_sent";
+  date: string;
+  amount?: number;
+  description: string;
+}
+
+export interface MembershipInvoice {
+  id: string;
+  date: string;
+  amount: number;
+  tax: number;
+  status: "paid" | "failed" | "refunded" | "pending";
+  receiptUrl?: string;
+}
+
+export interface PauseDetails {
+  mode: "cycles" | "date" | "manual";
+  cycles?: number;
+  resumeDate?: string;
+  pausedAt: string;
+}
 
 export interface Service {
   id: string;
@@ -118,6 +196,11 @@ export interface Membership {
   discountPercentage: number;
   autoRenew: boolean;
   createdAt: string;
+  activityLog: MembershipActivityEvent[];
+  invoices: MembershipInvoice[];
+  pauseDetails?: PauseDetails;
+  failedPaymentAt?: string;
+  graceEndsAt?: string;
 }
 
 export interface MembershipPlan {
@@ -135,6 +218,20 @@ export interface MembershipPlan {
   isActive: boolean;
   subscriberCount: number;
   createdAt: string;
+  // MoeGo-workflow extensions
+  billingCycle: MembershipBillingCycle;
+  weeklyBillingDay?: WeeklyBillingDay;
+  weeklyBillingTime?: string; // "HH:mm"
+  taxAmount: number;
+  termsUrl?: string;
+  termsText?: string;
+  discountRules: MembershipDiscountRule[];
+  includedItems: MembershipIncludedItem[];
+  availableOnline: boolean;
+  gracePeriodDays: number;
+  cancellationPolicy: CancellationPolicy;
+  badgeColor: string; // hex
+  tierLabel?: string; // e.g. Silver / Gold / Platinum
 }
 
 export interface PrepaidCredits {
@@ -595,7 +692,9 @@ export const membershipPlans: MembershipPlan[] = [
   {
     id: "plan-001",
     name: "Daycare Basic",
-    description: "Perfect for occasional daycare needs",
+    tierLabel: "Silver",
+    description:
+      "Perfect for occasional daycare needs. Enjoy priority booking and a monthly discount on all services.",
     monthlyPrice: 99,
     quarterlyPrice: 279,
     annualPrice: 999,
@@ -611,11 +710,41 @@ export const membershipPlans: MembershipPlan[] = [
     isActive: true,
     subscriberCount: 45,
     createdAt: "2024-01-01T10:00:00Z",
+    billingCycle: "monthly",
+    taxAmount: 8.66,
+    termsText:
+      "Membership auto-renews monthly. Cancel anytime; benefits continue until the end of the current billing cycle.",
+    discountRules: [
+      {
+        id: "dr-001-1",
+        target: "services",
+        categories: ["daycare", "grooming"],
+        discountType: "percentage",
+        discountValue: 10,
+        label: "10% off daycare & grooming",
+      },
+    ],
+    includedItems: [
+      {
+        id: "ii-001-1",
+        kind: "service",
+        refId: "srv-003",
+        label: "Full Day Daycare",
+        quantity: 4,
+        expiry: { type: "end_of_cycle" },
+      },
+    ],
+    availableOnline: true,
+    gracePeriodDays: 7,
+    cancellationPolicy: "end_of_cycle",
+    badgeColor: "#C0C0C0",
   },
   {
     id: "plan-002",
     name: "Daycare Plus",
-    description: "Our most popular plan for regular daycare users",
+    tierLabel: "Gold",
+    description:
+      "Our most popular plan for regular daycare users. Richer discounts, more credits, and a complimentary monthly bath.",
     monthlyPrice: 179,
     quarterlyPrice: 499,
     annualPrice: 1799,
@@ -633,15 +762,59 @@ export const membershipPlans: MembershipPlan[] = [
     isActive: true,
     subscriberCount: 112,
     createdAt: "2024-01-01T10:00:00Z",
+    billingCycle: "monthly",
+    taxAmount: 15.66,
+    termsText:
+      "Rollover credits expire after 60 days. Membership auto-renews monthly. Cancel anytime; access continues until the end of the current billing cycle.",
+    discountRules: [
+      {
+        id: "dr-002-1",
+        target: "services",
+        discountType: "percentage",
+        discountValue: 15,
+        label: "15% off all services",
+      },
+      {
+        id: "dr-002-2",
+        target: "addons",
+        discountType: "percentage",
+        discountValue: 10,
+        label: "10% off add-ons",
+      },
+    ],
+    includedItems: [
+      {
+        id: "ii-002-1",
+        kind: "service",
+        refId: "srv-003",
+        label: "Full Day Daycare",
+        quantity: 8,
+        expiry: { type: "end_of_cycle" },
+      },
+      {
+        id: "ii-002-2",
+        kind: "addon",
+        refId: "addon-005",
+        label: "Bath & Brush",
+        quantity: 1,
+        expiry: { type: "end_of_cycle" },
+      },
+    ],
+    availableOnline: true,
+    gracePeriodDays: 7,
+    cancellationPolicy: "end_of_cycle",
+    badgeColor: "#D4AF37",
   },
   {
     id: "plan-003",
     name: "Daycare Unlimited",
-    description: "Unlimited daycare access for power users",
+    tierLabel: "Platinum",
+    description:
+      "Unlimited daycare access plus quarterly grooming and VIP lounge. Built for everyday users.",
     monthlyPrice: 349,
     quarterlyPrice: 949,
     annualPrice: 3499,
-    credits: -1, // unlimited
+    credits: -1,
     discountPercentage: 20,
     perks: [
       "20% off all services",
@@ -656,11 +829,55 @@ export const membershipPlans: MembershipPlan[] = [
     isActive: true,
     subscriberCount: 28,
     createdAt: "2024-01-01T10:00:00Z",
+    billingCycle: "monthly",
+    taxAmount: 30.54,
+    termsText:
+      "Unlimited access is subject to facility capacity and fair-use guidelines. Auto-renews monthly. Cancel anytime.",
+    discountRules: [
+      {
+        id: "dr-003-1",
+        target: "services",
+        discountType: "percentage",
+        discountValue: 20,
+        label: "20% off all services",
+      },
+      {
+        id: "dr-003-2",
+        target: "products",
+        discountType: "percentage",
+        discountValue: 10,
+        label: "10% off retail",
+      },
+    ],
+    includedItems: [
+      {
+        id: "ii-003-1",
+        kind: "service",
+        refId: "srv-003",
+        label: "Full Day Daycare",
+        quantity: -1,
+        expiry: { type: "end_of_cycle" },
+      },
+      {
+        id: "ii-003-2",
+        kind: "addon",
+        refId: "addon-005",
+        label: "Bath & Brush",
+        quantity: 1,
+        expiry: { type: "end_of_cycle" },
+      },
+    ],
+    availableOnline: true,
+    gracePeriodDays: 7,
+    cancellationPolicy: "end_of_cycle",
+    badgeColor: "#6B46C1",
   },
   {
     id: "plan-004",
     name: "Boarding Saver",
-    description: "Great savings for frequent boarders",
+    tierLabel: "Silver",
+    description:
+      "Great savings for frequent boarders with priority holiday availability and webcam access.",
     monthlyPrice: 149,
     quarterlyPrice: 419,
     annualPrice: 1499,
@@ -677,6 +894,86 @@ export const membershipPlans: MembershipPlan[] = [
     isActive: true,
     subscriberCount: 34,
     createdAt: "2024-02-01T10:00:00Z",
+    billingCycle: "monthly",
+    taxAmount: 13.04,
+    termsText:
+      "Priority holiday booking subject to availability. Credits do not roll over.",
+    discountRules: [
+      {
+        id: "dr-004-1",
+        target: "services",
+        categories: ["boarding"],
+        discountType: "percentage",
+        discountValue: 15,
+        label: "15% off boarding",
+      },
+    ],
+    includedItems: [
+      {
+        id: "ii-004-1",
+        kind: "service",
+        refId: "srv-001",
+        label: "Standard Boarding",
+        quantity: 3,
+        expiry: { type: "end_of_cycle" },
+      },
+    ],
+    availableOnline: true,
+    gracePeriodDays: 7,
+    cancellationPolicy: "end_of_cycle",
+    badgeColor: "#3B82F6",
+  },
+  {
+    id: "plan-005",
+    name: "Groom Weekly Club",
+    tierLabel: "Silver",
+    description:
+      "A weekly self-care rhythm for pets who need frequent grooming. Billed weekly on your chosen day.",
+    monthlyPrice: 45,
+    quarterlyPrice: 129,
+    annualPrice: 499,
+    credits: 4,
+    discountPercentage: 20,
+    perks: [
+      "Complimentary weekly bath & brush",
+      "20% off full grooms",
+      "Priority stylist booking",
+    ],
+    applicableServices: ["grooming"],
+    isPopular: false,
+    isActive: true,
+    subscriberCount: 17,
+    createdAt: "2025-09-10T10:00:00Z",
+    billingCycle: "weekly",
+    weeklyBillingDay: "mon",
+    weeklyBillingTime: "09:00",
+    taxAmount: 3.94,
+    termsText:
+      "Billed every Monday at 9:00 AM local time. Missed weeks do not roll over.",
+    discountRules: [
+      {
+        id: "dr-005-1",
+        target: "services",
+        categories: ["grooming"],
+        discountType: "percentage",
+        discountValue: 20,
+        label: "20% off grooming",
+      },
+    ],
+    includedItems: [
+      {
+        id: "ii-005-1",
+        kind: "addon",
+        refId: "addon-005",
+        label: "Bath & Brush",
+        quantity: 1,
+        expiry: { type: "end_of_cycle" },
+      },
+    ],
+    availableOnline: true,
+    gracePeriodDays: 3,
+    cancellationPolicy: "end_of_cycle",
+    badgeColor: "#14B8A6",
   },
 ];
 
@@ -691,13 +988,68 @@ export const memberships: Membership[] = [
     status: "active",
     billingCycle: "monthly",
     monthlyPrice: 179,
-    startDate: "2024-01-15",
-    nextBillingDate: "2025-02-15",
+    startDate: "2025-06-15",
+    nextBillingDate: "2026-05-15",
     creditsRemaining: 5,
     creditsTotal: 8,
     discountPercentage: 15,
     autoRenew: true,
-    createdAt: "2024-01-15T10:00:00Z",
+    createdAt: "2025-06-15T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-001-1",
+        type: "created",
+        date: "2025-06-15T10:00:00Z",
+        amount: 179,
+        description: "Subscribed to Daycare Plus",
+      },
+      {
+        id: "act-001-2",
+        type: "renewed",
+        date: "2026-03-15T09:02:00Z",
+        amount: 179,
+        description: "Monthly renewal",
+      },
+      {
+        id: "act-001-3",
+        type: "perk_redeemed",
+        date: "2026-03-20T12:30:00Z",
+        description: "Full Day Daycare used (1 of 8)",
+      },
+      {
+        id: "act-001-4",
+        type: "renewed",
+        date: "2026-04-15T09:01:00Z",
+        amount: 179,
+        description: "Monthly renewal",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-001-1",
+        date: "2026-04-15",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+      {
+        id: "inv-001-2",
+        date: "2026-03-15",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+      {
+        id: "inv-001-3",
+        date: "2026-02-15",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
   },
   {
     id: "mem-002",
@@ -709,13 +1061,47 @@ export const memberships: Membership[] = [
     status: "active",
     billingCycle: "annually",
     monthlyPrice: 291.58,
-    startDate: "2024-03-01",
-    nextBillingDate: "2025-03-01",
+    startDate: "2025-03-01",
+    nextBillingDate: "2026-03-01",
     creditsRemaining: -1,
     creditsTotal: -1,
     discountPercentage: 20,
     autoRenew: true,
-    createdAt: "2024-03-01T10:00:00Z",
+    createdAt: "2025-03-01T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-002-1",
+        type: "created",
+        date: "2025-03-01T10:00:00Z",
+        amount: 3499,
+        description: "Subscribed to Daycare Unlimited (annual)",
+      },
+      {
+        id: "act-002-2",
+        type: "renewed",
+        date: "2026-03-01T09:00:00Z",
+        amount: 3499,
+        description: "Annual renewal",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-002-1",
+        date: "2026-03-01",
+        amount: 3499,
+        tax: 306.16,
+        status: "paid",
+        receiptUrl: "#",
+      },
+      {
+        id: "inv-002-2",
+        date: "2025-03-01",
+        amount: 3499,
+        tax: 306.16,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
   },
   {
     id: "mem-003",
@@ -727,13 +1113,39 @@ export const memberships: Membership[] = [
     status: "active",
     billingCycle: "monthly",
     monthlyPrice: 99,
-    startDate: "2024-06-01",
-    nextBillingDate: "2025-02-01",
+    startDate: "2025-11-01",
+    nextBillingDate: "2026-05-01",
     creditsRemaining: 2,
     creditsTotal: 4,
     discountPercentage: 10,
     autoRenew: true,
-    createdAt: "2024-06-01T10:00:00Z",
+    createdAt: "2025-11-01T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-003-1",
+        type: "created",
+        date: "2025-11-01T10:00:00Z",
+        amount: 99,
+        description: "Subscribed to Daycare Basic",
+      },
+      {
+        id: "act-003-2",
+        type: "renewed",
+        date: "2026-04-01T09:00:00Z",
+        amount: 99,
+        description: "Monthly renewal",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-003-1",
+        date: "2026-04-01",
+        amount: 99,
+        tax: 8.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
   },
   {
     id: "mem-004",
@@ -745,13 +1157,43 @@ export const memberships: Membership[] = [
     status: "paused",
     billingCycle: "quarterly",
     monthlyPrice: 139.67,
-    startDate: "2024-04-15",
-    nextBillingDate: "2025-04-15",
+    startDate: "2025-04-15",
+    nextBillingDate: "2026-07-15",
     creditsRemaining: 3,
     creditsTotal: 3,
     discountPercentage: 15,
     autoRenew: false,
-    createdAt: "2024-04-15T10:00:00Z",
+    createdAt: "2025-04-15T10:00:00Z",
+    pauseDetails: {
+      mode: "cycles",
+      cycles: 2,
+      pausedAt: "2026-04-01T11:00:00Z",
+    },
+    activityLog: [
+      {
+        id: "act-004-1",
+        type: "created",
+        date: "2025-04-15T10:00:00Z",
+        amount: 419,
+        description: "Subscribed to Boarding Saver (quarterly)",
+      },
+      {
+        id: "act-004-2",
+        type: "paused",
+        date: "2026-04-01T11:00:00Z",
+        description: "Paused for 2 billing cycles",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-004-1",
+        date: "2026-01-15",
+        amount: 419,
+        tax: 36.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
   },
   {
     id: "mem-005",
@@ -764,12 +1206,124 @@ export const memberships: Membership[] = [
     billingCycle: "monthly",
     monthlyPrice: 179,
     startDate: "2024-02-01",
-    nextBillingDate: "2024-12-01",
-    creditsRemaining: 0,
+    nextBillingDate: "2026-05-01",
+    creditsRemaining: 3,
     creditsTotal: 8,
     discountPercentage: 15,
     autoRenew: false,
     createdAt: "2024-02-01T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-005-1",
+        type: "created",
+        date: "2024-02-01T10:00:00Z",
+        amount: 179,
+        description: "Subscribed to Daycare Plus",
+      },
+      {
+        id: "act-005-2",
+        type: "cancelled",
+        date: "2026-04-05T14:20:00Z",
+        description: "Cancelled — access continues until 2026-05-01",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-005-1",
+        date: "2026-04-01",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
+  },
+  {
+    id: "mem-006",
+    customerId: "cust-009",
+    customerName: "Noah Patel",
+    customerEmail: "noah.patel@email.com",
+    planId: "plan-002",
+    planName: "Daycare Plus",
+    status: "expired",
+    billingCycle: "monthly",
+    monthlyPrice: 179,
+    startDate: "2025-10-12",
+    nextBillingDate: "2026-04-12",
+    creditsRemaining: 0,
+    creditsTotal: 8,
+    discountPercentage: 15,
+    autoRenew: true,
+    createdAt: "2025-10-12T10:00:00Z",
+    failedPaymentAt: "2026-04-12T09:02:00Z",
+    graceEndsAt: "2026-04-19T09:02:00Z",
+    activityLog: [
+      {
+        id: "act-006-1",
+        type: "created",
+        date: "2025-10-12T10:00:00Z",
+        amount: 179,
+        description: "Subscribed to Daycare Plus",
+      },
+      {
+        id: "act-006-2",
+        type: "payment_failed",
+        date: "2026-04-12T09:02:00Z",
+        amount: 179,
+        description: "Card declined — retrying",
+      },
+      {
+        id: "act-006-3",
+        type: "payment_retried",
+        date: "2026-04-13T09:02:00Z",
+        amount: 179,
+        description: "Retry attempt failed",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-006-1",
+        date: "2026-04-12",
+        amount: 179,
+        tax: 15.66,
+        status: "failed",
+      },
+    ],
+  },
+  {
+    id: "mem-007",
+    customerId: "cust-010",
+    customerName: "Olivia Green",
+    customerEmail: "olivia.green@email.com",
+    planId: "plan-005",
+    planName: "Groom Weekly Club",
+    status: "pending",
+    billingCycle: "weekly",
+    monthlyPrice: 45,
+    startDate: "2026-04-14",
+    nextBillingDate: "2026-04-21",
+    creditsRemaining: 0,
+    creditsTotal: 1,
+    discountPercentage: 20,
+    autoRenew: true,
+    createdAt: "2026-04-14T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-007-1",
+        type: "created",
+        date: "2026-04-14T10:00:00Z",
+        description: "Subscription created — awaiting first payment",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-007-1",
+        date: "2026-04-14",
+        amount: 45,
+        tax: 3.94,
+        status: "pending",
+      },
+    ],
   },
 ];
 
