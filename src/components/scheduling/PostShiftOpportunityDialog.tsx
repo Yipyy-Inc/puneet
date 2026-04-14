@@ -7,10 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogOverlay,
+  DialogPortal,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -148,10 +151,12 @@ export function PostShiftOpportunityDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[520px]">
-        <DialogHeader>
-          <DialogTitle>Post Shift Opportunity</DialogTitle>
-        </DialogHeader>
+      <DialogPortal>
+        <DialogOverlay className="bg-black/20 backdrop-blur-[2px]" />
+        <DialogContent className="max-h-[85vh] overflow-y-auto duration-300 sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Post Shift Opportunity</DialogTitle>
+          </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Department & Position */}
@@ -211,12 +216,15 @@ export function PostShiftOpportunityDialog({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Date</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.date}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, date: e.target.value }))
+                onValueChange={(v) =>
+                  setForm((p) => ({ ...p, date: v }))
                 }
+                displayMode="dialog"
+                showQuickPresets={false}
+                popoverClassName="!w-[300px]"
+                calendarClassName="p-1 text-xs"
               />
             </div>
             <div className="space-y-1.5">
@@ -379,15 +387,16 @@ export function PostShiftOpportunityDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={!isValid}>
-            Post Opportunity
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!isValid}>
+              Post Opportunity
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 }
