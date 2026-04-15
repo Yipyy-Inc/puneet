@@ -2,6 +2,19 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import {
+  logShiftCreated,
+  logShiftUpdated,
+  logShiftDeleted,
+  logShiftAssigned,
+  logShiftUnassigned,
+  logShiftMoved,
+  logShiftCopied,
+  logSchedulePublished,
+  logDraftDiscarded,
+  logOpenShiftPosted,
+} from "@/lib/schedule-audit";
 import {
   ScheduleHeader,
   type ViewMode,
@@ -12,7 +25,6 @@ import { DraftPublishBar } from "@/components/scheduling/DraftPublishBar";
 import { AddShiftDialog } from "@/components/scheduling/AddShiftDialog";
 import { SaveAsTemplateDialog } from "@/components/scheduling/SaveAsTemplateDialog";
 import { TimeClock } from "@/components/scheduling/TimeClock";
-import { ShiftOpportunityBoard } from "@/components/scheduling/ShiftOpportunityBoard";
 import { PostShiftOpportunityDialog } from "@/components/scheduling/PostShiftOpportunityDialog";
 import { ShiftOpportunityNotificationSettingsDialog } from "@/components/scheduling/ShiftOpportunityNotificationSettingsDialog";
 import { DraftReviewSummary } from "@/components/scheduling/DraftReviewSummary";
@@ -70,6 +82,7 @@ const schedulingSettings = {
 };
 
 export function ScheduleView() {
+  const { user } = useCurrentUser();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedDepartment, setSelectedDepartment] = useState<Department>(
@@ -100,6 +113,11 @@ export function ScheduleView() {
 
   // Date range for the current view
   const dateRange = useMemo(() => {
+    if (viewMode === "day") {
+      const dayStr = currentDate.toISOString().split("T")[0];
+      return { start: dayStr, end: dayStr };
+    }
+
     const start = new Date(currentDate);
     const dayOfWeek = start.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -219,6 +237,103 @@ export function ScheduleView() {
     [selectedDepartment.id],
   );
 
+  // ─── Audit helpers ───────────────────────────────────────────────────────
+
+  const buildShiftCtx = useCallback(
+    (shift: Partial<ScheduleShift> & { id?: string }) => {
+      const position = shift.positionId
+        ? deptPositions.find((p) => p.id === shift.positionId)
+        : undefined;
+      const employee = shift.employeeId
+        ? deptEmployees.find((e) => e.id === shift.employeeId)
+        : undefined;
+      return {
+        departmentId: selectedDepartment.id,
+        departmentName: selectedDepartment.name,
+        shiftId: shift.id,
+        shiftDate: shift.date,
+        shiftTimeRange:
+          shift.startTime && shift.endTime
+            ? `${shift.startTime} – ${shift.endTime}`
+            : undefined,
+        positionId: shift.positionId,
+        positionName: position?.name,
+        employeeId: shift.employeeId,
+        employeeName: employee?.name,
+        actorId: user.id,
+        actorName: user.name,
+        actorType: "staff" as const,
+      };
+    },
+    [deptEmployees, deptPositions, selectedDepartment, user.id, user.name],
+  );
+
+  const diffShifts = useCallback(
+    (
+      before: ScheduleShift,
+      after: Partial<ScheduleShift>,
+    ): { field: string; oldValue: string; newValue: string }[] => {
+      const out: { field: string; oldValue: string; newValue: string }[] = [];
+      if (after.date && after.date !== before.date) {
+        out.push({ field: "Date", oldValue: before.date, newValue: after.date });
+      }
+      if (after.startTime && after.startTime !== before.startTime) {
+        out.push({
+          field: "Start time",
+          oldValue: before.startTime,
+          newValue: after.startTime,
+        });
+      }
+      if (after.endTime && after.endTime !== before.endTime) {
+        out.push({
+          field: "End time",
+          oldValue: before.endTime,
+          newValue: after.endTime,
+        });
+      }
+      if (
+        after.positionId !== undefined &&
+        after.positionId !== before.positionId
+      ) {
+        const oldPos = deptPositions.find((p) => p.id === before.positionId);
+        const newPos = deptPositions.find((p) => p.id === after.positionId);
+        out.push({
+          field: "Position",
+          oldValue: oldPos?.name ?? before.positionId,
+          newValue: newPos?.name ?? after.positionId,
+        });
+      }
+      if (
+        after.employeeId !== undefined &&
+        after.employeeId !== before.employeeId
+      ) {
+        const oldEmp = before.employeeId
+          ? deptEmployees.find((e) => e.id === before.employeeId)
+          : null;
+        const newEmp = after.employeeId
+          ? deptEmployees.find((e) => e.id === after.employeeId)
+          : null;
+        out.push({
+          field: "Assigned to",
+          oldValue: oldEmp?.name ?? "Open",
+          newValue: newEmp?.name ?? "Open",
+        });
+      }
+      if (
+        after.breakMinutes !== undefined &&
+        after.breakMinutes !== before.breakMinutes
+      ) {
+        out.push({
+          field: "Break (min)",
+          oldValue: String(before.breakMinutes),
+          newValue: String(after.breakMinutes),
+        });
+      }
+      return out;
+    },
+    [deptEmployees, deptPositions],
+  );
+
   // ─── Shift handlers ──────────────────────────────────────────────────────
 
   const handleShiftClick = (shift: ScheduleShift) => {
@@ -243,19 +358,32 @@ export function ScheduleView() {
   const handleSaveShift = (shiftsData: Omit<ScheduleShift, "id">[]) => {
     if (editingShift) {
       const shiftData = shiftsData[0];
+      const changes = diffShifts(editingShift, shiftData);
       setShifts((prev) =>
         prev.map((s) =>
           s.id === editingShift.id ? { ...s, ...shiftData } : s,
         ),
       );
+      logShiftUpdated({
+        ...buildShiftCtx({ ...editingShift, ...shiftData }),
+        changes,
+      });
       toast.success("Shift updated");
     } else {
+      const timestamp = Date.now();
       const newShifts: ScheduleShift[] = shiftsData.map((s, i) => ({
         ...s,
-        id: `shift-new-${Date.now()}-${i}`,
+        id: `shift-new-${timestamp}-${i}`,
         status: "draft" as const,
       }));
       setShifts((prev) => [...prev, ...newShifts]);
+      newShifts.forEach((s) => {
+        if (s.employeeId) {
+          logShiftCreated(buildShiftCtx(s));
+        } else {
+          logOpenShiftPosted(buildShiftCtx(s));
+        }
+      });
       if (newShifts.length === 1) {
         toast.success("Draft shift added");
       } else {
@@ -267,12 +395,15 @@ export function ScheduleView() {
   };
 
   const handleDeleteShift = (shiftId: string) => {
+    const target = shifts.find((s) => s.id === shiftId);
     setShifts((prev) => prev.filter((s) => s.id !== shiftId));
+    if (target) logShiftDeleted(buildShiftCtx(target));
     toast.success("Shift deleted");
   };
 
   const handleMoveShift = useCallback(
     (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+      const original = shifts.find((s) => s.id === shiftId);
       setShifts((prev) =>
         prev.map((s) =>
           s.id === shiftId
@@ -280,48 +411,86 @@ export function ScheduleView() {
             : s,
         ),
       );
+      if (original) {
+        const changes = diffShifts(original, {
+          employeeId: newEmployeeId,
+          date: newDate,
+        });
+        const previousEmp = original.employeeId
+          ? deptEmployees.find((e) => e.id === original.employeeId)
+          : null;
+        logShiftMoved({
+          ...buildShiftCtx({
+            ...original,
+            employeeId: newEmployeeId,
+            date: newDate,
+          }),
+          previousEmployeeId: original.employeeId,
+          previousEmployeeName: previousEmp?.name,
+          changes,
+        });
+      }
       toast.success("Shift moved");
     },
-    [],
+    [shifts, deptEmployees, buildShiftCtx, diffShifts],
   );
 
   const handleCopyShift = useCallback(
     (shiftId: string, newEmployeeId: string | undefined, newDate: string) => {
+      const copyId = `shift-copy-${Date.now()}`;
+      let copied: ScheduleShift | null = null;
       setShifts((prev) => {
         const original = prev.find((s) => s.id === shiftId);
         if (!original) return prev;
-        const copy: ScheduleShift = {
+        copied = {
           ...original,
-          id: `shift-copy-${Date.now()}`,
+          id: copyId,
           employeeId: newEmployeeId,
           date: newDate,
           status: "draft",
           recurrenceId: undefined,
         };
-        return [...prev, copy];
+        return [...prev, copied];
       });
+      if (copied) logShiftCopied(buildShiftCtx(copied));
       toast.success("Shift copied");
     },
-    [],
+    [buildShiftCtx],
   );
 
   const handleAssignShift = useCallback(
     (shiftId: string, employeeId: string | undefined) => {
+      const original = shifts.find((s) => s.id === shiftId);
       setShifts((prev) =>
         prev.map((s) => (s.id === shiftId ? { ...s, employeeId } : s)),
       );
+      if (original) {
+        if (employeeId) {
+          logShiftAssigned(buildShiftCtx({ ...original, employeeId }));
+        } else {
+          const previousEmp = original.employeeId
+            ? deptEmployees.find((e) => e.id === original.employeeId)
+            : null;
+          logShiftUnassigned({
+            ...buildShiftCtx({ ...original, employeeId: undefined }),
+            previousEmployeeId: original.employeeId,
+            previousEmployeeName: previousEmp?.name,
+          });
+        }
+      }
       if (employeeId) {
         toast.success("Employee assigned");
       } else {
         toast.success("Shift made open");
       }
     },
-    [],
+    [shifts, deptEmployees, buildShiftCtx],
   );
 
   // ─── Publish / Draft handlers ──────────────────────────────────────────
 
   const handlePublish = () => {
+    const publishedCount = draftShifts.length;
     setShifts((prev) =>
       prev.map((s) =>
         s.departmentId === selectedDepartment.id && s.status === "draft"
@@ -329,8 +498,16 @@ export function ScheduleView() {
           : s,
       ),
     );
+    logSchedulePublished({
+      departmentId: selectedDepartment.id,
+      departmentName: selectedDepartment.name,
+      count: publishedCount,
+      weekStart: dateRange.start,
+      actorId: user.id,
+      actorName: user.name,
+    });
     toast.success("Schedule published! Staff will be notified.", {
-      description: `${draftShifts.length} shifts have been published.`,
+      description: `${publishedCount} shifts have been published.`,
     });
   };
 
@@ -339,12 +516,20 @@ export function ScheduleView() {
   };
 
   const handleDiscard = () => {
+    const discardedCount = draftShifts.length;
     setShifts((prev) =>
       prev.filter(
         (s) =>
           !(s.departmentId === selectedDepartment.id && s.status === "draft"),
       ),
     );
+    logDraftDiscarded({
+      departmentId: selectedDepartment.id,
+      departmentName: selectedDepartment.name,
+      count: discardedCount,
+      actorId: user.id,
+      actorName: user.name,
+    });
     toast.info("Draft changes discarded");
   };
 
@@ -411,6 +596,8 @@ export function ScheduleView() {
         onPrint={handlePrint}
         onSaveAsTemplate={handleSaveAsTemplate}
         onOpenTimeClock={() => setTimeClockOpen(true)}
+        onPostOpenShift={() => setShowPostDialog(true)}
+        onOpenShiftNotifSettings={() => setShowNotifSettings(true)}
       />
 
       <ScheduleStats
@@ -430,17 +617,6 @@ export function ScheduleView() {
           availabilities={employeeAvailabilities}
           timeOffRequests={enhancedTimeOffRequests}
           settings={schedulingSettings}
-        />
-        <ShiftOpportunityBoard
-          opportunities={shiftOpportunities}
-          notificationSettings={notifSettings}
-          departments={departments}
-          positions={allPositions}
-          employees={scheduleEmployees}
-          onOpportunitiesChange={setShiftOpportunities}
-          onOpenPostDialog={() => setShowPostDialog(true)}
-          onOpenNotificationSettings={() => setShowNotifSettings(true)}
-          defaultExpanded={false}
         />
       </div>
 
@@ -519,7 +695,29 @@ export function ScheduleView() {
         departments={departments}
         positions={allPositions}
         employees={scheduleEmployees}
-        onPost={(opp) => setShiftOpportunities((prev) => [opp, ...prev])}
+        onPost={(opp) => {
+          setShiftOpportunities((prev) => [opp, ...prev]);
+          const dept = departments.find((d) => d.id === opp.departmentId);
+          const pos = allPositions.find((p) => p.id === opp.positionId);
+          logOpenShiftPosted({
+            departmentId: opp.departmentId,
+            departmentName: dept?.name,
+            shiftId: opp.id,
+            shiftDate: opp.date,
+            shiftTimeRange: `${opp.startTime} – ${opp.endTime}`,
+            positionId: opp.positionId,
+            positionName: pos?.name,
+            actorId: user.id,
+            actorName: user.name,
+            metadata:
+              opp.claimMode === "invite_only"
+                ? {
+                    claimMode: opp.claimMode,
+                    invitedCount: opp.invitedEmployeeIds?.length ?? 0,
+                  }
+                : { claimMode: opp.claimMode ?? "open" },
+          });
+        }}
       />
 
       <ShiftOpportunityNotificationSettingsDialog

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import {
@@ -13,38 +13,46 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Mail,
   Phone,
   CalendarDays,
   MapPin,
   Clock,
-  ShieldCheck,
   Bell,
   Wallet,
   BadgeCheck,
   ArrowLeftRight,
   UserPlus,
   Pencil,
-  KeyRound,
   LockKeyhole,
-  Unlock,
+  FileSignature,
+  FileText,
+  FileCheck2,
+  Fingerprint,
+  Download,
+  ChevronRight,
 } from "lucide-react";
 import {
   ROLE_META,
-  PERMISSION_GROUPS,
-  ALWAYS_ON_PERMISSIONS,
   NOTIFICATION_EVENT_META,
-  resolvePermission,
   type StaffProfile,
 } from "@/types/facility-staff";
+import { AccessTab } from "./access-tab";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
+import {
+  employeeDocumentSubmissions,
+  employeeDocumentTemplates,
+} from "@/data/scheduling";
+import type {
+  EmployeeDocumentSubmission,
+  EmployeeDocumentTemplate,
+} from "@/types/scheduling";
 import {
   RolePill,
   ServiceChip,
   StaffAvatar,
-  ScopeBadge,
   fullNameOf,
   formatRelative,
 } from "./staff-shared";
@@ -55,6 +63,8 @@ interface StaffProfileSheetProps {
   onEdit: (p: StaffProfile) => void;
   onInvite: (p: StaffProfile) => void;
   onTransfer: (p: StaffProfile) => void;
+  /** Called when the profile is updated inline (e.g. from the Access tab). */
+  onUpdate?: (p: StaffProfile) => void;
 }
 
 export function StaffProfileSheet({
@@ -63,7 +73,11 @@ export function StaffProfileSheet({
   onEdit,
   onInvite,
   onTransfer,
+  onUpdate,
 }: StaffProfileSheetProps) {
+  const { can } = useFacilityRbac();
+  const canSeeAccess = can("view_staff_permissions");
+  const canSeePayroll = can("view_payroll");
   if (!profile) return null;
 
   return (
@@ -89,27 +103,39 @@ export function StaffProfileSheet({
               <Tabs defaultValue="overview">
                 <TabsList className="w-full justify-start bg-transparent p-0">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="access">Access</TabsTrigger>
+                  {canSeeAccess && (
+                    <TabsTrigger value="access">Access</TabsTrigger>
+                  )}
                   <TabsTrigger value="services">Services</TabsTrigger>
+                  <TabsTrigger value="documents">Documents</TabsTrigger>
                   <TabsTrigger value="notifications">Notifications</TabsTrigger>
-                  <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                  {canSeePayroll && (
+                    <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                  )}
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-4 space-y-4">
                   <OverviewTab profile={profile} />
                 </TabsContent>
-                <TabsContent value="access" className="mt-4 space-y-4">
-                  <AccessTab profile={profile} />
-                </TabsContent>
+                {canSeeAccess && (
+                  <TabsContent value="access" className="mt-4 space-y-4">
+                    <AccessTab profile={profile} onUpdate={onUpdate} />
+                  </TabsContent>
+                )}
                 <TabsContent value="services" className="mt-4 space-y-4">
                   <ServicesTab profile={profile} />
+                </TabsContent>
+                <TabsContent value="documents" className="mt-4 space-y-4">
+                  <DocumentsTab profile={profile} />
                 </TabsContent>
                 <TabsContent value="notifications" className="mt-4 space-y-4">
                   <NotificationsTab profile={profile} />
                 </TabsContent>
-                <TabsContent value="payroll" className="mt-4 space-y-4">
-                  <PayrollTab profile={profile} />
-                </TabsContent>
+                {canSeePayroll && (
+                  <TabsContent value="payroll" className="mt-4 space-y-4">
+                    <PayrollTab profile={profile} />
+                  </TabsContent>
+                )}
               </Tabs>
             </div>
           </div>
@@ -226,85 +252,6 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
   );
 }
 
-function AccessTab({ profile }: { profile: StaffProfile }) {
-  const granted = useMemo(() => {
-    return PERMISSION_GROUPS.map((g) => ({
-      ...g,
-      permissions: g.permissions
-        .map((p) => ({
-          ...p,
-          setting: resolvePermission(profile, p.key),
-        }))
-        .filter((p) => p.setting.granted),
-    })).filter((g) => g.permissions.length > 0);
-  }, [profile]);
-
-  return (
-    <div className="space-y-4">
-      <AccessRow
-        icon={ShieldCheck}
-        title="Calendar visibility"
-        value={
-          profile.showOnCalendar
-            ? "Shows on the facility calendar"
-            : "Hidden from calendar (admin / back-office)"
-        }
-      />
-      <AccessRow
-        icon={BadgeCheck}
-        title="Can view other calendars"
-        value={
-          profile.calendarAccess.mode === "all"
-            ? "All working-business staff"
-            : profile.calendarAccess.mode === "none"
-              ? "None"
-              : `${profile.calendarAccess.staffIds.length} selected teammates`
-        }
-      />
-      <AccessRow
-        icon={profile.clockIn.requireAccessCode ? KeyRound : Unlock}
-        title="Clock in / out"
-        value={
-          profile.clockIn.requireAccessCode
-            ? `Requires access code (${profile.clockIn.accessCode})`
-            : "No access code required"
-        }
-      />
-
-      <Separator />
-
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-sm font-semibold">Permissions granted</div>
-          <Badge variant="outline" className="text-[10px]">
-            Always-on: {ALWAYS_ON_PERMISSIONS.length}
-          </Badge>
-        </div>
-        <div className="space-y-3">
-          {granted.map((g) => (
-            <div key={g.id}>
-              <div className="text-muted-foreground mb-1.5 text-xs font-medium">
-                {g.label}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {g.permissions.map((p) => (
-                  <div
-                    key={p.key}
-                    className="border-border/60 bg-card flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs"
-                  >
-                    <span>{p.label}</span>
-                    <ScopeBadge scope={p.setting.scope} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ServicesTab({ profile }: { profile: StaffProfile }) {
   if (profile.serviceAssignments.length === 0) {
     return (
@@ -335,6 +282,269 @@ function ServicesTab({ profile }: { profile: StaffProfile }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function DocumentsTab({ profile }: { profile: StaffProfile }) {
+  const fullName = fullNameOf(profile).toLowerCase();
+  const submissions = useMemo(
+    () =>
+      employeeDocumentSubmissions.filter(
+        (s) => s.employeeName.toLowerCase() === fullName,
+      ),
+    [fullName],
+  );
+  const [viewing, setViewing] = useState<EmployeeDocumentSubmission | null>(
+    null,
+  );
+
+  const signed = submissions.filter((s) => s.status === "signed").length;
+  const pending = submissions.filter((s) => s.status === "pending").length;
+
+  if (submissions.length === 0) {
+    return (
+      <div className="border-border/60 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed p-8 text-center">
+        <FileSignature className="text-muted-foreground size-7 opacity-40" />
+        <div className="text-sm font-semibold">No signed documents yet</div>
+        <p className="text-muted-foreground max-w-sm text-xs">
+          Send an employment agreement, NDA, or other onboarding document from
+          the <span className="text-foreground font-medium">Scheduling &rsaquo; Onboarding &rsaquo; Templates</span>{" "}
+          tab.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="border-border/60 bg-card rounded-xl border p-3">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <FileCheck2 className="size-3 text-emerald-600" /> Signed
+          </div>
+          <div className="mt-1 text-lg font-bold">{signed}</div>
+        </div>
+        <div className="border-border/60 bg-card rounded-xl border p-3">
+          <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <Clock className="size-3 text-amber-600" /> Pending
+          </div>
+          <div className="mt-1 text-lg font-bold">{pending}</div>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        {submissions.map((sub) => (
+          <button
+            key={sub.id}
+            onClick={() => setViewing(sub)}
+            className="group border-border/60 hover:border-primary/40 hover:bg-muted/40 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all"
+          >
+            <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <FileText className="size-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">
+                {sub.templateTitle}
+              </div>
+              <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-[11px]">
+                <span>
+                  Signed{" "}
+                  {sub.signedAt
+                    ? new Date(sub.signedAt).toLocaleDateString("en-CA", {
+                        dateStyle: "medium",
+                      })
+                    : "—"}
+                </span>
+                {sub.ipAddress && (
+                  <span className="flex items-center gap-0.5">
+                    <MapPin className="size-2.5" /> {sub.ipAddress}
+                  </span>
+                )}
+                {sub.deviceId && (
+                  <span className="flex items-center gap-0.5">
+                    <Fingerprint className="size-2.5" /> {sub.deviceId}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Badge
+              className={cn(
+                "border-0 text-[10px]",
+                sub.status === "signed"
+                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+              )}
+            >
+              {sub.status === "signed" ? "Signed" : "Pending"}
+            </Badge>
+            <ChevronRight className="text-muted-foreground group-hover:text-primary size-4 shrink-0 transition-colors" />
+          </button>
+        ))}
+      </div>
+
+      <SignedDocumentQuickView
+        submission={viewing}
+        onOpenChange={(v) => !v && setViewing(null)}
+      />
+    </div>
+  );
+}
+
+function SignedDocumentQuickView({
+  submission,
+  onOpenChange,
+}: {
+  submission: EmployeeDocumentSubmission | null;
+  onOpenChange: (v: boolean) => void;
+}) {
+  if (!submission) return null;
+  const tmpl: EmployeeDocumentTemplate | undefined =
+    employeeDocumentTemplates.find((t) => t.id === submission.templateId);
+  return (
+    <Dialog open={!!submission} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogOverlay className="backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            "bg-background fixed top-[50%] left-[50%] z-60 flex flex-col",
+            "w-full max-w-xl max-h-[85vh]",
+            "-translate-x-1/2 -translate-y-1/2",
+            "rounded-xl border shadow-2xl overflow-hidden",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            "duration-200",
+          )}
+        >
+          <div className="bg-primary/5 shrink-0 border-b px-6 py-4">
+            <DialogTitle className="text-base">
+              {submission.templateTitle}
+            </DialogTitle>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {tmpl && (
+                <Badge variant="outline" className="text-[10px]">
+                  v{tmpl.version}
+                </Badge>
+              )}
+              <Badge
+                className={cn(
+                  "border-0 text-[10px]",
+                  submission.status === "signed"
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    : "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                )}
+              >
+                {submission.status}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="space-y-4">
+              {submission.signatureData && (
+                <div>
+                  <div className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                    Signature
+                  </div>
+                  <div className="bg-background flex h-24 items-center justify-center rounded-lg border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={submission.signatureData}
+                      alt="Signature"
+                      className="max-h-16 object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                  Audit trail
+                </div>
+                <dl className="border-border/60 grid grid-cols-1 divide-y rounded-xl border text-xs sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                  <AuditItem
+                    label="Signed at"
+                    value={
+                      submission.signedAt
+                        ? new Date(submission.signedAt).toLocaleString("en-CA")
+                        : "—"
+                    }
+                  />
+                  <AuditItem
+                    label="IP address"
+                    value={submission.ipAddress ?? "—"}
+                    mono
+                  />
+                  <AuditItem
+                    label="Timezone"
+                    value={submission.timezone ?? "—"}
+                  />
+                  <AuditItem
+                    label="Device"
+                    value={submission.deviceId ?? "—"}
+                    mono
+                  />
+                </dl>
+              </div>
+
+              {Object.keys(submission.fieldValues).length > 0 && (
+                <div>
+                  <div className="text-muted-foreground mb-2 text-[10px] font-semibold tracking-wider uppercase">
+                    Information provided
+                  </div>
+                  <div className="space-y-1.5">
+                    {Object.entries(submission.fieldValues).map(([k, v]) => {
+                      const field = tmpl?.fields.find((f) => f.id === k);
+                      return (
+                        <div
+                          key={k}
+                          className="border-border/60 flex justify-between gap-3 rounded-md border px-3 py-2 text-xs"
+                        >
+                          <span className="text-muted-foreground">
+                            {field?.label ?? k.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-right font-medium">
+                            {v || "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t px-6 py-3 backdrop-blur-sm">
+            <div className="text-muted-foreground text-[10px] font-mono">
+              {submission.id}
+            </div>
+            <Button variant="outline" size="sm">
+              <Download className="size-3.5" /> Download
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
+  );
+}
+
+function AuditItem({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="p-3">
+      <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+        {label}
+      </div>
+      <div className={cn("mt-0.5 break-all", mono && "font-mono")}>{value}</div>
     </div>
   );
 }
@@ -465,28 +675,6 @@ function InfoTile({
           {sub}
         </div>
       )}
-    </div>
-  );
-}
-
-function AccessRow({
-  icon: Icon,
-  title,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="border-border/60 bg-card flex items-start gap-3 rounded-xl border p-3">
-      <div className="bg-primary/10 text-primary rounded-lg p-2">
-        <Icon className="size-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="text-muted-foreground mt-0.5 text-xs">{value}</div>
-      </div>
     </div>
   );
 }

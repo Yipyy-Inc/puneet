@@ -14,6 +14,10 @@ import type { ViewMode } from "./ScheduleHeader";
 // ─── Date Utilities ───────────────────────────────────────────────────────────
 
 export function getDatesForView(currentDate: Date, viewMode: ViewMode): Date[] {
+  if (viewMode === "day") {
+    return [new Date(currentDate)];
+  }
+
   const dates: Date[] = [];
   const start = new Date(currentDate);
   const dayOfWeek = start.getDay();

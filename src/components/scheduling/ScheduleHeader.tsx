@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,6 +9,9 @@ import {
   MoreVertical,
   BookmarkPlus,
   Printer,
+  Megaphone,
+  Bell,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +25,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { Department } from "@/types/scheduling";
 
-export type ViewMode = "week" | "2weeks" | "month";
+export type ViewMode = "day" | "week" | "2weeks" | "month";
 
 interface ScheduleHeaderProps {
   currentDate: Date;
@@ -44,12 +49,23 @@ interface ScheduleHeaderProps {
   onPrint: () => void;
   onSaveAsTemplate: () => void;
   onOpenTimeClock: () => void;
+  onPostOpenShift: () => void;
+  onOpenShiftNotifSettings: () => void;
 }
 
 function formatDateRange(date: Date, viewMode: ViewMode): string {
   if (viewMode === "month") {
     return date.toLocaleDateString("en-US", {
       month: "long",
+      year: "numeric",
+    });
+  }
+
+  if (viewMode === "day") {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
       year: "numeric",
     });
   }
@@ -90,6 +106,8 @@ export function ScheduleHeader({
   onPrint,
   onSaveAsTemplate,
   onOpenTimeClock,
+  onPostOpenShift,
+  onOpenShiftNotifSettings,
 }: ScheduleHeaderProps) {
   const { can } = useCurrentUser();
   const canEdit = can("schedule.edit");
@@ -97,7 +115,14 @@ export function ScheduleHeader({
 
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(currentDate);
-    const offset = viewMode === "month" ? 30 : viewMode === "2weeks" ? 14 : 7;
+    const offset =
+      viewMode === "month"
+        ? 30
+        : viewMode === "2weeks"
+          ? 14
+          : viewMode === "day"
+            ? 1
+            : 7;
     newDate.setDate(
       newDate.getDate() + (direction === "next" ? offset : -offset),
     );
@@ -177,6 +202,7 @@ export function ScheduleHeader({
       <div className="bg-muted flex shrink-0 items-center rounded-lg p-0.5">
         {(
           [
+            { value: "day", label: "Day" },
             { value: "week", label: "Week" },
             { value: "2weeks", label: "2 Wk" },
             { value: "month", label: "Month" },
@@ -233,7 +259,20 @@ export function ScheduleHeader({
               <MoreVertical className="size-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align="end" className="w-56">
+            {canEdit && (
+              <DropdownMenuItem onClick={onPostOpenShift}>
+                <Megaphone className="mr-2 size-3.5" />
+                Post Open Shift
+              </DropdownMenuItem>
+            )}
+            {canEdit && (
+              <DropdownMenuItem onClick={onOpenShiftNotifSettings}>
+                <Bell className="mr-2 size-3.5" />
+                Open Shift Notifications
+              </DropdownMenuItem>
+            )}
+            {canEdit && <DropdownMenuSeparator />}
             <DropdownMenuItem onClick={onOpenTimeClock}>
               <Clock className="mr-2 size-3.5" />
               Time Clock
@@ -248,6 +287,17 @@ export function ScheduleHeader({
               <Printer className="mr-2 size-3.5" />
               Print
             </DropdownMenuItem>
+            {canPublish && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/facility/dashboard/services/scheduling/audit">
+                    <Shield className="mr-2 size-3.5" />
+                    Audit Trail
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

@@ -688,6 +688,11 @@ export type ShiftOpportunityUrgency = z.infer<
   typeof shiftOpportunityUrgencyEnum
 >;
 
+export const shiftOpportunityClaimModeEnum = z.enum(["open", "invite_only"]);
+export type ShiftOpportunityClaimMode = z.infer<
+  typeof shiftOpportunityClaimModeEnum
+>;
+
 export const shiftOpportunitySchema = z.object({
   id: z.string(),
   facilityId: z.number(),
@@ -701,6 +706,10 @@ export const shiftOpportunitySchema = z.object({
   notes: z.string().optional(),
   urgency: shiftOpportunityUrgencyEnum,
   status: shiftOpportunityStatusEnum,
+  /** Who is allowed to claim this opportunity. Defaults to "open" if unset. */
+  claimMode: shiftOpportunityClaimModeEnum.optional(),
+  /** When claimMode === "invite_only", restrict claims to these employee IDs. */
+  invitedEmployeeIds: z.array(z.string()).optional(),
   originalEmployeeId: z.string().optional(),
   originalEmployeeName: z.string().optional(),
   originalShiftId: z.string().optional(),
@@ -770,3 +779,55 @@ export const timeClockEntrySchema = z.object({
   status: z.enum(["pending", "clocked_in", "clocked_out", "approved"]),
 });
 export type TimeClockEntry = z.infer<typeof timeClockEntrySchema>;
+
+// ============================================================================
+// Schedule Audit Trail
+// ============================================================================
+
+export const scheduleAuditActionEnum = z.enum([
+  "shift_created",
+  "shift_updated",
+  "shift_deleted",
+  "shift_assigned",
+  "shift_unassigned",
+  "shift_moved",
+  "shift_copied",
+  "schedule_published",
+  "draft_discarded",
+  "open_shift_posted",
+  "open_shift_claimed",
+]);
+export type ScheduleAuditAction = z.infer<typeof scheduleAuditActionEnum>;
+
+export const scheduleAuditEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  action: scheduleAuditActionEnum,
+  facilityId: z.number(),
+  departmentId: z.string().optional(),
+  departmentName: z.string().optional(),
+  shiftId: z.string().optional(),
+  shiftDate: z.string().optional(),
+  shiftTimeRange: z.string().optional(),
+  positionId: z.string().optional(),
+  positionName: z.string().optional(),
+  employeeId: z.string().optional(),
+  employeeName: z.string().optional(),
+  previousEmployeeId: z.string().optional(),
+  previousEmployeeName: z.string().optional(),
+  actorId: z.union([z.string(), z.number()]).optional(),
+  actorName: z.string().optional(),
+  actorType: z.enum(["staff", "system", "employee"]).optional(),
+  changes: z
+    .array(
+      z.object({
+        field: z.string(),
+        oldValue: z.string(),
+        newValue: z.string(),
+      }),
+    )
+    .optional(),
+  count: z.number().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+export type ScheduleAuditEntry = z.infer<typeof scheduleAuditEntrySchema>;

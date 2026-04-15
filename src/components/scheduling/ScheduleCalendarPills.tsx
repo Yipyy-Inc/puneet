@@ -1,6 +1,13 @@
 "use client";
 
-import { Clock, Heart, Palmtree, UserX } from "lucide-react";
+import {
+  Clock,
+  Heart,
+  Palmtree,
+  UserX,
+  CheckCircle2,
+  CircleDashed,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -46,18 +53,26 @@ export function ShiftPill({
     onDragStart(e);
   };
 
+  // ─── Compact (2-week) variant ──────────────────────────────
+  // Replaces the old ~2px dot with a readable mini-pill that
+  // shows the shift time and a draft/published indicator.
   if (isCompact) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "mx-auto h-2.5 w-full max-w-[28px] cursor-grab rounded-full transition-all hover:scale-110 active:cursor-grabbing",
-              isDraft && "outline-1 outline-offset-1 outline-dashed",
-              isDragging && "opacity-50",
-              isOpen && "border border-dashed border-amber-500",
+              "group/mini relative flex cursor-grab items-center gap-1 overflow-hidden rounded-md border px-1.5 py-0.5 transition-all hover:-translate-y-px hover:shadow-sm active:cursor-grabbing",
+              isDraft && "border-dashed",
+              isDragging && "scale-95 opacity-40",
+              isOpen && "border-amber-400/80",
             )}
-            style={{ backgroundColor: color }}
+            style={{
+              background: isDraft
+                ? `repeating-linear-gradient(135deg, ${color}22 0px, ${color}22 4px, ${color}10 4px, ${color}10 8px)`
+                : `linear-gradient(135deg, ${color}30 0%, ${color}14 100%)`,
+              borderColor: isDraft ? `${color}90` : `${color}66`,
+            }}
             draggable
             onDragStart={handleDragStart}
             onClick={(e) => {
@@ -68,35 +83,68 @@ export function ShiftPill({
               e.stopPropagation();
               onContextMenu(e);
             }}
-          />
+          >
+            <span
+              className="size-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+            <span
+              className="truncate text-[9px] font-semibold tabular-nums"
+              style={{ color }}
+            >
+              {shift.startTime.slice(0, 5)}
+            </span>
+            {isDraft && (
+              <span className="ml-auto rounded-full bg-amber-500/90 px-1 text-[8px] font-bold tracking-wider text-white uppercase">
+                D
+              </span>
+            )}
+          </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           <p className="font-medium">{position?.name ?? "Unknown"}</p>
           <p className="text-muted-foreground">
             {shift.startTime} – {shift.endTime}
           </p>
-          {isDraft && (
-            <Badge variant="outline" className="mt-1 text-[10px]">
-              Draft
-            </Badge>
-          )}
+          <Badge
+            variant="outline"
+            className={cn(
+              "mt-1 gap-1 text-[10px]",
+              isDraft
+                ? "border-amber-300 text-amber-700 dark:border-amber-600 dark:text-amber-400"
+                : "border-emerald-300 text-emerald-700 dark:border-emerald-600 dark:text-emerald-400",
+            )}
+          >
+            {isDraft ? (
+              <CircleDashed className="size-2.5" />
+            ) : (
+              <CheckCircle2 className="size-2.5" />
+            )}
+            {isDraft ? "Draft" : "Published"}
+          </Badge>
         </TooltipContent>
       </Tooltip>
     );
   }
+
+  // ─── Full (week) variant ────────────────────────────────────
+  const StatusIcon = isDraft ? CircleDashed : CheckCircle2;
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
           className={cn(
-            "group/pill flex cursor-grab items-center gap-1.5 rounded-lg border px-2 py-1.5 transition-all hover:-translate-y-px hover:shadow-md active:cursor-grabbing",
+            "group/pill relative flex cursor-grab items-center gap-1.5 overflow-hidden rounded-xl border pl-2.5 pr-1.5 py-1.5 transition-all hover:-translate-y-px hover:shadow-md active:cursor-grabbing",
             isDraft && "border-dashed",
             isDragging && "scale-95 opacity-40",
           )}
           style={{
-            background: `linear-gradient(135deg, ${color}1a 0%, ${color}10 100%)`,
-            borderColor: `${color}55`,
+            background: isDraft
+              ? `repeating-linear-gradient(135deg, ${color}1f 0px, ${color}1f 6px, ${color}0c 6px, ${color}0c 12px)`
+              : `linear-gradient(135deg, ${color}26 0%, ${color}10 100%)`,
+            borderColor: isDraft ? `${color}90` : `${color}55`,
+            boxShadow: isDraft ? "none" : `0 1px 6px ${color}1a`,
           }}
           draggable
           onDragStart={handleDragStart}
@@ -109,38 +157,62 @@ export function ShiftPill({
             onContextMenu(e);
           }}
         >
+          {/* Left color accent rail */}
           <div
-            className="size-2 shrink-0 rounded-full shadow-sm"
+            className="absolute top-0 bottom-0 left-0 w-[3px]"
             style={{ backgroundColor: color }}
           />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 pl-1">
             <p
               className="truncate text-[11px] leading-tight font-semibold"
               style={{ color }}
             >
               {position?.name ?? "—"}
             </p>
-            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[10px]">
+            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[10px] tabular-nums">
               <Clock className="size-2.5" />
               {shift.startTime} – {shift.endTime}
             </p>
           </div>
-          {isDraft && (
-            <div className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase">
-              Draft
-            </div>
-          )}
-          {isOpen && (
-            <div className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-700 uppercase dark:bg-amber-900/40 dark:text-amber-400">
-              Open
-            </div>
-          )}
+          {/* Status chip — Draft (amber) vs Live/Published (emerald) */}
+          <span
+            className={cn(
+              "shrink-0 flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8.5px] font-bold tracking-wider uppercase",
+              isOpen
+                ? "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
+                : isDraft
+                  ? "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
+                  : "border-emerald-300/80 bg-emerald-50 text-emerald-700 dark:border-emerald-600/50 dark:bg-emerald-950/40 dark:text-emerald-300",
+            )}
+          >
+            {isOpen ? (
+              <>
+                <UserX className="size-2.5" />
+                Open
+              </>
+            ) : (
+              <>
+                <StatusIcon className="size-2.5" />
+                {isDraft ? "Draft" : "Live"}
+              </>
+            )}
+          </span>
         </div>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
         <p className="font-medium">{position?.name}</p>
         <p>
           {shift.startTime} – {shift.endTime}
+        </p>
+        <p
+          className={cn(
+            "mt-1 text-[10px] font-semibold tracking-wider uppercase",
+            isDraft
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-emerald-600 dark:text-emerald-400",
+          )}
+        >
+          {isDraft ? "Draft — not published" : "Published"}
         </p>
         {shift.notes && (
           <p className="text-muted-foreground mt-1">{shift.notes}</p>
@@ -238,12 +310,22 @@ export function TimeOffCell({
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "mx-auto h-2.5 w-full max-w-[28px] rounded-full border",
+              "flex h-5 w-full items-center justify-center gap-1 rounded-md border px-1 shadow-sm",
               style.gradient,
               style.border,
-              isPending && "animate-pulse",
+              isPending && "border-dashed",
             )}
-          />
+          >
+            <Icon className={cn("size-2.5 shrink-0", style.text)} />
+            <span
+              className={cn(
+                "truncate text-[8.5px] font-bold tracking-wider uppercase",
+                style.text,
+              )}
+            >
+              {label.split(" ")[0]}
+            </span>
+          </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           <p className="font-medium">{label}</p>
