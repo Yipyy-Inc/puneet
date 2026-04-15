@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
+import { getNextEstimateId } from "@/data/estimates";
 import { GuestContactForm } from "./GuestContactForm";
 import { SERVICE_CATEGORIES } from "@/components/bookings/modals/constants";
 import type { EstimateLineItem } from "@/types/booking";
@@ -79,7 +80,7 @@ export function EstimateWizard({
   const [endDate, setEndDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("14:00");
   const [checkOutTime, setCheckOutTime] = useState("11:00");
-  const [roomType, setRoomType] = useState("Standard");
+  const [roomType, setRoomType] = useState("");
 
   // Line items
   const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
@@ -89,6 +90,9 @@ export function EstimateWizard({
   // Completion
   const [created, setCreated] = useState(false);
   const [sent, setSent] = useState(false);
+  const [generatedEstimateId, setGeneratedEstimateId] = useState<string | null>(
+    null,
+  );
 
   const facilityClients = useMemo(
     () =>
@@ -151,6 +155,12 @@ export function EstimateWizard({
     const items: EstimateLineItem[] = [];
 
     if (selectedService === "boarding" && startDate && endDate) {
+      const roomPrices: Record<string, number> = {
+        Standard: 35,
+        Deluxe: 50,
+        "Luxury Suite": 65,
+      };
+      const nightlyRate = roomPrices[roomType] ?? price;
       const nights = Math.max(
         1,
         Math.round(
@@ -159,11 +169,11 @@ export function EstimateWizard({
         ),
       );
       items.push({
-        label: `${roomType} Room`,
-        description: `${nights} night${nights !== 1 ? "s" : ""} @ $${price}/night`,
-        amount: price,
+        label: roomType ? `${roomType} Room` : "Boarding Room",
+        description: `${nights} night${nights !== 1 ? "s" : ""} @ $${nightlyRate}/night`,
+        amount: nightlyRate,
         quantity: nights,
-        total: price * nights,
+        total: nightlyRate * nights,
       });
     } else {
       items.push({
@@ -192,6 +202,8 @@ export function EstimateWizard({
       case 1:
         return !!selectedService;
       case 2:
+        if (selectedService === "boarding")
+          return !!startDate && !!endDate && !!roomType;
         return !!startDate;
       case 3:
         if (isGuest) return !!guestName.trim() && !!guestEmail.trim();
@@ -209,8 +221,10 @@ export function EstimateWizard({
   };
 
   const handleCreate = () => {
+    const newId = getNextEstimateId();
+    setGeneratedEstimateId(newId);
     setCreated(true);
-    toast.success("Estimate created");
+    toast.success(`Estimate ${newId} created`);
   };
 
   const handleSend = () => {
@@ -227,10 +241,12 @@ export function EstimateWizard({
     setSelectedService("");
     setStartDate("");
     setEndDate("");
+    setRoomType("");
     setLineItems([]);
     setDiscount(0);
     setCreated(false);
     setSent(false);
+    setGeneratedEstimateId(null);
     setGuestName("");
     setGuestEmail("");
     setGuestPhone("");
@@ -308,6 +324,14 @@ export function EstimateWizard({
                   <Check className="size-7 text-blue-600" />
                 </div>
                 <h3 className="text-lg font-bold">Estimate Created</h3>
+                {generatedEstimateId && (
+                  <Badge
+                    variant="outline"
+                    className="font-mono text-xs tracking-wider"
+                  >
+                    {generatedEstimateId}
+                  </Badge>
+                )}
                 <p className="text-muted-foreground max-w-sm text-sm">
                   for{" "}
                   <span className="font-medium text-slate-700">
@@ -667,7 +691,7 @@ export function EstimateWizard({
                     <Label>Room Type</Label>
                     <Select value={roomType} onValueChange={setRoomType}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select a room type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Standard">
@@ -856,7 +880,7 @@ export function EstimateWizard({
 
         {/* Footer */}
         {!created && (
-          <div className="flex justify-between border-t px-6 py-4">
+          <div className="flex shrink-0 justify-between border-t px-6 py-4">
             <Button
               variant="outline"
               onClick={() => (step === 0 ? handleClose() : setStep(step - 1))}

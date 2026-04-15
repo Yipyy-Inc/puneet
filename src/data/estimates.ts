@@ -3,7 +3,7 @@ import type { Estimate } from "@/types/booking";
 export const estimates: Estimate[] = [
   {
     id: "est-001",
-    estimateId: "EST-10001",
+    estimateId: "E10001",
     clientId: 15,
     clientName: "Alice Johnson",
     clientEmail: "alice@example.com",
@@ -74,7 +74,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-002",
-    estimateId: "EST-10002",
+    estimateId: "E10002",
     clientId: 28,
     clientName: "John Doe",
     clientEmail: "john@example.com",
@@ -123,7 +123,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-003",
-    estimateId: "EST-10003",
+    estimateId: "E10003",
     clientId: 16,
     clientName: "Bob Smith",
     clientEmail: "bob@example.com",
@@ -162,7 +162,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-004",
-    estimateId: "EST-10004",
+    estimateId: "E10004",
     clientId: 15,
     clientName: "Alice Johnson",
     clientEmail: "alice@example.com",
@@ -208,7 +208,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-005",
-    estimateId: "EST-10005",
+    estimateId: "E10005",
     clientId: 28,
     clientName: "John Doe",
     clientEmail: "john@example.com",
@@ -243,7 +243,7 @@ export const estimates: Estimate[] = [
   // Guest estimates
   {
     id: "est-006",
-    estimateId: "EST-10006",
+    estimateId: "E10006",
     clientId: 30,
     clientName: "David Park",
     clientEmail: "david.park@gmail.com",
@@ -304,7 +304,7 @@ export const estimates: Estimate[] = [
   },
   {
     id: "est-007",
-    estimateId: "EST-10007",
+    estimateId: "E10007",
     clientId: 31,
     clientName: "Maria Santos",
     clientEmail: "maria.santos@outlook.com",
@@ -349,3 +349,19 @@ export const estimates: Estimate[] = [
     createdBy: "Sarah Admin",
   },
 ];
+
+const ESTIMATE_ID_PREFIX = "E";
+const ESTIMATE_ID_MIN_DIGITS = 5;
+const ESTIMATE_ID_START = 10001;
+
+export function getNextEstimateId(existing: Estimate[] = estimates): string {
+  const maxNumber = existing.reduce((max, e) => {
+    const match = e.estimateId.match(/^E(\d+)$/);
+    if (!match) return max;
+    const n = Number(match[1]);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, ESTIMATE_ID_START - 1);
+  const next = maxNumber + 1;
+  const padded = String(next).padStart(ESTIMATE_ID_MIN_DIGITS, "0");
+  return `${ESTIMATE_ID_PREFIX}${padded}`;
+}

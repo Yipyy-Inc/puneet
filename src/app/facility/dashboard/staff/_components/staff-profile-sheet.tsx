@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -66,94 +67,106 @@ export function StaffProfileSheet({
   if (!profile) return null;
 
   return (
-    <Sheet open={!!profile} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className={cn(
-          "flex w-full flex-col gap-0 p-0 sm:max-w-xl",
-          "overflow-hidden",
-        )}
-        style={{ maxWidth: "min(42rem, 100vw)" }}
-      >
-        <Header profile={profile} />
+    <Dialog open={!!profile} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogOverlay className="backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            "bg-background fixed top-[50%] left-[50%] z-50 flex flex-col",
+            "w-full max-w-2xl max-h-[90vh]",
+            "-translate-x-1/2 -translate-y-1/2",
+            "rounded-xl border shadow-2xl overflow-hidden",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            "duration-200",
+          )}
+        >
+          <Header profile={profile} />
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-6 pb-6">
-            <Tabs defaultValue="overview">
-              <TabsList className="w-full justify-start bg-transparent p-0">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="access">Access</TabsTrigger>
-                <TabsTrigger value="services">Services</TabsTrigger>
-                <TabsTrigger value="notifications">Notifications</TabsTrigger>
-                <TabsTrigger value="payroll">Payroll</TabsTrigger>
-              </TabsList>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="px-6 pb-6">
+              <Tabs defaultValue="overview">
+                <TabsList className="w-full justify-start bg-transparent p-0">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="access">Access</TabsTrigger>
+                  <TabsTrigger value="services">Services</TabsTrigger>
+                  <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                  <TabsTrigger value="payroll">Payroll</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="overview" className="mt-4 space-y-4">
-                <OverviewTab profile={profile} />
-              </TabsContent>
-              <TabsContent value="access" className="mt-4 space-y-4">
-                <AccessTab profile={profile} />
-              </TabsContent>
-              <TabsContent value="services" className="mt-4 space-y-4">
-                <ServicesTab profile={profile} />
-              </TabsContent>
-              <TabsContent value="notifications" className="mt-4 space-y-4">
-                <NotificationsTab profile={profile} />
-              </TabsContent>
-              <TabsContent value="payroll" className="mt-4 space-y-4">
-                <PayrollTab profile={profile} />
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="overview" className="mt-4 space-y-4">
+                  <OverviewTab profile={profile} />
+                </TabsContent>
+                <TabsContent value="access" className="mt-4 space-y-4">
+                  <AccessTab profile={profile} />
+                </TabsContent>
+                <TabsContent value="services" className="mt-4 space-y-4">
+                  <ServicesTab profile={profile} />
+                </TabsContent>
+                <TabsContent value="notifications" className="mt-4 space-y-4">
+                  <NotificationsTab profile={profile} />
+                </TabsContent>
+                <TabsContent value="payroll" className="mt-4 space-y-4">
+                  <PayrollTab profile={profile} />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
-        </div>
 
-        <div className="bg-background/80 flex items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onInvite(profile)}
-            >
-              <UserPlus className="size-4" />
-              {profile.status === "invited" ? "Resend invite" : "Send invite"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onTransfer(profile)}
-            >
-              <ArrowLeftRight className="size-4" />
-              Transfer appts
+          <div className="bg-background/80 flex items-center justify-between gap-2 border-t px-6 py-4 backdrop-blur-sm shrink-0">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onInvite(profile)}
+              >
+                <UserPlus className="size-4" />
+                {profile.status === "invited" ? "Resend invite" : "Send invite"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onTransfer(profile)}
+              >
+                <ArrowLeftRight className="size-4" />
+                Transfer appts
+              </Button>
+            </div>
+            <Button size="sm" onClick={() => onEdit(profile)}>
+              <Pencil className="size-4" />
+              Edit profile
             </Button>
           </div>
-          <Button size="sm" onClick={() => onEdit(profile)}>
-            <Pencil className="size-4" />
-            Edit profile
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
   );
 }
 
 function Header({ profile }: { profile: StaffProfile }) {
   const meta = ROLE_META[profile.primaryRole];
   return (
-    <SheetHeader className={cn("relative gap-0 overflow-hidden p-6 pb-5")}>
+    <div className={cn("relative shrink-0 overflow-hidden p-6 pb-5 border-b")}>
       <div
         className={cn("pointer-events-none absolute inset-0", meta.accent)}
       />
       <div className="relative flex items-start gap-4">
         <StaffAvatar profile={profile} size="xl" />
         <div className="min-w-0 flex-1">
-          <SheetTitle className="truncate text-xl font-bold">
+          <DialogTitle className="truncate text-xl font-bold">
             {fullNameOf(profile)}
-          </SheetTitle>
-          <SheetDescription className="mt-1 flex items-center gap-1.5 text-xs">
+          </DialogTitle>
+          {profile.jobTitle && (
+            <p className="text-foreground/70 mt-0.5 truncate text-sm font-medium">
+              {profile.jobTitle}
+            </p>
+          )}
+          <DialogDescription className="mt-1 flex items-center gap-1.5 text-xs">
             <Clock className="size-3" />
             Active {formatRelative(profile.lastActive)} ·{" "}
             <span className="capitalize">{profile.status}</span>
-          </SheetDescription>
+          </DialogDescription>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <RolePill role={profile.primaryRole} size="md" />
             {profile.additionalRoles.map((r) => (
@@ -162,7 +175,7 @@ function Header({ profile }: { profile: StaffProfile }) {
           </div>
         </div>
       </div>
-    </SheetHeader>
+    </div>
   );
 }
 

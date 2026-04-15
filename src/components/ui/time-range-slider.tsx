@@ -3,9 +3,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 
 export interface TimeRangeSliderProps {
   minTime?: string; // HH:mm format, default "06:00"
@@ -320,15 +320,12 @@ export function TimeRangeSlider({
       <div className="grid grid-cols-2 gap-3 pt-1">
         <div className="space-y-1">
           <Label className="text-muted-foreground text-xs">Check-in</Label>
-          <Input
-            type="time"
+          <TimePickerLux
             value={startTime}
             min={minutesToTime(startMinMinutes)}
             max={minutesToTime(startMaxMinutes)}
-            step={step * 60}
-            className="h-9"
-            onChange={(e) => {
-              const v = e.target.value;
+            stepMinutes={step}
+            onValueChange={(v) => {
               if (!isValidTime(v)) return;
               enforceAndEmit(timeToMinutes(v), endMinutes);
             }}
@@ -336,15 +333,12 @@ export function TimeRangeSlider({
         </div>
         <div className="space-y-1">
           <Label className="text-muted-foreground text-xs">Check-out</Label>
-          <Input
-            type="time"
+          <TimePickerLux
             value={endTime}
             min={minutesToTime(endMinMinutes)}
             max={minutesToTime(endMaxMinutes)}
-            step={step * 60}
-            className="h-9"
-            onChange={(e) => {
-              const v = e.target.value;
+            stepMinutes={step}
+            onValueChange={(v) => {
               if (!isValidTime(v)) return;
               enforceAndEmit(startMinutes, timeToMinutes(v));
             }}

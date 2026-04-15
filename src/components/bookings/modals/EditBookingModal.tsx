@@ -13,7 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { TimePicker } from "@/components/ui/time-picker";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { Calendar, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Booking } from "@/types/booking";
@@ -230,7 +230,7 @@ export function EditBookingModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="checkInTime">Check-in Time</Label>
-                <TimePicker
+                <TimePickerLux
                   value={formData.checkInTime || undefined}
                   onValueChange={(nextCheckIn) => {
                     setFormData((prev) => {
@@ -285,7 +285,7 @@ export function EditBookingModal({
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="checkOutTime">Check-out Time</Label>
-                <TimePicker
+                <TimePickerLux
                   value={formData.checkOutTime || undefined}
                   onValueChange={(nextCheckOut) => {
                     setFormData((prev) => ({

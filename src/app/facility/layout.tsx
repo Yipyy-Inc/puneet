@@ -43,7 +43,7 @@ export default async function FacilityLayout({
               <div className="flex items-center gap-3">
                 <SidebarTrigger className="hover:bg-muted size-9 rounded-xl transition-colors md:hidden" />
                 <GlobalSearchNext
-                  className="hidden max-w-[520px] sm:flex"
+                  className="hidden w-[460px] max-w-[480px] sm:flex"
                   canCreateCustomer={userRole === "facility_admin"}
                 />
               </div>

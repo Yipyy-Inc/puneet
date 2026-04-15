@@ -508,6 +508,19 @@ function RoleSection({
         </div>
       </div>
 
+      <FieldRow
+        label="Position title"
+        hint="What your facility calls this role. Shows on their profile card — leave blank to use the default role name."
+      >
+        <Input
+          value={draft.jobTitle ?? ""}
+          onChange={(e) =>
+            update("jobTitle", e.target.value || undefined)
+          }
+          placeholder={ROLE_META[draft.primaryRole].label}
+        />
+      </FieldRow>
+
       <div>
         <SectionHeader
           title="Additional roles"
@@ -547,20 +560,23 @@ function RoleSection({
           {SERVICE_ORDER.map((svc) => {
             const meta = SERVICE_MODULE_META[svc];
             const active = draft.serviceAssignments.includes(svc);
+            const toggle = () =>
+              update(
+                "serviceAssignments",
+                active
+                  ? draft.serviceAssignments.filter((s) => s !== svc)
+                  : [...draft.serviceAssignments, svc],
+              );
             return (
-              <button
-                type="button"
+              <div
                 key={svc}
-                onClick={() =>
-                  update(
-                    "serviceAssignments",
-                    active
-                      ? draft.serviceAssignments.filter((s) => s !== svc)
-                      : [...draft.serviceAssignments, svc],
-                  )
-                }
+                role="checkbox"
+                aria-checked={active}
+                tabIndex={0}
+                onClick={toggle}
+                onKeyDown={(e) => (e.key === " " || e.key === "Enter") && toggle()}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl border p-3 text-left transition-all",
+                  "flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-left transition-all select-none",
                   active
                     ? "border-primary ring-primary/20 bg-card shadow-sm ring-1"
                     : "border-border/60 bg-card/50",
@@ -570,8 +586,8 @@ function RoleSection({
                   <ServiceIcon module={svc} className="size-4" />
                 </div>
                 <div className="text-sm font-medium">{meta.label}</div>
-                <Checkbox checked={active} className="ml-auto" />
-              </button>
+                <Checkbox checked={active} tabIndex={-1} className="ml-auto pointer-events-none" />
+              </div>
             );
           })}
         </div>
