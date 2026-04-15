@@ -26,7 +26,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import {
   Select,
   SelectContent,
@@ -392,27 +394,30 @@ export function OperationsCalendarNewEventMenu({
                   className="md:col-span-2"
                 />
 
-                <Input
-                  type="date"
+                <DatePicker
                   value={customDraft.date}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setCustomDraft((previous) => ({
                       ...previous,
-                      date: event.target.value,
+                      date: next,
                     }))
                   }
+                  displayMode="dialog"
+                  showQuickPresets={false}
+                  popoverClassName="!w-[300px]"
+                  calendarClassName="p-1 text-xs"
                 />
 
-                <Input
-                  type="time"
+                <TimePickerLux
                   value={customDraft.startTime}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setCustomDraft((previous) => ({
                       ...previous,
-                      startTime: event.target.value,
+                      startTime: next,
                     }))
                   }
                   disabled={customDraft.allDay}
+                  placeholder="Start time"
                 />
 
                 <Select
@@ -622,15 +627,18 @@ export function OperationsCalendarNewEventMenu({
                   className="md:col-span-2"
                 />
 
-                <Input
-                  type="date"
+                <DatePicker
                   value={blockDraft.date}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setBlockDraft((previous) => ({
                       ...previous,
-                      date: event.target.value,
+                      date: next,
                     }))
                   }
+                  displayMode="dialog"
+                  showQuickPresets={false}
+                  popoverClassName="!w-[300px]"
+                  calendarClassName="p-1 text-xs"
                 />
 
                 <Select
@@ -655,25 +663,25 @@ export function OperationsCalendarNewEventMenu({
                   </SelectContent>
                 </Select>
 
-                <Input
-                  type="time"
+                <TimePickerLux
                   value={blockDraft.startTime}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setBlockDraft((previous) => ({
                       ...previous,
-                      startTime: event.target.value,
+                      startTime: next,
                     }))
                   }
+                  placeholder="Start time"
                 />
-                <Input
-                  type="time"
+                <TimePickerLux
                   value={blockDraft.endTime}
-                  onChange={(event) =>
+                  onValueChange={(next) =>
                     setBlockDraft((previous) => ({
                       ...previous,
-                      endTime: event.target.value,
+                      endTime: next,
                     }))
                   }
+                  placeholder="End time"
                 />
 
                 <Select

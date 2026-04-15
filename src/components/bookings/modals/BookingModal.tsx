@@ -57,6 +57,7 @@ import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
+import { getNextEstimateId } from "@/data/estimates";
 import { facilities } from "@/data/facilities";
 import { facilityConfig, isApprovalRequired } from "@/data/facility-config";
 
@@ -173,6 +174,9 @@ export function BookingModal({
   const [isEstimateMode, setIsEstimateMode] = useState(false);
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [estimateSent, setEstimateSent] = useState(false);
+  const [generatedEstimateId, setGeneratedEstimateId] = useState<string | null>(
+    null,
+  );
   const [estimatePricingSnapshot, setEstimatePricingSnapshot] =
     useState<EstimatePricingSnapshot | null>(null);
 
@@ -234,11 +238,13 @@ export function BookingModal({
       localStorage.removeItem("booking-modal-mode");
       setEstimateCreated(false);
       setEstimateSent(false);
+      setGeneratedEstimateId(null);
       setEstimatePricingSnapshot(null);
     } else {
       setIsEstimateMode(false);
       setEstimateCreated(false);
       setEstimateSent(false);
+      setGeneratedEstimateId(null);
       setEstimatePricingSnapshot(null);
     }
   }
@@ -1031,6 +1037,7 @@ export function BookingModal({
   const handleComplete = () => {
     if (isEstimateMode && isGuestEstimate) {
       setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
+      setGeneratedEstimateId(getNextEstimateId());
       setEstimateCreated(true);
       return;
     }
@@ -1142,6 +1149,7 @@ export function BookingModal({
     if (isEstimateMode) {
       // In estimate mode, show success state instead of creating a booking
       setEstimatePricingSnapshot(buildEstimatePricingSnapshot(calculatePrice));
+      setGeneratedEstimateId(getNextEstimateId());
       setEstimateCreated(true);
       return;
     }
@@ -1164,6 +1172,7 @@ export function BookingModal({
     setGuestPhone("");
     setGuestPetNames([""]);
     setEstimatePricingSnapshot(null);
+    setGeneratedEstimateId(null);
     setDaycareSelectedDates([]);
     setDaycareDateTimes([]);
     setBoardingRangeStart(null);
@@ -1793,7 +1802,7 @@ export function BookingModal({
           {/* Side Navigation Tabs */}
           <div className="bg-muted/30 hidden w-80 flex-col border-r lg:flex">
             {/* Title in Sidebar */}
-            <div className="bg-background border-b p-4">
+            <div className="bg-background shrink-0 border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Plus className="size-5" />
                 {(() => {
@@ -1839,7 +1848,7 @@ export function BookingModal({
               </p>
             </div>
             {/* #2 — Progress indicator */}
-            <div className="border-b px-4 py-2.5">
+            <div className="shrink-0 border-b px-4 py-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                   Step {currentStep + 1} of {displayedSteps.length}
@@ -2133,8 +2142,8 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Price Summary at Bottom */}
-            <div className="bg-background border-t p-6">
-              <div className="space-y-2">
+            <div className="bg-background shrink-0 border-t px-4 py-3">
+              <div className="space-y-1.5">
                 <div className="flex justify-between text-sm font-semibold">
                   <span>
                     {isEstimateMode ? "Estimated Total" : "Total Price"}
@@ -2331,6 +2340,14 @@ export function BookingModal({
                           <h3 className="mt-4 text-lg font-bold text-slate-800">
                             Estimate Sent!
                           </h3>
+                          {generatedEstimateId && (
+                            <Badge
+                              variant="outline"
+                              className="mt-2 font-mono text-xs tracking-wider"
+                            >
+                              {generatedEstimateId}
+                            </Badge>
+                          )}
                           <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                             The estimate has been sent to{" "}
                             <span className="font-medium text-slate-700">
@@ -2368,6 +2385,14 @@ export function BookingModal({
                           <h3 className="mt-4 text-lg font-bold text-slate-800">
                             Estimate Created
                           </h3>
+                          {generatedEstimateId && (
+                            <Badge
+                              variant="outline"
+                              className="mt-2 font-mono text-xs tracking-wider"
+                            >
+                              {generatedEstimateId}
+                            </Badge>
+                          )}
                           <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                             Estimate for{" "}
                             <span className="font-medium text-slate-700">

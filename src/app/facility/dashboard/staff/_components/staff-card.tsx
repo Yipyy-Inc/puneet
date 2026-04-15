@@ -72,6 +72,11 @@ export function StaffCard({
                 <div className="truncate font-semibold tracking-tight">
                   {fullNameOf(profile)}
                 </div>
+                {profile.jobTitle && (
+                  <div className="text-muted-foreground truncate text-xs font-medium">
+                    {profile.jobTitle}
+                  </div>
+                )}
                 <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                   <Clock className="size-3" />
                   Active {formatRelative(profile.lastActive)}

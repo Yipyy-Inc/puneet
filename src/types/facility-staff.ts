@@ -145,6 +145,8 @@ export interface StaffProfile {
   phone: string;
   avatarUrl?: string;
   colorHex: string;
+  /** Optional custom position title shown in place of / alongside the role label (e.g. "Lead Bather", "Senior Trainer") */
+  jobTitle?: string;
   primaryRole: FacilityStaffRole;
   additionalRoles: FacilityStaffRole[];
   serviceAssignments: ServiceModule[];
