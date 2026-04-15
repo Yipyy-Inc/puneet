@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
-import Script from "next/script";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/query-provider";
 import "./globals.css";
@@ -38,9 +37,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head suppressHydrationWarning>
-        <Script
+        <script
           id="remove-extension-injected-attrs"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function () {

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ScheduleGridView } from "./ScheduleGridView";
 import { ScheduleMonthView } from "./ScheduleMonthView";
+import { ScheduleDayView } from "./ScheduleDayView";
 import { AssignShiftDialog } from "./AssignShiftDialog";
 import {
   ShiftContextMenu,
@@ -80,7 +81,18 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      {props.viewMode === "month" ? (
+      {props.viewMode === "day" ? (
+        <ScheduleDayView
+          currentDate={props.currentDate}
+          employees={props.employees}
+          shifts={props.shifts}
+          positions={props.positions}
+          timeOffRequests={props.timeOffRequests}
+          holidayRates={props.holidayRates}
+          onShiftClick={props.onShiftClick}
+          onCellClick={props.onCellClick}
+        />
+      ) : props.viewMode === "month" ? (
         <ScheduleMonthView
           currentDate={props.currentDate}
           employees={props.employees}

@@ -34,7 +34,9 @@ import {
   LayoutGrid,
   List,
   Mail,
+  Building2,
 } from "lucide-react";
+import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import {
   ROLE_META,
   type FacilityStaffRole,
@@ -82,6 +84,7 @@ export default function FacilityStaffPage() {
   const [deleting, setDeleting] = useState<StaffProfile | null>(null);
   const [transferring, setTransferring] = useState<StaffProfile | null>(null);
   const [inviteTarget, setInviteTarget] = useState<StaffProfile | null>(null);
+  const [departmentsOpen, setDepartmentsOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return staff.filter((s) => {
@@ -159,6 +162,9 @@ export default function FacilityStaffPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDepartmentsOpen(true)}>
+              <Building2 className="size-4" /> Manage departments
+            </Button>
             <Button variant="outline">
               <ArrowUpDown className="size-4" /> Sort staff
             </Button>
@@ -371,6 +377,16 @@ export default function FacilityStaffPage() {
         onEdit={openEdit}
         onInvite={setInviteTarget}
         onTransfer={setTransferring}
+        onUpdate={(next) => {
+          setStaff((list) => {
+            const idx = list.findIndex((s) => s.id === next.id);
+            if (idx === -1) return list;
+            const copy = [...list];
+            copy[idx] = next;
+            return copy;
+          });
+          setViewing(next);
+        }}
       />
 
       {/* Edit/Create dialog */}
@@ -461,6 +477,20 @@ export default function FacilityStaffPage() {
             </Button>
             <Button onClick={() => setTransferring(null)}>Transfer</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Departments management */}
+      <Dialog open={departmentsOpen} onOpenChange={setDepartmentsOpen}>
+        <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Departments</DialogTitle>
+            <DialogDescription>
+              Create departments to organize your staff and assign tasks by
+              team. Each staff member belongs to one department.
+            </DialogDescription>
+          </DialogHeader>
+          <DepartmentSettings />
         </DialogContent>
       </Dialog>
 

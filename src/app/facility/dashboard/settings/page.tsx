@@ -37,7 +37,6 @@ import { TaxSettings } from "@/components/facility/TaxSettings";
 import { BookingStatusSettings } from "@/components/facility/BookingStatusSettings";
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
-import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import { EvaluationSettings } from "@/components/facility/EvaluationSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
@@ -71,10 +70,10 @@ const PricingRulesSettings = dynamic(
     ),
   { ssr: false },
 );
-const RolesPermissionsSettings = dynamic(
+const FacilityRolesStudio = dynamic(
   () =>
-    import("@/components/facility/RolesPermissionsSettings").then(
-      (mod) => mod.RolesPermissionsSettings,
+    import("@/components/facility/FacilityRolesStudio").then(
+      (mod) => mod.FacilityRolesStudio,
     ),
   { ssr: false },
 );
@@ -4841,7 +4840,7 @@ export default function SettingsPage() {
           {/* Roles & Permissions */}
           {activeSection === "roles-permissions" && (
             <div className="space-y-6">
-              <RolesPermissionsSettings />
+              <FacilityRolesStudio />
             </div>
           )}
 
@@ -4863,13 +4862,6 @@ export default function SettingsPage() {
           {activeSection === "tags-notes" && (
             <div className="space-y-6">
               <TagNotesSettings />
-            </div>
-          )}
-
-          {/* Departments */}
-          {activeSection === "departments" && (
-            <div className="space-y-6">
-              <DepartmentSettings />
             </div>
           )}
 

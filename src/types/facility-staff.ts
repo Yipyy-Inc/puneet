@@ -76,6 +76,7 @@ export type PermissionKey =
   | "export_financials"
   // Staff & payroll
   | "view_staff"
+  | "view_staff_permissions"
   | "manage_staff"
   | "manage_roles"
   | "view_payroll"
@@ -149,6 +150,8 @@ export interface StaffProfile {
   jobTitle?: string;
   primaryRole: FacilityStaffRole;
   additionalRoles: FacilityStaffRole[];
+  /** Facility-defined custom role ids (from `useFacilityRoles`). Additive to preset roles. */
+  customRoleIds?: string[];
   serviceAssignments: ServiceModule[];
   assignedLocations: string[];
   showOnCalendar: boolean;
@@ -425,6 +428,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Role, schedule, and pay decisions",
     permissions: [
       { key: "view_staff", label: "View staff directory" },
+      {
+        key: "view_staff_permissions",
+        label: "View staff permissions",
+        hint: "See the Access tab on each staff profile",
+      },
       { key: "manage_staff", label: "Manage staff" },
       { key: "manage_roles", label: "Manage roles & permissions" },
       { key: "view_payroll", label: "View payroll" },
@@ -533,6 +541,7 @@ export const ROLE_PRESETS: Record<
           "view_revenue",
           "export_financials",
           "view_staff",
+          "view_staff_permissions",
           "manage_staff",
           "manage_roles",
           "view_payroll",
@@ -595,6 +604,7 @@ export const ROLE_PRESETS: Record<
           "view_financial_reports",
           "view_revenue",
           "view_staff",
+          "view_staff_permissions",
           "manage_staff",
           "view_payroll",
           "view_inventory",
@@ -773,21 +783,92 @@ export function buildDefaultNotifications(
   return { ...base, ...presetOverrides };
 }
 
+// ============================================================================
+// Custom / editable roles
+// ============================================================================
+
+/**
+ * A facility-defined role. Distinct from the 8 hard-coded {@link FacilityStaffRole}
+ * presets — these are created by the facility owner in settings.
+ */
+export interface CustomFacilityRole {
+  id: string;
+  label: string;
+  description: string;
+  /** Tailwind background accent class (e.g. "bg-amber-500/10"). */
+  accent: string;
+  /** Tailwind ring class (e.g. "ring-amber-500/40"). */
+  ring: string;
+  /** Icon name from lucide-react (e.g. "Sparkles"). Resolved via the shared ICON_MAP. */
+  icon: string;
+  /** Per-permission grant + scope. Missing keys mean "not granted". */
+  permissions: Partial<Record<PermissionKey, AccessScope>>;
+  createdAt: string;
+}
+
+/**
+ * Per-facility editable overrides applied on top of {@link ROLE_PRESETS}. A missing
+ * key means "use the preset default". Presence means the facility has explicitly
+ * granted or revoked that permission for the role.
+ */
+export type RolePresetOverrides = Partial<
+  Record<FacilityStaffRole, Partial<Record<PermissionKey, AccessScope | "revoked">>>
+>;
+
+/** Lookup table of custom roles by id. */
+export type CustomRolesById = Record<string, CustomFacilityRole>;
+
+function scopeForRole(
+  role: FacilityStaffRole,
+  key: PermissionKey,
+  overrides?: RolePresetOverrides,
+): AccessScope | undefined {
+  const override = overrides?.[role]?.[key];
+  if (override === "revoked") return undefined;
+  if (override) return override;
+  const preset = ROLE_PRESETS[role].permissions.find(([k]) => k === key);
+  return preset?.[1];
+}
+
+export interface ResolvePermissionContext {
+  presetOverrides?: RolePresetOverrides;
+  customRoles?: CustomRolesById;
+}
+
 export function resolvePermission(
   staff: StaffProfile,
   key: PermissionKey,
+  ctx: ResolvePermissionContext = {},
 ): PermissionSetting {
   if (staff.permissionOverrides[key]) {
     return staff.permissionOverrides[key]!;
   }
-  const presetMap = new Map<PermissionKey, AccessScope>(
-    ROLE_PRESETS[staff.primaryRole].permissions,
-  );
+
+  const scopes: AccessScope[] = [];
+  const primary = scopeForRole(staff.primaryRole, key, ctx.presetOverrides);
+  if (primary) scopes.push(primary);
   for (const add of staff.additionalRoles) {
-    for (const [k, scope] of ROLE_PRESETS[add].permissions) {
-      if (!presetMap.has(k)) presetMap.set(k, scope);
+    const s = scopeForRole(add, key, ctx.presetOverrides);
+    if (s) scopes.push(s);
+  }
+  if (ctx.customRoles && staff.customRoleIds) {
+    for (const id of staff.customRoleIds) {
+      const role = ctx.customRoles[id];
+      const s = role?.permissions[key];
+      if (s) scopes.push(s);
     }
   }
-  const scope = presetMap.get(key);
-  return scope ? { granted: true, scope } : { granted: false, scope: "none" };
+
+  if (scopes.length === 0) return { granted: false, scope: "none" };
+  // Union: widest scope wins (anytime > operating_hours > assigned_shifts > none).
+  const rank: Record<AccessScope, number> = {
+    none: 0,
+    assigned_shifts: 1,
+    operating_hours: 2,
+    anytime: 3,
+  };
+  const widest = scopes.reduce((best, s) =>
+    rank[s] > rank[best] ? s : best,
+  );
+  return { granted: true, scope: widest };
 }

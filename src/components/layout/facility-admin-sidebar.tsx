@@ -223,7 +223,7 @@ export function FacilitySidebar() {
             disabled: false,
           },
           {
-            title: "Users",
+            title: "Staff",
             url: "/facility/dashboard/staff",
             icon: UserCheck,
             disabled: false,

@@ -21,7 +21,6 @@ import {
   Activity,
   ClipboardCheck,
   BarChart3,
-  Bell,
   Building,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -127,10 +126,10 @@ const navItems: NavItem[] = [
     requires: "report.view",
   },
   {
-    label: "Notifications",
-    href: "/facility/dashboard/services/scheduling/notifications",
-    icon: Bell,
-    requires: "messaging.send",
+    label: "Audit Trail",
+    href: "/facility/dashboard/services/scheduling/audit",
+    icon: Shield,
+    requires: "schedule.publish",
   },
   {
     label: "Company",

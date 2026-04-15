@@ -23,10 +23,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, Clock, Zap } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  Clock,
+  Globe,
+  Lock,
+  X,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import type {
   ShiftOpportunity,
+  ShiftOpportunityClaimMode,
   Department,
   Position,
   ScheduleEmployee,
@@ -54,6 +80,8 @@ interface PostForm {
   originalEmployeeId: string;
   setExpiry: boolean;
   expiryHours: number;
+  claimMode: ShiftOpportunityClaimMode;
+  invitedEmployeeIds: string[];
 }
 
 const emptyForm: PostForm = {
@@ -69,6 +97,8 @@ const emptyForm: PostForm = {
   originalEmployeeId: "",
   setExpiry: true,
   expiryHours: 2,
+  claimMode: "open",
+  invitedEmployeeIds: [],
 };
 
 export function PostShiftOpportunityDialog({
@@ -80,6 +110,7 @@ export function PostShiftOpportunityDialog({
   onPost,
 }: Props) {
   const [form, setForm] = useState<PostForm>(emptyForm);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const deptPositions = positions.filter(
     (p) => !form.departmentId || p.departmentId === form.departmentId,
@@ -91,13 +122,27 @@ export function PostShiftOpportunityDialog({
       (!form.departmentId || e.departmentIds.includes(form.departmentId)),
   );
 
+  const invitedEmployees = employees.filter((e) =>
+    form.invitedEmployeeIds.includes(e.id),
+  );
+
+  const toggleInvited = (id: string) => {
+    setForm((p) => ({
+      ...p,
+      invitedEmployeeIds: p.invitedEmployeeIds.includes(id)
+        ? p.invitedEmployeeIds.filter((x) => x !== id)
+        : [...p.invitedEmployeeIds, id],
+    }));
+  };
+
   const isValid =
     form.departmentId &&
     form.positionId &&
     form.date &&
     form.startTime &&
     form.endTime &&
-    form.reason.trim();
+    form.reason.trim() &&
+    (form.claimMode === "open" || form.invitedEmployeeIds.length > 0);
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -128,6 +173,9 @@ export function PostShiftOpportunityDialog({
       notes: form.notes || undefined,
       urgency: form.urgency,
       status: "open",
+      claimMode: form.claimMode,
+      invitedEmployeeIds:
+        form.claimMode === "invite_only" ? form.invitedEmployeeIds : [],
       originalEmployeeId: hasOriginal ? form.originalEmployeeId : undefined,
       originalEmployeeName: originalEmp?.name,
       postedBy: "emp-1", // manager
@@ -138,7 +186,10 @@ export function PostShiftOpportunityDialog({
 
     onPost(opp);
     toast.success("Shift opportunity posted!", {
-      description: "Eligible employees will be notified.",
+      description:
+        form.claimMode === "invite_only"
+          ? `${form.invitedEmployeeIds.length} invited employee${form.invitedEmployeeIds.length === 1 ? "" : "s"} will be notified.`
+          : "Eligible employees will be notified.",
     });
     setForm(emptyForm);
     onOpenChange(false);
@@ -356,6 +407,189 @@ export function PostShiftOpportunityDialog({
                 }
                 placeholder="Any special requirements or instructions"
               />
+            </div>
+
+            {/* Who can claim */}
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Who can claim</p>
+                <p className="text-muted-foreground text-xs">
+                  Open to anyone in the department, or invite specific staff.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    {
+                      value: "open",
+                      label: "Open to all",
+                      hint: "Any eligible employee can claim",
+                      icon: Globe,
+                    },
+                    {
+                      value: "invite_only",
+                      label: "Invite only",
+                      hint: "Only employees you pick",
+                      icon: Lock,
+                    },
+                  ] as const
+                ).map((mode) => {
+                  const active = form.claimMode === mode.value;
+                  const Icon = mode.icon;
+                  return (
+                    <button
+                      type="button"
+                      key={mode.value}
+                      onClick={() =>
+                        setForm((p) => ({ ...p, claimMode: mode.value }))
+                      }
+                      className={cn(
+                        "flex items-start gap-2 rounded-md border p-2.5 text-left transition-all",
+                        active
+                          ? "border-indigo-400 bg-indigo-50/50 ring-1 ring-indigo-300/40 dark:border-indigo-500/60 dark:bg-indigo-950/30"
+                          : "hover:bg-muted/40 border-border",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "mt-0.5 size-4 shrink-0",
+                          active
+                            ? "text-indigo-600 dark:text-indigo-400"
+                            : "text-muted-foreground",
+                        )}
+                      />
+                      <div className="min-w-0">
+                        <p
+                          className={cn(
+                            "text-xs font-semibold",
+                            active && "text-indigo-700 dark:text-indigo-300",
+                          )}
+                        >
+                          {mode.label}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-[10px] leading-tight">
+                          {mode.hint}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {form.claimMode === "invite_only" && (
+                <div className="space-y-2 pt-1">
+                  <Popover open={inviteOpen} onOpenChange={setInviteOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!form.departmentId}
+                        className="h-9 w-full justify-between font-normal"
+                      >
+                        <span
+                          className={cn(
+                            "truncate text-xs",
+                            form.invitedEmployeeIds.length === 0 &&
+                              "text-muted-foreground",
+                          )}
+                        >
+                          {!form.departmentId
+                            ? "Select department first"
+                            : form.invitedEmployeeIds.length === 0
+                              ? "Pick employees to invite…"
+                              : `${form.invitedEmployeeIds.length} invited`}
+                        </span>
+                        <ChevronDown className="size-3.5 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Search employees…"
+                          className="h-9"
+                        />
+                        <CommandList>
+                          <CommandEmpty>No employees found.</CommandEmpty>
+                          <CommandGroup>
+                            {deptEmployees.map((emp) => {
+                              const checked = form.invitedEmployeeIds.includes(
+                                emp.id,
+                              );
+                              return (
+                                <CommandItem
+                                  key={emp.id}
+                                  value={`${emp.name} ${emp.role}`}
+                                  onSelect={() => toggleInvited(emp.id)}
+                                  className="gap-2"
+                                >
+                                  <div
+                                    className={cn(
+                                      "flex size-4 shrink-0 items-center justify-center rounded border",
+                                      checked
+                                        ? "border-indigo-500 bg-indigo-500 text-white"
+                                        : "border-input",
+                                    )}
+                                  >
+                                    {checked && <Check className="size-3" />}
+                                  </div>
+                                  <Avatar className="size-6 shrink-0">
+                                    <AvatarImage
+                                      src={emp.avatar}
+                                      alt={emp.name}
+                                    />
+                                    <AvatarFallback className="text-[9px]">
+                                      {emp.initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-medium">
+                                      {emp.name}
+                                    </p>
+                                    <p className="text-muted-foreground truncate text-[10px]">
+                                      {emp.role}
+                                    </p>
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {invitedEmployees.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {invitedEmployees.map((emp) => (
+                        <Badge
+                          key={emp.id}
+                          variant="secondary"
+                          className="gap-1 pr-1 text-[10px]"
+                        >
+                          <Avatar className="size-4">
+                            <AvatarImage src={emp.avatar} alt={emp.name} />
+                            <AvatarFallback className="text-[8px]">
+                              {emp.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          {emp.name}
+                          <button
+                            type="button"
+                            onClick={() => toggleInvited(emp.id)}
+                            className="hover:bg-muted ml-0.5 rounded-full p-0.5"
+                          >
+                            <X className="size-2.5" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Expiry */}

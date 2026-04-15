@@ -30,7 +30,7 @@ import type {
 import type { ViewMode } from "./ScheduleHeader";
 
 export interface ScheduleGridViewProps {
-  viewMode: Exclude<ViewMode, "month">;
+  viewMode: Exclude<ViewMode, "month" | "day">;
   currentDate: Date;
   employees: ScheduleEmployee[];
   shifts: ScheduleShift[];
@@ -101,12 +101,15 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
   );
 
   const isCompact = viewMode === "2weeks";
-  const empColWidth = isCompact ? 200 : 220;
+  const empColWidth = isCompact ? 220 : 240;
   const hoursColWidth = 84;
 
   const gridStyle: React.CSSProperties = {
     gridTemplateColumns: `${empColWidth}px repeat(${dates.length}, minmax(0, 1fr)) ${hoursColWidth}px`,
   };
+
+  // Find today's column index for the vertical accent overlay
+  const todayColIdx = dates.findIndex((d) => isToday(d));
 
   const renderCell = (
     empId: string | undefined,
@@ -125,7 +128,8 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         key={cellKey}
         className={cn(
           "group/cell border-border/50 relative flex min-h-[60px] cursor-pointer flex-col gap-1 border-r border-b p-1.5 transition-colors",
-          weekend && "bg-muted/20",
+          weekend &&
+            "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.08)_0px,rgba(148,163,184,0.08)_6px,transparent_6px,transparent_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.06)_0px,rgba(148,163,184,0.06)_6px,transparent_6px,transparent_12px)]",
           todayFlag && "bg-indigo-50/40 dark:bg-indigo-950/10",
           empId
             ? "hover:bg-muted/40"
@@ -164,9 +168,24 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
     );
   };
 
+  // Vertical "today" accent line — positioned overlay
+  const todayLeftCalc =
+    todayColIdx >= 0
+      ? `calc(${empColWidth}px + (100% - ${empColWidth}px - ${hoursColWidth}px) * ${todayColIdx} / ${dates.length} + (100% - ${empColWidth}px - ${hoursColWidth}px) / ${dates.length} / 2)`
+      : null;
+
   return (
     <div className="h-full overflow-x-hidden overflow-y-auto">
-      <div className="grid" style={gridStyle}>
+      <div className="relative grid" style={gridStyle}>
+        {/* Vertical today accent line */}
+        {todayLeftCalc && (
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 z-10"
+            style={{ left: todayLeftCalc }}
+          >
+            <div className="absolute inset-y-0 -translate-x-1/2 border-l-2 border-dashed border-indigo-500/40" />
+          </div>
+        )}
         {/* ─── Header row ───────────────────────────────────── */}
         <div className="border-border/60 bg-background/95 sticky top-0 z-20 flex items-center border-r border-b px-4 py-3 backdrop-blur-sm">
           <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.08em] uppercase">
@@ -186,8 +205,11 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
               key={`header-${i}`}
               className={cn(
                 "border-border/60 sticky top-0 z-20 flex flex-col items-center justify-center gap-0.5 border-r border-b py-2.5 backdrop-blur-sm",
-                weekend ? "bg-muted/40" : "bg-background/95",
-                todayFlag && "bg-indigo-50/70 dark:bg-indigo-950/30",
+                weekend
+                  ? "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(255,255,255,0.7)_6px,rgba(255,255,255,0.7)_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(15,23,42,0.7)_6px,rgba(15,23,42,0.7)_12px)]"
+                  : "bg-background/95",
+                todayFlag &&
+                  "bg-gradient-to-b from-indigo-50/90 to-indigo-50/40 dark:from-indigo-950/40 dark:to-indigo-950/10",
               )}
             >
               <span
@@ -237,33 +259,6 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
           </span>
         </div>
 
-        {/* ─── Open shifts row ──────────────────────────────── */}
-        {hasOpenShifts && (
-          <Fragment>
-            <div className="border-border/50 flex items-center gap-3 border-r border-b bg-amber-50/30 px-4 py-3 dark:bg-amber-950/10">
-              <div className="flex size-9 items-center justify-center rounded-full border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/30">
-                <UserX className="size-4 text-amber-600" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-amber-700 dark:text-amber-400">
-                  Open Shifts
-                </p>
-                <p className="truncate text-[11px] text-amber-600/70 dark:text-amber-500/70">
-                  Unassigned
-                </p>
-              </div>
-            </div>
-            {dates.map((date) => {
-              const dateStr = formatDateStr(date);
-              const cellShifts = shiftsByKey.get(`unassigned-${dateStr}`) ?? [];
-              return renderCell(undefined, date, cellShifts);
-            })}
-            <div className="border-border/50 flex items-center justify-center border-b border-l bg-amber-50/30 px-2 dark:bg-amber-950/10">
-              <span className="text-muted-foreground text-xs">—</span>
-            </div>
-          </Fragment>
-        )}
-
         {/* ─── Employee rows ────────────────────────────────── */}
         {employees.map((employee) => {
           const totalHours = getEmployeeHours(employee.id);
@@ -306,6 +301,73 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
             </Fragment>
           );
         })}
+
+        {/* ─── Open shifts row (anchored at the bottom) ───── */}
+        {hasOpenShifts && (
+          <Fragment>
+            <div className="border-border/50 sticky bottom-0 z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
+              <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white shadow-sm dark:bg-amber-950/30">
+                <UserX className="size-4 text-amber-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-amber-700 dark:text-amber-400">
+                  Open Shifts
+                </p>
+                <p className="truncate text-[11px] text-amber-600/80 dark:text-amber-500/80">
+                  Available to claim
+                </p>
+              </div>
+            </div>
+            {dates.map((date) => {
+              const dateStr = formatDateStr(date);
+              const cellShifts = shiftsByKey.get(`unassigned-${dateStr}`) ?? [];
+              return (
+                <div
+                  key={`open-${dateStr}`}
+                  className={cn(
+                    "group/open-cell border-border/50 sticky bottom-0 z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
+                    isToday(date) &&
+                      "from-indigo-50/70 to-amber-50/30 dark:from-indigo-950/30",
+                  )}
+                  onClick={() => {
+                    if (cellShifts.length === 0)
+                      onCellClick(undefined, dateStr);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = e.altKey ? "copy" : "move";
+                    setDragOverCell(`unassigned-${dateStr}`);
+                  }}
+                  onDragLeave={() => setDragOverCell(null)}
+                  onDrop={(e) => onDrop(e, undefined, dateStr)}
+                >
+                  {cellShifts.length === 0 ? (
+                    <span className="text-muted-foreground/40 m-auto text-[10px] italic opacity-0 transition-opacity group-hover/open-cell:opacity-100">
+                      + Post open shift
+                    </span>
+                  ) : (
+                    cellShifts.map((shift) => (
+                      <ShiftPill
+                        key={shift.id}
+                        shift={shift}
+                        position={positionMap.get(shift.positionId)}
+                        isCompact={isCompact}
+                        isOpen
+                        isDragging={draggedShiftId === shift.id}
+                        onClick={() => onShiftClick(shift)}
+                        onContextMenu={(e) => onContextMenu(e, shift)}
+                        onDragStart={() => setDraggedShiftId(shift.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              );
+            })}
+            <div className="border-border/50 sticky bottom-0 z-20 flex items-center justify-center border-t-2 border-b border-l border-dashed border-amber-300 bg-amber-50/40 px-2 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/10">
+              <span className="text-muted-foreground text-xs">—</span>
+            </div>
+          </Fragment>
+        )}
       </div>
     </div>
   );
