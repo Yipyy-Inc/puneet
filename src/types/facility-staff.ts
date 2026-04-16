@@ -161,7 +161,13 @@ export interface StaffProfile {
   notifications: Record<NotificationEvent, NotificationScope>;
   payroll: PayrollConfig;
   employment: EmploymentDetails;
-  status: "active" | "invited" | "inactive";
+  status: "active" | "invited" | "inactive" | "terminated";
+  /** ISO timestamp of the last status change */
+  statusChangedAt?: string;
+  /** Reason code for the current status (set when moving to inactive or terminated) */
+  statusReason?: "vacation" | "medical_leave" | "resigned" | "terminated_cause" | "performance" | "rehired" | "other";
+  /** Free-text note added when the status was last changed */
+  statusNote?: string;
   lastActive: string;
   upcomingAppointments: number;
   openTasks: number;

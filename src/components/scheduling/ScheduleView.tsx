@@ -695,13 +695,31 @@ export function ScheduleView() {
         departments={departments}
         positions={allPositions}
         employees={scheduleEmployees}
+        defaultDepartmentId={selectedDepartment.id}
         onPost={(opp) => {
           setShiftOpportunities((prev) => [opp, ...prev]);
-          const dept = departments.find((d) => d.id === opp.departmentId);
+          // Add an unassigned draft shift so it shows in the calendar
+          const oppShift: ScheduleShift = {
+            id: `shift-opp-${opp.id}`,
+            departmentId: opp.departmentId,
+            positionId: opp.positionId,
+            date: opp.date,
+            startTime: opp.startTime,
+            endTime: opp.endTime,
+            breakMinutes: opp.breakMinutes,
+            status: "draft",
+            urgent: opp.urgency !== "normal",
+            notes: opp.reason || undefined,
+          };
+          setShifts((prev) => [...prev, oppShift]);
+          // Navigate the calendar to the department and week of the new shift
+          const oppDept = departments.find((d) => d.id === opp.departmentId);
+          if (oppDept) setSelectedDepartment(oppDept);
+          setCurrentDate(new Date(opp.date + "T12:00:00"));
           const pos = allPositions.find((p) => p.id === opp.positionId);
           logOpenShiftPosted({
             departmentId: opp.departmentId,
-            departmentName: dept?.name,
+            departmentName: oppDept?.name,
             shiftId: opp.id,
             shiftDate: opp.date,
             shiftTimeRange: `${opp.startTime} – ${opp.endTime}`,

@@ -110,12 +110,12 @@ export function KpiTile({
           styles.halo,
         )}
       />
-      <div className="relative flex items-center justify-between gap-3 px-4 py-3">
+      <div className="relative flex items-center justify-between gap-3 px-4 py-2">
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
             {label}
           </p>
-          <p className="text-2xl font-semibold leading-tight tracking-tight tabular-nums">
+          <p className="text-xl font-semibold leading-tight tracking-tight tabular-nums">
             {value}
           </p>
           {hint && (
@@ -126,7 +126,7 @@ export function KpiTile({
         </div>
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ring-2 transition-transform group-hover:scale-105",
+            "flex size-8 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ring-2 transition-transform group-hover:scale-105",
             styles.accentBg,
             styles.iconRing,
           )}

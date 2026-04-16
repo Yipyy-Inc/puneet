@@ -31,6 +31,16 @@ import type { Pet } from "@/types/pet";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const DAY_NAME_TO_INDEX: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
 const formatDateString = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -191,6 +201,31 @@ export function EvaluationDetails({
       };
     }, [serviceDateBlocks]);
 
+  // Compute dates that fall on days of the week that aren't allowed for evaluations.
+  const disabledDayOfWeekDates = React.useMemo(() => {
+    const allowedDays = evaluation.schedule.allowedDays;
+    if (!allowedDays || allowedDays.length === 0) return [];
+    const allowedIndices = new Set(
+      allowedDays.map((d) => DAY_NAME_TO_INDEX[d] ?? -1),
+    );
+    const maxDays = (evaluation.maxAdvanceDays ?? 90) + 1;
+    const today = new Date();
+    const dates: Date[] = [];
+    for (let i = 0; i <= maxDays; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      if (!allowedIndices.has(d.getDay())) {
+        dates.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+    }
+    return dates;
+  }, [evaluation.schedule.allowedDays, evaluation.maxAdvanceDays]);
+
+  const allBlockedDates = React.useMemo(
+    () => [...blockedDatesForEvaluation, ...disabledDayOfWeekDates],
+    [blockedDatesForEvaluation, disabledDayOfWeekDates],
+  );
+
   const durationOptions = evaluation.schedule.durationOptionsMinutes;
   const defaultDuration =
     evaluation.schedule.defaultDurationMinutes ?? durationOptions[0] ?? 60;
@@ -335,7 +370,7 @@ export function EvaluationDetails({
                     minimumAdvanceBooking: rules.minimumAdvanceBooking,
                     maximumAdvanceBooking: rules.maximumAdvanceBooking,
                   }}
-                  disabledDates={blockedDatesForEvaluation}
+                  disabledDates={allBlockedDates}
                   disabledDateMessages={blockedDateMessagesForEvaluation}
                   holidays={holidays}
                 />

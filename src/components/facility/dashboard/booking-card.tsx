@@ -159,12 +159,6 @@ export function BookingCard({
             <PawPrint className="size-5" />
           </div>
         )}
-        <span
-          className="absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full ring-2 ring-card"
-          style={{ backgroundColor: booking.serviceColor }}
-        >
-          <span className="size-1.5 rounded-full bg-white/90" />
-        </span>
       </Link>
 
       <div className="min-w-0 flex-1 space-y-1">

@@ -228,14 +228,14 @@ export function ScheduleDayView({
                 </span>
               )}
               {holiday && (
-                <Tooltip>
+                <Tooltip disableHoverableContent>
                   <TooltipTrigger asChild>
                     <span className="flex cursor-default items-center gap-1 rounded-full border border-amber-300/60 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-600/40 dark:bg-amber-950/40 dark:text-amber-300">
                       <Star className="size-3 fill-amber-400 text-amber-500" />
                       {holiday.name}
                     </span>
                   </TooltipTrigger>
-                  <TooltipContent className="text-xs">
+                  <TooltipContent className="bg-popover text-popover-foreground border shadow-md text-xs">
                     ×{holiday.multiplier} pay rate
                   </TooltipContent>
                 </Tooltip>
@@ -530,7 +530,7 @@ function ShiftBar({
   const StatusIcon = isDraft ? CircleDashed : CheckCircle2;
 
   return (
-    <Tooltip>
+    <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <div
           role="button"
@@ -596,7 +596,7 @@ function ShiftBar({
           </div>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
+      <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
         <p className="font-medium">{position?.name}</p>
         <p>
           {shift.startTime} – {shift.endTime}

@@ -4,10 +4,10 @@ import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
-import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 import { clients } from "@/data/clients";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
+import { useSettings } from "@/hooks/use-settings";
 
 const MOCK_CUSTOMER_ID = 15;
 
@@ -15,6 +15,8 @@ export default function NewBookingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
+
+  const { bookingFlow } = useSettings();
 
   const customer = useMemo(
     () => clients.find((client) => client.id === MOCK_CUSTOMER_ID),
@@ -75,15 +77,11 @@ export default function NewBookingPage() {
           facilityName={selectedFacility.name}
           preSelectedClientId={customer.id}
           preSelectedService={preSelectedService}
-          onCreateBooking={(booking) => {
-            if (booking.status === "request_submitted") {
-              toast.success(
-                "Booking request submitted! We'll review it and get back to you shortly.",
-              );
-            } else {
-              toast.success("Booking created successfully!");
-            }
-            router.push("/customer/bookings");
+          isCustomerMode={true}
+          bookingRequestMessage={bookingFlow.bookingRequestConfirmationMessage}
+          onCreateBooking={() => {
+            // Booking data is recorded; the modal shows the confirmation screen.
+            // Navigation happens when the customer clicks Done (via onOpenChange).
           }}
         />
       </div>

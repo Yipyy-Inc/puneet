@@ -133,8 +133,13 @@ function normalizeEvaluation(
   next: EvaluationConfig,
   fallback: EvaluationConfig,
 ): EvaluationConfig {
-  if (next.schedule) return next;
-  return { ...next, schedule: fallback.schedule };
+  if (!next.schedule) return { ...next, schedule: fallback.schedule };
+  // Deep-merge schedule so new optional fields from defaults are picked up
+  // even when an older stored config doesn't include them yet.
+  return {
+    ...next,
+    schedule: { ...fallback.schedule, ...next.schedule },
+  };
 }
 
 function normalizeBusinessProfile(

@@ -85,6 +85,12 @@ export interface NewBookingModalProps {
   preSelectedPetId?: number;
   preSelectedService?: string;
   booking?: Booking;
+  /** When true, the wizard is being used by a customer making a booking request (not facility staff). */
+  isCustomerMode?: boolean;
+  /** Custom message shown to the customer after they submit a booking request. Configured by the facility. */
+  bookingRequestMessage?: string;
+  /** When true, opens the wizard in estimate mode instead of booking mode. */
+  estimateMode?: boolean;
 }
 
 interface EstimatePricingSnapshot {
@@ -154,6 +160,9 @@ export function BookingModal({
   preSelectedPetId,
   preSelectedService,
   booking,
+  isCustomerMode = false,
+  bookingRequestMessage,
+  estimateMode = false,
 }: NewBookingModalProps) {
   const {
     daycare,
@@ -170,8 +179,8 @@ export function BookingModal({
   );
   const { getModuleBySlug } = useCustomServices();
 
-  // Estimate mode detection
-  const [isEstimateMode, setIsEstimateMode] = useState(false);
+  // Estimate mode — initialized from prop, key-remount resets it correctly
+  const [isEstimateMode, setIsEstimateMode] = useState(estimateMode);
   const [estimateCreated, setEstimateCreated] = useState(false);
   const [estimateSent, setEstimateSent] = useState(false);
   const [generatedEstimateId, setGeneratedEstimateId] = useState<string | null>(
@@ -179,6 +188,9 @@ export function BookingModal({
   );
   const [estimatePricingSnapshot, setEstimatePricingSnapshot] =
     useState<EstimatePricingSnapshot | null>(null);
+
+  // Customer booking request confirmation state
+  const [bookingRequested, setBookingRequested] = useState(false);
 
   const pricingRulesStorageKey = useMemo(
     () => getPricingRulesStorageKey(facilityId),
@@ -257,9 +269,6 @@ export function BookingModal({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      const mode = localStorage.getItem("booking-modal-mode");
-      setIsEstimateMode(mode === "estimate");
-      localStorage.removeItem("booking-modal-mode");
       setEstimateCreated(false);
       setEstimateSent(false);
       setGeneratedEstimateId(null);
@@ -1257,6 +1266,12 @@ export function BookingModal({
       return;
     }
 
+    if (isCustomerMode) {
+      onCreateBooking(booking);
+      setBookingRequested(true);
+      return;
+    }
+
     onCreateBooking(booking);
     resetForm();
     onOpenChange(false);
@@ -1300,6 +1315,7 @@ export function BookingModal({
     setNotificationSMS(false);
     setTipAmount(0);
     setIncludesEvaluation(false);
+    setBookingRequested(false);
   };
 
   const handleSendEstimate = () => {
@@ -2433,6 +2449,32 @@ export function BookingModal({
                     </div>
                   )}
 
+                {/* Customer booking request confirmation state */}
+                {isCustomerMode && bookingRequested && (
+                  <div className="flex flex-col items-center px-6 py-12 text-center">
+                    <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100">
+                      <Check className="size-7 text-emerald-600" />
+                    </div>
+                    <h3 className="mt-4 text-lg font-bold text-slate-800">
+                      Booking Request Received!
+                    </h3>
+                    <p className="text-muted-foreground mt-3 max-w-sm text-sm leading-relaxed">
+                      {bookingRequestMessage ||
+                        bookingFlow.bookingRequestConfirmationMessage ||
+                        "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved."}
+                    </p>
+                    <Button
+                      className="mt-6"
+                      onClick={() => {
+                        resetForm();
+                        onOpenChange(false);
+                      }}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                )}
+
                 {/* Estimate success state */}
                 {displayedSteps[currentStep]?.id === "confirm" &&
                   isEstimateMode &&
@@ -2557,7 +2599,8 @@ export function BookingModal({
                   )}
 
                 {displayedSteps[currentStep]?.id === "confirm" &&
-                  !(isEstimateMode && estimateCreated) && (
+                  !(isEstimateMode && estimateCreated) &&
+                  !(isCustomerMode && bookingRequested) && (
                     <ConfirmStep
                       selectedClient={selectedClient}
                       selectedPets={selectedPets}
@@ -2594,7 +2637,7 @@ export function BookingModal({
             </ScrollArea>
 
             {/* Navigation Buttons */}
-            {!(isEstimateMode && estimateCreated) && (
+            {!(isEstimateMode && estimateCreated) && !(isCustomerMode && bookingRequested) && (
               <div className="bg-background flex justify-between border-t p-4">
                 <Button
                   type="button"
@@ -2645,9 +2688,11 @@ export function BookingModal({
                     >
                       {isEstimateMode
                         ? "Create Estimate"
-                        : approvalRequired
-                          ? "Submit Request"
-                          : "Create Booking"}
+                        : isCustomerMode
+                          ? "Request Booking"
+                          : approvalRequired
+                            ? "Submit Request"
+                            : "Create Booking"}
                     </Button>
                   )}
                 </div>

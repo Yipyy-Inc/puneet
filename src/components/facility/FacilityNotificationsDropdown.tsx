@@ -30,7 +30,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import {
   getFacilityNotifications,
   getUnreadFacilityNotificationCount,
@@ -194,14 +193,7 @@ export function FacilityNotificationsDropdown({
                 className="group relative size-10 rounded-xl"
                 aria-label="Notifications"
               >
-                <Bell
-                  className={cn(
-                    "size-5 transition-colors",
-                    hasUnread
-                      ? "text-primary"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                />
+                <Bell className="text-muted-foreground size-5 transition-colors group-hover:text-foreground" />
                 {hasUnread && (
                   <span className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium">
                     {unreadCount > 9 ? "9+" : unreadCount}

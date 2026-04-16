@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,7 @@ interface Props {
   positions: Position[];
   employees: ScheduleEmployee[];
   onPost: (opp: ShiftOpportunity) => void;
+  defaultDepartmentId?: string;
 }
 
 interface PostForm {
@@ -108,9 +109,17 @@ export function PostShiftOpportunityDialog({
   positions,
   employees,
   onPost,
+  defaultDepartmentId,
 }: Props) {
   const [form, setForm] = useState<PostForm>(emptyForm);
   const [inviteOpen, setInviteOpen] = useState(false);
+
+  // Pre-fill department when dialog opens
+  useEffect(() => {
+    if (open && defaultDepartmentId) {
+      setForm((p) => ({ ...p, departmentId: p.departmentId || defaultDepartmentId }));
+    }
+  }, [open, defaultDepartmentId]);
 
   const deptPositions = positions.filter(
     (p) => !form.departmentId || p.departmentId === form.departmentId,

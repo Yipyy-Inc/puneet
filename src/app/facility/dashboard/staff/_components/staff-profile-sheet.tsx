@@ -37,6 +37,7 @@ import {
 import { AccessTab } from "./access-tab";
 import { WarningsTab } from "./warnings-tab";
 import { EmployeeFilesTab } from "./employee-files-tab";
+import { StaffAuditTrail } from "./staff-audit-trail";
 import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import {
@@ -46,6 +47,17 @@ import {
   fullNameOf,
   formatRelative,
 } from "./staff-shared";
+import { StatusBadge } from "./status-change-dialog";
+
+const STATUS_REASON_LABELS: Record<string, string> = {
+  vacation: "Vacation",
+  medical_leave: "Medical leave",
+  resigned: "Resigned voluntarily",
+  terminated_cause: "Terminated for cause",
+  performance: "Performance-based termination",
+  rehired: "Returned from leave",
+  other: "Other",
+};
 
 interface StaffProfileSheetProps {
   profile: StaffProfile | null;
@@ -65,9 +77,11 @@ export function StaffProfileSheet({
   onTransfer,
   onUpdate,
 }: StaffProfileSheetProps) {
-  const { can } = useFacilityRbac();
+  const { can, viewer } = useFacilityRbac();
   const canSeeAccess = can("view_staff_permissions");
   const canSeePayroll = can("view_payroll");
+  const canSeeAudit =
+    viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
   if (!profile) return null;
 
   return (
@@ -103,6 +117,9 @@ export function StaffProfileSheet({
                   {canSeePayroll && (
                     <TabsTrigger value="payroll">Payroll</TabsTrigger>
                   )}
+                  {canSeeAudit && (
+                    <TabsTrigger value="audit">Audit trail</TabsTrigger>
+                  )}
                 </ScrollableTabsBar>
 
                 <TabsContent value="overview" className="mt-4 space-y-4">
@@ -128,6 +145,11 @@ export function StaffProfileSheet({
                 {canSeePayroll && (
                   <TabsContent value="payroll" className="mt-4 space-y-4">
                     <PayrollTab profile={profile} />
+                  </TabsContent>
+                )}
+                {canSeeAudit && (
+                  <TabsContent value="audit" className="mt-4">
+                    <StaffAuditTrail staffId={profile.id} />
                   </TabsContent>
                 )}
               </Tabs>
@@ -266,10 +288,21 @@ function Header({ profile }: { profile: StaffProfile }) {
               {profile.jobTitle}
             </p>
           )}
-          <DialogDescription className="mt-1 flex items-center gap-1.5 text-xs">
+          <DialogDescription className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <Clock className="size-3" />
-            Active {formatRelative(profile.lastActive)} ·{" "}
-            <span className="capitalize">{profile.status}</span>
+            {profile.status === "active" || profile.status === "invited"
+              ? <>Active {formatRelative(profile.lastActive)}</>
+              : <>Last active {formatRelative(profile.lastActive)}</>
+            }
+            {(profile.status === "inactive" || profile.status === "terminated") && (
+              <>
+                <span>·</span>
+                <StatusBadge status={profile.status} />
+                {profile.statusReason && (
+                  <span>{STATUS_REASON_LABELS[profile.statusReason]}</span>
+                )}
+              </>
+            )}
           </DialogDescription>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <RolePill role={profile.primaryRole} size="md" />
@@ -290,6 +323,57 @@ function OverviewTab({ profile }: { profile: StaffProfile }) {
 
   return (
     <div className="space-y-4">
+      {(profile.status === "inactive" || profile.status === "terminated") && (
+        <div
+          className={cn(
+            "rounded-xl border p-4",
+            profile.status === "inactive"
+              ? "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20"
+              : "border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-950/20",
+          )}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <StatusBadge status={profile.status} />
+            {profile.statusChangedAt && (
+              <span
+                className={cn(
+                  "text-xs",
+                  profile.status === "inactive"
+                    ? "text-amber-700 dark:text-amber-400"
+                    : "text-rose-700 dark:text-rose-400",
+                )}
+              >
+                since {new Date(profile.statusChangedAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          {profile.statusReason && (
+            <div
+              className={cn(
+                "text-sm font-medium",
+                profile.status === "inactive"
+                  ? "text-amber-800 dark:text-amber-300"
+                  : "text-rose-800 dark:text-rose-300",
+              )}
+            >
+              {STATUS_REASON_LABELS[profile.statusReason] ?? profile.statusReason}
+            </div>
+          )}
+          {profile.statusNote && (
+            <p
+              className={cn(
+                "mt-1 text-xs/relaxed",
+                profile.status === "inactive"
+                  ? "text-amber-700 dark:text-amber-400"
+                  : "text-rose-700 dark:text-rose-400",
+              )}
+            >
+              {profile.statusNote}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <InfoTile icon={Mail} label="Email" value={profile.email} />
         <InfoTile icon={Phone} label="Phone" value={profile.phone} />

@@ -38,6 +38,7 @@ import { BookingStatusSettings } from "@/components/facility/BookingStatusSettin
 import { RetailSettings } from "@/components/facility/RetailSettings";
 import { CheckinRequirementsSettings } from "@/components/facility/CheckinRequirementsSettings";
 import { EvaluationSettings } from "@/components/facility/EvaluationSettings";
+import { EvaluationBookingWizardSettings } from "@/components/facility/EvaluationBookingWizardSettings";
 import { FormNotificationSettings } from "@/components/forms/FormNotificationSettings";
 import { ServiceNotificationSettings } from "@/components/facility/ServiceNotificationSettings";
 import { TipSettings } from "@/components/facility/TipSettings";
@@ -3901,6 +3902,26 @@ function FacilityBookingFlowCard() {
               </div>
             </div>
           )}
+
+          <div className="space-y-1.5">
+            <Label>Booking Request Confirmation Message</Label>
+            <Textarea
+              rows={4}
+              disabled={!isEditing}
+              placeholder="e.g. Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly."
+              value={localFlow.bookingRequestConfirmationMessage ?? ""}
+              onChange={(e) =>
+                setLocalFlow({
+                  ...localFlow,
+                  bookingRequestConfirmationMessage: e.target.value,
+                })
+              }
+            />
+            <p className="text-muted-foreground text-xs">
+              Shown to customers on the confirmation screen after they submit a
+              booking request.
+            </p>
+          </div>
         </div>
       )}
     </SettingsBlock>
@@ -4869,6 +4890,7 @@ export default function SettingsPage() {
           {activeSection === "evaluations" && (
             <div className="space-y-6">
               <EvaluationSettings />
+              <EvaluationBookingWizardSettings />
               <EvaluationFormBuilder />
               <EvaluationReportCardBuilder />
             </div>

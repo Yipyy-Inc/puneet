@@ -35,6 +35,7 @@ import {
   List,
   Mail,
   Building2,
+  UserMinus,
 } from "lucide-react";
 import { DepartmentSettings } from "@/components/facility/DepartmentSettings";
 import {
@@ -47,6 +48,7 @@ import { StaffCard } from "./_components/staff-card";
 import { StaffProfileSheet } from "./_components/staff-profile-sheet";
 import { StaffFormDialog } from "./_components/staff-form-dialog";
 import { RoleAccessMatrix } from "./_components/role-matrix";
+import { StatusChangeDialog } from "./_components/status-change-dialog";
 import {
   RolePill,
   ServiceChip,
@@ -55,6 +57,15 @@ import {
   formatRelative,
   RoleIcon,
 } from "./_components/staff-shared";
+import {
+  diffProfile,
+  logStaffCreated,
+  logStaffUpdated,
+  logStatusChanged,
+  logStaffDeleted,
+  logInvitationSent,
+} from "@/lib/staff-audit";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 
 const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
   { value: "all", label: "All roles" },
@@ -69,13 +80,14 @@ const ROLE_FILTERS: { value: FacilityStaffRole | "all"; label: string }[] = [
 ];
 
 export default function FacilityStaffPage() {
+  const { viewer } = useFacilityRbac();
   const [staff, setStaff] = useState<StaffProfile[]>(facilityStaff);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<FacilityStaffRole | "all">(
     "all",
   );
   const [locationFilter, setLocationFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"active" | "on_leave" | "former">("active");
   const [view, setView] = useState<"grid" | "list">("grid");
 
   const [viewing, setViewing] = useState<StaffProfile | null>(null);
@@ -85,16 +97,25 @@ export default function FacilityStaffPage() {
   const [transferring, setTransferring] = useState<StaffProfile | null>(null);
   const [inviteTarget, setInviteTarget] = useState<StaffProfile | null>(null);
   const [departmentsOpen, setDepartmentsOpen] = useState(false);
+  const [statusChanging, setStatusChanging] = useState<StaffProfile | null>(null);
+
+  // Tab-level base set
+  const tabFiltered = useMemo(() => {
+    return staff.filter((s) => {
+      if (activeTab === "active") return s.status === "active" || s.status === "invited";
+      if (activeTab === "on_leave") return s.status === "inactive";
+      return s.status === "terminated";
+    });
+  }, [staff, activeTab]);
 
   const filtered = useMemo(() => {
-    return staff.filter((s) => {
+    return tabFiltered.filter((s) => {
       if (roleFilter !== "all" && s.primaryRole !== roleFilter) return false;
       if (
         locationFilter !== "all" &&
         !s.assignedLocations.includes(locationFilter)
       )
         return false;
-      if (statusFilter !== "all" && s.status !== statusFilter) return false;
       if (query) {
         const q = query.toLowerCase();
         const haystack = [
@@ -110,21 +131,43 @@ export default function FacilityStaffPage() {
       }
       return true;
     });
-  }, [staff, query, roleFilter, locationFilter, statusFilter]);
+  }, [tabFiltered, query, roleFilter, locationFilter]);
 
   const stats = useMemo(() => {
-    const total = staff.length;
+    const activeStaff = staff.filter((s) => s.status === "active" || s.status === "invited");
+    const total = activeStaff.length;
     const active = staff.filter((s) => s.status === "active").length;
     const invited = staff.filter((s) => s.status === "invited").length;
-    const roles = new Set(staff.map((s) => s.primaryRole)).size;
-    const services = new Set(staff.flatMap((s) => s.serviceAssignments)).size;
-    return { total, active, invited, roles, services };
+    const onLeave = staff.filter((s) => s.status === "inactive").length;
+    const terminated = staff.filter((s) => s.status === "terminated").length;
+    const roles = new Set(activeStaff.map((s) => s.primaryRole)).size;
+    const services = new Set(activeStaff.flatMap((s) => s.serviceAssignments)).size;
+    return { total, active, invited, onLeave, terminated, roles, services };
   }, [staff]);
 
   function handleSave(next: StaffProfile) {
+    const actor = {
+      actorId: viewer.id,
+      actorName: `${viewer.firstName} ${viewer.lastName}`.trim(),
+      actorRole: viewer.primaryRole,
+    };
+    const subject = {
+      subjectId: next.id,
+      subjectName: `${next.firstName} ${next.lastName}`.trim(),
+    };
+
     setStaff((list) => {
       const idx = list.findIndex((s) => s.id === next.id);
-      if (idx === -1) return [next, ...list];
+      if (idx === -1) {
+        // New staff member
+        logStaffCreated(subject, actor, next.primaryRole);
+        return [next, ...list];
+      }
+      // Existing — diff and log
+      const changes = diffProfile(list[idx], next);
+      if (changes.length > 0) {
+        logStaffUpdated(subject, actor, changes);
+      }
       const copy = [...list];
       copy[idx] = next;
       return copy;
@@ -141,6 +184,57 @@ export default function FacilityStaffPage() {
   function openAddNew() {
     setEditing(null);
     setFormOpen(true);
+  }
+
+  function handleStatusChange(
+    profileId: string,
+    newStatus: "active" | "inactive" | "terminated",
+    reason: StaffProfile["statusReason"],
+    note: string,
+  ) {
+    const target = staff.find((s) => s.id === profileId);
+    if (target) {
+      logStatusChanged(
+        {
+          subjectId: profileId,
+          subjectName: `${target.firstName} ${target.lastName}`.trim(),
+        },
+        {
+          actorId: viewer.id,
+          actorName: `${viewer.firstName} ${viewer.lastName}`.trim(),
+          actorRole: viewer.primaryRole,
+        },
+        target.status,
+        newStatus,
+        reason ?? "other",
+        note || undefined,
+      );
+    }
+
+    setStaff((list) =>
+      list.map((s) =>
+        s.id === profileId
+          ? {
+              ...s,
+              status: newStatus,
+              statusReason: reason,
+              statusNote: note || undefined,
+              statusChangedAt: new Date().toISOString(),
+            }
+          : s,
+      ),
+    );
+    // If we're viewing this profile, update it
+    setViewing((v) => {
+      if (!v || v.id !== profileId) return v;
+      return {
+        ...v,
+        status: newStatus,
+        statusReason: reason,
+        statusNote: note || undefined,
+        statusChangedAt: new Date().toISOString(),
+      };
+    });
   }
 
   return (
@@ -178,7 +272,7 @@ export default function FacilityStaffPage() {
         <div className="relative mt-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <StatPill
             icon={Users}
-            label="Total staff"
+            label="Active headcount"
             value={stats.total}
             tone="bg-primary/10 text-primary"
           />
@@ -195,16 +289,16 @@ export default function FacilityStaffPage() {
             tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
           />
           <StatPill
+            icon={UserMinus}
+            label="On leave"
+            value={stats.onLeave}
+            tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          />
+          <StatPill
             icon={ShieldCheck}
             label="Roles in use"
             value={stats.roles}
             tone="bg-violet-500/10 text-violet-600 dark:text-violet-400"
-          />
-          <StatPill
-            icon={Sparkles}
-            label="Services covered"
-            value={stats.services}
-            tone="bg-sky-500/10 text-sky-600 dark:text-sky-400"
           />
         </div>
       </div>
@@ -256,18 +350,6 @@ export default function FacilityStaffPage() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="invited">Invited</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-
             <div className="bg-muted ml-auto flex rounded-md p-0.5">
               <button
                 onClick={() => setView("grid")}
@@ -299,8 +381,8 @@ export default function FacilityStaffPage() {
             {ROLE_FILTERS.map((r) => {
               const count =
                 r.value === "all"
-                  ? staff.length
-                  : staff.filter((s) => s.primaryRole === r.value).length;
+                  ? tabFiltered.length
+                  : tabFiltered.filter((s) => s.primaryRole === r.value).length;
               const active = roleFilter === r.value;
               return (
                 <button
@@ -334,6 +416,31 @@ export default function FacilityStaffPage() {
         </CardContent>
       </Card>
 
+      {/* Tab navigation */}
+      <div className="flex items-center gap-1 border-b">
+        <TabButton
+          active={activeTab === "active"}
+          onClick={() => { setActiveTab("active"); setRoleFilter("all"); }}
+          count={staff.filter((s) => s.status === "active" || s.status === "invited").length}
+        >
+          Active employees
+        </TabButton>
+        <TabButton
+          active={activeTab === "on_leave"}
+          onClick={() => { setActiveTab("on_leave"); setRoleFilter("all"); }}
+          count={stats.onLeave}
+        >
+          On leave
+        </TabButton>
+        <TabButton
+          active={activeTab === "former"}
+          onClick={() => { setActiveTab("former"); setRoleFilter("all"); }}
+          count={stats.terminated}
+        >
+          Former employees
+        </TabButton>
+      </div>
+
       {/* Directory */}
       {filtered.length === 0 ? (
         <Card>
@@ -356,6 +463,7 @@ export default function FacilityStaffPage() {
               onInvite={setInviteTarget}
               onTransfer={setTransferring}
               onDelete={setDeleting}
+              onStatusChange={setStatusChanging}
             />
           ))}
         </div>
@@ -423,6 +531,17 @@ export default function FacilityStaffPage() {
               variant="destructive"
               onClick={() => {
                 if (deleting) {
+                  logStaffDeleted(
+                    {
+                      subjectId: deleting.id,
+                      subjectName: fullNameOf(deleting),
+                    },
+                    {
+                      actorId: viewer.id,
+                      actorName: fullNameOf(viewer),
+                      actorRole: viewer.primaryRole,
+                    },
+                  );
                   setStaff((l) => l.filter((s) => s.id !== deleting.id));
                 }
                 setDeleting(null);
@@ -515,13 +634,80 @@ export default function FacilityStaffPage() {
             <Button variant="outline" onClick={() => setInviteTarget(null)}>
               Cancel
             </Button>
-            <Button onClick={() => setInviteTarget(null)}>
+            <Button
+              onClick={() => {
+                if (inviteTarget) {
+                  logInvitationSent(
+                    {
+                      subjectId: inviteTarget.id,
+                      subjectName: fullNameOf(inviteTarget),
+                    },
+                    {
+                      actorId: viewer.id,
+                      actorName: fullNameOf(viewer),
+                      actorRole: viewer.primaryRole,
+                    },
+                  );
+                }
+                setInviteTarget(null);
+              }}
+            >
               <UserPlus className="size-4" /> Send invite
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Status change dialog */}
+      <StatusChangeDialog
+        open={!!statusChanging}
+        onOpenChange={(v) => !v && setStatusChanging(null)}
+        profile={statusChanging}
+        onConfirm={(profileId, newStatus, reason, note) => {
+          handleStatusChange(profileId, newStatus, reason, note);
+          // Move to the appropriate tab after confirming
+          if (newStatus === "active") setActiveTab("active");
+          else if (newStatus === "inactive") setActiveTab("on_leave");
+          else setActiveTab("former");
+        }}
+      />
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  count,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "relative px-4 py-2.5 text-sm font-medium transition-colors",
+        active
+          ? "text-foreground after:bg-primary after:absolute after:bottom-0 after:inset-x-0 after:h-0.5"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+      <span
+        className={cn(
+          "ml-2 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
+          active
+            ? "bg-primary/10 text-primary"
+            : "bg-muted text-muted-foreground",
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
 

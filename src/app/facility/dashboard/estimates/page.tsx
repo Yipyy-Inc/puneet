@@ -54,11 +54,11 @@ export default function EstimatesPage() {
 
   const openDashboardEstimateWizard = useCallback(() => {
     const facilityName = "Example Pet Care Facility";
-    localStorage.setItem("booking-modal-mode", "estimate");
     openBookingModal({
       clients: clients.filter((c) => c.facility === facilityName),
       facilityId: 11,
       facilityName,
+      isEstimateMode: true,
       onCreateBooking: () => {
         toast.success("Booking created");
       },

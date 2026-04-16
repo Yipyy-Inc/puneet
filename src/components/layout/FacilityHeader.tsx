@@ -187,12 +187,12 @@ export function FacilityHeader({ facilityId = 11 }: FacilityHeaderProps) {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                localStorage.setItem("booking-modal-mode", "estimate");
                 openBookingModal({
                   clients: clients.filter((c) => c.facility === facility.name),
                   facilityId: facilityId,
                   facilityName: facility.name,
                   onCreateBooking: handleCreateBooking,
+                  isEstimateMode: true,
                 });
               }}
             >
