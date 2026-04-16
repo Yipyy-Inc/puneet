@@ -9,6 +9,7 @@ import {
   TrendingUp,
   FileSignature,
   Eye,
+  ShieldAlert,
 } from "lucide-react";
 import {
   FacilityRbacProvider,
@@ -39,6 +40,11 @@ const staffTabs = [
     name: "Documents",
     href: "/facility/dashboard/staff/documents",
     icon: FileSignature,
+  },
+  {
+    name: "Warnings",
+    href: "/facility/dashboard/staff/warnings",
+    icon: ShieldAlert,
   },
   {
     name: "Performance",

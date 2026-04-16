@@ -2,30 +2,30 @@
 
 import { useMemo, useState } from "react";
 import {
-  FileSignature,
-  Search,
-  Sparkles,
-  ShieldCheck,
-  Users as UsersIcon,
-  FileText,
+  FolderOpen,
+  AlertTriangle,
+  CheckCircle2,
   Clock,
-  MapPin,
-  Smartphone,
-  Globe,
-  Fingerprint,
-  ChevronRight,
-  Download,
-  Eye,
+  Search,
+  Award,
   Shield,
-  FileCheck2,
-  AlertCircle,
+  CreditCard,
+  FileText,
+  File,
+  Heart,
+  UserCheck,
+  User,
+  Calendar,
+  Users,
+  Eye,
+  Info,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -33,417 +33,686 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  employeeDocumentSubmissions,
-  employeeDocumentTemplates,
-  scheduleEmployees,
-} from "@/data/scheduling";
-import type {
-  EmployeeDocTemplateType,
-  EmployeeDocumentSubmission,
-  EmployeeDocumentTemplate,
-} from "@/types/scheduling";
+import { cn } from "@/lib/utils";
+import { employeeFiles } from "@/data/employee-files";
+import { facilityStaff } from "@/data/facility-staff";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { ROLE_META } from "@/types/facility-staff";
+import type { EmployeeDocument, EmployeeDocType } from "@/types/scheduling";
 
-const TYPE_LABELS: Record<EmployeeDocTemplateType, string> = {
-  employment_agreement: "Employment Agreement",
-  nda: "Confidentiality / NDA",
-  policy_acknowledgement: "Policy Acknowledgement",
-  health_declaration: "Health Declaration",
-  emergency_contact: "Emergency Contact",
-  direct_deposit: "Direct Deposit",
-  tax_form: "Tax Form",
-  custom: "Custom Document",
+// ── Type metadata ─────────────────────────────────────────────────────────────
+
+const TYPE_META: Record<
+  EmployeeDocType,
+  { label: string; icon: React.ElementType; bg: string; text: string }
+> = {
+  work_permit: {
+    label: "Work Permit",
+    icon: Shield,
+    bg: "bg-violet-500/10",
+    text: "text-violet-600 dark:text-violet-400",
+  },
+  id_document: {
+    label: "ID Document",
+    icon: CreditCard,
+    bg: "bg-blue-500/10",
+    text: "text-blue-600 dark:text-blue-400",
+  },
+  certification: {
+    label: "Certification",
+    icon: Award,
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-600 dark:text-emerald-400",
+  },
+  contract: {
+    label: "Contract",
+    icon: FileText,
+    bg: "bg-indigo-500/10",
+    text: "text-indigo-600 dark:text-indigo-400",
+  },
+  tax_form: {
+    label: "Tax Form",
+    icon: File,
+    bg: "bg-amber-500/10",
+    text: "text-amber-600 dark:text-amber-400",
+  },
+  emergency_contact: {
+    label: "Emergency Contact",
+    icon: UserCheck,
+    bg: "bg-rose-500/10",
+    text: "text-rose-600 dark:text-rose-400",
+  },
+  health_record: {
+    label: "Health Record",
+    icon: Heart,
+    bg: "bg-pink-500/10",
+    text: "text-pink-600 dark:text-pink-400",
+  },
+  other: {
+    label: "Other",
+    icon: File,
+    bg: "bg-slate-500/10",
+    text: "text-slate-600 dark:text-slate-400",
+  },
 };
 
-const TYPE_TONES: Record<EmployeeDocTemplateType, string> = {
-  employment_agreement: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  nda: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  policy_acknowledgement:
-    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  health_declaration: "bg-rose-500/10 text-rose-600 dark:text-rose-400",
-  emergency_contact: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  direct_deposit: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
-  tax_form: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  custom: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
-};
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function isExpired(date?: string): boolean {
+  if (!date) return false;
+  return new Date(date) < new Date();
+}
+
+function isExpiringSoon(date?: string): boolean {
+  if (!date) return false;
+  const d = new Date(date);
+  const now = new Date();
+  const diffDays = (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays > 0 && diffDays <= 90;
+}
+
+function formatDate(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-CA", { dateStyle: "medium" });
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type StatusFilter = "all" | "valid" | "expiring" | "expired";
 
 type EmployeeGroup = {
   id: string;
   name: string;
-  avatar?: string;
-  initials: string;
-  role?: string;
-  submissions: EmployeeDocumentSubmission[];
+  avatarUrl?: string;
+  roleLabel: string;
+  docs: EmployeeDocument[];
 };
 
-function formatDate(iso?: string) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-CA", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(iso?: string) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-CA", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-function templateFor(
-  id: string,
-): EmployeeDocumentTemplate | undefined {
-  return employeeDocumentTemplates.find((t) => t.id === id);
-}
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function StaffDocumentsPage() {
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<EmployeeDocTemplateType | "all">(
-    "all",
-  );
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "signed" | "pending"
-  >("all");
-  const [viewing, setViewing] = useState<EmployeeGroup | null>(null);
-  const [viewingDoc, setViewingDoc] =
-    useState<EmployeeDocumentSubmission | null>(null);
+  const { can, viewer, viewerId } = useFacilityRbac();
+  const isManager = can("manage_staff");
 
-  const filteredSubs = useMemo(() => {
-    return employeeDocumentSubmissions.filter((s) => {
-      if (typeFilter !== "all") {
-        const tmpl = templateFor(s.templateId);
-        if (!tmpl || tmpl.type !== typeFilter) return false;
-      }
-      if (statusFilter === "signed" && s.status !== "signed") return false;
-      if (statusFilter === "pending" && s.status !== "pending") return false;
-      if (query) {
-        const q = query.toLowerCase();
-        const haystack = [s.templateTitle, s.employeeName]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [query, typeFilter, statusFilter]);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<EmployeeDocType | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
 
-  const groupedByEmployee = useMemo<EmployeeGroup[]>(() => {
-    const byId = new Map<string, EmployeeGroup>();
-    for (const sub of filteredSubs) {
-      const emp = scheduleEmployees.find((e) => e.id === sub.employeeId);
-      if (!byId.has(sub.employeeId)) {
-        byId.set(sub.employeeId, {
-          id: sub.employeeId,
-          name: sub.employeeName,
-          avatar: emp?.avatar,
-          initials: emp?.initials ?? sub.employeeName.slice(0, 2).toUpperCase(),
-          role: emp?.role,
-          submissions: [],
-        });
-      }
-      byId.get(sub.employeeId)!.submissions.push(sub);
-    }
-    return Array.from(byId.values()).sort((a, b) => {
-      const aLatest = Math.max(
-        ...a.submissions.map((s) => new Date(s.submittedAt).getTime()),
-      );
-      const bLatest = Math.max(
-        ...b.submissions.map((s) => new Date(s.submittedAt).getTime()),
-      );
-      return bLatest - aLatest;
-    });
-  }, [filteredSubs]);
-
-  const stats = useMemo(() => {
-    const total = employeeDocumentSubmissions.length;
-    const signed = employeeDocumentSubmissions.filter(
-      (s) => s.status === "signed",
-    ).length;
-    const pending = employeeDocumentSubmissions.filter(
-      (s) => s.status === "pending",
-    ).length;
-    const employeesWithDocs = new Set(
-      employeeDocumentSubmissions.map((s) => s.employeeId),
-    ).size;
-    return { total, signed, pending, employeesWithDocs };
-  }, []);
-
-  return (
-    <div className="space-y-5">
-      {/* Hero */}
-      <div className="bg-card relative overflow-hidden rounded-2xl border p-6">
-        <div className="bg-primary/5 pointer-events-none absolute -top-24 -right-20 size-64 rounded-full blur-3xl" />
-        <div className="relative flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+  // ── Personal (non-manager) view ───────────────────────────────────────────
+  if (!isManager) {
+    const myDocs = employeeFiles.filter(
+      (d) => d.employeeId === viewerId && d.visibleToEmployee,
+    );
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-900/40 dark:bg-sky-950/30">
+          <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
           <div>
-            <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
-              <Sparkles className="size-3" /> Signed documents vault
-            </div>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight">
-              Every agreement, signed &amp; sealed
-            </h2>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-              The manager can audit every signed document, and staff can review
-              what they&apos;ve signed at any time. Each signature captures
-              timestamp, IP, device fingerprint &amp; the signature image.
+            <p className="text-sm font-semibold text-sky-700 dark:text-sky-400">
+              Your employee files
+            </p>
+            <p className="mt-0.5 text-xs text-sky-600/80 dark:text-sky-400/70">
+              Documents your employer has shared with you. Contact your manager
+              if you believe something is missing or incorrect.
             </p>
           </div>
         </div>
 
-        <div className="relative mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatPill
-            icon={FileCheck2}
-            label="Total signed"
-            value={stats.signed}
-            tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-          />
-          <StatPill
-            icon={UsersIcon}
-            label="Employees"
-            value={stats.employeesWithDocs}
-            tone="bg-primary/10 text-primary"
-          />
-          <StatPill
-            icon={AlertCircle}
-            label="Pending"
-            value={stats.pending}
-            tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          />
-          <StatPill
-            icon={FileSignature}
-            label="All records"
-            value={stats.total}
-            tone="bg-violet-500/10 text-violet-600 dark:text-violet-400"
-          />
+        {myDocs.length === 0 ? (
+          <div className="border-border/60 flex flex-col items-center rounded-xl border border-dashed p-12 text-center">
+            <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted">
+              <FolderOpen className="text-muted-foreground size-6 opacity-60" />
+            </div>
+            <p className="font-semibold">No documents shared yet</p>
+            <p className="text-muted-foreground mt-1 max-w-xs text-sm">
+              Your manager hasn&apos;t shared any documents with you yet.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {myDocs.map((doc) => (
+              <DocRow key={doc.id} doc={doc} isManager={false} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Manager view (compliance dashboard) ──────────────────────────────────
+  return <ComplianceDashboard
+    search={search}
+    setSearch={setSearch}
+    typeFilter={typeFilter}
+    setTypeFilter={setTypeFilter}
+    statusFilter={statusFilter}
+    setStatusFilter={setStatusFilter}
+    expandedEmployee={expandedEmployee}
+    setExpandedEmployee={setExpandedEmployee}
+  />;
+}
+
+// ── Compliance dashboard (manager only) ───────────────────────────────────────
+
+function ComplianceDashboard({
+  search,
+  setSearch,
+  typeFilter,
+  setTypeFilter,
+  statusFilter,
+  setStatusFilter,
+  expandedEmployee,
+  setExpandedEmployee,
+}: {
+  search: string;
+  setSearch: (v: string) => void;
+  typeFilter: EmployeeDocType | "all";
+  setTypeFilter: (v: EmployeeDocType | "all") => void;
+  statusFilter: StatusFilter;
+  setStatusFilter: (v: StatusFilter) => void;
+  expandedEmployee: string | null;
+  setExpandedEmployee: (v: string | null) => void;
+}) {
+  const allDocs = employeeFiles;
+
+  const stats = useMemo(() => {
+    const total = allDocs.length;
+    const expired = allDocs.filter((d) => isExpired(d.expiresAt)).length;
+    const expiring = allDocs.filter((d) => isExpiringSoon(d.expiresAt)).length;
+    const employees = new Set(allDocs.map((d) => d.employeeId)).size;
+    return { total, expired, expiring, employees };
+  }, [allDocs]);
+
+  const filtered = useMemo(() => {
+    return allDocs.filter((d) => {
+      if (typeFilter !== "all" && d.type !== typeFilter) return false;
+      if (statusFilter === "expired" && !isExpired(d.expiresAt)) return false;
+      if (statusFilter === "expiring" && !isExpiringSoon(d.expiresAt)) return false;
+      if (statusFilter === "valid") {
+        if (isExpired(d.expiresAt) || isExpiringSoon(d.expiresAt)) return false;
+      }
+      if (search) {
+        const q = search.toLowerCase();
+        if (
+          !d.name.toLowerCase().includes(q) &&
+          !d.employeeName.toLowerCase().includes(q)
+        )
+          return false;
+      }
+      return true;
+    });
+  }, [allDocs, typeFilter, statusFilter, search]);
+
+  const groupedByEmployee = useMemo<EmployeeGroup[]>(() => {
+    const map = new Map<string, EmployeeGroup>();
+    for (const doc of filtered) {
+      if (!map.has(doc.employeeId)) {
+        const staff = facilityStaff.find((s) => s.id === doc.employeeId);
+        map.set(doc.employeeId, {
+          id: doc.employeeId,
+          name: doc.employeeName,
+          avatarUrl: staff?.avatarUrl,
+          roleLabel: staff ? ROLE_META[staff.primaryRole].label : "Staff",
+          docs: [],
+        });
+      }
+      map.get(doc.employeeId)!.docs.push(doc);
+    }
+    // Sort: most compliance issues first, then alphabetically
+    return Array.from(map.values()).sort((a, b) => {
+      const aUrgent = a.docs.filter(
+        (d) => isExpired(d.expiresAt) || isExpiringSoon(d.expiresAt),
+      ).length;
+      const bUrgent = b.docs.filter(
+        (d) => isExpired(d.expiresAt) || isExpiringSoon(d.expiresAt),
+      ).length;
+      return bUrgent - aUrgent || a.name.localeCompare(b.name);
+    });
+  }, [filtered]);
+
+  const groupedByType = useMemo(() => {
+    const map = new Map<EmployeeDocType, EmployeeDocument[]>();
+    for (const doc of filtered) {
+      if (!map.has(doc.type)) map.set(doc.type, []);
+      map.get(doc.type)!.push(doc);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length);
+  }, [filtered]);
+
+  return (
+    <div className="space-y-5">
+      {/* Compliance alert */}
+      {(stats.expired > 0 || stats.expiring > 0) && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div>
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              Compliance action required
+            </p>
+            <p className="mt-0.5 text-xs text-amber-600/80 dark:text-amber-400/70">
+              {stats.expired > 0 &&
+                `${stats.expired} document${stats.expired !== 1 ? "s" : ""} have expired`}
+              {stats.expired > 0 && stats.expiring > 0 && " · "}
+              {stats.expiring > 0 &&
+                `${stats.expiring} expiring within 90 days`}
+              . Open the employee profile to upload renewed versions.
+            </p>
+          </div>
         </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard
+          icon={FolderOpen}
+          label="Total documents"
+          value={stats.total}
+          iconBg="bg-primary/10"
+          iconClass="text-primary"
+        />
+        <StatCard
+          icon={Users}
+          label="Employees"
+          value={stats.employees}
+          iconBg="bg-indigo-500/10"
+          iconClass="text-indigo-600 dark:text-indigo-400"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Expired"
+          value={stats.expired}
+          iconBg="bg-red-500/10"
+          iconClass="text-red-600 dark:text-red-400"
+        />
+        <StatCard
+          icon={Clock}
+          label="Expiring ≤ 90 days"
+          value={stats.expiring}
+          iconBg="bg-amber-500/10"
+          iconClass="text-amber-600 dark:text-amber-400"
+        />
       </div>
 
-      {/* Toolbar */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[240px] flex-1">
+        <div className="relative min-w-[220px] flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by employee or document…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search employee or document…"
             className="h-9 pl-9"
           />
         </div>
 
         <Select
           value={typeFilter}
-          onValueChange={(v) =>
-            setTypeFilter(v as EmployeeDocTemplateType | "all")
-          }
+          onValueChange={(v) => setTypeFilter(v as EmployeeDocType | "all")}
         >
           <SelectTrigger className="h-9 w-48">
-            <SelectValue />
+            <SelectValue placeholder="All types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All document types</SelectItem>
-            {Object.entries(TYPE_LABELS).map(([k, v]) => (
+            <SelectItem value="all">All types</SelectItem>
+            {(Object.keys(TYPE_META) as EmployeeDocType[]).map((k) => (
               <SelectItem key={k} value={k}>
-                {v}
+                {TYPE_META[k].label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         <div className="bg-muted ml-auto flex rounded-md p-0.5">
-          {(["all", "signed", "pending"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={cn(
-                "inline-flex items-center rounded-sm px-3 py-1 text-xs font-medium capitalize transition-colors",
-                statusFilter === s
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {s === "all" ? "All" : s}
-            </button>
-          ))}
+          {(["all", "valid", "expiring", "expired"] as StatusFilter[]).map(
+            (s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={cn(
+                  "inline-flex items-center rounded-sm px-3 py-1 text-xs font-medium capitalize transition-colors",
+                  statusFilter === s
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {s}
+              </button>
+            ),
+          )}
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Views */}
       <Tabs defaultValue="employees">
         <TabsList>
-          <TabsTrigger value="employees">By employee</TabsTrigger>
-          <TabsTrigger value="documents">By document</TabsTrigger>
+          <TabsTrigger value="employees">By Employee</TabsTrigger>
+          <TabsTrigger value="types">By Type</TabsTrigger>
         </TabsList>
 
+        {/* ── By Employee ── */}
         <TabsContent value="employees" className="mt-4">
           {groupedByEmployee.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {groupedByEmployee.map((group) => (
-                <EmployeeDocCard
-                  key={group.id}
-                  group={group}
-                  onOpen={() => setViewing(group)}
-                />
-              ))}
+            <div className="space-y-3">
+              {groupedByEmployee.map((group) => {
+                const isExpanded = expandedEmployee === group.id;
+                const expiredCount = group.docs.filter((d) =>
+                  isExpired(d.expiresAt),
+                ).length;
+                const expiringCount = group.docs.filter((d) =>
+                  isExpiringSoon(d.expiresAt),
+                ).length;
+                const initials = group.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2);
+
+                return (
+                  <Card key={group.id} className="overflow-hidden">
+                    <button
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30"
+                      onClick={() =>
+                        setExpandedEmployee(isExpanded ? null : group.id)
+                      }
+                    >
+                      <Avatar className="size-8 shrink-0">
+                        <AvatarImage
+                          src={group.avatarUrl}
+                          alt={group.name}
+                        />
+                        <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-semibold">
+                            {group.name}
+                          </span>
+                          {expiredCount > 0 && (
+                            <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
+                              <AlertTriangle className="mr-0.5 size-2.5" />{" "}
+                              {expiredCount} expired
+                            </Badge>
+                          )}
+                          {expiringCount > 0 && (
+                            <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
+                              <Clock className="mr-0.5 size-2.5" />{" "}
+                              {expiringCount} expiring
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground text-[11px]">
+                          {group.roleLabel} ·{" "}
+                          {group.docs.length} document
+                          {group.docs.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+
+                      <span className="text-muted-foreground text-[10px]">
+                        {isExpanded ? "▲" : "▼"}
+                      </span>
+                    </button>
+
+                    {isExpanded && (
+                      <CardContent className="border-t px-3 pb-3 pt-2.5">
+                        <div className="space-y-2">
+                          {group.docs.map((doc) => (
+                            <DocRow
+                              key={doc.id}
+                              doc={doc}
+                              isManager={true}
+                            />
+                          ))}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="documents" className="mt-4">
-          {filteredSubs.length === 0 ? (
+        {/* ── By Type ── */}
+        <TabsContent value="types" className="mt-4">
+          {groupedByType.length === 0 ? (
             <EmptyState />
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground text-xs">
-                      <tr>
-                        <th className="px-4 py-2.5 text-left font-medium">
-                          Document
-                        </th>
-                        <th className="px-4 py-2.5 text-left font-medium">
-                          Employee
-                        </th>
-                        <th className="px-4 py-2.5 text-left font-medium">
-                          Signed
-                        </th>
-                        <th className="px-4 py-2.5 text-left font-medium">
-                          IP address
-                        </th>
-                        <th className="px-4 py-2.5 text-left font-medium">
-                          Status
-                        </th>
-                        <th className="px-4 py-2.5 text-right font-medium"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSubs.map((sub) => {
-                        const tmpl = templateFor(sub.templateId);
-                        const type = tmpl?.type ?? "custom";
-                        const emp = scheduleEmployees.find(
-                          (e) => e.id === sub.employeeId,
-                        );
-                        return (
-                          <tr
-                            key={sub.id}
-                            onClick={() => setViewingDoc(sub)}
-                            className="border-border/50 hover:bg-muted/40 cursor-pointer border-t"
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2.5">
-                                <div
-                                  className={cn(
-                                    "flex size-8 items-center justify-center rounded-lg",
-                                    TYPE_TONES[type],
-                                  )}
-                                >
-                                  <FileText className="size-4" />
-                                </div>
-                                <div>
-                                  <div className="font-semibold">
-                                    {sub.templateTitle}
-                                  </div>
-                                  <div className="text-muted-foreground text-[11px]">
-                                    {TYPE_LABELS[type]}
-                                    {tmpl && ` · v${tmpl.version}`}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="size-7">
-                                  <AvatarImage
-                                    src={emp?.avatar}
-                                    alt={sub.employeeName}
-                                  />
-                                  <AvatarFallback className="bg-slate-100 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                    {emp?.initials ??
-                                      sub.employeeName.slice(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm font-medium">
-                                  {sub.employeeName}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="text-muted-foreground px-4 py-3 text-xs">
-                              {formatDateTime(sub.signedAt ?? sub.submittedAt)}
-                            </td>
-                            <td className="text-muted-foreground px-4 py-3 font-mono text-xs">
-                              {sub.ipAddress ?? "—"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <StatusBadge status={sub.status} />
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="size-3.5" /> View
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-3">
+              {groupedByType.map(([type, docs]) => {
+                const meta = TYPE_META[type];
+                const Icon = meta.icon;
+                const expiredInType = docs.filter((d) =>
+                  isExpired(d.expiresAt),
+                ).length;
+                const expiringInType = docs.filter((d) =>
+                  isExpiringSoon(d.expiresAt),
+                ).length;
+
+                return (
+                  <Card key={type} className="overflow-hidden">
+                    <div
+                      className={cn(
+                        "flex items-center gap-2.5 border-b px-4 py-2.5",
+                        meta.bg,
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex size-6 shrink-0 items-center justify-center rounded-md bg-white/40 dark:bg-black/20",
+                        )}
+                      >
+                        <Icon className={cn("size-3.5", meta.text)} />
+                      </div>
+                      <span className={cn("text-sm font-semibold", meta.text)}>
+                        {meta.label}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="ml-0.5 text-[10px]"
+                      >
+                        {docs.length}
+                      </Badge>
+                      {expiredInType > 0 && (
+                        <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
+                          {expiredInType} expired
+                        </Badge>
+                      )}
+                      {expiringInType > 0 && (
+                        <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
+                          {expiringInType} expiring
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="divide-y">
+                      {docs.map((doc) => (
+                        <DocRow
+                          key={doc.id}
+                          doc={doc}
+                          isManager={true}
+                          showEmployee
+                          flat
+                        />
+                      ))}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Per-employee dialog */}
-      <EmployeeDocsDialog
-        group={viewing}
-        onOpenChange={(v) => !v && setViewing(null)}
-        onOpenDoc={(sub) => {
-          setViewing(null);
-          setViewingDoc(sub);
-        }}
-      />
-
-      {/* Single doc viewer */}
-      <SignedDocumentDialog
-        submission={viewingDoc}
-        onOpenChange={(v) => !v && setViewingDoc(null)}
-      />
     </div>
   );
 }
 
-// ===========================================================================
-// Sub-components
-// ===========================================================================
+// ── DocRow ─────────────────────────────────────────────────────────────────────
 
-function StatPill({
+function DocRow({
+  doc,
+  isManager,
+  showEmployee,
+  flat,
+}: {
+  doc: EmployeeDocument;
+  isManager: boolean;
+  showEmployee?: boolean;
+  /** Flat variant for grouped-by-type: no border box, no type badge, divide-y rows inside a Card */
+  flat?: boolean;
+}) {
+  const meta = TYPE_META[doc.type];
+  const Icon = meta.icon;
+  const expired = isExpired(doc.expiresAt);
+  const expiring = isExpiringSoon(doc.expiresAt);
+
+  if (flat) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-medium">{doc.name}</span>
+            {expired && (
+              <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
+                <AlertTriangle className="mr-0.5 size-2.5" /> Expired
+              </Badge>
+            )}
+            {expiring && !expired && (
+              <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
+                <Clock className="mr-0.5 size-2.5" /> Expiring soon
+              </Badge>
+            )}
+            {!expired && !expiring && doc.expiresAt && (
+              <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="mr-0.5 size-2.5" /> Valid
+              </Badge>
+            )}
+          </div>
+          <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px]">
+            {showEmployee && (
+              <span className="flex items-center gap-1">
+                <User className="size-2.5" /> {doc.employeeName}
+              </span>
+            )}
+            <span className="flex items-center gap-1">
+              <Calendar className="size-2.5" /> Uploaded{" "}
+              {formatDate(doc.uploadedAt)}
+            </span>
+            {doc.expiresAt && (
+              <span
+                className={cn(
+                  "flex items-center gap-1",
+                  expired && "font-medium text-red-500 dark:text-red-400",
+                  expiring &&
+                    !expired &&
+                    "font-medium text-amber-500 dark:text-amber-400",
+                )}
+              >
+                Expires {formatDate(doc.expiresAt)}
+              </span>
+            )}
+            {isManager && doc.visibleToEmployee && (
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <Eye className="size-2.5" /> Visible to employee
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-border/50 flex items-start gap-3 rounded-xl border p-3">
+      <div
+        className={cn(
+          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+          meta.bg,
+        )}
+      >
+        <Icon className={cn("size-4", meta.text)} />
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-sm font-semibold">{doc.name}</span>
+          <Badge className={cn("border-0 text-[10px]", meta.bg, meta.text)}>
+            {meta.label}
+          </Badge>
+          {expired && (
+            <Badge className="border-0 bg-red-500/10 text-[10px] text-red-600 dark:text-red-400">
+              <AlertTriangle className="mr-0.5 size-2.5" /> Expired
+            </Badge>
+          )}
+          {expiring && !expired && (
+            <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400">
+              <Clock className="mr-0.5 size-2.5" /> Expiring soon
+            </Badge>
+          )}
+          {!expired && !expiring && doc.expiresAt && (
+            <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="mr-0.5 size-2.5" /> Valid
+            </Badge>
+          )}
+        </div>
+
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px]">
+          {showEmployee && (
+            <span className="flex items-center gap-1">
+              <User className="size-2.5" /> {doc.employeeName}
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            <Calendar className="size-2.5" /> Uploaded{" "}
+            {formatDate(doc.uploadedAt)}
+          </span>
+          {doc.expiresAt && (
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                expired && "font-medium text-red-500 dark:text-red-400",
+                expiring &&
+                  !expired &&
+                  "font-medium text-amber-500 dark:text-amber-400",
+              )}
+            >
+              Expires {formatDate(doc.expiresAt)}
+            </span>
+          )}
+          {isManager && doc.visibleToEmployee && (
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+              <Eye className="size-2.5" /> Visible to employee
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── StatCard ──────────────────────────────────────────────────────────────────
+
+function StatCard({
   icon: Icon,
   label,
   value,
-  tone,
+  iconBg,
+  iconClass,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
-  tone: string;
+  iconBg: string;
+  iconClass: string;
 }) {
   return (
-    <div className="border-border/60 bg-card/80 flex items-center gap-3 rounded-xl border p-3 backdrop-blur-sm">
-      <div className={cn("rounded-lg p-2", tone)}>
-        <Icon className="size-4" />
+    <div className="border-border/60 bg-card flex items-center gap-3 rounded-xl border p-3">
+      <div className={cn("rounded-lg p-2", iconBg)}>
+        <Icon className={cn("size-4", iconClass)} />
       </div>
       <div>
         <div className="text-xl leading-none font-bold">{value}</div>
@@ -453,427 +722,17 @@ function StatPill({
   );
 }
 
-function EmployeeDocCard({
-  group,
-  onOpen,
-}: {
-  group: EmployeeGroup;
-  onOpen: () => void;
-}) {
-  const signed = group.submissions.filter((s) => s.status === "signed").length;
-  const pending = group.submissions.filter((s) => s.status === "pending")
-    .length;
-  const latest = group.submissions.reduce<EmployeeDocumentSubmission | null>(
-    (acc, s) => {
-      if (!acc) return s;
-      return new Date(s.submittedAt) > new Date(acc.submittedAt) ? s : acc;
-    },
-    null,
-  );
-
-  return (
-    <button
-      onClick={onOpen}
-      className={cn(
-        "group border-border/60 bg-card hover:border-primary/40 relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 text-left transition-all",
-        "hover:-translate-y-0.5 hover:shadow-md",
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <Avatar className="size-12 ring-2 ring-white dark:ring-slate-900">
-          <AvatarImage src={group.avatar} alt={group.name} />
-          <AvatarFallback className="bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {group.initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{group.name}</div>
-          {group.role && (
-            <div className="text-muted-foreground truncate text-[11px]">
-              {group.role}
-            </div>
-          )}
-        </div>
-        <ChevronRight className="text-muted-foreground group-hover:text-primary size-4 transition-colors" />
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {signed > 0 && (
-          <Badge className="border-0 bg-emerald-500/10 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-            <FileCheck2 className="mr-1 size-3" /> {signed} signed
-          </Badge>
-        )}
-        {pending > 0 && (
-          <Badge className="border-0 bg-amber-500/10 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-            <Clock className="mr-1 size-3" /> {pending} pending
-          </Badge>
-        )}
-      </div>
-
-      <div className="border-border/50 mt-auto border-t pt-3">
-        <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-          Latest
-        </div>
-        <div className="mt-0.5 truncate text-xs font-semibold">
-          {latest?.templateTitle ?? "—"}
-        </div>
-        <div className="text-muted-foreground text-[11px]">
-          {latest ? formatDate(latest.signedAt ?? latest.submittedAt) : ""}
-        </div>
-      </div>
-    </button>
-  );
-}
+// ── EmptyState ────────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-        <FileSignature className="text-muted-foreground size-8 opacity-40" />
-        <div className="font-semibold">No signed documents match</div>
-        <p className="text-muted-foreground max-w-sm text-sm">
-          Try clearing filters or send a document to an employee to sign from
-          the onboarding &rsaquo; templates tab.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function StatusBadge({ status }: { status: "signed" | "pending" | "revoked" }) {
-  if (status === "signed") {
-    return (
-      <Badge className="border-0 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-400">
-        <FileCheck2 className="mr-1 size-3" /> Signed
-      </Badge>
-    );
-  }
-  if (status === "pending") {
-    return (
-      <Badge className="border-0 bg-amber-500/10 text-[10px] text-amber-700 dark:text-amber-400">
-        <Clock className="mr-1 size-3" /> Pending
-      </Badge>
-    );
-  }
-  return (
-    <Badge className="border-0 bg-rose-500/10 text-[10px] text-rose-700 dark:text-rose-400">
-      Revoked
-    </Badge>
-  );
-}
-
-function EmployeeDocsDialog({
-  group,
-  onOpenChange,
-  onOpenDoc,
-}: {
-  group: EmployeeGroup | null;
-  onOpenChange: (v: boolean) => void;
-  onOpenDoc: (s: EmployeeDocumentSubmission) => void;
-}) {
-  if (!group) return null;
-  return (
-    <Dialog open={!!group} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] overflow-hidden sm:max-w-2xl">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <Avatar className="size-12 ring-2 ring-white dark:ring-slate-900">
-              <AvatarImage src={group.avatar} alt={group.name} />
-              <AvatarFallback className="bg-slate-100 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {group.initials}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <DialogTitle>{group.name}</DialogTitle>
-              <DialogDescription>
-                {group.submissions.length}{" "}
-                {group.submissions.length === 1 ? "document" : "documents"} on
-                file
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-        <ScrollArea className="max-h-[60vh] pr-3">
-          <div className="space-y-2">
-            {group.submissions.map((sub) => {
-              const tmpl = templateFor(sub.templateId);
-              const type = tmpl?.type ?? "custom";
-              return (
-                <button
-                  key={sub.id}
-                  onClick={() => onOpenDoc(sub)}
-                  className="group border-border/60 hover:border-primary/40 hover:bg-muted/40 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all"
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-lg",
-                      TYPE_TONES[type],
-                    )}
-                  >
-                    <FileText className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">
-                      {sub.templateTitle}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2 text-[11px]">
-                      <span>{TYPE_LABELS[type]}</span>
-                      {tmpl && <span>· v{tmpl.version}</span>}
-                      <span>
-                        · Signed{" "}
-                        {formatDateTime(sub.signedAt ?? sub.submittedAt)}
-                      </span>
-                    </div>
-                  </div>
-                  <StatusBadge status={sub.status} />
-                  <ChevronRight className="text-muted-foreground group-hover:text-primary size-4 shrink-0 transition-colors" />
-                </button>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SignedDocumentDialog({
-  submission,
-  onOpenChange,
-}: {
-  submission: EmployeeDocumentSubmission | null;
-  onOpenChange: (v: boolean) => void;
-}) {
-  if (!submission) return null;
-  const tmpl = templateFor(submission.templateId);
-  const type = tmpl?.type ?? "custom";
-  const emp = scheduleEmployees.find((e) => e.id === submission.employeeId);
-
-  return (
-    <Dialog open={!!submission} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[92vh] flex-col overflow-hidden sm:max-w-3xl">
-        <DialogHeader className="shrink-0">
-          <div className="flex items-start gap-3">
-            <div
-              className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-xl",
-                TYPE_TONES[type],
-              )}
-            >
-              <FileText className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="truncate">
-                {submission.templateTitle}
-              </DialogTitle>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <Badge variant="secondary" className="text-[10px]">
-                  {TYPE_LABELS[type]}
-                </Badge>
-                {tmpl && (
-                  <Badge variant="outline" className="text-[10px]">
-                    v{tmpl.version}
-                  </Badge>
-                )}
-                <StatusBadge status={submission.status} />
-              </div>
-            </div>
-            <div className="bg-muted/60 flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1">
-              <Avatar className="size-7">
-                <AvatarImage src={emp?.avatar} alt={submission.employeeName} />
-                <AvatarFallback className="bg-slate-100 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  {emp?.initials ?? submission.employeeName.slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-semibold">
-                {submission.employeeName}
-              </span>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="space-y-5 pr-2">
-            {/* Filled fields */}
-            {Object.keys(submission.fieldValues).length > 0 && (
-              <section>
-                <SectionHeader title="Information provided" icon={FileText} />
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {Object.entries(submission.fieldValues).map(([key, val]) => {
-                    const field = tmpl?.fields.find((f) => f.id === key);
-                    return (
-                      <div
-                        key={key}
-                        className="border-border/60 bg-card rounded-lg border p-3"
-                      >
-                        <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-                          {field?.label ?? key.replace(/_/g, " ")}
-                        </div>
-                        <div className="mt-0.5 truncate text-sm font-semibold">
-                          {val || "—"}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {/* Document body */}
-            {tmpl && (
-              <section>
-                <SectionHeader title="Document text" icon={FileText} />
-                <div className="bg-muted/20 rounded-xl border p-5">
-                  <pre className="text-foreground font-sans text-sm/relaxed whitespace-pre-wrap">
-                    {tmpl.content}
-                  </pre>
-                </div>
-              </section>
-            )}
-
-            {/* Signature */}
-            {submission.signatureData && (
-              <section>
-                <SectionHeader title="Signature" icon={FileSignature} />
-                <div className="from-muted/20 rounded-xl border bg-linear-to-br to-transparent p-4">
-                  <div className="bg-background flex h-32 items-center justify-center rounded-lg border">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={submission.signatureData}
-                      alt="Employee signature"
-                      className="max-h-24 object-contain"
-                    />
-                  </div>
-                  <p className="text-muted-foreground mt-2 text-[11px]">
-                    Electronically signed by{" "}
-                    <span className="text-foreground font-semibold">
-                      {submission.employeeName}
-                    </span>{" "}
-                    on {formatDateTime(submission.signedAt)}.
-                  </p>
-                </div>
-              </section>
-            )}
-
-            {/* Audit trail */}
-            <section>
-              <SectionHeader title="Audit trail" icon={ShieldCheck} />
-              <div className="border-border/60 bg-card rounded-xl border">
-                <AuditRow
-                  icon={Clock}
-                  label="Signed timestamp"
-                  value={formatDateTime(submission.signedAt)}
-                  sub={
-                    submission.signedAt
-                      ? `ISO: ${submission.signedAt}`
-                      : undefined
-                  }
-                />
-                <AuditRow
-                  icon={MapPin}
-                  label="IP address"
-                  value={submission.ipAddress ?? "—"}
-                />
-                <AuditRow
-                  icon={Globe}
-                  label="Timezone"
-                  value={submission.timezone ?? "—"}
-                />
-                <AuditRow
-                  icon={Fingerprint}
-                  label="Device fingerprint"
-                  value={submission.deviceId ?? "—"}
-                  sub="Browser-equivalent of MAC — hashed userAgent + screen + language + timezone"
-                />
-                <AuditRow
-                  icon={Smartphone}
-                  label="User-agent"
-                  value={submission.userAgent ?? "—"}
-                  mono
-                  last
-                />
-              </div>
-              <div className="text-muted-foreground mt-2 flex items-start gap-1.5 text-[11px]">
-                <Shield className="mt-0.5 size-3 shrink-0" />
-                <span>
-                  Browsers block real MAC address access for privacy. The device
-                  fingerprint is the strongest portable identifier available and
-                  is captured alongside signature, timestamp &amp; IP.
-                </span>
-              </div>
-            </section>
-          </div>
-        </ScrollArea>
-
-        <div className="bg-background/80 flex shrink-0 items-center justify-between gap-2 border-t pt-4 backdrop-blur-sm">
-          <div className="text-muted-foreground text-[11px]">
-            Submission ID:{" "}
-            <span className="font-mono">{submission.id}</span>
-          </div>
-          <Button variant="outline" size="sm">
-            <Download className="size-3.5" /> Download PDF
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SectionHeader({
-  title,
-  icon: Icon,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <div className="text-muted-foreground mb-2 flex items-center gap-1.5 text-[10px] font-semibold tracking-wider uppercase">
-      <Icon className="size-3" /> {title}
-    </div>
-  );
-}
-
-function AuditRow({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  mono,
-  last,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  sub?: string;
-  mono?: boolean;
-  last?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-start gap-3 p-3",
-        !last && "border-border/60 border-b",
-      )}
-    >
-      <div className="bg-muted text-muted-foreground mt-0.5 rounded-md p-1.5">
-        <Icon className="size-3.5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
-          {label}
-        </div>
-        <div
-          className={cn(
-            "mt-0.5 text-sm break-all",
-            mono && "font-mono text-xs",
-          )}
-        >
-          {value}
-        </div>
-        {sub && (
-          <div className="text-muted-foreground mt-0.5 text-[11px]">{sub}</div>
-        )}
-      </div>
+    <div className="border-border/60 flex flex-col items-center rounded-xl border border-dashed p-12 text-center">
+      <FolderOpen className="text-muted-foreground mb-3 size-10 opacity-30" />
+      <p className="font-semibold">No documents match</p>
+      <p className="text-muted-foreground mt-1 max-w-xs text-sm">
+        Try adjusting filters or upload documents from individual employee
+        profiles.
+      </p>
     </div>
   );
 }

@@ -295,7 +295,7 @@ export default function FacilityStaffPage() {
           </div>
 
           {/* Role chip strip */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="scrollbar-hidden -mx-1 mt-2.5 flex gap-0.5 overflow-x-auto px-1 pb-px">
             {ROLE_FILTERS.map((r) => {
               const count =
                 r.value === "all"
@@ -307,22 +307,22 @@ export default function FacilityStaffPage() {
                   key={r.value}
                   onClick={() => setRoleFilter(r.value)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-all",
+                    "inline-flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
                     active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border/60 bg-card hover:bg-muted",
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   {r.value !== "all" && (
-                    <RoleIcon role={r.value} className="size-3" />
+                    <RoleIcon role={r.value} className="size-3 opacity-70" />
                   )}
                   {r.label}
                   <span
                     className={cn(
-                      "rounded-full px-1.5 text-[10px] font-semibold",
+                      "ml-0.5 rounded px-1 text-[10px] tabular-nums",
                       active
-                        ? "bg-primary-foreground/20"
-                        : "bg-muted text-muted-foreground",
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground/60",
                     )}
                   >
                     {count}

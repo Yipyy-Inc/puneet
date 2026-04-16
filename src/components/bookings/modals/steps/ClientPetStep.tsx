@@ -57,6 +57,8 @@ interface ClientPetStepProps {
   setGuestPhone?: (v: string) => void;
   guestPetNames?: string[];
   setGuestPetNames?: React.Dispatch<React.SetStateAction<string[]>>;
+  guestPetWeights?: string[];
+  setGuestPetWeights?: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export function ClientPetStep({
@@ -82,6 +84,8 @@ export function ClientPetStep({
   setGuestPhone,
   guestPetNames,
   setGuestPetNames,
+  guestPetWeights,
+  setGuestPetWeights,
 }: ClientPetStepProps) {
   // Check if service requires evaluation
   const serviceRequiresEvaluation = React.useMemo(() => {
@@ -278,6 +282,18 @@ export function ClientPetStep({
     });
   };
 
+  const handleGuestPetWeightChange = (index: number, value: string) => {
+    if (!setGuestPetWeights) return;
+    // Only digits with optional one decimal point — ignore other characters.
+    const sanitized = value.replace(/[^\d.]/g, "");
+    setGuestPetWeights((prev) => {
+      const weights = prev.length > 0 ? [...prev] : [""];
+      while (weights.length <= index) weights.push("");
+      weights[index] = sanitized;
+      return weights;
+    });
+  };
+
   const addGuestPetField = () => {
     if (!setGuestPetNames) return;
     setGuestPetNames((prev) => [...(prev.length > 0 ? prev : [""]), ""]);
@@ -442,10 +458,12 @@ export function ClientPetStep({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="flex items-center gap-1.5 text-base font-semibold">
-                  <PawPrint className="size-4" /> Pet Information
+                  <PawPrint className="size-4" /> Pet Information{" "}
+                  <span className="text-destructive text-sm">*</span>
                 </h4>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  Add one or more pets to include in this estimate.
+                  Name and weight are required so the right room category can be
+                  quoted.
                 </p>
               </div>
               <Button
@@ -461,32 +479,61 @@ export function ClientPetStep({
             </div>
 
             <div className="space-y-2">
-              {resolvedGuestPetNames.map((petName, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="flex h-8 min-w-8 items-center justify-center rounded-md bg-violet-100 text-xs font-semibold text-violet-700">
-                    {index + 1}
+              {resolvedGuestPetNames.map((petName, index) => {
+                const weight = guestPetWeights?.[index] ?? "";
+                const nameEntered = petName.trim().length > 0;
+                const weightMissing =
+                  nameEntered && (!weight || Number(weight) <= 0);
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="flex h-8 min-w-8 items-center justify-center rounded-md bg-violet-100 text-xs font-semibold text-violet-700">
+                      {index + 1}
+                    </div>
+                    <Input
+                      value={petName}
+                      onChange={(e) =>
+                        handleGuestPetNameChange(index, e.target.value)
+                      }
+                      placeholder={
+                        index === 0
+                          ? "Pet name (e.g. Buddy)"
+                          : `Pet ${index + 1} name`
+                      }
+                      className="bg-white"
+                    />
+                    <div className="relative">
+                      <Input
+                        value={weight}
+                        onChange={(e) =>
+                          handleGuestPetWeightChange(index, e.target.value)
+                        }
+                        inputMode="decimal"
+                        placeholder="Weight"
+                        aria-label={`Pet ${index + 1} weight in pounds`}
+                        aria-invalid={weightMissing}
+                        className={cn(
+                          "w-28 bg-white pr-9",
+                          weightMissing && "border-destructive",
+                        )}
+                      />
+                      <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-xs">
+                        lbs
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-slate-400 hover:text-red-500"
+                      disabled={resolvedGuestPetNames.length <= 1}
+                      onClick={() => removeGuestPetField(index)}
+                    >
+                      <Trash2 className="size-4" />
+                      <span className="sr-only">Remove pet</span>
+                    </Button>
                   </div>
-                  <Input
-                    value={petName}
-                    onChange={(e) =>
-                      handleGuestPetNameChange(index, e.target.value)
-                    }
-                    placeholder={`Pet ${index + 1} name (optional)`}
-                    className="bg-white"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-slate-400 hover:text-red-500"
-                    disabled={resolvedGuestPetNames.length <= 1}
-                    onClick={() => removeGuestPetField(index)}
-                  >
-                    <Trash2 className="size-4" />
-                    <span className="sr-only">Remove pet</span>
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

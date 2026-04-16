@@ -16,7 +16,6 @@ import {
   FileText,
   BookOpen,
   Shield,
-  FolderOpen,
   Settings,
   Activity,
   ClipboardCheck,
@@ -105,18 +104,6 @@ const navItems: NavItem[] = [
     label: "Onboarding",
     href: "/facility/dashboard/services/scheduling/onboarding",
     icon: BookOpen,
-    requires: "employee.edit",
-  },
-  {
-    label: "Documents",
-    href: "/facility/dashboard/services/scheduling/documents",
-    icon: FolderOpen,
-    requires: "employee.view",
-  },
-  {
-    label: "Warnings",
-    href: "/facility/dashboard/services/scheduling/warnings",
-    icon: Shield,
     requires: "employee.edit",
   },
   {

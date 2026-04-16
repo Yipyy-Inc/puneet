@@ -83,6 +83,7 @@ interface BoardingDetailsProps {
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
+  skipEligibility?: boolean;
 }
 
 export function BoardingDetails({
@@ -109,6 +110,7 @@ export function BoardingDetails({
   extraServices,
   setExtraServices,
   selectedPets,
+  skipEligibility,
 }: BoardingDetailsProps) {
   const {
     hours,
@@ -264,6 +266,7 @@ export function BoardingDetails({
             setServiceType={setServiceType}
             boardingRangeStart={boardingRangeStart}
             boardingRangeEnd={boardingRangeEnd}
+            skipEligibility={skipEligibility}
           />
         )}
 
@@ -380,6 +383,7 @@ interface BoardingRoomSelectionStepProps {
   setServiceType: (type: string) => void;
   boardingRangeStart: Date | null;
   boardingRangeEnd: Date | null;
+  skipEligibility?: boolean;
 }
 
 function BoardingRoomSelectionStep({
@@ -390,6 +394,7 @@ function BoardingRoomSelectionStep({
   setServiceType,
   boardingRangeStart,
   boardingRangeEnd,
+  skipEligibility,
 }: BoardingRoomSelectionStepProps) {
   const [activePet, setActivePet] = React.useState<Pet | null>(null);
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
@@ -411,8 +416,12 @@ function BoardingRoomSelectionStep({
   const startDate = boardingRangeStart?.toISOString().split("T")[0] ?? "";
   const endDate = boardingRangeEnd?.toISOString().split("T")[0] ?? "";
 
-  // When checking eligibility, use the currently active (selected) pet, or first pet
-  const focusPet = activePet ?? selectedPets[0] ?? undefined;
+  // When checking eligibility, use the currently active (selected) pet, or first pet.
+  // For guest estimates we don't know the pet's weight/type, so skip eligibility entirely
+  // and let any room be picked.
+  const focusPet = skipEligibility
+    ? undefined
+    : (activePet ?? selectedPets[0] ?? undefined);
 
   const availability = React.useMemo(() => {
     if (!startDate || !endDate) return [];

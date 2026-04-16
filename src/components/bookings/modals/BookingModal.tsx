@@ -229,6 +229,30 @@ export function BookingModal({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [guestPetNames, setGuestPetNames] = useState<string[]>([""]);
+  // Parallel array — same index as guestPetNames. Stored as string for input control;
+  // parsed when needed for eligibility / synthesized Pet.
+  const [guestPetWeights, setGuestPetWeights] = useState<string[]>([""]);
+
+  // Wrap setGuestPetNames so weight slots are kept aligned when pets are added/removed
+  // by ClientPetStep's existing handlers.
+  const setGuestPetNamesSynced = useCallback<
+    React.Dispatch<React.SetStateAction<string[]>>
+  >((next) => {
+    setGuestPetNames((prev) => {
+      const updated = typeof next === "function" ? next(prev) : next;
+      setGuestPetWeights((prevWeights) => {
+        if (updated.length === prevWeights.length) return prevWeights;
+        if (updated.length > prevWeights.length) {
+          return [
+            ...prevWeights,
+            ...Array(updated.length - prevWeights.length).fill(""),
+          ];
+        }
+        return prevWeights.slice(0, updated.length);
+      });
+      return updated;
+    });
+  }, []);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -412,12 +436,21 @@ export function BookingModal({
   // Check if current sub-step is complete
   const isSubStepComplete = useCallback(
     (stepIndex: number) => {
+      // Pets that need a room assignment: real selected pets, or guest pets in
+      // estimate mode (each named entry counts as one).
+      const effectivePetCount =
+        isEstimateMode && isGuestEstimate
+          ? guestPetNames.filter((n) => n.trim()).length
+          : selectedPetIds.length;
       if (selectedService === "daycare") {
         switch (stepIndex) {
           case 0:
             return daycareSelectedDates.length > 0;
           case 1:
-            return roomAssignments.length === selectedPetIds.length;
+            return (
+              effectivePetCount > 0 &&
+              roomAssignments.length === effectivePetCount
+            );
           case 2:
             return true;
           case 3:
@@ -433,7 +466,10 @@ export function BookingModal({
           case 0:
             return boardingRangeStart !== null && boardingRangeEnd !== null;
           case 1:
-            return roomAssignments.length === selectedPetIds.length;
+            return (
+              effectivePetCount > 0 &&
+              roomAssignments.length === effectivePetCount
+            );
           case 2:
             return true;
           case 3:
@@ -465,6 +501,9 @@ export function BookingModal({
       daycareSelectedDates,
       roomAssignments,
       selectedPetIds,
+      isEstimateMode,
+      isGuestEstimate,
+      guestPetNames,
       boardingRangeStart,
       boardingRangeEnd,
       startDate,
@@ -519,16 +558,42 @@ export function BookingModal({
     [guestPetNames],
   );
 
+  // Returns the parsed weight (lbs) for the named pet at index `i`, or 0 if missing/invalid.
+  const parseGuestWeight = useCallback(
+    (i: number) => {
+      const raw = guestPetWeights[i];
+      const n = raw ? Number(raw) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    },
+    [guestPetWeights],
+  );
+
   const isGuestInquiryComplete = useMemo(() => {
     if (!(isEstimateMode && isGuestEstimate)) return true;
 
     const hasName = guestName.trim().length > 0;
     const normalizedEmail = guestEmail.trim();
     const hasValidEmail = SIMPLE_EMAIL_REGEX.test(normalizedEmail);
-    const hasAtLeastOnePet = guestPetSummary.length > 0;
 
-    return hasName && hasValidEmail && hasAtLeastOnePet;
-  }, [isEstimateMode, isGuestEstimate, guestName, guestEmail, guestPetSummary]);
+    // Every named pet must also have a valid weight (> 0). This prevents staff from
+    // generating estimates with the wrong room category, since boarding rooms are
+    // weight-gated.
+    const namedIndexes = guestPetNames
+      .map((name, i) => (name.trim() ? i : -1))
+      .filter((i) => i >= 0);
+    const hasAtLeastOnePet = namedIndexes.length > 0;
+    const allNamedHaveWeight =
+      hasAtLeastOnePet && namedIndexes.every((i) => parseGuestWeight(i) > 0);
+
+    return hasName && hasValidEmail && hasAtLeastOnePet && allNamedHaveWeight;
+  }, [
+    isEstimateMode,
+    isGuestEstimate,
+    guestName,
+    guestEmail,
+    guestPetNames,
+    parseGuestWeight,
+  ]);
 
   const guestPricingPetNames = useMemo(() => {
     if (!(isEstimateMode && isGuestEstimate)) return [];
@@ -548,6 +613,44 @@ export function BookingModal({
     }
     return selectedPets;
   }, [isEstimateMode, isGuestEstimate, pricingSelectedPetIds, selectedPets]);
+
+  // Pets visible to UI sub-steps that need name/type (room picker, add-ons, feeding, etc.).
+  // For guest estimates we synthesize Pet shapes from the inquiry names + weights so they
+  // can be dragged onto rooms with real eligibility rules applied; real client pets pass
+  // through unchanged.
+  const effectiveSelectedPets = useMemo<Pet[]>(() => {
+    if (isEstimateMode && isGuestEstimate) {
+      return guestPetNames
+        .map((name, index) => ({ name: name.trim(), index }))
+        .filter((p) => p.name.length > 0)
+        .map(({ name, index }) => ({
+          id: -1 * (index + 1),
+          name,
+          type: "Dog",
+          breed: "",
+          age: 0,
+          weight: parseGuestWeight(index),
+          color: "",
+          microchip: "",
+          allergies: "",
+          specialNeeds: "",
+        }));
+    }
+    return selectedPets;
+  }, [
+    isEstimateMode,
+    isGuestEstimate,
+    guestPetNames,
+    parseGuestWeight,
+    selectedPets,
+  ]);
+
+  const effectiveSelectedPetIds = useMemo(() => {
+    if (isEstimateMode && isGuestEstimate) {
+      return effectiveSelectedPets.map((p) => p.id);
+    }
+    return selectedPetIds;
+  }, [isEstimateMode, isGuestEstimate, effectiveSelectedPets, selectedPetIds]);
 
   const selectedClientBookings = useMemo(() => {
     if (selectedClientId == null) return [];
@@ -1171,6 +1274,7 @@ export function BookingModal({
     setGuestEmail("");
     setGuestPhone("");
     setGuestPetNames([""]);
+    setGuestPetWeights([""]);
     setEstimatePricingSnapshot(null);
     setGeneratedEstimateId(null);
     setDaycareSelectedDates([]);
@@ -2259,7 +2363,9 @@ export function BookingModal({
                     guestPhone={guestPhone}
                     setGuestPhone={setGuestPhone}
                     guestPetNames={guestPetNames}
-                    setGuestPetNames={setGuestPetNames}
+                    setGuestPetNames={setGuestPetNamesSynced}
+                    guestPetWeights={guestPetWeights}
+                    setGuestPetWeights={setGuestPetWeights}
                   />
                 )}
                 {displayedSteps[currentStep]?.id === "details" && (
@@ -2297,7 +2403,7 @@ export function BookingModal({
                     setFeedingMedicationTab={setFeedingMedicationTab}
                     extraServices={extraServices}
                     setExtraServices={setExtraServices}
-                    selectedPets={selectedPets}
+                    selectedPets={effectiveSelectedPets}
                   />
                 )}
 
