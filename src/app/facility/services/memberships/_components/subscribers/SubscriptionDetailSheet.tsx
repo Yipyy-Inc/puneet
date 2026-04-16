@@ -157,13 +157,30 @@ export function SubscriptionDetailSheet({
         >
           <SheetHeader className="border-b px-6 py-5">
             <div className="flex items-start gap-3">
-              <div
-                className="flex size-10 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
-                style={{
-                  backgroundColor: plan?.badgeColor ?? "#D4AF37",
-                }}
-              >
-                <Crown className="size-5" />
+              <div className="relative shrink-0">
+                <div className="flex size-10 items-center justify-center overflow-hidden rounded-full ring-2 ring-slate-100">
+                  {membership.customerAvatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={membership.customerAvatarUrl}
+                      alt={membership.customerName}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex size-full items-center justify-center text-xs font-semibold text-white"
+                      style={{ backgroundColor: plan?.badgeColor ?? "#D4AF37" }}
+                    >
+                      {membership.customerName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div
+                  className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full text-white shadow-sm"
+                  style={{ backgroundColor: plan?.badgeColor ?? "#D4AF37" }}
+                >
+                  <Crown className="size-2.5" />
+                </div>
               </div>
               <div className="flex-1">
                 <SheetTitle className="text-base">

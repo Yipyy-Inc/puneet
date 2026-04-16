@@ -184,6 +184,7 @@ export interface Membership {
   customerId: string;
   customerName: string;
   customerEmail: string;
+  customerAvatarUrl?: string;
   planId: string;
   planName: string;
   status: MembershipStatus;
@@ -983,6 +984,7 @@ export const memberships: Membership[] = [
     customerId: "cust-001",
     customerName: "Sarah Johnson",
     customerEmail: "sarah.johnson@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-002",
     planName: "Daycare Plus",
     status: "active",
@@ -1056,6 +1058,7 @@ export const memberships: Membership[] = [
     customerId: "cust-002",
     customerName: "Michael Chen",
     customerEmail: "m.chen@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-003",
     planName: "Daycare Unlimited",
     status: "active",
@@ -1108,6 +1111,7 @@ export const memberships: Membership[] = [
     customerId: "cust-003",
     customerName: "Emily Rodriguez",
     customerEmail: "emily.r@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e8?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-001",
     planName: "Daycare Basic",
     status: "active",
@@ -1152,6 +1156,7 @@ export const memberships: Membership[] = [
     customerId: "cust-004",
     customerName: "David Thompson",
     customerEmail: "d.thompson@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-004",
     planName: "Boarding Saver",
     status: "paused",
@@ -1200,6 +1205,7 @@ export const memberships: Membership[] = [
     customerId: "cust-005",
     customerName: "Jennifer Park",
     customerEmail: "j.park@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-002",
     planName: "Daycare Plus",
     status: "cancelled",
@@ -1243,6 +1249,7 @@ export const memberships: Membership[] = [
     customerId: "cust-009",
     customerName: "Noah Patel",
     customerEmail: "noah.patel@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-002",
     planName: "Daycare Plus",
     status: "expired",
@@ -1295,6 +1302,7 @@ export const memberships: Membership[] = [
     customerId: "cust-010",
     customerName: "Olivia Green",
     customerEmail: "olivia.green@email.com",
+    customerAvatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=256&h=256&fit=crop&crop=faces&auto=format&q=80",
     planId: "plan-005",
     planName: "Groom Weekly Club",
     status: "pending",

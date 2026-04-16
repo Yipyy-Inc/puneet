@@ -68,7 +68,7 @@ type RoleKind =
   | { type: "preset"; id: FacilityStaffRole }
   | { type: "custom"; id: string };
 
-const ACCENT_CHOICES: { label: string; accent: string; ring: string }[] = [
+export const ACCENT_CHOICES: { label: string; accent: string; ring: string }[] = [
   { label: "Amber", accent: "bg-amber-500/10", ring: "ring-amber-500/40" },
   { label: "Violet", accent: "bg-violet-500/10", ring: "ring-violet-500/40" },
   { label: "Sky", accent: "bg-sky-500/10", ring: "ring-sky-500/40" },
@@ -786,9 +786,9 @@ function CustomRoleEditor({
 // Permission grid — shared by both editors
 // ============================================================================
 
-type GridValue = AccessScope | "preset" | "revoked" | "none";
+export type GridValue = AccessScope | "preset" | "revoked" | "none";
 
-function PermissionsGrid({
+export function PermissionsGrid({
   getValue,
   getPresetDefault,
   onChange,
@@ -1104,7 +1104,7 @@ function CreateRoleDialog({
   );
 }
 
-function AccentPicker({
+export function AccentPicker({
   accent,
   onChange,
 }: {

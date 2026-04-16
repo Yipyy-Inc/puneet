@@ -214,6 +214,12 @@ export const evaluationConfigSchema = z.object({
   schedule: z.object({
     durationOptionsMinutes: z.array(z.number()),
     defaultDurationMinutes: z.number().optional(),
+    /** Days of the week on which evaluations can be booked (e.g. "monday", "friday"). */
+    allowedDays: z.array(z.string()).optional(),
+    /** Minimum gap in minutes between back-to-back evaluation slots. */
+    bufferMinutes: z.number().optional(),
+    /** Maximum number of pets that can be evaluated in the same start-time slot. */
+    capacityPerSlot: z.number().optional(),
     timeWindows: z.array(
       z.object({
         id: z.string(),
@@ -361,6 +367,7 @@ export const facilityBookingFlowConfigSchema = z.object({
   servicesRequiringEvaluation: z.array(z.string()),
   hiddenServices: z.array(z.string()),
   evaluationLockedMessage: z.string().optional(),
+  bookingRequestConfirmationMessage: z.string().optional(),
 });
 export type FacilityBookingFlowConfig = z.infer<
   typeof facilityBookingFlowConfigSchema
@@ -486,6 +493,7 @@ export type ServiceNotificationDefault = z.infer<
 export const tipOptionSchema = z.object({
   type: z.enum(["percentage", "fixed"]),
   value: z.number(),
+  label: z.string().optional(),
 });
 export type TipOption = z.infer<typeof tipOptionSchema>;
 

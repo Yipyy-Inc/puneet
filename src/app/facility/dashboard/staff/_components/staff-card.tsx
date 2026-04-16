@@ -22,6 +22,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import type { StaffProfile } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
@@ -32,6 +33,9 @@ import {
   fullNameOf,
   formatRelative,
 } from "./staff-shared";
+import { StatusBadge } from "./status-change-dialog";
+import { getLatestStaffAuditEntry } from "@/lib/staff-audit";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
 
 interface StaffCardProps {
   profile: StaffProfile;
@@ -40,6 +44,7 @@ interface StaffCardProps {
   onInvite: (p: StaffProfile) => void;
   onTransfer: (p: StaffProfile) => void;
   onDelete: (p: StaffProfile) => void;
+  onStatusChange: (p: StaffProfile) => void;
 }
 
 export function StaffCard({
@@ -49,7 +54,15 @@ export function StaffCard({
   onInvite,
   onTransfer,
   onDelete,
+  onStatusChange,
 }: StaffCardProps) {
+  const { viewer } = useFacilityRbac();
+  const canSeeAudit =
+    viewer.primaryRole === "owner" || viewer.primaryRole === "manager";
+  const latestEntry = canSeeAudit
+    ? getLatestStaffAuditEntry(profile.id)
+    : null;
+
   const locationLabels = profile.assignedLocations
     .map((id) => FACILITY_LOCATIONS.find((l) => l.id === id)?.label)
     .filter(Boolean) as string[];
@@ -105,6 +118,10 @@ export function StaffCard({
                     <Pencil className="size-4" /> Edit profile
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onStatusChange(profile)}>
+                    <RefreshCw className="size-4" /> Change status
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onInvite(profile)}>
                     <UserPlus className="size-4" />
                     {profile.status === "invited"
@@ -131,6 +148,10 @@ export function StaffCard({
               {profile.additionalRoles.map((r) => (
                 <RolePill key={r} role={r} />
               ))}
+              {(profile.status === "inactive" ||
+                profile.status === "terminated") && (
+                <StatusBadge status={profile.status} />
+              )}
             </div>
           </div>
         </div>
@@ -185,6 +206,20 @@ export function StaffCard({
             </div>
           </div>
         </div>
+
+        {/* Last-modified indicator (owner / manager only) */}
+        {latestEntry && (
+          <div className="border-border/40 bg-muted/30 mt-2 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5">
+            <div className="size-1.5 shrink-0 rounded-full bg-violet-500/60" />
+            <p className="text-muted-foreground truncate text-[10px]">
+              <span className="font-medium">{latestEntry.actorName.split(" ")[0]}</span>
+              {" · "}
+              {latestEntry.action.replace(/_/g, " ")}
+              {" · "}
+              {formatRelative(latestEntry.timestamp)}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

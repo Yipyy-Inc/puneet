@@ -12,15 +12,6 @@ export function KpiRow() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiTile
-        label="Current Guests"
-        value={counts.currentGuests}
-        hint="Pets currently on-site"
-        icon={PawPrint}
-        tone="indigo"
-        active={tab === "checked-in"}
-        onClick={() => setTab("checked-in")}
-      />
-      <KpiTile
         label="Today's Arrivals"
         value={counts.todaysArrivals}
         hint="Scheduled check-ins"
@@ -28,6 +19,15 @@ export function KpiRow() {
         tone="amber"
         active={tab === "scheduled"}
         onClick={() => setTab("scheduled")}
+      />
+      <KpiTile
+        label="Current Guests"
+        value={counts.currentGuests}
+        hint="Pets currently on-site"
+        icon={PawPrint}
+        tone="indigo"
+        active={tab === "checked-in"}
+        onClick={() => setTab("checked-in")}
       />
       <KpiTile
         label="Going Home Today"

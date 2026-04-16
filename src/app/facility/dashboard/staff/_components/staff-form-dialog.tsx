@@ -35,7 +35,11 @@ import {
   Eye,
   Lock,
   Clock,
+  Plus,
+  X,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import {
   ROLE_META,
   SERVICE_MODULE_META,
@@ -55,6 +59,8 @@ import {
 } from "@/types/facility-staff";
 import { FACILITY_LOCATIONS } from "@/data/facility-staff";
 import { RoleIcon, ServiceIcon } from "./staff-shared";
+import { useFacilityRbac } from "@/hooks/use-facility-rbac";
+import { CustomRoleQuickCreateDialog } from "./custom-role-quick-create-dialog";
 
 const ROLE_ORDER: FacilityStaffRole[] = [
   "owner",
@@ -198,22 +204,6 @@ function StaffFormDialogBody({
     }));
   }
 
-  function toggleAdditionalRole(role: FacilityStaffRole) {
-    setDraft((d) => {
-      const has = d.additionalRoles.includes(role);
-      const additionalRoles = has
-        ? d.additionalRoles.filter((r) => r !== role)
-        : [...d.additionalRoles, role];
-      const services = Array.from(
-        new Set([
-          ...ROLE_PRESETS[d.primaryRole].services,
-          ...additionalRoles.flatMap((r) => ROLE_PRESETS[r].services),
-        ]),
-      );
-      return { ...d, additionalRoles, serviceAssignments: services };
-    });
-  }
-
   return (
     <DialogContent
       className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0"
@@ -285,7 +275,6 @@ function StaffFormDialogBody({
               draft={draft}
               update={update}
               onRoleChange={onRoleChange}
-              toggleAdditionalRole={toggleAdditionalRole}
             />
           )}
           {section === "locations" && (
@@ -455,13 +444,26 @@ function RoleSection({
   draft,
   update,
   onRoleChange,
-  toggleAdditionalRole,
 }: {
   draft: StaffProfile;
   update: <K extends keyof StaffProfile>(k: K, v: StaffProfile[K]) => void;
   onRoleChange: (r: FacilityStaffRole) => void;
-  toggleAdditionalRole: (r: FacilityStaffRole) => void;
 }) {
+  const { customRoles } = useFacilityRbac();
+  const customList = Object.values(customRoles);
+  const assignedCustomIds = draft.customRoleIds ?? [];
+  const [createRoleOpen, setCreateRoleOpen] = useState(false);
+
+  function toggleCustomRole(id: string) {
+    const has = assignedCustomIds.includes(id);
+    update(
+      "customRoleIds",
+      has
+        ? assignedCustomIds.filter((x) => x !== id)
+        : [...assignedCustomIds, id],
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -508,48 +510,94 @@ function RoleSection({
         </div>
       </div>
 
-      <FieldRow
-        label="Position title"
-        hint="What your facility calls this role. Shows on their profile card — leave blank to use the default role name."
-      >
-        <Input
-          value={draft.jobTitle ?? ""}
-          onChange={(e) =>
-            update("jobTitle", e.target.value || undefined)
-          }
-          placeholder={ROLE_META[draft.primaryRole].label}
-        />
-      </FieldRow>
-
       <div>
-        <SectionHeader
-          title="Additional roles"
-          hint="Someone who grooms AND is a kennel attendant? Add both — permissions union."
-        />
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {ROLE_ORDER.filter((r) => r !== draft.primaryRole).map((role) => {
-            const active = draft.additionalRoles.includes(role);
-            return (
-              <button
-                key={role}
-                type="button"
-                onClick={() => toggleAdditionalRole(role)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-all",
-                  active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border/60 hover:bg-muted",
-                )}
-              >
-                <RoleIcon role={role} className="size-3" />
-                {ROLE_META[role].label}
-              </button>
-            );
-          })}
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <SectionHeader
+            title="Custom roles"
+            hint="Facility-defined roles — like “Runner”, “Helper”, or “Shift Lead”. Layer any number on top of the primary role; permissions union."
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setCreateRoleOpen(true)}
+            className="h-8"
+          >
+            <Plus className="size-3.5" /> Create custom role
+          </Button>
+        </div>
+
+        {customList.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => setCreateRoleOpen(true)}
+            className="border-border/60 hover:border-primary/60 hover:bg-muted/40 mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-6 text-xs font-medium transition-all"
+          >
+            <Sparkles className="text-primary size-4" />
+            <span>
+              No custom roles yet —{" "}
+              <span className="text-primary underline underline-offset-2">
+                create one
+              </span>{" "}
+              tailored to your facility
+            </span>
+          </button>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {customList.map((role) => {
+              const active = assignedCustomIds.includes(role.id);
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => toggleCustomRole(role.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : cn("hover:bg-muted border-border/60", role.accent),
+                  )}
+                  title={role.description || undefined}
+                >
+                  <Sparkles className="size-3" />
+                  {role.label}
+                  <span
+                    className={cn(
+                      "text-[10px] font-normal",
+                      active
+                        ? "text-primary-foreground/70"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    · {Object.keys(role.permissions).length}
+                  </span>
+                  {active && <X className="size-3 opacity-70" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="text-muted-foreground mt-2 flex items-center gap-1.5 text-[11px]">
+          <span>Need to edit permissions on an existing custom role?</span>
+          <Link
+            href="/facility/dashboard/settings?section=roles-permissions"
+            className="text-primary inline-flex items-center gap-0.5 hover:underline"
+          >
+            Open Roles Studio <ExternalLink className="size-3" />
+          </Link>
         </div>
       </div>
 
       <Separator />
+
+      <CustomRoleQuickCreateDialog
+        open={createRoleOpen}
+        onOpenChange={setCreateRoleOpen}
+        onCreated={(role) => {
+          update("customRoleIds", [...assignedCustomIds, role.id]);
+        }}
+      />
 
       <div>
         <SectionHeader

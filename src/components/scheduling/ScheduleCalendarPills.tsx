@@ -58,7 +58,7 @@ export function ShiftPill({
   // shows the shift time and a draft/published indicator.
   if (isCompact) {
     return (
-      <Tooltip>
+      <Tooltip disableHoverableContent>
         <TooltipTrigger asChild>
           <div
             className={cn(
@@ -101,7 +101,7 @@ export function ShiftPill({
             )}
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
+        <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
           <p className="font-medium">{position?.name ?? "Unknown"}</p>
           <p className="text-muted-foreground">
             {shift.startTime} – {shift.endTime}
@@ -131,7 +131,7 @@ export function ShiftPill({
   const StatusIcon = isDraft ? CircleDashed : CheckCircle2;
 
   return (
-    <Tooltip>
+    <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <div
           className={cn(
@@ -199,7 +199,7 @@ export function ShiftPill({
           </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
+      <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
         <p className="font-medium">{position?.name}</p>
         <p>
           {shift.startTime} – {shift.endTime}
@@ -306,7 +306,7 @@ export function TimeOffCell({
 
   if (isCompact) {
     return (
-      <Tooltip>
+      <Tooltip disableHoverableContent>
         <TooltipTrigger asChild>
           <div
             className={cn(
@@ -327,7 +327,7 @@ export function TimeOffCell({
             </span>
           </div>
         </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
+        <TooltipContent side="top" className="bg-popover text-popover-foreground border shadow-md text-xs">
           <p className="font-medium">{label}</p>
           <Badge
             variant={isPending ? "outline" : "secondary"}

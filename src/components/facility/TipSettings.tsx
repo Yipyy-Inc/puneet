@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Percent, Star } from "lucide-react";
+import { DollarSign, Percent, Star, MessageSquare } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,6 +88,28 @@ function TierEditor({
                 })
               }
             />
+            {/* Label input */}
+            <Input
+              type="text"
+              placeholder="e.g. Good job"
+              value={opt.label ?? ""}
+              disabled={disabled}
+              maxLength={32}
+              className="h-8 text-xs"
+              onChange={(e) =>
+                setOption(idx, {
+                  ...opt,
+                  label: e.target.value || undefined,
+                })
+              }
+            />
+            {/* Preview pill */}
+            <div className="bg-muted flex h-7 items-center justify-center rounded-md px-2">
+              <span className="truncate text-[11px] font-medium">
+                {opt.type === "percentage" ? `${opt.value}%` : `$${opt.value}`}
+                {opt.label ? ` · ${opt.label}` : ""}
+              </span>
+            </div>
             {/* Mark as preferred */}
             {!disabled && tier.preferredIndex !== idx && (
               <button
@@ -106,6 +128,12 @@ function TierEditor({
           </div>
         ))}
       </div>
+      {/* Section label hint */}
+      <p className="text-muted-foreground flex items-center gap-1 text-[11px]">
+        <MessageSquare className="size-3" />
+        The label is shown to customers alongside the tip amount (e.g.&nbsp;
+        <span className="font-medium">20% · Fantastic job</span>).
+      </p>
     </div>
   );
 }

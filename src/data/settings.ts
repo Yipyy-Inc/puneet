@@ -66,6 +66,15 @@ export const evaluationConfig: EvaluationConfig = {
   schedule: {
     durationOptionsMinutes: [120, 240],
     defaultDurationMinutes: 120,
+    allowedDays: [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+    ],
+    bufferMinutes: 0,
+    capacityPerSlot: 1,
     timeWindows: [
       { id: "morning", label: "Morning", startTime: "09:00", endTime: "12:00" },
       {
@@ -288,6 +297,8 @@ export const facilityBookingFlowConfig: FacilityBookingFlowConfig = {
   hiddenServices: [],
   evaluationLockedMessage:
     "This service requires a pet evaluation first. Please book an evaluation so we can get to know your pet before their first visit.",
+  bookingRequestConfirmationMessage:
+    "Thank you! We've received your booking request and will verify all the details. You'll receive a confirmation email shortly once everything is reviewed and approved.",
 };
 
 export const evaluationReportCardConfig: EvaluationReportCardConfig = {
@@ -892,9 +903,9 @@ export const tipConfig: TipConfig = {
   mode: "general",
   general: {
     options: [
-      { type: "percentage", value: 15 },
-      { type: "percentage", value: 20 },
-      { type: "percentage", value: 25 },
+      { type: "percentage", value: 15, label: "Good job" },
+      { type: "percentage", value: 18, label: "Excellent job" },
+      { type: "percentage", value: 20, label: "Fantastic job" },
     ],
     preferredIndex: 1,
   },
@@ -902,17 +913,17 @@ export const tipConfig: TipConfig = {
     thresholdAmount: 50,
     belowThreshold: {
       options: [
-        { type: "fixed", value: 5 },
-        { type: "fixed", value: 10 },
-        { type: "fixed", value: 15 },
+        { type: "fixed", value: 5, label: "Good job" },
+        { type: "fixed", value: 10, label: "Excellent job" },
+        { type: "fixed", value: 15, label: "Fantastic job" },
       ],
       preferredIndex: 1,
     },
     aboveThreshold: {
       options: [
-        { type: "percentage", value: 15 },
-        { type: "percentage", value: 20 },
-        { type: "percentage", value: 25 },
+        { type: "percentage", value: 15, label: "Good job" },
+        { type: "percentage", value: 18, label: "Excellent job" },
+        { type: "percentage", value: 20, label: "Fantastic job" },
       ],
       preferredIndex: 1,
     },

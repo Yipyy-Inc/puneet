@@ -121,6 +121,7 @@ export function StaffAvatar({
           profile.status === "active" && "bg-emerald-500",
           profile.status === "invited" && "bg-amber-400",
           profile.status === "inactive" && "bg-zinc-400",
+          profile.status === "terminated" && "bg-rose-500",
         )}
       />
     </div>

@@ -19,6 +19,8 @@ interface BookingModalConfig {
   preSelectedPetId?: number;
   preSelectedService?: string;
   onCreateBooking: (booking: BookingData) => void;
+  isEstimateMode?: boolean;
+  isCustomerMode?: boolean;
 }
 
 interface BookingModalContextValue {
@@ -34,9 +36,11 @@ const BookingModalContext = createContext<BookingModalContextValue | null>(
 export function BookingModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState<BookingModalConfig | null>(null);
+  const [openCount, setOpenCount] = useState(0);
 
   const openBookingModal = useCallback((newConfig: BookingModalConfig) => {
     setConfig(newConfig);
+    setOpenCount((c) => c + 1);
     setIsOpen(true);
   }, []);
 
@@ -55,7 +59,7 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
       {children}
       {config && (
         <BookingModal
-          key={`${config.preSelectedClientId ?? "none"}-${config.preSelectedPetId ?? "none"}-${config.preSelectedService ?? "none"}`}
+          key={`${openCount}-${config.preSelectedClientId ?? "none"}-${config.preSelectedPetId ?? "none"}-${config.preSelectedService ?? "none"}`}
           open={isOpen}
           onOpenChange={handleOpenChange}
           clients={config.clients}
@@ -65,6 +69,8 @@ export function BookingModalProvider({ children }: { children: ReactNode }) {
           preSelectedClientId={config.preSelectedClientId}
           preSelectedPetId={config.preSelectedPetId}
           preSelectedService={config.preSelectedService}
+          estimateMode={config.isEstimateMode ?? false}
+          isCustomerMode={config.isCustomerMode ?? false}
         />
       )}
     </BookingModalContext.Provider>

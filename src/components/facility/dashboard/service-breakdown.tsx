@@ -24,24 +24,24 @@ export function ServiceBreakdown() {
   return (
     <Card className="from-card via-card to-card relative overflow-hidden border bg-gradient-to-br">
       <div className="pointer-events-none absolute -top-12 right-0 h-40 w-40 rounded-full bg-gradient-to-br from-sky-200/40 via-cyan-200/20 to-transparent blur-2xl dark:from-sky-500/15 dark:via-cyan-500/10" />
-      <div className="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
-        <div className="flex items-center gap-3 lg:min-w-[220px]">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
-            <CalendarDays className="size-5" />
+      <div className="relative flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
+        <div className="flex items-center gap-2.5 lg:min-w-[180px]">
+          <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
+            <CalendarDays className="size-4" />
           </div>
           <div>
-            <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+            <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
               Today&apos;s Check-Ins
             </p>
-            <p className="text-2xl font-semibold tabular-nums">
+            <p className="text-lg font-semibold tabular-nums leading-tight">
               {total}
-              <span className="text-muted-foreground ml-2 text-sm font-normal">
+              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
                 across {services.length} services
               </span>
             </p>
           </div>
         </div>
-        <div className="flex flex-1 flex-wrap gap-2">
+        <div className="flex flex-1 flex-wrap gap-1.5">
           <ServicePill
             label="All"
             value={total}
@@ -94,7 +94,7 @@ function ServicePill({
       data-active={active ? "true" : undefined}
       data-color={color}
       className={cn(
-        "group inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm font-medium transition-all",
+        "group inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium transition-all",
         "hover:-translate-y-px hover:shadow-sm",
         "data-[active=true]:border-transparent data-[active=true]:text-white data-[active=true]:shadow-md",
       )}
@@ -106,17 +106,17 @@ function ServicePill({
     >
       <span
         className={cn(
-          "flex size-6 items-center justify-center rounded-full transition-colors",
+          "flex size-5 items-center justify-center rounded-full transition-colors",
           active ? "bg-white/20" : "bg-transparent",
         )}
         style={active ? undefined : { color }}
       >
-        <DynamicIcon name={icon} className="size-3.5" />
+        <DynamicIcon name={icon} className="size-3" />
       </span>
       <span>{label}</span>
       <span
         className={cn(
-          "ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
+          "ml-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
           active
             ? "bg-white/25 text-white"
             : "bg-muted text-muted-foreground group-hover:bg-muted/80",
