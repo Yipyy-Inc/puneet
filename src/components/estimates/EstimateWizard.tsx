@@ -9,13 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   User,
   Sparkles,
   Check,
@@ -116,34 +109,26 @@ export function EstimateWizard({
 
   const selectedClient = facilityClients.find((c) => c.id === selectedClientId);
 
-  const guestPetSummary = useMemo(
-    () => guestPetNames.map((name) => name.trim()).filter(Boolean),
-    [guestPetNames],
-  );
+  const guestPetSummary = guestPetNames.map((name) => name.trim()).filter(Boolean);
 
-  const resolvedGuestPetNames = useMemo(
-    () => (guestPetNames.length > 0 ? guestPetNames : [""]),
-    [guestPetNames],
-  );
+  const resolvedGuestPetNames = guestPetNames.length > 0 ? guestPetNames : [""];
 
   const handleGuestPetNameChange = (index: number, value: string) => {
     setGuestPetNames((prev) => {
-      const names = prev.length > 0 ? [...prev] : [""];
+      const names = [...prev];
       names[index] = value;
       return names;
     });
   };
 
   const addGuestPetField = () => {
-    setGuestPetNames((prev) => [...(prev.length > 0 ? prev : [""]), ""]);
+    setGuestPetNames((prev) => [...prev, ""]);
   };
 
   const removeGuestPetField = (index: number) => {
     setGuestPetNames((prev) => {
-      const names = prev.length > 0 ? [...prev] : [""];
-      if (names.length <= 1) return names;
-      const next = names.filter((_, i) => i !== index);
-      return next.length > 0 ? next : [""];
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, i) => i !== index);
     });
   };
 
@@ -194,24 +179,24 @@ export function EstimateWizard({
   const taxAmount = (subtotal - discount) * taxRate;
   const total = subtotal - discount + taxAmount;
 
-  const canProceed = () => {
-    switch (step) {
-      case 0:
-        if (isGuest) return !!guestName.trim() && !!guestEmail.trim();
-        return !!selectedClientId;
-      case 1:
-        return !!selectedService;
-      case 2:
-        if (selectedService === "boarding")
-          return !!startDate && !!endDate && !!roomType;
-        return !!startDate;
-      case 3:
-        if (isGuest) return !!guestName.trim() && !!guestEmail.trim();
-        return true;
-      default:
-        return false;
-    }
-  };
+  const canProceed =
+    step === 0
+      ? isGuest
+        ? !!guestName.trim() &&
+          !!guestEmail.trim() &&
+          guestPetSummary.length > 0
+        : !!selectedClientId
+      : step === 1
+        ? !!selectedService
+        : step === 2
+          ? selectedService === "boarding"
+            ? !!startDate && !!endDate && !!roomType
+            : !!startDate
+          : step === 3
+            ? isGuest
+              ? !!guestName.trim() && !!guestEmail.trim()
+              : true
+            : false;
 
   const handleNext = () => {
     if (step === 2 && lineItems.length === 0) {
@@ -527,22 +512,34 @@ export function EstimateWizard({
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="flex items-center gap-1.5 text-base font-semibold">
-                            <PawPrint className="size-4" /> Pet Information
+                            <PawPrint className="size-4" /> Pet Information{" "}
+                            <span className="text-destructive text-sm">*</span>
                           </h4>
                           <p className="text-muted-foreground mt-0.5 text-xs">
-                            Add one or more pets to include in this estimate.
+                            Add at least one pet — required for room selection
+                            and pricing.
                           </p>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-1.5 px-2 text-xs"
-                          onClick={addGuestPetField}
-                        >
-                          <Plus className="size-3" />
-                          Add pet
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {guestPetSummary.length > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="border-violet-200 bg-white text-[11px] text-violet-700"
+                            >
+                              {guestPetSummary.length} added
+                            </Badge>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 px-2 text-xs"
+                            onClick={addGuestPetField}
+                          >
+                            <Plus className="size-3" />
+                            Add pet
+                          </Button>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -556,7 +553,11 @@ export function EstimateWizard({
                               onChange={(e) =>
                                 handleGuestPetNameChange(index, e.target.value)
                               }
-                              placeholder={`Pet ${index + 1} name (optional)`}
+                              placeholder={
+                                index === 0
+                                  ? "Pet name (e.g. Buddy)"
+                                  : `Pet ${index + 1} name (optional)`
+                              }
                               className="bg-white"
                             />
                             <Button
@@ -632,6 +633,45 @@ export function EstimateWizard({
               <div className="space-y-5">
                 <h3 className="font-semibold">Service Details</h3>
 
+                {/* Pet context */}
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-violet-50/40 px-3 py-2.5">
+                  <PawPrint className="size-3.5 shrink-0 text-violet-600" />
+                  <span className="text-xs font-semibold text-violet-700">
+                    Pets:
+                  </span>
+                  {isGuest ? (
+                    guestPetSummary.length > 0 ? (
+                      guestPetSummary.map((name) => (
+                        <Badge
+                          key={name}
+                          variant="outline"
+                          className="bg-white text-xs"
+                        >
+                          {name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-xs italic">
+                        No pet added — go back to add one
+                      </span>
+                    )
+                  ) : (selectedClient?.pets?.length ?? 0) > 0 ? (
+                    selectedClient?.pets?.map((pet) => (
+                      <Badge
+                        key={pet.name}
+                        variant="outline"
+                        className="bg-white text-xs"
+                      >
+                        {pet.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-xs italic">
+                      No pets on file
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5">
@@ -688,23 +728,59 @@ export function EstimateWizard({
 
                 {selectedService === "boarding" && (
                   <div className="space-y-2">
-                    <Label>Room Type</Label>
-                    <Select value={roomType} onValueChange={setRoomType}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a room type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Standard">
-                          Standard Room — $35/night
-                        </SelectItem>
-                        <SelectItem value="Deluxe">
-                          Deluxe Room — $50/night
-                        </SelectItem>
-                        <SelectItem value="Luxury Suite">
-                          Luxury Suite — $65/night
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>
+                      Room Type{" "}
+                      <span className="text-destructive text-xs">*</span>
+                    </Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(
+                        [
+                          {
+                            value: "Standard",
+                            label: "Standard",
+                            price: 35,
+                            desc: "Cozy & comfortable",
+                          },
+                          {
+                            value: "Deluxe",
+                            label: "Deluxe",
+                            price: 50,
+                            desc: "Extra space & views",
+                          },
+                          {
+                            value: "Luxury Suite",
+                            label: "Luxury Suite",
+                            price: 65,
+                            desc: "Premium experience",
+                          },
+                        ] as const
+                      ).map((room) => (
+                        <button
+                          key={room.value}
+                          type="button"
+                          onClick={() => setRoomType(room.value)}
+                          className={cn(
+                            "flex flex-col items-start gap-0.5 rounded-xl border-2 p-3 text-left transition-all",
+                            roomType === room.value
+                              ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                              : "border-slate-200 hover:border-blue-200",
+                          )}
+                        >
+                          <span className="text-sm font-semibold">
+                            {room.label}
+                          </span>
+                          <span className="text-base font-bold text-blue-600">
+                            ${room.price}
+                            <span className="text-muted-foreground text-xs font-normal">
+                              /night
+                            </span>
+                          </span>
+                          <span className="text-muted-foreground text-[11px]">
+                            {room.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -891,7 +967,7 @@ export function EstimateWizard({
               {step === STEPS.length - 1 ? (
                 <Button
                   onClick={handleCreate}
-                  disabled={!canProceed()}
+                  disabled={!canProceed}
                   className="gap-1.5 bg-blue-500 hover:bg-blue-600"
                 >
                   <FileText className="size-4" />
@@ -902,7 +978,7 @@ export function EstimateWizard({
               ) : (
                 <Button
                   onClick={handleNext}
-                  disabled={!canProceed()}
+                  disabled={!canProceed}
                   className="gap-1.5"
                 >
                   Next

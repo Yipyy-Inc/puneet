@@ -49,6 +49,7 @@ interface DaycareDetailsProps {
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
+  skipEligibility?: boolean;
 }
 
 function getAddonPriceLabel(addon: ServiceAddOn): string {
@@ -94,6 +95,7 @@ export function DaycareDetails({
   extraServices,
   setExtraServices,
   selectedPets,
+  skipEligibility,
 }: DaycareDetailsProps) {
   const {
     hours,
@@ -232,6 +234,7 @@ export function DaycareDetails({
             roomAssignments={roomAssignments}
             setRoomAssignments={setRoomAssignments}
             daycareSelectedDates={daycareSelectedDates}
+            skipEligibility={skipEligibility}
           />
         )}
 
@@ -343,12 +346,14 @@ function DaycareSectionAssignmentStep({
   roomAssignments,
   setRoomAssignments,
   daycareSelectedDates,
+  skipEligibility,
 }: {
   isStepAccessible: (step: number) => boolean;
   selectedPets: Pet[];
   roomAssignments: Array<{ petId: number; roomId: string }>;
   setRoomAssignments: (a: Array<{ petId: number; roomId: string }>) => void;
   daycareSelectedDates: Date[];
+  skipEligibility?: boolean;
 }) {
   const [draggedPet, setDraggedPet] = React.useState<Pet | null>(null);
   const [selectedPet, setSelectedPet] = React.useState<Pet | null>(null);
@@ -363,23 +368,29 @@ function DaycareSectionAssignmentStep({
   const focusPet = selectedPet ?? draggedPet ?? selectedPets[0] ?? null;
   const dates = daycareSelectedDates.map((d) => d.toISOString().split("T")[0]);
 
-  const availabilitySummary = React.useMemo(
-    () =>
-      focusPet
-        ? getDaycareAvailabilitySummary(
-            focusPet,
-            dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
-            daycareSections,
-            allBookings,
-          )
-        : getDaycareAvailabilitySummary(
-            { weight: 0, type: "Dog" } as Pet,
-            dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
-            daycareSections,
-            allBookings,
-          ),
-    [focusPet, dates, daycareSections],
-  );
+  const availabilitySummary = React.useMemo(() => {
+    const base = focusPet
+      ? getDaycareAvailabilitySummary(
+          focusPet,
+          dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
+          daycareSections,
+          allBookings,
+        )
+      : getDaycareAvailabilitySummary(
+          { weight: 0, type: "Dog" } as Pet,
+          dates.length > 0 ? dates : [new Date().toISOString().split("T")[0]],
+          daycareSections,
+          allBookings,
+        );
+    if (skipEligibility) {
+      return base.map((item) => ({
+        ...item,
+        eligible: true,
+        eligibilityMessage: null,
+      }));
+    }
+    return base;
+  }, [focusPet, dates, daycareSections, skipEligibility]);
 
   const availabilityBySectionId = React.useMemo(() => {
     const map: Record<string, (typeof availabilitySummary)[number]> = {};

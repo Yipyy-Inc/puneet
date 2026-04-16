@@ -59,6 +59,9 @@ interface DetailsStepProps {
     services: Array<{ serviceId: string; quantity: number; petId: number }>,
   ) => void;
   selectedPets: Pet[];
+  /** When true, room/section eligibility rules are bypassed (used for guest estimates
+   *  where pet weight/type are unknown). */
+  skipEligibility?: boolean;
 }
 
 export function DetailsStep({
@@ -94,6 +97,7 @@ export function DetailsStep({
   extraServices,
   setExtraServices,
   selectedPets,
+  skipEligibility,
 }: DetailsStepProps) {
   return (
     <div className="space-y-4">
@@ -116,6 +120,7 @@ export function DetailsStep({
           extraServices={extraServices}
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}
+          skipEligibility={skipEligibility}
         />
       )}
 
@@ -144,6 +149,7 @@ export function DetailsStep({
           extraServices={extraServices}
           setExtraServices={setExtraServices}
           selectedPets={selectedPets}
+          skipEligibility={skipEligibility}
         />
       )}
 
