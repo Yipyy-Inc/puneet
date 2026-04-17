@@ -1,30 +1,32 @@
 "use client";
 
 import { useMemo } from "react";
-import { CalendarClock, Home, PawPrint, Search } from "lucide-react";
+import { PawPrint, Search } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
-import {
-  useDashboardFilters,
-  type BoardTab,
-} from "@/components/facility/dashboard/dashboard-filters-context";
+import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
 import { BookingCard } from "@/components/facility/dashboard/booking-card";
-import { CheckedOutSheet } from "@/components/facility/dashboard/checked-out-sheet";
 
 export function BookingsBoard() {
-  const { bookings, counts } = useUnifiedBookings();
-  const { tab, setTab, serviceFilter, query, setQuery } = useDashboardFilters();
+  const { bookings } = useUnifiedBookings();
+  const { tab, serviceFilter, query, setQuery } = useDashboardFilters();
 
-  const filtered = useMemo(() => {
-    return bookings.filter((b) => {
-      if (serviceFilter !== "all" && b.serviceKey !== serviceFilter)
-        return false;
-      if (!query.trim()) return true;
-      const v = query.toLowerCase();
+  const serviceScoped = useMemo(() => {
+    return serviceFilter === "all"
+      ? bookings
+      : bookings.filter((b) => b.serviceKey === serviceFilter);
+  }, [bookings, serviceFilter]);
+
+  const queryScoped = useMemo(() => {
+    if (!query.trim()) return serviceScoped;
+    const v = query.toLowerCase();
+    return serviceScoped.filter((b) => {
       return (
+        b.rawId.toLowerCase().includes(v) ||
+        b.id.toLowerCase().includes(v) ||
+        String(b.petId).includes(v) ||
+        (b.ownerId != null && String(b.ownerId).includes(v)) ||
         b.petName.toLowerCase().includes(v) ||
         b.ownerName.toLowerCase().includes(v) ||
         b.petBreed.toLowerCase().includes(v) ||
@@ -32,14 +34,44 @@ export function BookingsBoard() {
         b.ownerPhone.includes(v)
       );
     });
-  }, [bookings, query, serviceFilter]);
+  }, [query, serviceScoped]);
 
-  const scheduled = filtered.filter((b) => b.status === "scheduled");
-  const checkedIn = filtered.filter((b) => b.status === "checked-in");
-  const goingHome = filtered.filter(
-    (b) => b.isGoingHomeToday && b.status === "checked-in",
-  );
-  const checkedOut = filtered.filter((b) => b.status === "checked-out");
+  const visible = useMemo(() => {
+    switch (tab) {
+      case "scheduled":
+        return queryScoped.filter((b) => b.status === "scheduled");
+      case "checked-in":
+        return queryScoped.filter((b) => b.status === "checked-in");
+      case "going-home":
+        return queryScoped.filter((b) => b.isGoingHomeToday && b.status === "checked-in");
+      case "checked-out":
+        return queryScoped.filter((b) => b.status === "checked-out");
+    }
+  }, [queryScoped, tab]);
+
+  const emptyText = useMemo(() => {
+    switch (tab) {
+      case "scheduled":
+        return "No scheduled arrivals match your filters";
+      case "checked-in":
+        return "No pets currently checked in";
+      case "going-home":
+        return "No departures expected today";
+      case "checked-out":
+        return "No checked-out reservations today";
+    }
+  }, [tab]);
+
+  const primaryAction = useMemo(() => {
+    switch (tab) {
+      case "scheduled":
+        return "check-in" as const;
+      case "going-home":
+        return "check-out" as const;
+      default:
+        return "none" as const;
+    }
+  }, [tab]);
 
   return (
     <Card
@@ -62,100 +94,28 @@ export function BookingsBoard() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex items-center gap-2 md:flex-1 md:justify-end">
+            <div className="relative w-full md:max-w-xl">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search pet, owner, or breed…"
-                className="h-9 w-[280px] pl-9 text-sm"
+                placeholder="Search reservation ID, pet, owner, or phone…"
+                className="h-9 w-full pl-9 text-sm"
               />
             </div>
-            <CheckedOutSheet
-              bookings={checkedOut}
-              count={counts.checkedOutToday}
-            />
           </div>
         </div>
       </CardHeader>
 
-      <Tabs
-        value={tab}
-        onValueChange={(v) => setTab(v as BoardTab)}
-        className="gap-0"
-      >
-        <TabsList className="w-full justify-start gap-0 border-b bg-transparent px-4 pt-2">
-          <BoardTabTrigger
-            value="scheduled"
-            label="Scheduled Arrivals"
-            count={scheduled.length}
-            icon={<CalendarClock className="size-4" />}
-          />
-          <BoardTabTrigger
-            value="checked-in"
-            label="Currently Checked In"
-            count={checkedIn.length}
-            icon={<PawPrint className="size-4" />}
-          />
-          <BoardTabTrigger
-            value="going-home"
-            label="Going Home Today"
-            count={goingHome.length}
-            icon={<Home className="size-4" />}
-          />
-        </TabsList>
-
-        <CardContent className="p-4 sm:p-5">
-          <TabsContent value="scheduled" className="m-0">
-            <BookingList
-              items={scheduled}
-              empty="No scheduled arrivals match your filters"
-              primaryAction="check-in"
-            />
-          </TabsContent>
-          <TabsContent value="checked-in" className="m-0">
-            <BookingList
-              items={checkedIn}
-              empty="No pets currently checked in"
-              primaryAction="none"
-            />
-          </TabsContent>
-          <TabsContent value="going-home" className="m-0">
-            <BookingList
-              items={goingHome}
-              empty="No departures expected today"
-              primaryAction="check-out"
-            />
-          </TabsContent>
-        </CardContent>
-      </Tabs>
+      <CardContent className="p-4 sm:p-5">
+        <BookingList
+          items={visible}
+          empty={emptyText}
+          primaryAction={primaryAction}
+        />
+      </CardContent>
     </Card>
-  );
-}
-
-interface BoardTabTriggerProps {
-  value: BoardTab;
-  label: string;
-  count: number;
-  icon: React.ReactNode;
-}
-
-function BoardTabTrigger({ value, label, count, icon }: BoardTabTriggerProps) {
-  return (
-    <TabsTrigger
-      value={value}
-      className="data-[state=active]:bg-card data-[state=active]:border-b-primary"
-    >
-      {icon}
-      <span>{label}</span>
-      <Badge
-        variant="secondary"
-        className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-[11px] tabular-nums"
-      >
-        {count}
-      </Badge>
-    </TabsTrigger>
   );
 }
 

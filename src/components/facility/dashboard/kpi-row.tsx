@@ -1,13 +1,35 @@
 "use client";
 
+import { useMemo } from "react";
 import { LogIn, LogOut, PawPrint, Home } from "lucide-react";
 import { KpiTile } from "@/components/facility/dashboard/kpi-tile";
 import { useUnifiedBookings } from "@/hooks/use-unified-bookings";
 import { useDashboardFilters } from "@/components/facility/dashboard/dashboard-filters-context";
 
 export function KpiRow() {
-  const { counts } = useUnifiedBookings();
-  const { tab, setTab } = useDashboardFilters();
+  const { bookings } = useUnifiedBookings();
+  const { tab, setTab, serviceFilter } = useDashboardFilters();
+
+  const counts = useMemo(() => {
+    const scoped =
+      serviceFilter === "all"
+        ? bookings
+        : bookings.filter((b) => b.serviceKey === serviceFilter);
+
+    let currentGuests = 0;
+    let todaysArrivals = 0;
+    let goingHomeToday = 0;
+    let checkedOutToday = 0;
+
+    for (const b of scoped) {
+      if (b.status === "checked-in") currentGuests++;
+      if (b.status === "scheduled") todaysArrivals++;
+      if (b.isGoingHomeToday) goingHomeToday++;
+      if (b.status === "checked-out") checkedOutToday++;
+    }
+
+    return { currentGuests, todaysArrivals, goingHomeToday, checkedOutToday };
+  }, [bookings, serviceFilter]);
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
