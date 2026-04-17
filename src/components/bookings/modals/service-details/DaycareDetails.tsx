@@ -480,7 +480,7 @@ function DaycareSectionAssignmentStep({
                 className={cn(
                   "bg-background flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all select-none",
                   selectedPet?.id === pet.id
-                    ? "border-primary bg-primary/5 shadow-sm"
+                    ? "border-transparent bg-primary/5 shadow-sm"
                     : "border-border hover:border-primary/50",
                 )}
               >
@@ -603,8 +603,8 @@ function DaycareSectionAssignmentStep({
                             isDisabled
                               ? "cursor-not-allowed opacity-60"
                               : "cursor-pointer hover:-translate-y-0.5 hover:shadow-md",
-                            isDragOver && "ring-primary ring-2 ring-offset-1",
-                            hasAssigned && "ring-primary/30 shadow-md ring-2",
+                            isDragOver && "border-primary shadow-md",
+                            hasAssigned && "border-primary/50 shadow-md",
                             showInvite && "border-primary/40 border-dashed",
                           )}
                         >
@@ -817,7 +817,7 @@ function DaycareAddOnsSubStep({
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
                   isAdded
-                    ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
+                    ? "border-transparent bg-primary/5 shadow-md"
                     : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >

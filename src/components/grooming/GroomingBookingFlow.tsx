@@ -2445,7 +2445,7 @@ export function GroomingBookingFlow({
                         key={pet.id}
                         className={`cursor-pointer transition-all ${
                           isSelected
-                            ? "border-primary ring-primary ring-2"
+                            ? "border-transparent bg-primary/5"
                             : "hover:border-primary/50"
                         } ${hasVaccinationIssues ? "border-destructive/50" : ""} `}
                         onClick={() => handlePetSelect(pet.id)}
@@ -2719,7 +2719,7 @@ export function GroomingBookingFlow({
                 return (
                   <Card
                     key={category.id}
-                    className={`hover:border-primary/50 cursor-pointer transition-all ${isSelected ? "border-primary ring-primary ring-2" : ""} `}
+                    className={`hover:border-primary/50 cursor-pointer transition-all ${isSelected ? "border-transparent bg-primary/5" : ""} `}
                     onClick={() => handleServiceSelect(category.id)}
                   >
                     <CardContent className="p-6">
@@ -2824,7 +2824,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={variant.id}
                         className={`hover:border-primary/50 cursor-pointer transition-all ${
-                          isSelected ? "border-primary ring-primary ring-2" : ""
+                          isSelected ? "border-transparent bg-primary/5" : ""
                         } `}
                         onClick={() => handleVariantSelect(variant.id)}
                       >
@@ -3107,7 +3107,7 @@ export function GroomingBookingFlow({
                     <Card
                       key={addon.id}
                       className={`hover:border-primary/50 cursor-pointer transition-all ${
-                        isSelected ? "border-primary ring-primary ring-2" : ""
+                        isSelected ? "border-transparent bg-primary/5" : ""
                       } ${isSuggested ? "border-primary/20 bg-primary/5" : ""} `}
                       onClick={() => handleAddOnToggle(addon.id)}
                     >
@@ -3199,7 +3199,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={tier.id}
                         className={`hover:border-primary/50 cursor-pointer transition-all ${
-                          isSelected ? "border-primary ring-primary ring-2" : ""
+                          isSelected ? "border-transparent bg-primary/5" : ""
                         } `}
                         onClick={() => handleTierSelect(tier.id)}
                       >
@@ -3239,7 +3239,7 @@ export function GroomingBookingFlow({
                   <Card
                     className={`hover:border-primary/50 cursor-pointer transition-all ${
                       !selectedGroomerTier
-                        ? "border-primary ring-primary ring-2"
+                        ? "border-transparent bg-primary/5"
                         : ""
                     } `}
                     onClick={() => handleTierSelect("no-preference")}
@@ -3298,7 +3298,7 @@ export function GroomingBookingFlow({
                       <Card
                         key={groomer.id}
                         className={`cursor-pointer transition-all ${
-                          isSelected ? "border-primary ring-primary ring-2" : ""
+                          isSelected ? "border-transparent bg-primary/5" : ""
                         } ${
                           !isQualified
                             ? "cursor-not-allowed opacity-50"
@@ -3405,7 +3405,7 @@ export function GroomingBookingFlow({
                   <Card
                     className={`hover:border-primary/50 cursor-pointer transition-all ${
                       !selectedGroomerId && !selectedGroomerTier
-                        ? "border-primary ring-primary ring-2"
+                        ? "border-transparent bg-primary/5"
                         : ""
                     } `}
                     onClick={() => {
@@ -3492,7 +3492,7 @@ export function GroomingBookingFlow({
                     <Card
                       className={`cursor-pointer transition-all ${
                         serviceLocation === "salon"
-                          ? "border-primary ring-primary ring-2"
+                          ? "border-transparent bg-primary/5"
                           : "hover:border-primary/50"
                       } `}
                       onClick={() => setServiceLocation("salon")}
@@ -3524,7 +3524,7 @@ export function GroomingBookingFlow({
                     <Card
                       className={`cursor-pointer transition-all ${
                         serviceLocation === "mobile"
-                          ? "border-primary ring-primary ring-2"
+                          ? "border-transparent bg-primary/5"
                           : "hover:border-primary/50"
                       } `}
                       onClick={() => setServiceLocation("mobile")}
@@ -3756,7 +3756,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "wait"
-                            ? "border-primary ring-primary ring-2"
+                            ? "border-transparent bg-primary/5"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("wait")}
@@ -3785,7 +3785,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "drop-off"
-                            ? "border-primary ring-primary ring-2"
+                            ? "border-transparent bg-primary/5"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("drop-off")}
@@ -3813,7 +3813,7 @@ export function GroomingBookingFlow({
                       <Card
                         className={`cursor-pointer transition-all ${
                           dropOffPreference === "curbside"
-                            ? "border-primary ring-primary ring-2"
+                            ? "border-transparent bg-primary/5"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDropOffPreference("curbside")}
@@ -4116,7 +4116,7 @@ export function GroomingBookingFlow({
                             className={cn(
                               "cursor-pointer transition-all",
                               selectedTimeSlot === slot.time
-                                ? "border-primary ring-primary ring-2"
+                                ? "border-transparent bg-primary/5"
                                 : "hover:border-primary/50",
                             )}
                             onClick={() =>
@@ -5174,7 +5174,7 @@ export function GroomingBookingFlow({
                         key={method.id}
                         className={`cursor-pointer transition-all ${
                           depositPaymentMethod === method.id
-                            ? "border-primary ring-primary ring-2"
+                            ? "border-transparent bg-primary/5"
                             : "hover:border-primary/50"
                         } `}
                         onClick={() => setDepositPaymentMethod(method.id)}

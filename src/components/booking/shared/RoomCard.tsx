@@ -151,7 +151,7 @@ export function RoomCard({
     compact ? "min-h-[300px]" : "min-h-[360px]",
     disabled && "cursor-not-allowed opacity-60",
     !disabled && "cursor-pointer",
-    selected && !disabled && "border-primary bg-primary/5 ring-2 ring-primary",
+    selected && !disabled && "border-transparent bg-primary/5 shadow-sm",
     !selected &&
       !disabled &&
       `
