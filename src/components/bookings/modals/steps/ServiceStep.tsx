@@ -238,7 +238,6 @@ export function ServiceStep({
                 // #1 — span full row when last in odd-count grid
                 isLastOdd && "col-span-2",
                 "group relative overflow-hidden rounded-2xl border transition-all duration-200 outline-none select-none",
-                "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2",
                 isDisabled
                   ? "cursor-not-allowed opacity-60"
                   : "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg",
