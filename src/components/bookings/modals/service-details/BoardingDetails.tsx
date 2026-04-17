@@ -657,7 +657,7 @@ function BoardingRoomSelectionStep({
                         ? "cursor-not-allowed"
                         : "",
                     isDragOver && canDrop
-                      ? "border-primary ring-primary/20 scale-[1.02] ring-2 ring-offset-2"
+                      ? "border-primary/70 shadow-lg scale-[1.02]"
                       : petsHere.length > 0
                         ? "border-primary/70 shadow-md"
                         : "border-border hover:border-primary/30 hover:shadow-sm",
@@ -854,7 +854,7 @@ function BoardingAddOnsSubStep({
                 className={cn(
                   "group flex flex-col overflow-hidden rounded-2xl border-2 transition-all duration-200 select-none",
                   isAdded
-                    ? "border-primary ring-primary/20 shadow-md ring-2 ring-offset-2"
+                    ? "border-transparent bg-primary/5 shadow-md"
                     : "border-border hover:border-primary/40 hover:-translate-y-0.5 hover:shadow-lg",
                 )}
               >

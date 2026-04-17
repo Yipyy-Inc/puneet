@@ -383,7 +383,7 @@ export function EstimateWizard({
                     className={cn(
                       "flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all",
                       !isGuest
-                        ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                        ? "border-transparent bg-blue-50/50 shadow-sm"
                         : "border-slate-200 hover:border-blue-200",
                     )}
                   >
@@ -404,7 +404,7 @@ export function EstimateWizard({
                     className={cn(
                       "flex flex-col items-center gap-2 rounded-xl border-2 p-5 transition-all",
                       isGuest
-                        ? "border-violet-400 bg-violet-50/50 shadow-sm"
+                        ? "border-transparent bg-violet-50/50 shadow-sm"
                         : "border-slate-200 hover:border-violet-200",
                     )}
                   >
@@ -598,7 +598,7 @@ export function EstimateWizard({
                         className={cn(
                           "flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-all",
                           selected
-                            ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                            ? "border-transparent bg-blue-50/50 shadow-sm"
                             : "border-slate-200 hover:border-blue-200 hover:shadow-sm",
                         )}
                       >
@@ -762,7 +762,7 @@ export function EstimateWizard({
                           className={cn(
                             "flex flex-col items-start gap-0.5 rounded-xl border-2 p-3 text-left transition-all",
                             roomType === room.value
-                              ? "border-blue-400 bg-blue-50/50 shadow-sm"
+                              ? "border-transparent bg-blue-50/50 shadow-sm"
                               : "border-slate-200 hover:border-blue-200",
                           )}
                         >

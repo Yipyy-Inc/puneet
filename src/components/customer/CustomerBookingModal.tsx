@@ -56,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stepper } from "@/components/ui/stepper";
 import {
   AlertCircle,
+  Check,
   CheckCircle,
   Loader2,
   Dog,
@@ -1423,7 +1424,7 @@ export function CustomerBookingModal({
                           key={pet.id}
                           className={`cursor-pointer transition-all ${
                             selectedPetIds.includes(pet.id)
-                              ? "ring-primary ring-2"
+                              ? "border-transparent bg-primary/5"
                               : "hover:border-primary/50"
                           } ${
                             isBlocked
@@ -1637,7 +1638,7 @@ export function CustomerBookingModal({
                               : "cursor-pointer"
                           } ${
                             selectedService === service.id && !isDisabled
-                              ? `border-primary bg-primary/5 ring-primary shadow-sm ring-2`
+                              ? `border-transparent bg-primary/5 shadow-sm`
                               : !isDisabled
                                 ? "hover:border-primary/50 hover:shadow-sm"
                                 : ""
@@ -1654,6 +1655,11 @@ export function CustomerBookingModal({
                             </div>
                           )}
                           <div className="bg-muted relative h-28 w-full shrink-0">
+                            {selectedService === service.id && !isDisabled && (
+                              <div className="absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                                <Check className="size-4" strokeWidth={3} />
+                              </div>
+                            )}
                             {config?.bannerImage ? (
                               <Image
                                 src={config.bannerImage}
@@ -1683,15 +1689,9 @@ export function CustomerBookingModal({
                             )}
                           </div>
                           <div className="flex flex-1 flex-col space-y-1.5 p-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <h3 className="text-base/tight font-semibold">
-                                {displayName}
-                              </h3>
-                              {selectedService === service.id &&
-                                !isDisabled && (
-                                  <CheckCircle className="text-primary mt-0.5 size-4 shrink-0" />
-                                )}
-                            </div>
+                            <h3 className="text-base/tight font-semibold">
+                              {displayName}
+                            </h3>
                             <p className="text-muted-foreground line-clamp-2 text-xs">
                               {displayDesc}
                             </p>
@@ -2093,7 +2093,7 @@ export function CustomerBookingModal({
                                         }
                                         className={`rounded-xl border-2 p-3 text-center transition-all ${
                                           customDurationMinutes === opt.minutes
-                                            ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                                            ? "border-transparent bg-primary/5 shadow-sm"
                                             : "border-border hover:border-border/80 hover:bg-accent/30"
                                         }`}
                                       >
@@ -2150,7 +2150,7 @@ export function CustomerBookingModal({
                                       }
                                       className={`flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all ${
                                         customSelectedResourceId === res.id
-                                          ? "border-primary bg-primary/5 ring-primary/20 ring-1"
+                                          ? "border-transparent bg-primary/5 shadow-sm"
                                           : "border-border hover:border-border/80 hover:bg-accent/30"
                                       }`}
                                     >
@@ -2305,7 +2305,7 @@ export function CustomerBookingModal({
                             return (
                               <Card
                                 key={addon.id}
-                                className={`flex min-h-[240px] flex-col overflow-hidden ${totalQty > 0 ? `ring-primary ring-2` : ""} `}
+                                className={`flex min-h-[240px] flex-col overflow-hidden ${totalQty > 0 ? `border-primary` : ""} `}
                               >
                                 <div className="bg-muted relative h-28 w-full shrink-0">
                                   <Image
@@ -2584,7 +2584,7 @@ export function CustomerBookingModal({
                                             }}
                                             className={`flex min-h-[220px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                               isSelected
-                                                ? "border-primary bg-primary/5"
+                                                ? "border-transparent bg-primary/5"
                                                 : `border-border hover:border-primary/50`
                                             } ${
                                               available === 0
@@ -2707,7 +2707,7 @@ export function CustomerBookingModal({
                                   key={room.id}
                                   className={`flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                     isSelected
-                                      ? `border-primary bg-primary/5 ring-primary ring-2`
+                                      ? `border-transparent bg-primary/5`
                                       : `border-border hover:border-primary/50`
                                   } ${
                                     available === 0
@@ -2849,7 +2849,7 @@ export function CustomerBookingModal({
                             return (
                               <Card
                                 key={addon.id}
-                                className={`flex min-h-[240px] flex-col overflow-hidden ${totalQty > 0 ? `ring-primary ring-2` : ""} `}
+                                className={`flex min-h-[240px] flex-col overflow-hidden ${totalQty > 0 ? `border-primary` : ""} `}
                               >
                                 <div className="bg-muted relative h-28 w-full shrink-0">
                                   <Image
@@ -3123,7 +3123,7 @@ export function CustomerBookingModal({
                                 key={pkg.id}
                                 className={`flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                   isSelected
-                                    ? `border-primary bg-primary/5 ring-primary ring-2`
+                                    ? `border-transparent bg-primary/5`
                                     : `border-border hover:border-primary/50`
                                 } `}
                                 onClick={() =>
@@ -3225,7 +3225,7 @@ export function CustomerBookingModal({
                                 key={addon.id}
                                 className={`flex min-h-[200px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 transition-all ${
                                   isSelected
-                                    ? `border-primary bg-primary/5 ring-primary ring-2`
+                                    ? `border-transparent bg-primary/5`
                                     : `border-border hover:border-primary/50`
                                 } `}
                                 onClick={() => {

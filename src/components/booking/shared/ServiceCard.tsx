@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -66,9 +66,7 @@ export function ServiceCard({
         `relative flex min-h-[340px] flex-col overflow-hidden rounded-xl border-2 text-left transition-all`,
         disabled && "cursor-not-allowed opacity-50",
         !disabled && "cursor-pointer",
-        selected &&
-          !disabled &&
-          "border-primary bg-primary/5 ring-primary shadow-md ring-2",
+        selected && !disabled && "border-transparent bg-primary/5 shadow-md",
         !selected &&
           !disabled &&
           `border-border hover:border-primary/50 hover:shadow-sm`,
@@ -83,6 +81,11 @@ export function ServiceCard({
         </div>
       )}
       <div className="bg-muted relative h-44 w-full shrink-0">
+        {selected && !disabled && (
+          <div className="absolute top-2.5 right-2.5 z-10 flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+            <Check className="size-4" strokeWidth={3} />
+          </div>
+        )}
         {service.image ? (
           <Image
             src={service.image}
@@ -105,12 +108,7 @@ export function ServiceCard({
         ) : null}
       </div>
       <div className="flex flex-1 flex-col space-y-3 p-5">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg/tight font-semibold">{name}</h3>
-          {selected && !disabled && (
-            <CheckCircle className="text-primary mt-0.5 size-5 shrink-0" />
-          )}
-        </div>
+        <h3 className="text-lg/tight font-semibold">{name}</h3>
         {description && (
           <p className="text-muted-foreground line-clamp-2 text-sm">
             {description}

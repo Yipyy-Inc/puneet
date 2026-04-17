@@ -573,7 +573,7 @@ export function ClientPetStep({
                           className={cn(
                             "cursor-pointer rounded-lg p-3 transition-all",
                             isSelected
-                              ? "border-primary bg-primary/10 row-span-2 border-2"
+                              ? "border-transparent bg-primary/10 row-span-2 shadow-sm"
                               : "hover:bg-muted border-2 border-transparent",
                           )}
                           onClick={() => {
@@ -746,7 +746,7 @@ export function ClientPetStep({
                             isDisabled
                               ? "bg-muted cursor-not-allowed opacity-50"
                               : isSelected
-                                ? "border-primary bg-primary/5 ring-primary/20 cursor-pointer ring-2"
+                                ? "border-transparent bg-primary/5 cursor-pointer shadow-sm"
                                 : "hover:border-primary/50 cursor-pointer",
                           )}
                           onClick={() => {
