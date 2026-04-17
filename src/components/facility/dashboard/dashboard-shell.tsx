@@ -11,8 +11,8 @@ export function DashboardShell() {
     <UnifiedBookingsProvider>
       <DashboardFiltersProvider>
         <div className="space-y-5">
-          <KpiRow />
           <ServiceBreakdown />
+          <KpiRow />
           <BookingsBoard />
         </div>
       </DashboardFiltersProvider>
