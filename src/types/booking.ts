@@ -526,6 +526,20 @@ export const bookingRequestSchema = z.object({
   services: z.array(bookingRequestServiceEnum),
   status: bookingRequestStatusEnum,
   notes: z.string().optional(),
+  // What the customer actually entered in their online booking form.
+  // Optional so older/seeded requests without detail still validate.
+  startDate: z.string().optional(), // "YYYY-MM-DD"
+  endDate: z.string().optional(), // "YYYY-MM-DD" — boarding checkout
+  checkInTime: z.string().optional(), // "HH:mm"
+  checkOutTime: z.string().optional(), // "HH:mm"
+  daycareDates: z.array(z.string()).optional(), // multi-date daycare picks
+  roomPreference: z.string().optional(), // boarding room id (e.g. "room-ds-01")
+  daycareSectionId: z.string().optional(), // daycare play-area section (e.g. "sec-indoor-medium")
+  extraServices: z.array(extraServiceSchema).optional(),
+  feedingSchedule: z.array(feedingScheduleItemSchema).optional(),
+  medications: z.array(medicationItemSchema).optional(),
+  notificationEmail: z.boolean().optional(),
+  notificationSMS: z.boolean().optional(),
 });
 
 export type BookingRequest = z.infer<typeof bookingRequestSchema>;

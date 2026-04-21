@@ -1,15 +1,47 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Percent, Star, MessageSquare } from "lucide-react";
+import {
+  DollarSign,
+  Percent,
+  Star,
+  MessageSquare,
+  Bell,
+  FileText,
+  Clock,
+  Mail,
+  Smartphone,
+  Heart,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
 import type { TipConfig, TipOption, TipTierConfig } from "@/types/facility";
+
+// Defaults used when an older tipConfig (without reminder/reportCardPrompt) is loaded.
+const DEFAULT_REMINDER = {
+  enabled: true,
+  delayHours: 3,
+  channels: { email: true, sms: false, push: true },
+  subject: "Thanks for trusting us with {petName} 🐾",
+  messageHeadline: "Your care team would love your thanks",
+  messageBody:
+    "{petName} just went home after a wonderful visit. If the team made {petName}'s day brighter, you can leave them a tip in one tap — 100% goes directly to the staff who looked after {petName}.",
+  includeReportCard: true,
+} as const;
+
+const DEFAULT_REPORT_CARD_PROMPT = {
+  enabled: true,
+  headline: "Loved the care {petName} received?",
+  subcopy:
+    "Tip the team that made today special. Tips are split evenly and go 100% to the staff.",
+  onlyOnPositiveFeedback: false,
+} as const;
 
 // ── Tier editor: 3 options + preferred selector ───────────────────────────────
 
@@ -328,6 +360,281 @@ export function TipSettings() {
                 </div>
               </div>
             )}
+
+            {/* ── Post-stay tip reminder ─────────────────────────────── */}
+            {(() => {
+              const reminder = local.reminder ?? DEFAULT_REMINDER;
+              const updateReminder = (
+                patch: Partial<typeof reminder>,
+              ) =>
+                setLocal({
+                  ...local,
+                  reminder: { ...reminder, ...patch },
+                });
+              const updateChannels = (
+                patch: Partial<typeof reminder.channels>,
+              ) =>
+                setLocal({
+                  ...local,
+                  reminder: {
+                    ...reminder,
+                    channels: { ...reminder.channels, ...patch },
+                  },
+                });
+              return (
+                <div className="space-y-3 rounded-xl border border-dashed p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-2">
+                      <Bell className="text-primary mt-0.5 size-4 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Post check-out tip reminder
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Send a friendly ask after the pet goes home — when
+                          appreciation is highest.
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={reminder.enabled}
+                      disabled={!isEditing}
+                      onCheckedChange={(v) => updateReminder({ enabled: v })}
+                    />
+                  </div>
+
+                  {reminder.enabled && (
+                    <div className="space-y-3 pt-1">
+                      {/* Delay */}
+                      <div className="flex items-center gap-3">
+                        <Clock className="text-muted-foreground size-3.5" />
+                        <Label className="shrink-0 text-xs font-medium">
+                          Send after
+                        </Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={168}
+                          step={1}
+                          value={reminder.delayHours}
+                          disabled={!isEditing}
+                          className="h-8 w-20 text-sm"
+                          onChange={(e) =>
+                            updateReminder({
+                              delayHours: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                        <span className="text-muted-foreground text-xs">
+                          hours after check-out
+                        </span>
+                      </div>
+
+                      {/* Channels */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Channels</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={!isEditing}
+                            onClick={() =>
+                              updateChannels({ email: !reminder.channels.email })
+                            }
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+                              reminder.channels.email
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "text-muted-foreground",
+                              !isEditing && "cursor-default",
+                            )}
+                          >
+                            <Mail className="size-3" /> Email
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!isEditing}
+                            onClick={() =>
+                              updateChannels({ sms: !reminder.channels.sms })
+                            }
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+                              reminder.channels.sms
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "text-muted-foreground",
+                              !isEditing && "cursor-default",
+                            )}
+                          >
+                            <Smartphone className="size-3" /> SMS
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!isEditing}
+                            onClick={() =>
+                              updateChannels({ push: !reminder.channels.push })
+                            }
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+                              reminder.channels.push
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "text-muted-foreground",
+                              !isEditing && "cursor-default",
+                            )}
+                          >
+                            <Bell className="size-3" /> Push
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Subject */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">
+                          Email subject
+                        </Label>
+                        <Input
+                          value={reminder.subject}
+                          disabled={!isEditing}
+                          className="h-8 text-sm"
+                          onChange={(e) =>
+                            updateReminder({ subject: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      {/* Headline */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Headline</Label>
+                        <Input
+                          value={reminder.messageHeadline}
+                          disabled={!isEditing}
+                          className="h-8 text-sm"
+                          onChange={(e) =>
+                            updateReminder({
+                              messageHeadline: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      {/* Body */}
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Message</Label>
+                        <Textarea
+                          rows={3}
+                          value={reminder.messageBody}
+                          disabled={!isEditing}
+                          className="text-sm"
+                          onChange={(e) =>
+                            updateReminder({ messageBody: e.target.value })
+                          }
+                        />
+                        <p className="text-muted-foreground text-[10px]">
+                          Use{" "}
+                          <code className="bg-muted rounded px-1">
+                            {"{petName}"}
+                          </code>{" "}
+                          or{" "}
+                          <code className="bg-muted rounded px-1">
+                            {"{clientName}"}
+                          </code>{" "}
+                          to personalize.
+                        </p>
+                      </div>
+
+                      {/* Attach report card */}
+                      <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <FileText className="text-muted-foreground size-3.5" />
+                          <span className="text-xs font-medium">
+                            Include the pet's report card
+                          </span>
+                        </div>
+                        <Switch
+                          checked={reminder.includeReportCard}
+                          disabled={!isEditing}
+                          onCheckedChange={(v) =>
+                            updateReminder({ includeReportCard: v })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* ── Report card tip prompt ─────────────────────────────── */}
+            {(() => {
+              const prompt =
+                local.reportCardPrompt ?? DEFAULT_REPORT_CARD_PROMPT;
+              const updatePrompt = (patch: Partial<typeof prompt>) =>
+                setLocal({
+                  ...local,
+                  reportCardPrompt: { ...prompt, ...patch },
+                });
+              return (
+                <div className="space-y-3 rounded-xl border border-dashed p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-2">
+                      <Heart className="text-primary mt-0.5 size-4 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Tip ask on report cards
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Add a gentle tip prompt to the daily report card sent
+                          to clients.
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={prompt.enabled}
+                      disabled={!isEditing}
+                      onCheckedChange={(v) => updatePrompt({ enabled: v })}
+                    />
+                  </div>
+
+                  {prompt.enabled && (
+                    <div className="space-y-3 pt-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Headline</Label>
+                        <Input
+                          value={prompt.headline}
+                          disabled={!isEditing}
+                          className="h-8 text-sm"
+                          onChange={(e) =>
+                            updatePrompt({ headline: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-medium">Subcopy</Label>
+                        <Textarea
+                          rows={2}
+                          value={prompt.subcopy}
+                          disabled={!isEditing}
+                          className="text-sm"
+                          onChange={(e) =>
+                            updatePrompt({ subcopy: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+                        <span className="text-xs font-medium">
+                          Only show on 5-star / happy report cards
+                        </span>
+                        <Switch
+                          checked={prompt.onlyOnPositiveFeedback}
+                          disabled={!isEditing}
+                          onCheckedChange={(v) =>
+                            updatePrompt({ onlyOnPositiveFeedback: v })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </>
         )}
       </div>

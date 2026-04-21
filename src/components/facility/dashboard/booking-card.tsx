@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Bed,
@@ -25,9 +26,13 @@ import { getBookingOverviewHref } from "@/lib/booking-overview-route";
 import {
   getPetImage,
   type UnifiedBooking,
-  type UnifiedStatus,
   useUnifiedBookings,
 } from "@/hooks/use-unified-bookings";
+import { CheckInDialog } from "@/components/facility/dashboard/check-in-dialog";
+import {
+  CheckOutDialog,
+  type EarlyCheckoutAdjustment,
+} from "@/components/facility/dashboard/check-out-dialog";
 
 const findClient = (petId: number) =>
   clients.find((c) => c.pets.some((p) => p.id === petId));
@@ -93,6 +98,8 @@ export function BookingCard({
 }: BookingCardProps) {
   const router = useRouter();
   const { updateStatus } = useUnifiedBookings();
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
   const client = findClient(booking.petId);
   const petImage = getPetImage(booking.petId);
   const petHref = client
@@ -119,145 +126,210 @@ export function BookingCard({
     toast.error("No booking overview found for this card");
   };
 
-  const handleAction = (e: React.MouseEvent, next: UnifiedStatus) => {
+  const handleCheckInClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    updateStatus(booking.id, next);
+    setCheckInOpen(true);
+  };
+
+  const handleCheckInConfirm = ({
+    timestamp,
+    noShow,
+  }: {
+    timestamp: string;
+    noShow: boolean;
+  }) => {
+    updateStatus(booking.id, noShow ? "checked-out" : "checked-in", {
+      timestamp,
+      noShow,
+    });
+  };
+
+  const handleCheckOutClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCheckOutOpen(true);
+  };
+
+  const handleCheckOutConfirm = ({
+    timestamp,
+    earlyCheckout,
+  }: {
+    timestamp: string;
+    earlyCheckout?: EarlyCheckoutAdjustment;
+  }) => {
+    updateStatus(booking.id, "checked-out", {
+      timestamp,
+      earlyCheckout,
+    });
   };
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={handleOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") handleOpen();
-      }}
       className={cn(
         "group relative flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
-        "hover:border-border hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
       )}
       data-status={booking.status}
     >
-      <Link
-        href={petHref}
-        onClick={(e) => e.stopPropagation()}
-        className="relative block size-12 shrink-0"
+      {/* Clickable info region — opens the booking overview */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleOpen}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          }
+        }}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {petImage ? (
-          <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
-            <Image
-              src={petImage}
-              alt={booking.petName}
-              width={48}
-              height={48}
-              className="size-full object-cover"
+        <Link
+          href={petHref}
+          onClick={(e) => e.stopPropagation()}
+          className="relative block size-12 shrink-0"
+        >
+          {petImage ? (
+            <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
+              <Image
+                src={petImage}
+                alt={booking.petName}
+                width={48}
+                height={48}
+                className="size-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl ring-2 ring-background">
+              <PawPrint className="size-5" />
+            </div>
+          )}
+        </Link>
+
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Link
+              href={petHref}
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm font-semibold leading-none hover:underline"
+            >
+              {booking.petName}
+            </Link>
+            <ServiceBadge booking={booking} />
+            {booking.isGoingHomeToday && booking.status === "checked-in" && (
+              <Badge className="border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-900/40 dark:bg-violet-900/30 dark:text-violet-300">
+                <Clock className="mr-1 size-3" />
+                Going home today
+              </Badge>
+            )}
+            <TagList
+              entityType="pet"
+              entityId={booking.petId}
+              compact
+              maxVisible={2}
             />
           </div>
-        ) : (
-          <div className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-2xl ring-2 ring-background">
-            <PawPrint className="size-5" />
-          </div>
-        )}
-      </Link>
-
-      <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Link
-            href={petHref}
-            onClick={(e) => e.stopPropagation()}
-            className="text-sm font-semibold leading-none hover:underline"
-          >
-            {booking.petName}
-          </Link>
-          <ServiceBadge booking={booking} />
-          {booking.isGoingHomeToday && booking.status === "checked-in" && (
-            <Badge className="border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-900/40 dark:bg-violet-900/30 dark:text-violet-300">
-              <Clock className="mr-1 size-3" />
-              Going home today
-            </Badge>
-          )}
-          <TagList
-            entityType="pet"
-            entityId={booking.petId}
-            compact
-            maxVisible={2}
-          />
+          <p className="text-muted-foreground line-clamp-1 text-xs">
+            {ownerHref ? (
+              <Link
+                href={ownerHref}
+                onClick={(e) => e.stopPropagation()}
+                className="hover:text-foreground hover:underline"
+              >
+                {booking.ownerName}
+              </Link>
+            ) : (
+              booking.ownerName
+            )}
+            <span className="mx-1.5">·</span>
+            <span className="inline-flex items-center gap-1">
+              <Phone className="size-3" />
+              {booking.ownerPhone}
+            </span>
+          </p>
+          <p className="text-muted-foreground line-clamp-1 text-xs">
+            {booking.resourceLabel && (
+              <>
+                <span className="font-medium text-foreground/80">
+                  {booking.resourceLabel}
+                </span>
+                <span className="mx-1.5">·</span>
+              </>
+            )}
+            {booking.status === "scheduled" ? (
+              <>
+                Arrives {formatTime(booking.scheduledStart)}
+                {booking.source === "boarding" &&
+                  ` · checkout ${formatDate(booking.scheduledEnd)}`}
+              </>
+            ) : booking.status === "checked-in" ? (
+              <>
+                In {formatTime(booking.actualStart ?? booking.scheduledStart)} ·
+                Out{" "}
+                {booking.source === "boarding"
+                  ? formatDate(booking.scheduledEnd)
+                  : formatTime(booking.scheduledEnd)}
+              </>
+            ) : (
+              <>Out {formatTime(booking.actualEnd ?? booking.scheduledEnd)}</>
+            )}
+            {booking.totalNights ? (
+              <>
+                <span className="mx-1.5">·</span>
+                {booking.totalNights} night{booking.totalNights > 1 ? "s" : ""}
+              </>
+            ) : null}
+          </p>
         </div>
-        <p className="text-muted-foreground line-clamp-1 text-xs">
-          {ownerHref ? (
-            <Link
-              href={ownerHref}
-              onClick={(e) => e.stopPropagation()}
-              className="hover:text-foreground hover:underline"
-            >
-              {booking.ownerName}
-            </Link>
-          ) : (
-            booking.ownerName
-          )}
-          <span className="mx-1.5">·</span>
-          <span className="inline-flex items-center gap-1">
-            <Phone className="size-3" />
-            {booking.ownerPhone}
-          </span>
-        </p>
-        <p className="text-muted-foreground line-clamp-1 text-xs">
-          {booking.resourceLabel && (
-            <>
-              <span className="font-medium text-foreground/80">
-                {booking.resourceLabel}
-              </span>
-              <span className="mx-1.5">·</span>
-            </>
-          )}
-          {booking.status === "scheduled" ? (
-            <>
-              Arrives {formatTime(booking.scheduledStart)}
-              {booking.source === "boarding" &&
-                ` · checkout ${formatDate(booking.scheduledEnd)}`}
-            </>
-          ) : booking.status === "checked-in" ? (
-            <>
-              In {formatTime(booking.actualStart ?? booking.scheduledStart)} ·
-              Out{" "}
-              {booking.source === "boarding"
-                ? formatDate(booking.scheduledEnd)
-                : formatTime(booking.scheduledEnd)}
-            </>
-          ) : (
-            <>Out {formatTime(booking.actualEnd ?? booking.scheduledEnd)}</>
-          )}
-          {booking.totalNights ? (
-            <>
-              <span className="mx-1.5">·</span>
-              {booking.totalNights} night{booking.totalNights > 1 ? "s" : ""}
-            </>
-          ) : null}
-        </p>
       </div>
 
+      {/* Action region — sibling to the clickable area, no propagation possible */}
       <div className="flex shrink-0 items-center gap-2">
         {primaryAction === "check-in" && (
-          <Button
-            size="sm"
-            onClick={(e) => handleAction(e, "checked-in")}
-            className="gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
-          >
-            <LogIn className="size-3.5" />
-            Check In
-          </Button>
+          <>
+            <Button
+              size="sm"
+              onClick={handleCheckInClick}
+              className="gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <LogIn className="size-3.5" />
+              Check In
+            </Button>
+            {checkInOpen && (
+              <CheckInDialog
+                booking={booking}
+                open={checkInOpen}
+                onOpenChange={setCheckInOpen}
+                onConfirm={handleCheckInConfirm}
+              />
+            )}
+          </>
         )}
         {primaryAction === "check-out" && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => handleAction(e, "checked-out")}
-            className="gap-1 border-violet-300 text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-950/40"
-          >
-            <LogOut className="size-3.5" />
-            Check Out
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCheckOutClick}
+              className={cn(
+                "gap-1 border-violet-300 bg-background text-violet-700",
+                "hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800",
+                "dark:border-violet-800 dark:text-violet-300",
+                "dark:hover:border-violet-700 dark:hover:bg-violet-950/60 dark:hover:text-violet-200",
+              )}
+            >
+              <LogOut className="size-3.5" />
+              Check Out
+            </Button>
+            {checkOutOpen && (
+              <CheckOutDialog
+                booking={booking}
+                open={checkOutOpen}
+                onOpenChange={setCheckOutOpen}
+                onConfirm={handleCheckOutConfirm}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

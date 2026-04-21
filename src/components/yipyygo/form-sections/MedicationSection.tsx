@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldAlert,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MedicationItem, YipyyGoFormSectionProps } from "@/types/yipyygo";
@@ -219,6 +220,34 @@ export function MedicationSection({
             onCheckedChange={handleNoMedicationsToggle}
           />
         </div>
+
+        {/* ── Facility medication fee ── */}
+        {!formData.noMedications && config?.medicationFee?.enabled && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:bg-amber-950/20">
+            <div className="flex items-start gap-2">
+              <DollarSign className="mt-0.5 size-4 shrink-0 text-amber-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  {config.medicationFee.label ??
+                    "Medication administration fee"}
+                  : ${config.medicationFee.amount.toFixed(2)}{" "}
+                  <span className="font-normal">
+                    {config.medicationFee.billing === "per_dose" &&
+                      "per dose administered"}
+                    {config.medicationFee.billing === "per_day" && "per day"}
+                    {config.medicationFee.billing === "per_stay" &&
+                      "flat for the stay"}
+                  </span>
+                </p>
+                {config.medicationFee.description && (
+                  <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
+                    {config.medicationFee.description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {!formData.noMedications && (
           <>

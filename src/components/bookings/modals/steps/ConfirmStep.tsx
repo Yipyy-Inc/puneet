@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   Info,
   Star,
+  Heart,
   FileSignature,
   Pen,
   CheckCircle,
@@ -62,7 +63,7 @@ function formatAddonUnit(addon: ServiceAddOn): string {
       return `/${addon.unitLabel || "hr"}`;
   }
 }
-import { TipSelector } from "@/components/bookings/TipSelector";
+import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
@@ -244,6 +245,7 @@ export function ConfirmStep({
   const [signedIds, setSignedIds] = useState<Set<string>>(
     () => new Set(waiverSignatures.map((s) => s.waiverId)),
   );
+  const [tipDialogOpen, setTipDialogOpen] = useState(false);
   const pendingWaivers = digitalWaivers.filter(
     (w) =>
       w.isActive &&
@@ -277,7 +279,8 @@ export function ConfirmStep({
         ? `${fmtTime(checkInTime)}${checkOutTime ? ` — ${fmtTime(checkOutTime)}` : ""}`
         : "";
 
-  // Step index helpers for edit jumps (step ids: service=0, client-pet=1, details=2, confirm=3)
+  // Step index helpers for edit jumps (step ids: client-pet=0, service=1, details=2, confirm=3)
+  const clientPetStepIdx = onEditStep ? 0 : -1;
   const detailsStepIdx = onEditStep ? 2 : -1;
 
   return (
@@ -341,7 +344,7 @@ export function ConfirmStep({
           <SectionHeader
             icon={User}
             label="Client"
-            onEdit={onEditStep ? () => onEditStep(1) : undefined}
+            onEdit={onEditStep ? () => onEditStep(clientPetStepIdx) : undefined}
           />
           <p className="text-sm font-semibold">{selectedClient?.name ?? "—"}</p>
           {selectedClient?.email && (
@@ -360,7 +363,7 @@ export function ConfirmStep({
           <SectionHeader
             icon={PawPrint}
             label={`Pet${selectedPets.length > 1 ? "s" : ""}`}
-            onEdit={onEditStep ? () => onEditStep(1) : undefined}
+            onEdit={onEditStep ? () => onEditStep(clientPetStepIdx) : undefined}
           />
           <div className="flex flex-wrap gap-2">
             {selectedPets.map((pet) => (
@@ -797,11 +800,74 @@ export function ConfirmStep({
         </div>
       </div>
 
-      {/* ── Tip selector ─────────────────────────────────────────── */}
+      {/* ── Tip appreciation CTA ─────────────────────────────────── */}
       {tipConfig.enabled && (
-        <div className="rounded-2xl border p-4">
-          <SectionHeader icon={Star} label="Add a Tip" />
-          <TipSelector
+        <>
+          <button
+            type="button"
+            onClick={() => setTipDialogOpen(true)}
+            className={cn(
+              "group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all",
+              tipAmount > 0
+                ? "border-primary/50 bg-primary/5"
+                : "border-primary/20 from-primary/5 via-primary/[0.03] hover:border-primary/40 hover:from-primary/10 bg-gradient-to-br to-transparent",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "flex size-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+                  tipAmount > 0
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/15 text-primary",
+                )}
+              >
+                <Heart
+                  className={cn(
+                    "size-5",
+                    tipAmount > 0 && "fill-current",
+                  )}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                {tipAmount > 0 ? (
+                  <>
+                    <p className="text-sm font-semibold">
+                      Tip added · ${tipAmount.toFixed(2)}
+                    </p>
+                    <p className="text-muted-foreground text-[12px]">
+                      Thank you — 100% goes to the care team. Tap to change.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-semibold">
+                      Show appreciation for the care team
+                    </p>
+                    <p className="text-muted-foreground text-[12px]">
+                      {selectedPets[0]?.name
+                        ? `${selectedPets[0].name} will be in great hands —`
+                        : "Your pet will be in great hands —"}{" "}
+                      leave a tip to thank them. Most customers do.
+                    </p>
+                  </>
+                )}
+              </div>
+              <div
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold",
+                  tipAmount > 0
+                    ? "bg-primary/10 text-primary"
+                    : "bg-primary text-primary-foreground",
+                )}
+              >
+                {tipAmount > 0 ? "Edit" : "Add tip"}
+              </div>
+            </div>
+          </button>
+          <TipPromptDialog
+            open={tipDialogOpen}
+            onOpenChange={setTipDialogOpen}
             tipConfig={tipConfig}
             subtotal={
               calculatePrice.subtotal ??
@@ -809,8 +875,10 @@ export function ConfirmStep({
             }
             tipAmount={tipAmount}
             onTipChange={onTipChange}
+            petName={selectedPets[0]?.name}
+            serviceLabel={serviceInfo?.name}
           />
-        </div>
+        </>
       )}
 
       {/* ── Pending Waivers ───────────────────────────────────── */}

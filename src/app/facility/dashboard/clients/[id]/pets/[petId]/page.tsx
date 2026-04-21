@@ -60,6 +60,8 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { BookingModal } from "@/components/bookings/modals/BookingModal";
+import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
+import { toast } from "sonner";
 import type { Client } from "@/types/client";
 import type { NewBooking as BookingData } from "@/types/booking";
 import type { Evaluation, Pet } from "@/types/pet";
@@ -182,6 +184,7 @@ export default function PetDetailPage({
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [vaccinationModalOpen, setVaccinationModalOpen] = useState(false);
   const { role, userId } = useFacilityRole();
   const canUseEvaluationForm = hasPermission(
     role,
@@ -1082,7 +1085,11 @@ export default function PetDetailPage({
                 <CardTitle className="text-sm font-semibold">
                   Vaccination Records
                 </CardTitle>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVaccinationModalOpen(true)}
+                >
                   <Syringe className="mr-1 size-4" />
                   Add Vaccination
                 </Button>
@@ -1481,6 +1488,24 @@ export default function PetDetailPage({
           onCreateBooking={handleCreateBooking}
           preSelectedClientId={Number(id)}
           preSelectedPetId={parseInt(petId)}
+        />
+
+        <AddVaccinationModal
+          open={vaccinationModalOpen}
+          onOpenChange={setVaccinationModalOpen}
+          petId={pet.id}
+          petName={pet.name}
+          petSpecies={pet.type}
+          initialStatus="approved"
+          submitLabel="Save Records"
+          onSave={async (records) => {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            if (records.length === 0) return;
+            toast.success(
+              `${records.length} vaccination record${records.length === 1 ? "" : "s"} saved`,
+            );
+            router.refresh();
+          }}
         />
       </div>
     </div>

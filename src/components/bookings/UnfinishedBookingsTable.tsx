@@ -40,6 +40,8 @@ import { UnfinishedBookingDetailSheet } from "@/components/bookings/UnfinishedBo
 
 interface Props {
   data: UnfinishedBooking[];
+  /** Optional override — if omitted the table falls back to a generic toast. */
+  onSchedule?: (booking: UnfinishedBooking) => void;
 }
 
 function StepProgressBadge({ step }: { step: AbandonmentStep }) {
@@ -92,7 +94,10 @@ function formatShortDate(iso: string): string {
   ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-export function UnfinishedBookingsTable({ data: initialData }: Props) {
+export function UnfinishedBookingsTable({
+  data: initialData,
+  onSchedule,
+}: Props) {
   const [records, setRecords] = useState<UnfinishedBooking[]>(initialData);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -119,7 +124,10 @@ export function UnfinishedBookingsTable({ data: initialData }: Props) {
   };
 
   const handleSchedule = (record: UnfinishedBooking) => {
-    // Pre-fill booking wizard with known info — for now toast a message
+    if (onSchedule) {
+      onSchedule(record);
+      return;
+    }
     toast.info(
       `Opening booking wizard for ${record.clientName}${record.service ? ` — ${record.service}` : ""}`,
     );

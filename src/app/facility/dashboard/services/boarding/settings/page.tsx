@@ -15,10 +15,34 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
-import type { ModuleConfig } from "@/types/facility";
+import type {
+  EarlyCheckoutPolicy,
+  EarlyCheckoutPolicyConfig,
+  ModuleConfig,
+} from "@/types/facility";
+
+const DEFAULT_EARLY_CHECKOUT: EarlyCheckoutPolicyConfig = {
+  enabled: false,
+  policy: "none",
+};
+
+const POLICY_LABEL: Record<EarlyCheckoutPolicy, string> = {
+  none: "No refund — customer forfeits unused nights",
+  full_refund: "Full refund of unused nights",
+  partial_refund: "Partial refund (percentage of unused)",
+  credit: "Store credit for unused nights",
+  fee: "Charge an early checkout fee (no refund)",
+};
 
 export default function BoardingSettingsPage() {
   const { boarding, updateBoarding } = useSettings();
@@ -27,6 +51,14 @@ export default function BoardingSettingsPage() {
   const [isEditingPricing, setIsEditingPricing] = useState(false);
   const [isEditingMedia, setIsEditingMedia] = useState(false);
   const [isEditingEvaluation, setIsEditingEvaluation] = useState(false);
+  const [isEditingEarlyCheckout, setIsEditingEarlyCheckout] = useState(false);
+
+  const earlyCheckout: EarlyCheckoutPolicyConfig =
+    formData.settings.earlyCheckout ?? DEFAULT_EARLY_CHECKOUT;
+
+  const updateEarlyCheckout = (patch: Partial<EarlyCheckoutPolicyConfig>) => {
+    updateNested("settings", "earlyCheckout", { ...earlyCheckout, ...patch });
+  };
 
   const updateFormData = (updates: Partial<ModuleConfig>) => {
     const newData = { ...formData, ...updates };
@@ -57,6 +89,7 @@ export default function BoardingSettingsPage() {
     if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
+    if (section === "earlyCheckout") setIsEditingEarlyCheckout(false);
   };
 
   const handleSave = (section: string) => {
@@ -65,6 +98,7 @@ export default function BoardingSettingsPage() {
     if (section === "pricing") setIsEditingPricing(false);
     if (section === "media") setIsEditingMedia(false);
     if (section === "evaluation") setIsEditingEvaluation(false);
+    if (section === "earlyCheckout") setIsEditingEarlyCheckout(false);
   };
 
   return (
@@ -374,6 +408,194 @@ export default function BoardingSettingsPage() {
                       Settings → Business → Evaluation Settings
                     </a>
                   </p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Early Checkout Policy */}
+        <Card id="early-checkout" className="md:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Early Checkout Policy</CardTitle>
+                <CardDescription>
+                  How unused nights are handled when a guest checks out before
+                  their scheduled end date.
+                </CardDescription>
+              </div>
+              {isEditingEarlyCheckout ? (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancel("earlyCheckout")}
+                  >
+                    <X className="mr-2 size-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleSave("earlyCheckout")}
+                  >
+                    <Save className="mr-2 size-4" />
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditingEarlyCheckout(true)}
+                >
+                  <Edit className="mr-2 size-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Allow Early Checkout</Label>
+                <p className="text-muted-foreground text-sm">
+                  Let staff check guests out before the scheduled end date.
+                </p>
+              </div>
+              <Switch
+                checked={earlyCheckout.enabled}
+                onCheckedChange={(checked) =>
+                  updateEarlyCheckout({ enabled: checked })
+                }
+                disabled={!isEditingEarlyCheckout}
+              />
+            </div>
+
+            {earlyCheckout.enabled && (
+              <>
+                <Separator />
+                <div className="grid gap-2">
+                  <Label>Refund Policy</Label>
+                  <Select
+                    value={earlyCheckout.policy}
+                    onValueChange={(value) =>
+                      updateEarlyCheckout({
+                        policy: value as EarlyCheckoutPolicy,
+                      })
+                    }
+                    disabled={!isEditingEarlyCheckout}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(
+                        Object.keys(POLICY_LABEL) as EarlyCheckoutPolicy[]
+                      ).map((key) => (
+                        <SelectItem key={key} value={key}>
+                          {POLICY_LABEL[key]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {earlyCheckout.policy === "partial_refund" && (
+                  <div className="grid gap-2">
+                    <Label>Refund Percentage (% of unused nights)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={earlyCheckout.refundPercent ?? 50}
+                      onChange={(e) =>
+                        updateEarlyCheckout({
+                          refundPercent: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-32"
+                      disabled={!isEditingEarlyCheckout}
+                    />
+                  </div>
+                )}
+
+                {earlyCheckout.policy === "credit" && (
+                  <div className="grid gap-2">
+                    <Label>Credit Expiration (days, 0 = never)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={earlyCheckout.creditExpiresDays ?? 0}
+                      onChange={(e) =>
+                        updateEarlyCheckout({
+                          creditExpiresDays: Number(e.target.value) || 0,
+                        })
+                      }
+                      className="w-32"
+                      disabled={!isEditingEarlyCheckout}
+                    />
+                  </div>
+                )}
+
+                {earlyCheckout.policy === "fee" && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Fee Type</Label>
+                      <Select
+                        value={earlyCheckout.feeType ?? "flat"}
+                        onValueChange={(value) =>
+                          updateEarlyCheckout({
+                            feeType: value as "flat" | "percentage",
+                          })
+                        }
+                        disabled={!isEditingEarlyCheckout}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="flat">Flat ($)</SelectItem>
+                          <SelectItem value="percentage">
+                            Percentage of unused (%)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>
+                        Fee Amount{" "}
+                        {earlyCheckout.feeType === "percentage" ? "(%)" : "($)"}
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={earlyCheckout.feeAmount ?? 0}
+                        onChange={(e) =>
+                          updateEarlyCheckout({
+                            feeAmount: Number(e.target.value) || 0,
+                          })
+                        }
+                        disabled={!isEditingEarlyCheckout}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  <Label>Customer Note (shown at checkout & on invoice)</Label>
+                  <Textarea
+                    rows={2}
+                    value={earlyCheckout.customerNote ?? ""}
+                    onChange={(e) =>
+                      updateEarlyCheckout({ customerNote: e.target.value })
+                    }
+                    placeholder="e.g., Unused nights will be issued as store credit, valid for 90 days."
+                    disabled={!isEditingEarlyCheckout}
+                  />
                 </div>
               </>
             )}

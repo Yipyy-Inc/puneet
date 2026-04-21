@@ -49,6 +49,8 @@ import { AddNoteModal } from "@/components/shared/AddNoteModal";
 import { getNotesForEntity } from "@/data/tags-notes";
 import { getUnfinishedBookingsForCustomer } from "@/data/unfinished-bookings";
 import { CustomerUnfinishedBookings } from "@/components/bookings/CustomerUnfinishedBookings";
+import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
+import { Heart } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -57,7 +59,11 @@ export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
   const { selectedFacility } = useCustomerFacility();
   const router = useRouter();
-  useSettings();
+  const { tipConfig } = useSettings();
+  const [tipBooking, setTipBooking] = useState<(typeof bookings)[0] | null>(
+    null,
+  );
+  const [tipsGiven, setTipsGiven] = useState<Record<string, number>>({});
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<
     (typeof bookings)[0] | null
@@ -607,58 +613,98 @@ export default function CustomerBookingsPage() {
                       const pet = getPetForBooking(booking);
                       const ServiceIcon = getServiceIcon(booking.service);
                       const PetIcon = pet?.type === "Cat" ? Cat : Dog;
+                      const existingTip =
+                        tipsGiven[booking.id] ?? booking.tipAmount ?? 0;
+                      const canTip =
+                        booking.status === "completed" &&
+                        tipConfig.enabled &&
+                        existingTip <= 0;
 
                       return (
-                        <Link
-                          key={booking.id}
-                          href={`/customer/bookings/${booking.id}`}
-                          className="block"
-                        >
-                          <Card className="cursor-pointer opacity-75 transition-opacity hover:opacity-90">
-                            <CardContent className="p-6">
-                              <div className="flex items-start gap-4">
-                                <div className="shrink-0">
-                                  {pet?.imageUrl ? (
-                                    <Image
-                                      src={pet.imageUrl}
-                                      alt={pet.name}
-                                      width={64}
-                                      height={64}
-                                      className="h-16 w-16 rounded-lg object-cover"
-                                    />
-                                  ) : (
-                                    <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
-                                      <PetIcon className="text-primary size-8" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-start justify-between">
-                                    <div>
-                                      <div className="mb-1 flex items-center gap-2">
-                                        <ServiceIcon className="text-muted-foreground size-5" />
-                                        <h3 className="font-semibold capitalize">
-                                          {booking.service}
-                                        </h3>
+                        <div key={booking.id} className="space-y-2">
+                          <Link
+                            href={`/customer/bookings/${booking.id}`}
+                            className="block"
+                          >
+                            <Card className="cursor-pointer opacity-75 transition-opacity hover:opacity-90">
+                              <CardContent className="p-6">
+                                <div className="flex items-start gap-4">
+                                  <div className="shrink-0">
+                                    {pet?.imageUrl ? (
+                                      <Image
+                                        src={pet.imageUrl}
+                                        alt={pet.name}
+                                        width={64}
+                                        height={64}
+                                        className="h-16 w-16 rounded-lg object-cover"
+                                      />
+                                    ) : (
+                                      <div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-lg">
+                                        <PetIcon className="text-primary size-8" />
                                       </div>
-                                      <p className="text-muted-foreground text-sm">
-                                        {pet?.name || "Pet"} •{" "}
-                                        {formatDate(booking.startDate)}
-                                      </p>
-                                    </div>
-                                    {getStatusBadge(booking.status)}
-                                  </div>
-                                  <div className="text-muted-foreground flex items-center gap-4 text-sm">
-                                    <span>${booking.totalCost.toFixed(2)}</span>
-                                    {booking.checkInTime && (
-                                      <span>{booking.checkInTime}</span>
                                     )}
                                   </div>
+                                  <div className="flex-1 space-y-2">
+                                    <div className="flex items-start justify-between">
+                                      <div>
+                                        <div className="mb-1 flex items-center gap-2">
+                                          <ServiceIcon className="text-muted-foreground size-5" />
+                                          <h3 className="font-semibold capitalize">
+                                            {booking.service}
+                                          </h3>
+                                        </div>
+                                        <p className="text-muted-foreground text-sm">
+                                          {pet?.name || "Pet"} •{" "}
+                                          {formatDate(booking.startDate)}
+                                        </p>
+                                      </div>
+                                      {getStatusBadge(booking.status)}
+                                    </div>
+                                    <div className="text-muted-foreground flex items-center gap-4 text-sm">
+                                      <span>
+                                        ${booking.totalCost.toFixed(2)}
+                                      </span>
+                                      {booking.checkInTime && (
+                                        <span>{booking.checkInTime}</span>
+                                      )}
+                                      {existingTip > 0 && (
+                                        <span className="text-primary inline-flex items-center gap-1 font-medium">
+                                          <Heart className="size-3 fill-current" />
+                                          ${existingTip.toFixed(2)} tipped
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                          {canTip && (
+                            <button
+                              type="button"
+                              onClick={() => setTipBooking(booking)}
+                              className="border-primary/30 from-primary/10 via-primary/5 hover:border-primary/50 hover:from-primary/15 group flex w-full items-center gap-3 rounded-xl border-2 border-dashed bg-gradient-to-r to-transparent px-4 py-3 text-left transition-all"
+                            >
+                              <div className="bg-primary/15 text-primary flex size-9 items-center justify-center rounded-full">
+                                <Heart className="size-4" />
                               </div>
-                            </CardContent>
-                          </Card>
-                        </Link>
+                              <div className="flex-1 text-sm">
+                                <p className="font-semibold">
+                                  Leave a tip for{" "}
+                                  {pet?.name
+                                    ? `the team that cared for ${pet.name}`
+                                    : "the care team"}
+                                </p>
+                                <p className="text-muted-foreground text-[12px]">
+                                  100% goes to the staff · takes 10 seconds
+                                </p>
+                              </div>
+                              <span className="bg-primary text-primary-foreground rounded-full px-3 py-1.5 text-[11px] font-semibold group-hover:scale-105 transition-transform">
+                                Tip now
+                              </span>
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -704,6 +750,37 @@ export default function CustomerBookingsPage() {
             setAddNoteDialogOpen(false);
             setBookingForNote(null);
           }}
+        />
+      )}
+
+      {/* Post-stay tip dialog */}
+      {tipBooking && (
+        <TipPromptDialog
+          open={!!tipBooking}
+          onOpenChange={(open) => {
+            if (!open) setTipBooking(null);
+          }}
+          tipConfig={tipConfig}
+          subtotal={tipBooking.totalCost}
+          tipAmount={tipsGiven[tipBooking.id] ?? 0}
+          onTipChange={(amount) => {
+            if (amount > 0) {
+              setTipsGiven((prev) => ({ ...prev, [tipBooking.id]: amount }));
+              toast.success(
+                `Thank you! $${amount.toFixed(2)} sent to the team.`,
+              );
+            }
+            setTipBooking(null);
+          }}
+          petName={getPetForBooking(tipBooking)?.name}
+          serviceLabel={tipBooking.service}
+          confirmLabel="Send tip"
+          contextTitle={
+            getPetForBooking(tipBooking)?.name
+              ? `${getPetForBooking(tipBooking)!.name} is home safe 🏠`
+              : "Your pet is home safe 🏠"
+          }
+          contextSubtitle="The team would love to hear how they did. Your tip goes straight to them."
         />
       )}
     </div>

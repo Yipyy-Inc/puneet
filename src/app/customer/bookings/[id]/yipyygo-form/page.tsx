@@ -38,14 +38,18 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ContactInfoSection } from "@/components/yipyygo/form-sections/ContactInfoSection";
+import { PetDetailsSection } from "@/components/yipyygo/form-sections/PetDetailsSection";
+import { BookingDetailsSection } from "@/components/yipyygo/form-sections/BookingDetailsSection";
 import { BelongingsSection } from "@/components/yipyygo/form-sections/BelongingsSection";
 import { FeedingSection } from "@/components/yipyygo/form-sections/FeedingSection";
 import { MedicationSection } from "@/components/yipyygo/form-sections/MedicationSection";
-import { BehaviorSection } from "@/components/yipyygo/form-sections/BehaviorSection";
 import { AddOnsSection } from "@/components/yipyygo/form-sections/AddOnsSection";
-import { TipSection } from "@/components/yipyygo/form-sections/TipSection";
 import { ReviewSection } from "@/components/yipyygo/form-sections/ReviewSection";
+import { TipPromptDialog } from "@/components/yipyygo/TipPromptDialog";
 import { Separator } from "@/components/ui/separator";
+import type { TipSelection } from "@/types/yipyygo";
+import { CheckCircle2, PartyPopper } from "lucide-react";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -64,6 +68,8 @@ export default function YipyyGoFormPage({
   const [codeSent, setCodeSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSection, setCurrentSection] = useState(0);
+  const [showTipDialog, setShowTipDialog] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Get booking and customer data
   const booking = useMemo(() => {
@@ -201,14 +207,24 @@ export default function YipyyGoFormPage({
     }
   };
 
-  // Handle form submission
+  // Review "Submit" → show tip popup first (if configured), else finalize directly
   const handleSubmit = async () => {
+    if (!formData || !booking) return;
+    if (yipyyGoConfig?.tipPopup?.enabled) {
+      setShowTipDialog(true);
+      return;
+    }
+    void finalizeSubmission(undefined);
+  };
+
+  const finalizeSubmission = async (tip: TipSelection | undefined) => {
     if (!formData || !booking) return;
 
     setIsSubmitting(true);
     try {
       let saved = saveYipyyGoForm({
         ...formData,
+        tip: tip ?? formData.tip,
         submittedAt: new Date().toISOString(),
         submittedBy: MOCK_CUSTOMER_ID,
       });
@@ -249,10 +265,26 @@ export default function YipyyGoFormPage({
         sendEmail: yipyyGoConfig?.notifyStaffEmailOnSubmit ?? false,
       });
 
-      toast.success(
-        "Express Check-in form submitted successfully! You're check-in ready!",
-      );
-      router.push(`/customer/bookings/${booking.id}/check-in-qr`);
+      // Mock customer confirmation email (would go through a real email provider)
+      if (yipyyGoConfig?.confirmationEmail?.enabled) {
+        const dateStr = new Date(booking.startDate).toLocaleDateString(
+          "en-US",
+          { weekday: "long", month: "long", day: "numeric" },
+        );
+        const message = yipyyGoConfig.confirmationEmail.message
+          .replace(/\{petName\}/g, pet?.name ?? "your pet")
+          .replace(/\{date\}/g, dateStr);
+        console.info(
+          "[YipyyGo confirmation email]",
+          customer?.email,
+          yipyyGoConfig.confirmationEmail.subject,
+          message,
+        );
+      }
+
+      setShowTipDialog(false);
+      setIsSubmitted(true);
+      toast.success("Express Check-in submitted. Confirmation email sent.");
     } catch (error) {
       toast.error("Failed to submit form. Please try again.");
       console.error("Error submitting Express Check-in form:", error);
@@ -477,6 +509,62 @@ export default function YipyyGoFormPage({
     );
   }
 
+  // Success screen after submission
+  if (isSubmitted) {
+    const arrivalDate = new Date(booking.startDate).toLocaleDateString(
+      "en-US",
+      { weekday: "long", month: "long", day: "numeric" },
+    );
+    return (
+      <div className="from-background via-primary/5 to-background flex min-h-screen items-center justify-center bg-linear-to-br p-4">
+        <Card className="w-full max-w-lg border-green-200 shadow-lg">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-3 flex size-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <PartyPopper className="size-8 text-green-600" />
+            </div>
+            <CardTitle className="text-2xl">
+              You&apos;re all set, {customer.name.split(" ")[0]}!
+            </CardTitle>
+            <CardDescription className="text-base">
+              Thank you for completing your Express Check-in. We&apos;re excited
+              to meet <strong className="text-foreground">{pet.name}</strong>{" "}
+              on{" "}
+              <strong className="text-foreground">{arrivalDate}</strong>
+              {booking.checkInTime ? ` at ${booking.checkInTime}` : ""}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <CheckCircle2 className="size-4 text-green-600" />
+              <AlertDescription>
+                A confirmation email has been sent to{" "}
+                <strong>{customer.email}</strong>. Show your check-in QR code
+                when you arrive for a fast-track drop-off.
+              </AlertDescription>
+            </Alert>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                className="flex-1"
+                onClick={() =>
+                  router.push(`/customer/bookings/${booking.id}/check-in-qr`)
+                }
+              >
+                View check-in QR
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => router.push("/customer/dashboard")}
+              >
+                Back to dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Main form
   if (!formData) {
     return (
@@ -486,22 +574,42 @@ export default function YipyyGoFormPage({
     );
   }
 
+  const features = yipyyGoConfig?.formTemplate.features;
   const sections = [
-    { id: "belongings", label: "Belongings", component: BelongingsSection },
-    { id: "feeding", label: "Feeding Instructions", component: FeedingSection },
+    ...(features?.contactInfoSection !== false
+      ? [
+          {
+            id: "contact",
+            label: "Contact Info",
+            component: ContactInfoSection,
+          },
+        ]
+      : []),
+    ...(features?.petDetailsSection !== false
+      ? [
+          {
+            id: "pet-details",
+            label: "Pet Details",
+            component: PetDetailsSection,
+          },
+        ]
+      : []),
+    ...(features?.bookingDetailsSection !== false
+      ? [
+          {
+            id: "booking-details",
+            label: "Booking",
+            component: BookingDetailsSection,
+          },
+        ]
+      : []),
+    { id: "feeding", label: "Feeding", component: FeedingSection },
     { id: "medication", label: "Medications", component: MedicationSection },
-    {
-      id: "behavior",
-      label: "Behavior & Special Notes",
-      component: BehaviorSection,
-    },
-    ...(yipyyGoConfig?.formTemplate.features.addOnsSection
+    ...(features?.addOnsSection
       ? [{ id: "addons", label: "Add-ons", component: AddOnsSection }]
       : []),
-    ...(yipyyGoConfig?.formTemplate.features.tipSection
-      ? [{ id: "tip", label: "Tip", component: TipSection }]
-      : []),
-    { id: "review", label: "Review & Submit", component: ReviewSection },
+    { id: "belongings", label: "Belongings", component: BelongingsSection },
+    { id: "review", label: "Review", component: ReviewSection },
   ];
 
   const CurrentSectionComponent = sections[currentSection]?.component;
@@ -683,6 +791,18 @@ export default function YipyyGoFormPage({
           </div>
         )}
       </div>
+      {yipyyGoConfig?.tipPopup?.enabled && (
+        <TipPromptDialog
+          open={showTipDialog}
+          onOpenChange={(open) => {
+            if (!isSubmitting) setShowTipDialog(open);
+          }}
+          config={yipyyGoConfig.tipPopup}
+          stayTotal={booking.totalCost ?? 0}
+          onConfirm={(tip) => void finalizeSubmission(tip)}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 }

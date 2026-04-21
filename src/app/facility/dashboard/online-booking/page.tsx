@@ -1,25 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { CalendarClock, Clock, ShoppingCart } from "lucide-react";
 
 import { type BookingRequest } from "@/data/booking-requests";
 import { getUnfinishedBookingsForFacility } from "@/data/unfinished-bookings";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { clients as allClients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+import { buildResumePreselection } from "@/lib/resume-booking";
+import type { Client } from "@/types/client";
+import type { NewBooking } from "@/types/booking";
+import type { UnfinishedBooking } from "@/types/unfinished-booking";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { UnfinishedBookingsTable } from "@/components/bookings/UnfinishedBookingsTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,8 +36,6 @@ import { Label } from "@/components/ui/label";
 
 type NotifyMode = "none" | "text" | "email" | "both";
 type ConfirmAction = "decline" | "waitlist";
-
-const SCHEDULE_DRAFT_KEY = "booking_requests_schedule_draft";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -54,9 +53,19 @@ function servicesLabel(services: BookingRequest["services"]) {
 }
 
 export default function OnlineBookingPage() {
-  const router = useRouter();
   const facilityId = 11;
+  const router = useRouter();
   const { requests, setRequests } = useBookingRequestsStore();
+  const { openBookingModal, closeBookingModal } = useBookingModal();
+  const facility = React.useMemo(
+    () => facilities.find((f) => f.id === facilityId),
+    [facilityId],
+  );
+  const facilityClients = React.useMemo<Client[]>(
+    () =>
+      (allClients as Client[]).filter((c) => c.facility === facility?.name),
+    [facility],
+  );
 
   const facilityRequests = React.useMemo(
     () => requests.filter((r) => r.facilityId === facilityId),
@@ -86,7 +95,6 @@ export default function OnlineBookingPage() {
   const [activeTab, setActiveTab] = React.useState<
     "requests" | "waitlist" | "unfinished" | "settings"
   >("requests");
-  const [selected, setSelected] = React.useState<BookingRequest | null>(null);
 
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmAction, setConfirmAction] =
@@ -108,18 +116,84 @@ export default function OnlineBookingPage() {
   };
 
   const schedule = (req: BookingRequest) => {
-    localStorage.setItem(
-      SCHEDULE_DRAFT_KEY,
-      JSON.stringify({
-        requestId: req.id,
-        clientId: req.clientId,
-        petId: req.petId,
-        service: req.services[0],
-        appointmentAt: req.appointmentAt,
-      }),
+    if (!facility) return;
+
+    const handleCreateBooking = (booking: NewBooking) => {
+      // Mark the request as scheduled so it leaves the pending/waitlist queues.
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id ? { ...r, status: "scheduled" } : r,
+        ),
+      );
+
+      const notifyBits: string[] = [];
+      if (booking.notificationEmail) notifyBits.push("email");
+      if (booking.notificationSMS) notifyBits.push("SMS");
+      const notifyDesc =
+        notifyBits.length > 0
+          ? `Confirmation sent via ${notifyBits.join(" + ")} to ${req.clientName}`
+          : "No customer notification sent (disabled in wizard)";
+
+      toast.success(`Booking scheduled for ${req.petName}`, {
+        description: notifyDesc,
+      });
+
+      closeBookingModal();
+    };
+
+    openBookingModal({
+      clients: facilityClients,
+      facilityId,
+      facilityName: facility.name,
+      preSelectedClientId: req.clientId,
+      preSelectedPetId: req.petId,
+      preSelectedService: req.services[0],
+      preSelectedStartDate: req.startDate,
+      preSelectedEndDate: req.endDate,
+      preSelectedCheckInTime: req.checkInTime,
+      preSelectedCheckOutTime: req.checkOutTime,
+      preSelectedDaycareDates: req.daycareDates,
+      preSelectedRoomId: req.roomPreference,
+      preSelectedDaycareSectionId: req.daycareSectionId,
+      preSelectedExtraServices: req.extraServices,
+      preSelectedFeedingSchedule: req.feedingSchedule,
+      preSelectedMedications: req.medications,
+      preSelectedNotificationEmail: req.notificationEmail,
+      preSelectedNotificationSMS: req.notificationSMS,
+      onCreateBooking: handleCreateBooking,
+    });
+  };
+
+  const handleScheduleUnfinished = (ub: UnfinishedBooking) => {
+    if (!facility) return;
+
+    // When the session was started by an existing client, take the staff member
+    // to the client's account and resume the wizard from there — that's where
+    // they verify documents, vaccines, and card on file before confirming.
+    if (ub.clientId) {
+      toast.info(`Opening ${ub.clientName}'s account — resuming their booking`);
+      router.push(
+        `/facility/dashboard/clients/${ub.clientId}?resumeBooking=${ub.id}`,
+      );
+      return;
+    }
+
+    // Guest session — we have no customer profile yet, so open the wizard
+    // inline with whatever the prospect entered.
+    const preselection = buildResumePreselection(ub);
+    toast.info(
+      `Resuming ${ub.clientName}'s abandoned session (guest — no account yet)`,
     );
-    router.push("/facility/dashboard/bookings");
-    toast.success("Opened booking details for scheduling");
+    openBookingModal({
+      clients: facilityClients,
+      facilityId,
+      facilityName: facility.name,
+      ...preselection,
+      onCreateBooking: () => {
+        toast.success(`Booking completed for ${ub.clientName}`);
+        closeBookingModal();
+      },
+    });
   };
 
   const applyConfirm = () => {
@@ -137,9 +211,6 @@ export default function OnlineBookingPage() {
         ),
       );
     }
-
-    // Close the drawer if it was showing this request
-    setSelected((prev) => (prev?.id === target.id ? null : prev));
 
     // Confirm -> Notify step
     setConfirmOpen(false);
@@ -279,8 +350,6 @@ export default function OnlineBookingPage() {
                   },
                 ]}
                 itemsPerPage={10}
-                onRowClick={(r) => setSelected(r)}
-                rowClassName={() => "cursor-pointer"}
                 getSearchValue={(r) =>
                   `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
                 }
@@ -335,8 +404,6 @@ export default function OnlineBookingPage() {
                   },
                 ]}
                 itemsPerPage={10}
-                onRowClick={(r) => setSelected(r)}
-                rowClassName={() => "cursor-pointer"}
                 getSearchValue={(r) =>
                   `${r.clientName} ${r.clientContact} ${r.petName} ${r.services.join(" ")}`.toLowerCase()
                 }
@@ -361,7 +428,10 @@ export default function OnlineBookingPage() {
         </TabsContent>
 
         <TabsContent value="unfinished" className="mt-4">
-          <UnfinishedBookingsTable data={unfinishedBookings} />
+          <UnfinishedBookingsTable
+            data={unfinishedBookings}
+            onSchedule={handleScheduleUnfinished}
+          />
         </TabsContent>
 
         <TabsContent value="settings" className="mt-4">
@@ -378,81 +448,6 @@ export default function OnlineBookingPage() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="sm:max-w-md">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle>Booking request</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 p-4">
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">Submitted</div>
-                  <div className="text-sm font-medium">
-                    {formatDateTime(selected.createdAt)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Requested appointment
-                  </div>
-                  <div className="text-sm font-medium">
-                    {formatDateTime(selected.appointmentAt)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Customer / Pet
-                  </div>
-                  <div className="text-sm font-medium">
-                    {selected.clientName} — {selected.petName}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {selected.clientContact}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Service(s)
-                  </div>
-                  <div className="text-sm font-medium">
-                    {servicesLabel(selected.services)}
-                  </div>
-                </div>
-                {selected.notes && (
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">Notes</div>
-                    <div className="text-sm">{selected.notes}</div>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" onClick={() => schedule(selected)}>
-                    Schedule
-                  </Button>
-                  {selected.status === "pending" && (
-                    <Button
-                      className="flex-1"
-                      variant="outline"
-                      onClick={() => openConfirm("waitlist", selected)}
-                    >
-                      To waitlist
-                    </Button>
-                  )}
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => openConfirm("decline", selected)}
-                  >
-                    Decline
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

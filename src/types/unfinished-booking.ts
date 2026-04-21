@@ -3,6 +3,12 @@
 // Tracks customers who started but did not complete a reservation.
 // ============================================================================
 
+import type {
+  ExtraService,
+  FeedingScheduleItem,
+  MedicationItem,
+} from "@/types/booking";
+
 export type AbandonmentStep =
   | "service_selection"
   | "pet_selection"
@@ -60,6 +66,8 @@ export interface UnfinishedBooking {
   clientName: string;
   clientEmail: string;
   clientPhone?: string;
+  /** Set when the customer already selected a specific pet on their profile */
+  petId?: number;
   petName?: string;
   petType?: "dog" | "cat";
   service?: string;
@@ -77,4 +85,21 @@ export interface UnfinishedBooking {
   notes?: UnfinishedBookingNote[];
   /** Estimated value of the booking they would have completed */
   estimatedValue?: number;
+
+  // ── Resume data ────────────────────────────────────────────────────────────
+  // Everything the customer entered before abandoning, so the wizard can
+  // re-open exactly where they left off.
+  checkInTime?: string;
+  checkOutTime?: string;
+  daycareDates?: string[];
+  /** Boarding room preference (matches a room id) */
+  roomPreference?: string;
+  /** Daycare play-area section id */
+  daycareSectionId?: string;
+  extraServices?: ExtraService[];
+  feedingSchedule?: FeedingScheduleItem[];
+  medications?: MedicationItem[];
+  specialRequests?: string;
+  notificationEmail?: boolean;
+  notificationSMS?: boolean;
 }

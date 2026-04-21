@@ -760,6 +760,7 @@ export const vaccinationRules: VaccinationRule[] = [
   {
     id: "vax-001",
     vaccineName: "Rabies",
+    species: "Dog",
     required: true,
     expiryWarningDays: 30,
     applicableServices: ["boarding", "daycare", "grooming", "training"],
@@ -767,6 +768,7 @@ export const vaccinationRules: VaccinationRule[] = [
   {
     id: "vax-002",
     vaccineName: "DHPP (Distemper)",
+    species: "Dog",
     required: true,
     expiryWarningDays: 30,
     applicableServices: ["boarding", "daycare"],
@@ -774,6 +776,7 @@ export const vaccinationRules: VaccinationRule[] = [
   {
     id: "vax-003",
     vaccineName: "Bordetella",
+    species: "Dog",
     required: true,
     expiryWarningDays: 14,
     applicableServices: ["boarding", "daycare"],
@@ -781,7 +784,24 @@ export const vaccinationRules: VaccinationRule[] = [
   {
     id: "vax-004",
     vaccineName: "Canine Influenza",
+    species: "Dog",
     required: false,
+    expiryWarningDays: 30,
+    applicableServices: ["boarding"],
+  },
+  {
+    id: "vax-005",
+    vaccineName: "Rabies",
+    species: "Cat",
+    required: true,
+    expiryWarningDays: 30,
+    applicableServices: ["boarding", "grooming"],
+  },
+  {
+    id: "vax-006",
+    vaccineName: "FVRCP",
+    species: "Cat",
+    required: true,
     expiryWarningDays: 30,
     applicableServices: ["boarding"],
   },
@@ -927,6 +947,23 @@ export const tipConfig: TipConfig = {
       ],
       preferredIndex: 1,
     },
+  },
+  reminder: {
+    enabled: true,
+    delayHours: 3,
+    channels: { email: true, sms: false, push: true },
+    subject: "Thanks for trusting us with {petName} 🐾",
+    messageHeadline: "Your care team would love your thanks",
+    messageBody:
+      "{petName} just went home after a wonderful visit. If the team made {petName}'s day brighter, you can leave them a tip in one tap — 100% goes directly to the staff who looked after {petName}.",
+    includeReportCard: true,
+  },
+  reportCardPrompt: {
+    enabled: true,
+    headline: "Loved the care {petName} received?",
+    subcopy:
+      "Tip the team that made today special. Tips are split evenly and go 100% to the staff.",
+    onlyOnPositiveFeedback: false,
   },
 };
 
@@ -1204,6 +1241,13 @@ export const boardingConfig: ModuleConfig = {
       feeding: "required",
       medication: "required",
       belongings: "required",
+    },
+    earlyCheckout: {
+      enabled: true,
+      policy: "credit",
+      creditExpiresDays: 90,
+      customerNote:
+        "Unused nights are issued as store credit, valid for 90 days.",
     },
   },
   status: {

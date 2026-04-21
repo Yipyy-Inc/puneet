@@ -177,7 +177,7 @@ export function CustomerUnfinishedBookings({ bookings }: Props) {
                   <div className="shrink-0">
                     <Button asChild size="sm" className="gap-1.5">
                       <Link
-                        href={`/customer/bookings/new${booking.service ? `?service=${booking.service}` : ""}`}
+                        href={`/customer/bookings/new?resumeBooking=${booking.id}`}
                       >
                         Resume
                         <ArrowRight className="size-3.5" />

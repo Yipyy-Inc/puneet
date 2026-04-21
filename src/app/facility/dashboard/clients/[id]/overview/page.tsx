@@ -6,6 +6,14 @@ import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { vaccinationRecords } from "@/data/pet-data";
 import { clientCommunications } from "@/data/communications";
+import {
+  customerPackagePurchases,
+  memberships as allMemberships,
+  membershipPlans,
+  servicePackages,
+} from "@/data/services-pricing";
+import { PurchasedPackageCard } from "@/components/customer/billing/packages/PurchasedPackageCard";
+import { ActiveMembershipCard } from "@/components/customer/billing/packages/ActiveMembershipCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BulkPaymentModal } from "@/components/bookings/BulkPaymentModal";
@@ -52,6 +60,15 @@ export default function ClientOverviewPage({
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
 
   if (!client) return null;
+
+  // Memberships & packages — keyed by string customerId in the pricing data layer
+  const customerIdStr = String(clientId);
+  const clientMemberships = allMemberships.filter(
+    (m) => m.customerId === customerIdStr,
+  );
+  const clientPackagePurchases = customerPackagePurchases.filter(
+    (p) => p.customerId === customerIdStr,
+  );
 
   const clientBookings = bookings.filter((b) => b.clientId === clientId);
   const upcoming = clientBookings
@@ -653,6 +670,80 @@ export default function ClientOverviewPage({
           )}
         </div>
       </div>
+
+      {/* Detailed Memberships & Packages — pass-level breakdown with booking deep links */}
+      {(clientMemberships.length > 0 || clientPackagePurchases.length > 0) && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">
+              Memberships & Packages
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              Click any used pass to jump to its booking
+            </p>
+          </div>
+
+          {clientMemberships.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {clientMemberships.map((m) => {
+                const plan = membershipPlans.find((p) => p.id === m.planId);
+                return (
+                  <ActiveMembershipCard
+                    key={m.id}
+                    membership={m}
+                    plan={plan}
+                    onUpgrade={() =>
+                      toast.info(
+                        "Upgrade requests are initiated by the customer",
+                      )
+                    }
+                    onDowngrade={() =>
+                      toast.info(
+                        "Downgrade requests are initiated by the customer",
+                      )
+                    }
+                    onPause={() => toast.success("Pause applied")}
+                    onCancel={() =>
+                      toast.success("Membership cancellation scheduled")
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {clientPackagePurchases.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {clientPackagePurchases.map((purchase) => {
+                const pkg = servicePackages.find(
+                  (p) => p.id === purchase.packageId,
+                );
+                return (
+                  <PurchasedPackageCard
+                    key={purchase.id}
+                    purchase={purchase}
+                    pkg={pkg}
+                    getBooking={(bid) => bookings.find((b) => b.id === bid)}
+                    bookingLinkPrefix={`/facility/dashboard/clients/${id}/bookings`}
+                    showBookingCta={false}
+                    onRequestExtension={() =>
+                      toast.success(
+                        "Extension applied on behalf of the customer",
+                      )
+                    }
+                    onRequestTransfer={() =>
+                      toast.success("Transfer recorded")
+                    }
+                    onRequestRefund={() =>
+                      toast.success("Refund issued for unused passes")
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <BulkPaymentModal
         open={bulkPayOpen}

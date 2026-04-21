@@ -8,8 +8,10 @@ import type {
   WeeklyBillingDay,
   MembershipDiscountRule,
   MembershipIncludedItem,
+  MembershipChangePolicy,
   ServiceCategory,
 } from "@/data/services-pricing";
+import { defaultMembershipChangePolicy } from "@/data/services-pricing";
 
 export interface PlanBuilderData {
   name: string;
@@ -39,6 +41,10 @@ export interface PlanBuilderData {
   cancellationPolicy: CancellationPolicy;
   credits: number;
   discountPercentage: number;
+
+  changePolicy: MembershipChangePolicy;
+  upgradePlanIds: string[];
+  downgradePlanIds: string[];
 }
 
 export const emptyPlan: PlanBuilderData = {
@@ -69,6 +75,10 @@ export const emptyPlan: PlanBuilderData = {
   cancellationPolicy: "end_of_cycle",
   credits: 0,
   discountPercentage: 0,
+
+  changePolicy: { ...defaultMembershipChangePolicy },
+  upgradePlanIds: [],
+  downgradePlanIds: [],
 };
 
 export function planToBuilderData(plan: MembershipPlan): PlanBuilderData {
@@ -100,6 +110,10 @@ export function planToBuilderData(plan: MembershipPlan): PlanBuilderData {
     cancellationPolicy: plan.cancellationPolicy,
     credits: plan.credits,
     discountPercentage: plan.discountPercentage,
+
+    changePolicy: plan.changePolicy ?? { ...defaultMembershipChangePolicy },
+    upgradePlanIds: plan.upgradePlanIds ?? [],
+    downgradePlanIds: plan.downgradePlanIds ?? [],
   };
 }
 

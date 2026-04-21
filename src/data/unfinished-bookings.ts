@@ -14,6 +14,7 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     clientName: "John Doe",
     clientEmail: "john.doe@email.com",
     clientPhone: "+1 (514) 555-0101",
+    petId: 19,
     petName: "Bella",
     petType: "dog",
     service: "boarding",
@@ -24,6 +25,61 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     abandonmentStep: "payment",
     status: "abandoned",
     estimatedValue: 210,
+    // Customer made it all the way to payment — everything is filled.
+    checkInTime: "09:00",
+    checkOutTime: "11:00",
+    roomPreference: "room-ds-01",
+    extraServices: [
+      { serviceId: "addon-001", quantity: 4, petId: 19 },
+      { serviceId: "addon-002", quantity: 2, petId: 19 },
+    ],
+    feedingSchedule: [
+      {
+        id: "fs-ub-001-1",
+        petId: 19,
+        occasions: [
+          {
+            id: "occ-ub-001-1-breakfast",
+            label: "Breakfast",
+            time: "07:30",
+            components: [
+              {
+                id: "comp-ub-001-1a",
+                type: "kibble",
+                name: "Royal Canin Medium Adult",
+                amount: "1",
+                unit: "cups",
+              },
+            ],
+          },
+          {
+            id: "occ-ub-001-1-dinner",
+            label: "Dinner",
+            time: "18:00",
+            components: [
+              {
+                id: "comp-ub-001-1b",
+                type: "kibble",
+                name: "Royal Canin Medium Adult",
+                amount: "1",
+                unit: "cups",
+              },
+            ],
+          },
+        ],
+        source: "parent_brings",
+        prepInstructions: [],
+        ifRefuses: ["try_again_1hr"],
+        frequency: "daily",
+        allergies: [],
+        notes: "Scoop is in the food bag.",
+      },
+    ],
+    medications: [],
+    specialRequests:
+      "Bella gets anxious — please give her the blanket from her bag at bedtime.",
+    notificationEmail: true,
+    notificationSMS: true,
   },
   {
     id: "ub-002",
@@ -55,6 +111,7 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     clientName: "Alice Johnson",
     clientEmail: "alice.j@example.com",
     clientPhone: "+1 (514) 555-0303",
+    petId: 1,
     petName: "Buddy",
     petType: "dog",
     service: "daycare",
@@ -65,6 +122,13 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     status: "recovered",
     lastContactedAt: "2026-04-08T18:00:00Z",
     estimatedValue: 55,
+    // Abandoned at the schedule step — dates + section chosen, nothing else.
+    checkInTime: "08:00",
+    checkOutTime: "17:30",
+    daycareDates: ["2026-04-14"],
+    daycareSectionId: "sec-indoor-medium",
+    notificationEmail: true,
+    notificationSMS: false,
     notes: [
       {
         id: "note-ub003-1",
@@ -121,6 +185,10 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     abandonmentStep: "add_ons",
     status: "abandoned",
     estimatedValue: 165,
+    checkInTime: "15:00",
+    checkOutTime: "10:00",
+    notificationEmail: true,
+    notificationSMS: false,
   },
   {
     id: "ub-007",
@@ -191,6 +259,13 @@ export const unfinishedBookings: UnfinishedBooking[] = [
     abandonmentStep: "payment",
     status: "abandoned",
     estimatedValue: 240,
+    // Customer abandoned at payment — full session captured.
+    checkInTime: "12:00",
+    checkOutTime: "11:00",
+    specialRequests:
+      "Max is crate-trained and prefers a quiet room away from other dogs.",
+    notificationEmail: true,
+    notificationSMS: true,
   },
   {
     id: "ub-011",

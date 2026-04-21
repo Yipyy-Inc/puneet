@@ -35,6 +35,7 @@ import {
   MoreHorizontal,
   Layers,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +50,50 @@ import {
   type PricingType,
   type ServiceStatus,
 } from "@/data/services-pricing";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
+const CATEGORY_STYLES: Record<
+  ServiceCategory,
+  { chip: string; ring: string; iconBg: string; icon: string }
+> = {
+  boarding: {
+    chip: "border-violet-200 bg-violet-50/80 text-violet-700",
+    ring: "ring-violet-100",
+    iconBg: "bg-violet-50",
+    icon: "text-violet-600",
+  },
+  daycare: {
+    chip: "border-sky-200 bg-sky-50/80 text-sky-700",
+    ring: "ring-sky-100",
+    iconBg: "bg-sky-50",
+    icon: "text-sky-600",
+  },
+  grooming: {
+    chip: "border-rose-200 bg-rose-50/80 text-rose-700",
+    ring: "ring-rose-100",
+    iconBg: "bg-rose-50",
+    icon: "text-rose-600",
+  },
+  training: {
+    chip: "border-amber-200 bg-amber-50/80 text-amber-700",
+    ring: "ring-amber-100",
+    iconBg: "bg-amber-50",
+    icon: "text-amber-600",
+  },
+  retail: {
+    chip: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+    ring: "ring-emerald-100",
+    iconBg: "bg-emerald-50",
+    icon: "text-emerald-600",
+  },
+};
+
+const PRICING_TYPE_STYLES: Record<PricingType, string> = {
+  flat: "border-slate-200 bg-slate-50 text-slate-700",
+  per_hour: "border-amber-200 bg-amber-50/80 text-amber-700",
+  per_day: "border-sky-200 bg-sky-50/80 text-sky-700",
+  per_session: "border-indigo-200 bg-indigo-50/80 text-indigo-700",
+};
 
 type ServiceWithRecord = Service & Record<string, unknown>;
 
@@ -153,17 +198,54 @@ export default function ServicesCatalogPage() {
       label: "Service Name",
       icon: Package,
       defaultVisible: true,
+      render: (item: ServiceWithRecord) => {
+        const styles = CATEGORY_STYLES[item.category as ServiceCategory];
+        return (
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "flex size-9 items-center justify-center rounded-full ring-2",
+                styles.iconBg,
+                styles.ring,
+              )}
+            >
+              {item.isAddOn ? (
+                <Layers className={cn("size-4", styles.icon)} />
+              ) : (
+                <Package className={cn("size-4", styles.icon)} />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-800">
+                {item.name}
+              </p>
+              <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                {item.description}
+              </p>
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "category",
       label: "Category",
       icon: Tag,
       defaultVisible: true,
-      render: (item: ServiceWithRecord) => (
-        <Badge variant="outline" className="capitalize">
-          {item.category}
-        </Badge>
-      ),
+      render: (item: ServiceWithRecord) => {
+        const styles = CATEGORY_STYLES[item.category as ServiceCategory];
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[11px] font-medium capitalize",
+              styles.chip,
+            )}
+          >
+            {item.category}
+          </Badge>
+        );
+      },
     },
     {
       key: "basePrice",
@@ -171,7 +253,10 @@ export default function ServicesCatalogPage() {
       icon: DollarSign,
       defaultVisible: true,
       render: (item: ServiceWithRecord) => (
-        <span className="font-medium">${item.basePrice.toFixed(2)}</span>
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+          <DollarSign className="size-3.5 text-emerald-500" />
+          {item.basePrice.toFixed(2)}
+        </span>
       ),
     },
     {
@@ -180,7 +265,16 @@ export default function ServicesCatalogPage() {
       icon: Clock,
       defaultVisible: true,
       render: (item: ServiceWithRecord) => (
-        <span className="capitalize">{item.pricingType.replace("_", " ")}</span>
+        <Badge
+          variant="outline"
+          className={cn(
+            "inline-flex items-center gap-1.5 text-[11px] font-medium capitalize",
+            PRICING_TYPE_STYLES[item.pricingType as PricingType],
+          )}
+        >
+          <Clock className="size-3" />
+          {item.pricingType.replace("_", " ")}
+        </Badge>
       ),
     },
     {
@@ -188,16 +282,21 @@ export default function ServicesCatalogPage() {
       label: "Status",
       defaultVisible: true,
       render: (item: ServiceWithRecord) => {
-        const variant =
-          item.status === "active"
-            ? "default"
-            : item.status === "seasonal"
-              ? "secondary"
-              : "outline";
+        if (item.status === "seasonal") {
+          return (
+            <Badge
+              variant="outline"
+              className="border-amber-200 bg-amber-50/80 text-[11px] font-medium text-amber-700 capitalize"
+            >
+              Seasonal
+            </Badge>
+          );
+        }
         return (
-          <Badge variant={variant} className="capitalize">
-            {item.status}
-          </Badge>
+          <StatusBadge
+            type="status"
+            value={item.status as "active" | "inactive"}
+          />
         );
       },
     },
@@ -232,13 +331,13 @@ export default function ServicesCatalogPage() {
   return (
     <div className="space-y-6 pt-4">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-sky-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Services
             </CardTitle>
-            <Package className="text-muted-foreground size-4" />
+            <Package className="size-4 text-sky-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -249,10 +348,10 @@ export default function ServicesCatalogPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-emerald-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Add-Ons</CardTitle>
-            <Layers className="text-muted-foreground size-4" />
+            <Layers className="size-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -261,10 +360,10 @@ export default function ServicesCatalogPage() {
             <p className="text-muted-foreground text-xs">Available extras</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-violet-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Packages Sold</CardTitle>
-            <Tag className="text-muted-foreground size-4" />
+            <Tag className="size-4 text-violet-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -273,12 +372,12 @@ export default function ServicesCatalogPage() {
             <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-indigo-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active Promo Codes
             </CardTitle>
-            <DollarSign className="text-muted-foreground size-4" />
+            <DollarSign className="size-4 text-indigo-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -291,60 +390,152 @@ export default function ServicesCatalogPage() {
         </Card>
       </div>
 
-      {/* Tabs for Services vs Add-ons */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <Button
-            variant={activeTab === "services" ? "default" : "outline"}
-            onClick={() => setActiveTab("services")}
-          >
-            <Package className="mr-2 size-4" />
-            Services ({mainServices.length})
-          </Button>
-          <Button
-            variant={activeTab === "addons" ? "default" : "outline"}
-            onClick={() => setActiveTab("addons")}
-          >
-            <Layers className="mr-2 size-4" />
-            Add-Ons ({addOnServices.length})
-          </Button>
-        </div>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 size-4" />
-          Add {activeTab === "services" ? "Service" : "Add-On"}
-        </Button>
-      </div>
+      {/* Services & Add-Ons Directory */}
+      <Card className="border border-slate-200/80 bg-white/95 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-base">
+                {activeTab === "services"
+                  ? "Services Catalog"
+                  : "Add-Ons Catalog"}
+              </CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Showing {currentData.length}{" "}
+                {activeTab === "services" ? "services" : "add-ons"}
+              </p>
+            </div>
 
-      {/* Data Table */}
-      <DataTable
-        data={currentData.map((s) => ({ ...s }) as ServiceWithRecord)}
-        columns={columns}
-        filters={filters}
-        searchKey={"name" as keyof ServiceWithRecord}
-        searchPlaceholder="Search services..."
-        actions={(item: ServiceWithRecord) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleEdit(item as Service)}>
-                <Edit className="mr-2 size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeleteClick(item as Service)}
-                className="text-destructive"
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                role="tablist"
+                aria-label="Catalog type"
+                className="inline-flex rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
               >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      />
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "services"}
+                  onClick={() => setActiveTab("services")}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    activeTab === "services"
+                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+                      : "text-muted-foreground hover:text-slate-900",
+                  )}
+                >
+                  <Package
+                    className={cn(
+                      "size-3.5",
+                      activeTab === "services"
+                        ? "text-sky-600"
+                        : "text-muted-foreground",
+                    )}
+                  />
+                  Services
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-4 rounded-full px-1.5 text-[10px] font-medium",
+                      activeTab === "services"
+                        ? "border-sky-200 bg-sky-50 text-sky-700"
+                        : "border-slate-200 bg-white text-slate-600",
+                    )}
+                  >
+                    {mainServices.length}
+                  </Badge>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "addons"}
+                  onClick={() => setActiveTab("addons")}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                    activeTab === "addons"
+                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80"
+                      : "text-muted-foreground hover:text-slate-900",
+                  )}
+                >
+                  <Layers
+                    className={cn(
+                      "size-3.5",
+                      activeTab === "addons"
+                        ? "text-emerald-600"
+                        : "text-muted-foreground",
+                    )}
+                  />
+                  Add-Ons
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "h-4 rounded-full px-1.5 text-[10px] font-medium",
+                      activeTab === "addons"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-white text-slate-600",
+                    )}
+                  >
+                    {addOnServices.length}
+                  </Badge>
+                </button>
+              </div>
+
+              <Button size="sm" className="shadow-sm" onClick={handleAddNew}>
+                <Plus className="mr-2 size-4" />
+                Add {activeTab === "services" ? "Service" : "Add-On"}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="relative rounded-xl border border-slate-200/80 bg-linear-to-br from-sky-50/60 via-white to-indigo-50/50 p-2.5">
+            <div className="overflow-hidden rounded-lg border border-white/90 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+              <div className="[&_tbody_td]:py-3 [&_tbody_td]:align-middle [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-200 [&_thead_th]:bg-slate-50/90 [&_thead_th]:text-[11px] [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-slate-500 [&_thead_th]:uppercase">
+                <DataTable
+                  data={currentData.map(
+                    (s) => ({ ...s }) as ServiceWithRecord,
+                  )}
+                  columns={columns}
+                  filters={filters}
+                  searchKey={"name" as keyof ServiceWithRecord}
+                  searchPlaceholder={
+                    activeTab === "services"
+                      ? "Search services..."
+                      : "Search add-ons..."
+                  }
+                  rowClassName={() =>
+                    "border-b border-slate-100/80 bg-white/95 [&>td]:py-3"
+                  }
+                  actions={(item: ServiceWithRecord) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(item as Service)}
+                        >
+                          <Edit className="mr-2 size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteClick(item as Service)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>

@@ -64,14 +64,16 @@ export function ShiftPill({
             className={cn(
               "group/mini relative flex cursor-grab items-center gap-1 overflow-hidden rounded-md border px-1.5 py-0.5 transition-all hover:-translate-y-px hover:shadow-sm active:cursor-grabbing",
               isDraft && "border-dashed",
+              !isDraft && "shadow-sm",
               isDragging && "scale-95 opacity-40",
               isOpen && "border-amber-400/80",
             )}
             style={{
               background: isDraft
-                ? `repeating-linear-gradient(135deg, ${color}22 0px, ${color}22 4px, ${color}10 4px, ${color}10 8px)`
-                : `linear-gradient(135deg, ${color}30 0%, ${color}14 100%)`,
-              borderColor: isDraft ? `${color}90` : `${color}66`,
+                ? `repeating-linear-gradient(135deg, ${color}1a 0px, ${color}1a 4px, ${color}08 4px, ${color}08 8px)`
+                : `linear-gradient(135deg, ${color}cc 0%, ${color}80 100%)`,
+              borderColor: isDraft ? `${color}90` : color,
+              boxShadow: isDraft ? undefined : `0 1px 4px ${color}33`,
             }}
             draggable
             onDragStart={handleDragStart}
@@ -86,11 +88,11 @@ export function ShiftPill({
           >
             <span
               className="size-1.5 shrink-0 rounded-full"
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: isDraft ? color : "#ffffff" }}
             />
             <span
               className="truncate text-[9px] font-semibold tabular-nums"
-              style={{ color }}
+              style={{ color: isDraft ? color : "#ffffff" }}
             >
               {shift.startTime.slice(0, 5)}
             </span>
@@ -141,10 +143,10 @@ export function ShiftPill({
           )}
           style={{
             background: isDraft
-              ? `repeating-linear-gradient(135deg, ${color}1f 0px, ${color}1f 6px, ${color}0c 6px, ${color}0c 12px)`
-              : `linear-gradient(135deg, ${color}26 0%, ${color}10 100%)`,
-            borderColor: isDraft ? `${color}90` : `${color}55`,
-            boxShadow: isDraft ? "none" : `0 1px 6px ${color}1a`,
+              ? `repeating-linear-gradient(135deg, ${color}1a 0px, ${color}1a 6px, ${color}08 6px, ${color}08 12px)`
+              : `linear-gradient(135deg, ${color}cc 0%, ${color}80 100%)`,
+            borderColor: isDraft ? `${color}90` : color,
+            boxShadow: isDraft ? "none" : `0 1px 6px ${color}33`,
           }}
           draggable
           onDragStart={handleDragStart}
@@ -160,21 +162,26 @@ export function ShiftPill({
           {/* Left color accent rail */}
           <div
             className="absolute top-0 bottom-0 left-0 w-[3px]"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)" }}
           />
           <div className="min-w-0 flex-1 pl-1">
             <p
               className="truncate text-[11px] leading-tight font-semibold"
-              style={{ color }}
+              style={{ color: isDraft ? color : "#ffffff" }}
             >
               {position?.name ?? "—"}
             </p>
-            <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[10px] tabular-nums">
+            <p
+              className={cn(
+                "mt-0.5 flex items-center gap-1 truncate text-[10px] tabular-nums",
+                isDraft ? "text-muted-foreground" : "text-white/90",
+              )}
+            >
               <Clock className="size-2.5" />
               {shift.startTime} – {shift.endTime}
             </p>
           </div>
-          {/* Status chip — Draft (amber) vs Live/Published (emerald) */}
+          {/* Status chip — Draft (amber) vs Live/Published (white-on-solid) */}
           <span
             className={cn(
               "shrink-0 flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[8.5px] font-bold tracking-wider uppercase",
@@ -182,7 +189,7 @@ export function ShiftPill({
                 ? "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
                 : isDraft
                   ? "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
-                  : "border-emerald-300/80 bg-emerald-50 text-emerald-700 dark:border-emerald-600/50 dark:bg-emerald-950/40 dark:text-emerald-300",
+                  : "border-white/50 bg-white/25 text-white backdrop-blur-sm",
             )}
           >
             {isOpen ? (

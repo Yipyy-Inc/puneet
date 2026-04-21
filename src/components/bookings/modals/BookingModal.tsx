@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -55,6 +55,12 @@ import {
 } from "@/lib/pricing-rules";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/use-settings";
+import { useDaycareAreas } from "@/hooks/use-daycare-areas";
+import { useRooms } from "@/hooks/use-rooms";
+import {
+  autoAssignDaycareSection,
+  autoAssignBoardingUnit,
+} from "@/lib/capacity-engine";
 import { evaluationConfig } from "@/data/settings";
 import { bookings as historicalBookings } from "@/data/bookings";
 import { getNextEstimateId } from "@/data/estimates";
@@ -84,6 +90,20 @@ export interface NewBookingModalProps {
   preSelectedClientId?: number;
   preSelectedPetId?: number;
   preSelectedService?: string;
+  /** Pre-fill the wizard with details the customer submitted in their online booking request. */
+  preSelectedStartDate?: string; // "YYYY-MM-DD"
+  preSelectedEndDate?: string; // "YYYY-MM-DD"
+  preSelectedCheckInTime?: string; // "HH:mm"
+  preSelectedCheckOutTime?: string; // "HH:mm"
+  preSelectedDaycareDates?: string[]; // "YYYY-MM-DD"[]
+  preSelectedRoomId?: string;
+  preSelectedDaycareSectionId?: string;
+  preSelectedExtraServices?: ExtraService[];
+  preSelectedFeedingSchedule?: FeedingScheduleItem[];
+  preSelectedMedications?: MedicationItem[];
+  preSelectedSpecialRequests?: string;
+  preSelectedNotificationEmail?: boolean;
+  preSelectedNotificationSMS?: boolean;
   booking?: Booking;
   /** When true, the wizard is being used by a customer making a booking request (not facility staff). */
   isCustomerMode?: boolean;
@@ -159,6 +179,19 @@ export function BookingModal({
   preSelectedClientId,
   preSelectedPetId,
   preSelectedService,
+  preSelectedStartDate,
+  preSelectedEndDate,
+  preSelectedCheckInTime,
+  preSelectedCheckOutTime,
+  preSelectedDaycareDates,
+  preSelectedRoomId,
+  preSelectedDaycareSectionId,
+  preSelectedExtraServices,
+  preSelectedFeedingSchedule,
+  preSelectedMedications,
+  preSelectedSpecialRequests,
+  preSelectedNotificationEmail,
+  preSelectedNotificationSMS,
   booking,
   isCustomerMode = false,
   bookingRequestMessage,
@@ -178,6 +211,8 @@ export function BookingModal({
     [daycare, boarding, grooming, training],
   );
   const { getModuleBySlug } = useCustomServices();
+  const { sections: daycareSections } = useDaycareAreas();
+  const { categories: roomCategories, rooms: facilityRooms } = useRooms();
 
   // Estimate mode — initialized from prop, key-remount resets it correctly
   const [isEstimateMode, setIsEstimateMode] = useState(estimateMode);
@@ -303,29 +338,40 @@ export function BookingModal({
     (step) =>
       !(step.id === "client-pet" && preSelectedClientId && preSelectedPetId),
   );
-  const [currentStep, setCurrentStep] = useState(
-    preSelectedService
-      ? displayedSteps.findIndex(
-          (s) =>
-            s.id ===
-            (preSelectedClientId && preSelectedPetId
-              ? "details"
-              : "client-pet"),
-        )
-      : 0,
-  );
+  // Wizard now runs client-pet → service → details → confirm. When both client
+  // and pet are preselected, client-pet is filtered out and we start at service
+  // (or details, when a service is also preselected).
+  const initialStepIndex = (() => {
+    if (preSelectedClientId && preSelectedPetId && preSelectedService) {
+      return Math.max(
+        0,
+        displayedSteps.findIndex((s) => s.id === "details"),
+      );
+    }
+    if (preSelectedClientId && preSelectedPetId) {
+      return Math.max(
+        0,
+        displayedSteps.findIndex((s) => s.id === "service"),
+      );
+    }
+    return 0;
+  })();
+  const [currentStep, setCurrentStep] = useState(initialStepIndex);
   const [currentSubStep, setCurrentSubStep] = useState(0);
-  const [highestStepReached, setHighestStepReached] = useState(
-    preSelectedService
-      ? displayedSteps.findIndex(
-          (s) =>
-            s.id ===
-            (preSelectedClientId && preSelectedPetId
-              ? "details"
-              : "client-pet"),
-        )
-      : 0,
-  );
+
+  // Reset the main content scroll position when moving between wizard steps
+  // or sub-steps. Without this, scroll carries over from the previous step —
+  // e.g. scrolling down the client list and clicking Next would leave the
+  // service step scrolled past its first row of service cards.
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector<HTMLDivElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (viewport) viewport.scrollTop = 0;
+  }, [currentStep, currentSubStep]);
+  const [highestStepReached, setHighestStepReached] =
+    useState(initialStepIndex);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Client selection state
@@ -375,22 +421,44 @@ export function BookingModal({
         ? "full_day"
         : "",
   );
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [checkInTime, setCheckInTime] = useState("08:00");
-  const [checkOutTime, setCheckOutTime] = useState("17:00");
+  const [startDate, setStartDate] = useState(preSelectedStartDate ?? "");
+  const [endDate, setEndDate] = useState(preSelectedEndDate ?? "");
+  const [checkInTime, setCheckInTime] = useState(
+    preSelectedCheckInTime ?? "08:00",
+  );
+  const [checkOutTime, setCheckOutTime] = useState(
+    preSelectedCheckOutTime ?? "17:00",
+  );
 
   // Daycare specific - multi-date selection
-  const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>([]);
+  const [daycareSelectedDates, setDaycareSelectedDates] = useState<Date[]>(
+    () => {
+      const isoList =
+        preSelectedDaycareDates && preSelectedDaycareDates.length > 0
+          ? preSelectedDaycareDates
+          : preSelectedService === "daycare" && preSelectedStartDate
+            ? [preSelectedStartDate]
+            : [];
+      // "YYYY-MM-DD" → local Date (avoids UTC midnight off-by-one)
+      return isoList.map((d) => new Date(`${d}T00:00:00`));
+    },
+  );
   const [daycareDateTimes, setDaycareDateTimes] = useState<DaycareDateTime[]>(
     [],
   );
 
   // Boarding specific - date range selection
   const [boardingRangeStart, setBoardingRangeStart] = useState<Date | null>(
-    null,
+    () =>
+      preSelectedService === "boarding" && preSelectedStartDate
+        ? new Date(`${preSelectedStartDate}T00:00:00`)
+        : null,
   );
-  const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(null);
+  const [boardingRangeEnd, setBoardingRangeEnd] = useState<Date | null>(() =>
+    preSelectedService === "boarding" && preSelectedEndDate
+      ? new Date(`${preSelectedEndDate}T00:00:00`)
+      : null,
+  );
   const [boardingDateTimes, setBoardingDateTimes] = useState<DaycareDateTime[]>(
     [],
   );
@@ -399,16 +467,28 @@ export function BookingModal({
   const [kennel, setKennel] = useState("");
   const [roomAssignments, setRoomAssignments] = useState<
     Array<{ petId: number; roomId: string }>
-  >([]);
+  >(() => {
+    if (!preSelectedPetId) return [];
+    // Daycare uses play-area section IDs as the "roomId"; boarding uses room IDs.
+    const roomId =
+      preSelectedService === "daycare"
+        ? preSelectedDaycareSectionId
+        : preSelectedRoomId;
+    return roomId ? [{ petId: preSelectedPetId, roomId }] : [];
+  });
   const [feedingSchedule, setFeedingSchedule] = useState<FeedingScheduleItem[]>(
-    [],
+    preSelectedFeedingSchedule ?? [],
   );
   const [walkSchedule, setWalkSchedule] = useState("");
-  const [medications, setMedications] = useState<MedicationItem[]>([]);
+  const [medications, setMedications] = useState<MedicationItem[]>(
+    preSelectedMedications ?? [],
+  );
   const [feedingMedicationTab, setFeedingMedicationTab] = useState<
     "feeding" | "medication"
   >("feeding");
-  const [extraServices, setExtraServices] = useState<ExtraService[]>([]);
+  const [extraServices, setExtraServices] = useState<ExtraService[]>(
+    preSelectedExtraServices ?? [],
+  );
 
   // Derive notification defaults for a given service from settings
   const getNotifDefaults = useCallback(
@@ -421,30 +501,38 @@ export function BookingModal({
 
   const initDefaults = getNotifDefaults(preSelectedService ?? "");
   const [notificationEmail, setNotificationEmail] = useState(
-    initDefaults.email,
+    preSelectedNotificationEmail ?? initDefaults.email,
   );
-  const [notificationSMS, setNotificationSMS] = useState(initDefaults.sms);
+  const [notificationSMS, setNotificationSMS] = useState(
+    preSelectedNotificationSMS ?? initDefaults.sms,
+  );
   const [tipAmount, setTipAmount] = useState(0);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
 
   // Get current sub-steps based on selected service (estimate mode now includes feeding/medication for fee calculation)
+  // Customers never see the Room Assignment sub-step (id=1): the facility auto-assigns
+  // based on configured rules and can override from the facility side.
   const currentSubSteps = useMemo(() => {
+    const hideRoomAssignment = <T extends { id: number }>(arr: readonly T[]) =>
+      isCustomerMode ? arr.filter((s) => s.id !== 1) : [...arr];
     if (selectedService === "daycare") {
-      return DAYCARE_SUB_STEPS;
+      return hideRoomAssignment(DAYCARE_SUB_STEPS);
     }
     if (selectedService === "boarding") {
-      return BOARDING_SUB_STEPS;
+      return hideRoomAssignment(BOARDING_SUB_STEPS);
     }
     if (selectedService === "evaluation") return EVALUATION_SUB_STEPS;
     if (selectedService) {
       return CUSTOM_SERVICE_SUB_STEPS;
     }
     return [];
-  }, [selectedService, isEstimateMode]);
+  }, [selectedService, isEstimateMode, isCustomerMode]);
 
-  // Check if current sub-step is complete
+  // Check if a specific sub-step is complete, keyed by the canonical sub-step
+  // `id` (not the array position in `currentSubSteps`). This keeps the logic
+  // stable when customer mode removes the Room Assignment step from the list.
   const isSubStepComplete = useCallback(
-    (stepIndex: number) => {
+    (stepId: number) => {
       // Pets that need a room assignment: real selected pets, or guest pets in
       // estimate mode (each named entry counts as one).
       const effectivePetCount =
@@ -452,7 +540,7 @@ export function BookingModal({
           ? guestPetNames.filter((n) => n.trim()).length
           : selectedPetIds.length;
       if (selectedService === "daycare") {
-        switch (stepIndex) {
+        switch (stepId) {
           case 0:
             return daycareSelectedDates.length > 0;
           case 1:
@@ -471,7 +559,7 @@ export function BookingModal({
         }
       }
       if (selectedService === "boarding") {
-        switch (stepIndex) {
+        switch (stepId) {
           case 0:
             return boardingRangeStart !== null && boardingRangeEnd !== null;
           case 1:
@@ -490,7 +578,7 @@ export function BookingModal({
         }
       }
       if (selectedService === "evaluation") {
-        switch (stepIndex) {
+        switch (stepId) {
           case 0:
             return !!startDate && !!checkInTime && !!checkOutTime;
           case 1: // Add-ons — always complete (optional)
@@ -500,7 +588,7 @@ export function BookingModal({
         }
       }
       // Grooming, training, custom services — schedule sub-step
-      if (stepIndex === 0) {
+      if (stepId === 0) {
         return !!startDate && !!checkInTime && !!checkOutTime;
       }
       return true;
@@ -660,6 +748,62 @@ export function BookingModal({
     }
     return selectedPetIds;
   }, [isEstimateMode, isGuestEstimate, effectiveSelectedPets, selectedPetIds]);
+
+  // In customer mode the Room Assignment step is hidden — the system
+  // auto-assigns each pet to the best-fit section/unit based on the facility's
+  // configured rules (pet type, weight) and available capacity. The facility
+  // can override from the facility side after the booking request arrives.
+  useEffect(() => {
+    if (!isCustomerMode) return;
+    if (effectiveSelectedPets.length === 0) return;
+
+    if (selectedService === "daycare") {
+      if (daycareSelectedDates.length === 0) return;
+      const firstDate = daycareSelectedDates[0].toISOString().split("T")[0];
+      const next: Array<{ petId: number; roomId: string }> = [];
+      for (const pet of effectiveSelectedPets) {
+        const section = autoAssignDaycareSection(
+          pet,
+          firstDate,
+          daycareSections,
+          historicalBookings,
+        );
+        if (section) next.push({ petId: pet.id, roomId: section.id });
+      }
+      setRoomAssignments(next);
+      return;
+    }
+
+    if (selectedService === "boarding") {
+      if (!boardingRangeStart || !boardingRangeEnd) return;
+      const startStr = boardingRangeStart.toISOString().split("T")[0];
+      const endStr = boardingRangeEnd.toISOString().split("T")[0];
+      const next: Array<{ petId: number; roomId: string }> = [];
+      for (const pet of effectiveSelectedPets) {
+        const unit = autoAssignBoardingUnit(
+          pet,
+          startStr,
+          endStr,
+          null,
+          roomCategories,
+          facilityRooms,
+          historicalBookings,
+        );
+        if (unit) next.push({ petId: pet.id, roomId: unit.id });
+      }
+      setRoomAssignments(next);
+    }
+  }, [
+    isCustomerMode,
+    selectedService,
+    effectiveSelectedPets,
+    daycareSelectedDates,
+    boardingRangeStart,
+    boardingRangeEnd,
+    daycareSections,
+    roomCategories,
+    facilityRooms,
+  ]);
 
   const selectedClientBookings = useMemo(() => {
     if (selectedClientId == null) return [];
@@ -1019,15 +1163,18 @@ export function BookingModal({
   const canProceed = useMemo(() => {
     const currentStepId = displayedSteps[currentStep]?.id;
     switch (currentStepId) {
-      case "service":
-        return selectedService !== "";
       case "client-pet":
         if (isEstimateMode && isGuestEstimate) {
           return isGuestInquiryComplete;
         }
         if (selectedClientId === null || selectedPetIds.length === 0)
           return false;
-        // If any selected pet has an expired or failed evaluation, lock services (except booking a new evaluation)
+        return true;
+      case "service":
+        if (selectedService === "") return false;
+        // Evaluation-eligibility guards — now enforced at the service step
+        // because the user picks pets first. This blocks moving forward when
+        // the chosen service requires an evaluation the selected pets don't have.
         if (selectedService !== "evaluation") {
           const hasExpired = selectedPets.some((pet) =>
             petHasExpiredEvaluation(pet),
@@ -1036,12 +1183,12 @@ export function BookingModal({
             petHasFailedEvaluation(pet),
           );
           if (hasExpired || hasFailed) return false;
-        }
-        if (serviceRequiresEvaluation && !isEvaluationOptional) {
-          const petsWithoutEvaluation = selectedPets.filter(
-            (pet) => !petHasValidEvaluation(pet),
-          );
-          return petsWithoutEvaluation.length === 0;
+          if (serviceRequiresEvaluation && !isEvaluationOptional) {
+            const petsWithoutEvaluation = selectedPets.filter(
+              (pet) => !petHasValidEvaluation(pet),
+            );
+            if (petsWithoutEvaluation.length > 0) return false;
+          }
         }
         return true;
       case "details": {
@@ -1057,7 +1204,9 @@ export function BookingModal({
           );
           if (hasExpired || hasFailed) return false;
         }
-        return isSubStepComplete(currentSubStep);
+        return isSubStepComplete(
+          currentSubSteps[currentSubStep]?.id ?? currentSubStep,
+        );
       }
       case "confirm":
         if (selectedService !== "evaluation") {
@@ -1244,6 +1393,17 @@ export function BookingModal({
         daycareDateTimes.length > 0 ? daycareDateTimes : undefined,
 
       kennel: kennel || undefined,
+      // Persist the first pet's auto/manual room assignment so the facility
+      // inherits it on the booking record. The facility can override from
+      // their side if they want a different room.
+      sectionId:
+        selectedService === "daycare" && roomAssignments.length > 0
+          ? roomAssignments[0].roomId
+          : undefined,
+      unitAssignment:
+        selectedService === "boarding" && roomAssignments.length > 0
+          ? roomAssignments[0].roomId
+          : undefined,
       feedingSchedule: feedingSchedule || undefined,
       walkSchedule: walkSchedule || undefined,
       medications: medications || undefined,
@@ -2152,17 +2312,10 @@ export function BookingModal({
 
                       {/* Sub-steps */}
                       {showSubSteps && (
-                        <div
-                          className={cn(
-                            "mt-2 ml-6 space-y-1 border-l-2 pl-4",
-                            selectedService
-                              ? accent.subStepBorder
-                              : "border-primary/30",
-                          )}
-                        >
+                        <div className="mt-1.5 ml-8 space-y-0.5">
                           {currentSubSteps.map((subStep, subIdx) => {
                             const isSubActive = currentSubStep === subIdx;
-                            const isSubCompleted = isSubStepComplete(subIdx);
+                            const isSubCompleted = isSubStepComplete(subStep.id);
                             const isVisitedAndCompleted =
                               subIdx < currentSubStep && isSubCompleted;
 
@@ -2343,7 +2496,7 @@ export function BookingModal({
                   </p>
                 )}
             </div>
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
               <div className="p-6">
                 {displayedSteps[currentStep]?.id === "service" && (
                   <ServiceStep
@@ -2387,7 +2540,9 @@ export function BookingModal({
                 {displayedSteps[currentStep]?.id === "details" && (
                   <DetailsStep
                     selectedService={selectedService}
-                    currentSubStep={currentSubStep}
+                    currentSubStep={
+                      currentSubSteps[currentSubStep]?.id ?? currentSubStep
+                    }
                     isSubStepComplete={isSubStepComplete}
                     daycareSelectedDates={daycareSelectedDates}
                     setDaycareSelectedDates={setDaycareSelectedDates}

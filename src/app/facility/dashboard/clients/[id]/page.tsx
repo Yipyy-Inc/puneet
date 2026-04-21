@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, use } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clients } from "@/data/clients";
 import { bookings } from "@/data/bookings";
 import { facilities } from "@/data/facilities";
+import { unfinishedBookings } from "@/data/unfinished-bookings";
 import { useBookingModal } from "@/hooks/use-booking-modal";
+import { buildResumePreselection } from "@/lib/resume-booking";
 import { clientDocuments } from "@/data/documents";
 import { clientCommunications, clientCallHistory } from "@/data/communications";
 import {
@@ -125,7 +127,9 @@ export default function ClientDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { openBookingModal } = useBookingModal();
+  const resumedBookingRef = useRef<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [petActiveTab, setPetActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
@@ -135,6 +139,47 @@ export default function ClientDetailPage({
   const facility = client
     ? facilities.find((f) => f.name === client.facility)
     : null;
+
+  // Resume-from-unfinished-booking: when staff clicks Schedule on an
+  // unfinished booking, the URL gets `?resumeBooking=<ub-id>`. We look it up,
+  // open the wizard pre-filled, then strip the param so a reload doesn't
+  // re-open it.
+  useEffect(() => {
+    const resumeId = searchParams?.get("resumeBooking");
+    if (!resumeId || !client || !facility) return;
+    if (resumedBookingRef.current === resumeId) return;
+
+    const ub = unfinishedBookings.find((r) => r.id === resumeId);
+    if (!ub || ub.clientId !== client.id) return;
+
+    resumedBookingRef.current = resumeId;
+    const preselection = buildResumePreselection(ub);
+
+    const stepHint = ub.abandonmentStep.replace(/_/g, " ");
+    toast.success(
+      `Resumed ${ub.clientName}'s booking — last active at "${stepHint}".`,
+      { description: "All customer-entered details are pre-filled." },
+    );
+
+    openBookingModal({
+      clients: [client],
+      facilityId: facility.id,
+      facilityName: facility.name,
+      ...preselection,
+      onCreateBooking: () => {
+        toast.success(`Booking completed for ${ub.clientName}`);
+      },
+    });
+
+    // Strip the query param so refresh or back nav doesn't relaunch the modal.
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("resumeBooking");
+    const qs = params.toString();
+    router.replace(
+      `/facility/dashboard/clients/${client.id}${qs ? `?${qs}` : ""}`,
+      { scroll: false },
+    );
+  }, [searchParams, client, facility, openBookingModal, router]);
 
   const [editedClient, setEditedClient] = useState({
     name: client?.name || "",

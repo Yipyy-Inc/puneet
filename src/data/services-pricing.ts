@@ -31,7 +31,70 @@ export type WeeklyBillingDay =
   | "sat"
   | "sun";
 export type CancellationPolicy = "immediate" | "end_of_cycle";
+export type MembershipRefundRule =
+  | "none"
+  | "prorated"
+  | "remaining_credits_as_store_credit";
 export type IncludedItemKind = "service" | "addon" | "product";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Customer-facing change policies for memberships and packages
+// (configurable by the facility on each plan / package)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface MembershipChangePolicy {
+  allowUpgrade: boolean;
+  allowDowngrade: boolean;
+  allowCancel: boolean;
+  allowPause: boolean;
+  /** When the customer cancels — when does access end and what refund applies */
+  cancellationPolicy: CancellationPolicy;
+  refundRule: MembershipRefundRule;
+  /** Days of notice required before the requested change takes effect */
+  noticeRequiredDays: number;
+  /** After signing up, customer must wait this many days before changing plan */
+  cooldownDays: number;
+  /** Free-text policy explanation shown to the customer */
+  policyNotes?: string;
+}
+
+export interface PackagePolicy {
+  /** Allow cash / card refund on unused passes */
+  allowRefundUnused: boolean;
+  /** Refund amount per unused pass — usually less than the paid-per-pass rate */
+  refundPerUnusedPass?: number;
+  /** Convert unused passes to store credit on cancellation */
+  allowStoreCreditOnCancel: boolean;
+  /** Transfer remaining passes to another customer (e.g. family member) */
+  allowTransfer: boolean;
+  /** Customer can request an extension on expiring passes */
+  allowExtension: boolean;
+  /** Maximum number of days the validity window can be extended */
+  maxExtensionDays: number;
+  /** One-time fee to extend validity (0 = free) */
+  extensionFee: number;
+  policyNotes?: string;
+}
+
+export const defaultMembershipChangePolicy: MembershipChangePolicy = {
+  allowUpgrade: true,
+  allowDowngrade: true,
+  allowCancel: true,
+  allowPause: true,
+  cancellationPolicy: "end_of_cycle",
+  refundRule: "none",
+  noticeRequiredDays: 7,
+  cooldownDays: 0,
+};
+
+export const defaultPackagePolicy: PackagePolicy = {
+  allowRefundUnused: false,
+  allowStoreCreditOnCancel: true,
+  allowTransfer: false,
+  allowExtension: true,
+  maxExtensionDays: 30,
+  extensionFee: 0,
+};
 
 export type IncludedItemExpiry =
   | { type: "end_of_cycle" }
@@ -130,6 +193,55 @@ export interface ServicePackage {
   popularityRank?: number;
   purchaseCount: number;
   createdAt: string;
+  /** Facility-configurable customer-side policy (optional; falls back to default) */
+  policy?: PackagePolicy;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Customer-owned packages and individual pass usage
+// ─────────────────────────────────────────────────────────────────────────
+
+export type PassStatus = "available" | "used" | "refunded" | "expired";
+
+export interface PassUsage {
+  /** Sequential pass number within the package (1-based) */
+  passNumber: number;
+  status: PassStatus;
+  /** Booking that consumed this pass */
+  bookingId?: number;
+  usedAt?: string;
+  /** For refunded passes */
+  refundedAt?: string;
+  refundAmount?: number;
+  notes?: string;
+}
+
+export interface CustomerPackagePurchase {
+  id: string;
+  customerId: string;
+  packageId: string;
+  packageName: string;
+  /** Which service category the passes apply to — used to filter booking history */
+  category: ServiceCategory;
+  /** Mirror of the package's component service for convenience */
+  serviceId: string;
+  serviceLabel: string;
+  totalPasses: number;
+  purchaseDate: string;
+  /** ISO date — after this the remaining passes are considered expired */
+  expiresAt: string;
+  pricePaid: number;
+  /** One entry per pass, ordered by passNumber */
+  passes: PassUsage[];
+  /** History of extensions/refunds/transfers applied post-purchase */
+  adjustments?: {
+    id: string;
+    type: "extension" | "refund" | "transfer" | "store_credit";
+    date: string;
+    description: string;
+    amount?: number;
+    daysAdded?: number;
+  }[];
 }
 
 export interface SeasonalPricing {
@@ -233,6 +345,11 @@ export interface MembershipPlan {
   cancellationPolicy: CancellationPolicy;
   badgeColor: string; // hex
   tierLabel?: string; // e.g. Silver / Gold / Platinum
+  /** Which other plans this plan can transition to (empty = all active plans) */
+  upgradePlanIds?: string[];
+  downgradePlanIds?: string[];
+  /** Facility-configurable customer-side policy (optional; falls back to default) */
+  changePolicy?: MembershipChangePolicy;
 }
 
 export interface PrepaidCredits {
@@ -604,6 +721,17 @@ export const servicePackages: ServicePackage[] = [
     popularityRank: 1,
     purchaseCount: 156,
     createdAt: "2024-01-20T10:00:00Z",
+    policy: {
+      allowRefundUnused: true,
+      refundPerUnusedPass: 25,
+      allowStoreCreditOnCancel: true,
+      allowTransfer: true,
+      allowExtension: true,
+      maxExtensionDays: 60,
+      extensionFee: 0,
+      policyNotes:
+        "Refunds on unused passes issued at $25/pass (below the per-pass price). Transfers allowed once per package to a household member.",
+    },
   },
   {
     id: "pkg-002",
@@ -669,6 +797,16 @@ export const servicePackages: ServicePackage[] = [
     status: "active",
     purchaseCount: 45,
     createdAt: "2024-03-01T10:00:00Z",
+    policy: {
+      allowRefundUnused: false,
+      allowStoreCreditOnCancel: true,
+      allowTransfer: false,
+      allowExtension: true,
+      maxExtensionDays: 30,
+      extensionFee: 15,
+      policyNotes:
+        "Validity extensions available once for up to 30 days ($15 fee). Unused passes convert to store credit on cancellation.",
+    },
   },
   {
     id: "pkg-006",
@@ -739,6 +877,20 @@ export const membershipPlans: MembershipPlan[] = [
     gracePeriodDays: 7,
     cancellationPolicy: "end_of_cycle",
     badgeColor: "#C0C0C0",
+    upgradePlanIds: ["plan-002", "plan-003"],
+    downgradePlanIds: [],
+    changePolicy: {
+      allowUpgrade: true,
+      allowDowngrade: false,
+      allowCancel: true,
+      allowPause: true,
+      cancellationPolicy: "end_of_cycle",
+      refundRule: "none",
+      noticeRequiredDays: 7,
+      cooldownDays: 0,
+      policyNotes:
+        "Changes take effect on your next billing date. Unused credits do not roll over.",
+    },
   },
   {
     id: "plan-002",
@@ -805,6 +957,20 @@ export const membershipPlans: MembershipPlan[] = [
     gracePeriodDays: 7,
     cancellationPolicy: "end_of_cycle",
     badgeColor: "#D4AF37",
+    upgradePlanIds: ["plan-003"],
+    downgradePlanIds: ["plan-001"],
+    changePolicy: {
+      allowUpgrade: true,
+      allowDowngrade: true,
+      allowCancel: true,
+      allowPause: true,
+      cancellationPolicy: "end_of_cycle",
+      refundRule: "remaining_credits_as_store_credit",
+      noticeRequiredDays: 7,
+      cooldownDays: 30,
+      policyNotes:
+        "Upgrades take effect immediately with a prorated charge. Downgrades apply on the next billing cycle. Unused credits convert to store credit on cancellation.",
+    },
   },
   {
     id: "plan-003",
@@ -872,6 +1038,20 @@ export const membershipPlans: MembershipPlan[] = [
     gracePeriodDays: 7,
     cancellationPolicy: "end_of_cycle",
     badgeColor: "#6B46C1",
+    upgradePlanIds: [],
+    downgradePlanIds: ["plan-002", "plan-001"],
+    changePolicy: {
+      allowUpgrade: false,
+      allowDowngrade: true,
+      allowCancel: true,
+      allowPause: true,
+      cancellationPolicy: "end_of_cycle",
+      refundRule: "prorated",
+      noticeRequiredDays: 14,
+      cooldownDays: 60,
+      policyNotes:
+        "You're on our top tier! Downgrades apply next cycle. Prorated refunds are issued when you cancel an annual plan early.",
+    },
   },
   {
     id: "plan-004",
@@ -923,6 +1103,16 @@ export const membershipPlans: MembershipPlan[] = [
     gracePeriodDays: 7,
     cancellationPolicy: "end_of_cycle",
     badgeColor: "#3B82F6",
+    changePolicy: {
+      allowUpgrade: true,
+      allowDowngrade: true,
+      allowCancel: true,
+      allowPause: true,
+      cancellationPolicy: "end_of_cycle",
+      refundRule: "none",
+      noticeRequiredDays: 7,
+      cooldownDays: 0,
+    },
   },
   {
     id: "plan-005",
@@ -975,10 +1165,80 @@ export const membershipPlans: MembershipPlan[] = [
     gracePeriodDays: 3,
     cancellationPolicy: "end_of_cycle",
     badgeColor: "#14B8A6",
+    changePolicy: {
+      allowUpgrade: true,
+      allowDowngrade: true,
+      allowCancel: true,
+      allowPause: false,
+      cancellationPolicy: "end_of_cycle",
+      refundRule: "none",
+      noticeRequiredDays: 3,
+      cooldownDays: 0,
+      policyNotes:
+        "Weekly billing — cancellations apply from the next Monday. Pausing is not supported on weekly plans.",
+    },
   },
 ];
 
 export const memberships: Membership[] = [
+  {
+    id: "mem-000",
+    customerId: "15",
+    customerName: "Alice Johnson",
+    customerEmail: "alice@example.com",
+    planId: "plan-002",
+    planName: "Daycare Plus",
+    status: "active",
+    billingCycle: "monthly",
+    monthlyPrice: 179,
+    startDate: "2025-10-01",
+    nextBillingDate: "2026-05-01",
+    creditsRemaining: 5,
+    creditsTotal: 8,
+    discountPercentage: 15,
+    autoRenew: true,
+    createdAt: "2025-10-01T10:00:00Z",
+    activityLog: [
+      {
+        id: "act-000-1",
+        type: "created",
+        date: "2025-10-01T10:00:00Z",
+        amount: 179,
+        description: "Subscribed to Daycare Plus",
+      },
+      {
+        id: "act-000-2",
+        type: "renewed",
+        date: "2026-04-01T09:00:00Z",
+        amount: 179,
+        description: "Monthly renewal",
+      },
+      {
+        id: "act-000-3",
+        type: "perk_redeemed",
+        date: "2026-04-08T14:10:00Z",
+        description: "Full Day Daycare used (3 of 8)",
+      },
+    ],
+    invoices: [
+      {
+        id: "inv-000-1",
+        date: "2026-04-01",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+      {
+        id: "inv-000-2",
+        date: "2026-03-01",
+        amount: 179,
+        tax: 15.66,
+        status: "paid",
+        receiptUrl: "#",
+      },
+    ],
+  },
   {
     id: "mem-001",
     customerId: "cust-001",
@@ -1330,6 +1590,83 @@ export const memberships: Membership[] = [
         amount: 45,
         tax: 3.94,
         status: "pending",
+      },
+    ],
+  },
+];
+
+// Customer-owned packages (1 entry = 1 purchase of a ServicePackage by a customer).
+// Each `passes[i]` entry represents a single redeemable pass, some already linked
+// to real bookings (see bookings.ts) so the customer UI can deep-link.
+export const customerPackagePurchases: CustomerPackagePurchase[] = [
+  {
+    id: "cpp-001",
+    customerId: "15",
+    packageId: "pkg-001",
+    packageName: "Daycare 10-Pack",
+    category: "daycare",
+    serviceId: "srv-003",
+    serviceLabel: "Full Day Daycare",
+    totalPasses: 10,
+    purchaseDate: "2026-02-10",
+    expiresAt: "2026-08-09",
+    pricePaid: 299,
+    passes: [
+      {
+        passNumber: 1,
+        status: "used",
+        bookingId: 3,
+        usedAt: "2026-03-30",
+        notes: "Full Day Daycare — Max",
+      },
+      {
+        passNumber: 2,
+        status: "used",
+        bookingId: 22,
+        usedAt: "2026-04-22",
+        notes: "Full Day Daycare — Buddy & Max",
+      },
+      { passNumber: 3, status: "available" },
+      { passNumber: 4, status: "available" },
+      { passNumber: 5, status: "available" },
+      { passNumber: 6, status: "available" },
+      { passNumber: 7, status: "available" },
+      { passNumber: 8, status: "available" },
+      { passNumber: 9, status: "available" },
+      { passNumber: 10, status: "available" },
+    ],
+  },
+  {
+    id: "cpp-002",
+    customerId: "15",
+    packageId: "pkg-005",
+    packageName: "Grooming Maintenance",
+    category: "grooming",
+    serviceId: "srv-005",
+    serviceLabel: "Bath & Brush",
+    totalPasses: 4,
+    purchaseDate: "2025-12-15",
+    expiresAt: "2026-04-14",
+    pricePaid: 140,
+    passes: [
+      {
+        passNumber: 1,
+        status: "used",
+        bookingId: 7,
+        usedAt: "2026-03-12",
+        notes: "Bath & Brush — Buddy",
+      },
+      { passNumber: 2, status: "available" },
+      { passNumber: 3, status: "available" },
+      { passNumber: 4, status: "available" },
+    ],
+    adjustments: [
+      {
+        id: "adj-001",
+        type: "extension",
+        date: "2026-04-01",
+        description: "Validity extended by 30 days (courtesy)",
+        daysAdded: 30,
       },
     ],
   },

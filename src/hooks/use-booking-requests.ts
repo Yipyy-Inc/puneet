@@ -4,7 +4,9 @@ import * as React from "react";
 
 import { BOOKING_REQUESTS, type BookingRequest } from "@/data/booking-requests";
 
-const STORAGE_KEY = "booking_requests_store_v1";
+// Bump the version whenever BOOKING_REQUESTS seed shape or dates change —
+// otherwise stale data from a previous session wins over the fresh mocks.
+const STORAGE_KEY = "booking_requests_store_v4";
 
 function safeParse(json: string): unknown {
   try {

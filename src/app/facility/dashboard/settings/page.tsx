@@ -1479,6 +1479,231 @@ function DropOffPickUpOverrideCard() {
   );
 }
 
+// Vaccination Requirements Component
+const VACCINE_SPECIES_OPTIONS = ["Dog", "Cat", "Other"] as const;
+const VACCINE_SERVICE_OPTIONS = [
+  "boarding",
+  "daycare",
+  "grooming",
+  "training",
+  "vet",
+] as const;
+
+function VaccinationRequirementsCard() {
+  const [species, setSpecies] = useState<string>("Dog");
+  const [rules, setRules] = useState(() =>
+    vaccinationRules.map((r) => ({ ...r })),
+  );
+  const [newName, setNewName] = useState("");
+  const [newExpiry, setNewExpiry] = useState(30);
+
+  const filtered = rules.filter(
+    (r) => r.species.toLowerCase() === species.toLowerCase(),
+  );
+
+  const addVaccine = () => {
+    const name = newName.trim();
+    if (!name) return;
+    setRules((prev) => [
+      ...prev,
+      {
+        id: `vax-${Date.now()}`,
+        vaccineName: name,
+        species,
+        required: true,
+        expiryWarningDays: newExpiry,
+        applicableServices: [],
+      },
+    ]);
+    setNewName("");
+    setNewExpiry(30);
+  };
+
+  const removeVaccine = (id: string) => {
+    setRules((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const toggleService = (id: string, service: string) => {
+    setRules((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const has = r.applicableServices.includes(service);
+        return {
+          ...r,
+          applicableServices: has
+            ? r.applicableServices.filter((s) => s !== service)
+            : [...r.applicableServices, service],
+        };
+      }),
+    );
+  };
+
+  const updateRequired = (id: string, required: boolean) => {
+    setRules((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, required } : r)),
+    );
+  };
+
+  const updateExpiry = (id: string, days: number) => {
+    setRules((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, expiryWarningDays: days } : r)),
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vaccination Requirements</CardTitle>
+        <p className="text-muted-foreground text-sm">
+          Configure which vaccines are required for each animal type. Customers
+          will only be asked to provide the vaccines you define here.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Tabs value={species} onValueChange={setSpecies}>
+          <TabsList>
+            {VACCINE_SPECIES_OPTIONS.map((s) => (
+              <TabsTrigger key={s} value={s}>
+                {s}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {VACCINE_SPECIES_OPTIONS.map((s) => (
+            <TabsContent key={s} value={s} className="space-y-3">
+              {filtered.length === 0 && species === s ? (
+                <p className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
+                  No vaccines configured for {s}. Add one below.
+                </p>
+              ) : null}
+
+              {species === s &&
+                filtered.map((vax) => (
+                  <div key={vax.id} className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={vax.vaccineName}
+                            onChange={(e) =>
+                              setRules((prev) =>
+                                prev.map((r) =>
+                                  r.id === vax.id
+                                    ? { ...r, vaccineName: e.target.value }
+                                    : r,
+                                ),
+                              )
+                            }
+                            className="max-w-xs font-semibold"
+                          />
+                          <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                            <Checkbox
+                              checked={vax.required}
+                              onCheckedChange={(v) =>
+                                updateRequired(vax.id, Boolean(v))
+                              }
+                            />
+                            Required
+                          </label>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">
+                            Expiry warning (days)
+                          </Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={vax.expiryWarningDays}
+                            onChange={(e) =>
+                              updateExpiry(
+                                vax.id,
+                                parseInt(e.target.value) || 0,
+                              )
+                            }
+                            className="h-8 w-24"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-muted-foreground mb-1.5 block text-xs">
+                            Applicable services
+                          </Label>
+                          <div className="flex flex-wrap gap-2">
+                            {VACCINE_SERVICE_OPTIONS.map((service) => {
+                              const active =
+                                vax.applicableServices.includes(service);
+                              return (
+                                <button
+                                  key={service}
+                                  type="button"
+                                  onClick={() =>
+                                    toggleService(vax.id, service)
+                                  }
+                                  className={
+                                    active
+                                      ? "bg-primary text-primary-foreground rounded-full px-3 py-1 text-xs capitalize"
+                                      : "text-muted-foreground hover:bg-muted rounded-full border px-3 py-1 text-xs capitalize"
+                                  }
+                                >
+                                  {service}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeVaccine(vax.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+              {species === s && (
+                <div className="bg-muted/30 flex items-end gap-2 rounded-lg border border-dashed p-3">
+                  <div className="flex-1">
+                    <Label className="mb-1 block text-xs">Vaccine name</Label>
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder={`e.g. ${s === "Cat" ? "FeLV" : "Leptospirosis"}`}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="w-32">
+                    <Label className="mb-1 block text-xs">
+                      Expiry warn (days)
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={newExpiry}
+                      onChange={(e) =>
+                        setNewExpiry(parseInt(e.target.value) || 0)
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                  <Button size="sm" onClick={addVaccine} disabled={!newName.trim()}>
+                    <Plus className="mr-1 size-3.5" />
+                    Add vaccine
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Booking Rules Component
 function BookingRulesCard() {
   const { rules, updateRules } = useSettings();
@@ -4195,36 +4420,8 @@ export default function SettingsPage() {
               <FacilityBookingFlowCard />
 
               {/* Vaccination Rules */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vaccination Requirements</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {vaccinationRules.map((vax) => (
-                    <div key={vax.id} className="rounded-lg border p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold">{vax.vaccineName}</div>
-                          <div className="text-muted-foreground mt-1 text-sm">
-                            Expiry warning: {vax.expiryWarningDays} days before
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {vax.applicableServices.map((service, idx) => (
-                              <Badge
-                                key={idx}
-                                variant="outline"
-                                className="text-xs capitalize"
-                              >
-                                {service}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <VaccinationRequirementsCard />
+
 
               <ReportCardSettingsCard />
             </div>

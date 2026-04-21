@@ -44,9 +44,12 @@ import {
 import {
   servicePackages,
   services,
+  defaultPackagePolicy,
+  type PackagePolicy,
   type ServicePackage,
   type ServiceStatus,
 } from "@/data/services-pricing";
+import { Switch } from "@/components/ui/switch";
 
 type PackageWithRecord = ServicePackage & Record<string, unknown>;
 
@@ -67,6 +70,7 @@ export default function PackagesPage() {
     packagePrice: 0,
     validDays: 90,
     status: "active" as ServiceStatus,
+    policy: { ...defaultPackagePolicy } as PackagePolicy,
   });
 
   const [newServiceEntry, setNewServiceEntry] = useState({
@@ -97,6 +101,7 @@ export default function PackagesPage() {
       packagePrice: 0,
       validDays: 90,
       status: "active",
+      policy: { ...defaultPackagePolicy },
     });
     setIsAddEditModalOpen(true);
   };
@@ -110,6 +115,7 @@ export default function PackagesPage() {
       packagePrice: pkg.packagePrice,
       validDays: pkg.validDays,
       status: pkg.status,
+      policy: { ...(pkg.policy ?? defaultPackagePolicy) },
     });
     setIsAddEditModalOpen(true);
   };
@@ -557,6 +563,145 @@ export default function PackagesPage() {
                 />
               </div>
             </div>
+
+            {/* Customer Policy */}
+            <div className="space-y-3 rounded-lg border p-4">
+              <div>
+                <Label className="text-sm font-semibold">
+                  Customer self-service policy
+                </Label>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  What pass-holders can do from their account. Disabled actions
+                  are hidden in the customer portal.
+                </p>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-2">
+                <PackagePolicyToggle
+                  label="Refund unused passes"
+                  checked={formData.policy.allowRefundUnused}
+                  onChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowRefundUnused: v },
+                    })
+                  }
+                />
+                <PackagePolicyToggle
+                  label="Store credit on cancel"
+                  checked={formData.policy.allowStoreCreditOnCancel}
+                  onChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      policy: {
+                        ...formData.policy,
+                        allowStoreCreditOnCancel: v,
+                      },
+                    })
+                  }
+                />
+                <PackagePolicyToggle
+                  label="Allow transfer to household"
+                  checked={formData.policy.allowTransfer}
+                  onChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowTransfer: v },
+                    })
+                  }
+                />
+                <PackagePolicyToggle
+                  label="Allow validity extension"
+                  checked={formData.policy.allowExtension}
+                  onChange={(v) =>
+                    setFormData({
+                      ...formData,
+                      policy: { ...formData.policy, allowExtension: v },
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Refund per unused pass ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    disabled={!formData.policy.allowRefundUnused}
+                    value={formData.policy.refundPerUnusedPass ?? ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        policy: {
+                          ...formData.policy,
+                          refundPerUnusedPass:
+                            parseFloat(e.target.value) || undefined,
+                        },
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Max extension (days)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    disabled={!formData.policy.allowExtension}
+                    value={formData.policy.maxExtensionDays}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        policy: {
+                          ...formData.policy,
+                          maxExtensionDays: parseInt(e.target.value) || 0,
+                        },
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Extension fee ($)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    disabled={!formData.policy.allowExtension}
+                    value={formData.policy.extensionFee}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        policy: {
+                          ...formData.policy,
+                          extensionFee: parseFloat(e.target.value) || 0,
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Policy explanation shown to customers
+                </Label>
+                <Textarea
+                  rows={2}
+                  value={formData.policy.policyNotes ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      policy: {
+                        ...formData.policy,
+                        policyNotes: e.target.value,
+                      },
+                    })
+                  }
+                  placeholder="e.g. Refunds on unused passes are issued at $25/pass. Extensions available once for up to 30 days."
+                />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -596,5 +741,22 @@ export default function PackagesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PackagePolicyToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label className="hover:bg-muted/30 flex cursor-pointer items-center justify-between rounded-md border px-3 py-2">
+      <span className="text-sm">{label}</span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </label>
   );
 }
