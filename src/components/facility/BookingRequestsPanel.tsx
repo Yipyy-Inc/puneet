@@ -7,16 +7,15 @@ import { Clock, CalendarClock, ChevronRight } from "lucide-react";
 
 import { type BookingRequest } from "@/data/booking-requests";
 import { useBookingRequestsStore } from "@/hooks/use-booking-requests";
+import { useBookingModal } from "@/hooks/use-booking-modal";
+import { clients as allClients } from "@/data/clients";
+import { facilities } from "@/data/facilities";
+import type { Client } from "@/types/client";
+import type { NewBooking } from "@/types/booking";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,8 +38,6 @@ export interface BookingRequestsPanelProps {
   variant?: BookingRequestsPanelVariant;
 }
 
-const SCHEDULE_DRAFT_KEY = "booking_requests_schedule_draft";
-
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("en-US", {
@@ -61,6 +58,16 @@ export function BookingRequestsPanel({
   const router = useRouter();
   const facilityId = 11;
   const { requests, setRequests } = useBookingRequestsStore();
+  const { openBookingModal, closeBookingModal } = useBookingModal();
+  const facility = React.useMemo(
+    () => facilities.find((f) => f.id === facilityId),
+    [facilityId],
+  );
+  const facilityClients = React.useMemo<Client[]>(
+    () =>
+      (allClients as Client[]).filter((c) => c.facility === facility?.name),
+    [facility],
+  );
 
   const pending = React.useMemo(
     () =>
@@ -78,7 +85,6 @@ export function BookingRequestsPanel({
     [pending],
   );
 
-  const [selected, setSelected] = React.useState<BookingRequest | null>(null);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmAction, setConfirmAction] =
     React.useState<ConfirmAction>("decline");
@@ -98,19 +104,51 @@ export function BookingRequestsPanel({
   };
 
   const schedule = (req: BookingRequest) => {
-    // Frontend-only: store a draft and navigate to bookings page to edit/save.
-    localStorage.setItem(
-      SCHEDULE_DRAFT_KEY,
-      JSON.stringify({
-        requestId: req.id,
-        clientId: req.clientId,
-        petId: req.petId,
-        service: req.services[0],
-        appointmentAt: req.appointmentAt,
-      }),
-    );
-    router.push("/facility/dashboard/bookings");
-    toast.success("Opened booking for scheduling");
+    if (!facility) return;
+
+    const handleCreateBooking = (booking: NewBooking) => {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id ? { ...r, status: "scheduled" } : r,
+        ),
+      );
+
+      const notifyBits: string[] = [];
+      if (booking.notificationEmail) notifyBits.push("email");
+      if (booking.notificationSMS) notifyBits.push("SMS");
+      const notifyDesc =
+        notifyBits.length > 0
+          ? `Confirmation sent via ${notifyBits.join(" + ")} to ${req.clientName}`
+          : "No customer notification sent (disabled in wizard)";
+
+      toast.success(`Booking scheduled for ${req.petName}`, {
+        description: notifyDesc,
+      });
+
+      closeBookingModal();
+    };
+
+    openBookingModal({
+      clients: facilityClients,
+      facilityId,
+      facilityName: facility.name,
+      preSelectedClientId: req.clientId,
+      preSelectedPetId: req.petId,
+      preSelectedService: req.services[0],
+      preSelectedStartDate: req.startDate,
+      preSelectedEndDate: req.endDate,
+      preSelectedCheckInTime: req.checkInTime,
+      preSelectedCheckOutTime: req.checkOutTime,
+      preSelectedDaycareDates: req.daycareDates,
+      preSelectedRoomId: req.roomPreference,
+      preSelectedDaycareSectionId: req.daycareSectionId,
+      preSelectedExtraServices: req.extraServices,
+      preSelectedFeedingSchedule: req.feedingSchedule,
+      preSelectedMedications: req.medications,
+      preSelectedNotificationEmail: req.notificationEmail,
+      preSelectedNotificationSMS: req.notificationSMS,
+      onCreateBooking: handleCreateBooking,
+    });
   };
 
   const applyConfirm = () => {
@@ -129,9 +167,6 @@ export function BookingRequestsPanel({
         ),
       );
     }
-
-    // Close the details drawer if it was open for this request
-    setSelected((prev) => (prev?.id === target.id ? null : prev));
 
     // 2) Close confirm and open post-action notification chooser
     setConfirmOpen(false);
@@ -241,8 +276,6 @@ export function BookingRequestsPanel({
       data={sorted}
       columns={columns}
       itemsPerPage={variant === "dropdown" ? 3 : 5}
-      onRowClick={(r) => setSelected(r)}
-      rowClassName={() => "cursor-pointer"}
       actions={(r) => (
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" onClick={() => schedule(r)}>
@@ -280,79 +313,6 @@ export function BookingRequestsPanel({
           <div className="mt-3">{table}</div>
         </div>
       )}
-
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="sm:max-w-md">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle>Booking Request</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 p-4">
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">Submitted</div>
-                  <div className="text-sm font-medium">
-                    {formatDateTime(selected.createdAt)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Requested appointment
-                  </div>
-                  <div className="text-sm font-medium">
-                    {formatDateTime(selected.appointmentAt)}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Customer / Pet
-                  </div>
-                  <div className="text-sm font-medium">
-                    {selected.clientName} — {selected.petName}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {selected.clientContact}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground text-xs">
-                    Service(s)
-                  </div>
-                  <div className="text-sm font-medium">
-                    {servicesLabel(selected.services)}
-                  </div>
-                </div>
-                {selected.notes && (
-                  <div className="space-y-1">
-                    <div className="text-muted-foreground text-xs">Notes</div>
-                    <div className="text-sm">{selected.notes}</div>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-2">
-                  <Button className="flex-1" onClick={() => schedule(selected)}>
-                    Schedule
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => openConfirm("decline", selected)}
-                  >
-                    Decline
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => openConfirm("waitlist", selected)}
-                  >
-                    To Waitlist
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

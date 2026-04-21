@@ -38,6 +38,50 @@ export type MultiPetBehavior = z.infer<typeof multiPetBehaviorEnum>;
 export const yipyyGoAddOnsApprovalEnum = z.enum(["auto", "staff_approval"]);
 export type YipyyGoAddOnsApproval = z.infer<typeof yipyyGoAddOnsApprovalEnum>;
 
+export const medicationFeeBillingEnum = z.enum([
+  "per_dose",
+  "per_day",
+  "per_stay",
+]);
+export type MedicationFeeBilling = z.infer<typeof medicationFeeBillingEnum>;
+
+export const medicationFeeConfigSchema = z.object({
+  enabled: z.boolean(),
+  amount: z.number().nonnegative(),
+  billing: medicationFeeBillingEnum,
+  label: z.string().optional(),
+  description: z.string().optional(),
+});
+export type MedicationFeeConfig = z.infer<typeof medicationFeeConfigSchema>;
+
+export const tipPopupPresetSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.enum(["percentage", "fixed"]),
+  value: z.number(),
+});
+export type TipPopupPreset = z.infer<typeof tipPopupPresetSchema>;
+
+export const tipPopupConfigSchema = z.object({
+  enabled: z.boolean(),
+  title: z.string(),
+  message: z.string(),
+  appliesTo: z.enum(["stay_total", "selected_services"]),
+  allowCustomAmount: z.boolean(),
+  allowSkip: z.boolean(),
+  presets: z.array(tipPopupPresetSchema),
+});
+export type TipPopupConfig = z.infer<typeof tipPopupConfigSchema>;
+
+export const confirmationEmailConfigSchema = z.object({
+  enabled: z.boolean(),
+  subject: z.string(),
+  message: z.string(),
+});
+export type ConfirmationEmailConfig = z.infer<
+  typeof confirmationEmailConfigSchema
+>;
+
 // ============================================================================
 // Config Schemas
 // ============================================================================
@@ -109,6 +153,10 @@ export const formTemplateConfigSchema = z.object({
     photoUploads: z.boolean(),
     addOnsSection: z.boolean(),
     tipSection: z.boolean(),
+    contactInfoSection: z.boolean().optional(),
+    petDetailsSection: z.boolean().optional(),
+    bookingDetailsSection: z.boolean().optional(),
+    belongingsPhotoRequired: z.boolean().optional(),
   }),
   multiPetBehavior: multiPetBehaviorEnum,
   addOnsScope: z.enum(["booking", "per_pet"]),
@@ -124,6 +172,9 @@ export const yipyyGoConfigSchema = z.object({
   formTemplate: formTemplateConfigSchema,
   addOnsApproval: yipyyGoAddOnsApprovalEnum,
   notifyStaffEmailOnSubmit: z.boolean(),
+  medicationFee: medicationFeeConfigSchema.optional(),
+  tipPopup: tipPopupConfigSchema.optional(),
+  confirmationEmail: confirmationEmailConfigSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   updatedBy: z.number(),
@@ -370,7 +421,14 @@ export type CheckInAuditEntry = z.infer<typeof checkInAuditEntrySchema>;
 // ============================================================================
 
 export interface YipyyGoFormSectionBooking {
+  id?: number | string;
+  service?: string;
+  startDate?: string;
+  endDate?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
   totalCost?: number;
+  facilityId?: number;
 }
 
 export interface YipyyGoFormSectionProps {

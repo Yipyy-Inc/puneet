@@ -220,9 +220,9 @@ export default function CustomerDashboardPage() {
         const petName = pet?.name ?? "Your pet";
         actions.push({
           type: "yipyygo_needed",
-          priority: "medium",
-          title: `Action needed: complete YipyyGo for ${petName}'s stay`,
-          message: `Pre-check-in form for ${b.service} on ${new Date(b.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          priority: "high",
+          title: `Express Check-in required for ${petName}'s ${b.service}`,
+          message: `Complete the Express Check-in form before drop-off on ${new Date(b.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} — you won't be able to leave your pet until this is done.`,
           actionLabel: "Complete form",
           actionLink: `/customer/bookings/${b.id}/yipyygo-form`,
           petName: pet?.name,
@@ -618,38 +618,64 @@ export default function CustomerDashboardPage() {
                 </div>
               </div>
             ) : (
-              urgentActions.slice(0, 3).map((action, index) => (
-                <Alert
-                  key={index}
-                  variant={
-                    action.priority === "high" ? "destructive" : "default"
-                  }
-                  className="border-l-4 bg-white/75 shadow-sm"
-                >
-                  <AlertCircle className="size-4" />
-                  <AlertDescription>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{action.title}</p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {action.message}
-                        </p>
+              urgentActions.slice(0, 3).map((action, index) => {
+                const isExpressCheckin = action.type === "yipyygo_needed";
+                return (
+                  <Alert
+                    key={index}
+                    variant={
+                      action.priority === "high" ? "destructive" : "default"
+                    }
+                    data-express-checkin={isExpressCheckin || undefined}
+                    className="border-l-4 bg-white/75 shadow-sm data-[express-checkin=true]:animate-pulse data-[express-checkin=true]:border-red-500 data-[express-checkin=true]:bg-red-50 data-[express-checkin=true]:text-red-900"
+                  >
+                    <AlertCircle
+                      className={
+                        isExpressCheckin ? "size-4 text-red-600" : "size-4"
+                      }
+                    />
+                    <AlertDescription>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">
+                            {isExpressCheckin && (
+                              <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+                                <span className="size-1.5 animate-ping rounded-full bg-white" />
+                                Required
+                              </span>
+                            )}
+                            {action.title}
+                          </p>
+                          <p
+                            className={
+                              isExpressCheckin
+                                ? "mt-1 text-xs text-red-800"
+                                : "text-muted-foreground mt-1 text-xs"
+                            }
+                          >
+                            {action.message}
+                          </p>
+                        </div>
+                        <Button
+                          variant={isExpressCheckin ? "destructive" : "outline"}
+                          size="sm"
+                          className={
+                            isExpressCheckin
+                              ? "h-7 text-xs"
+                              : "h-7 bg-white/90 text-xs"
+                          }
+                          asChild
+                        >
+                          <Link href={action.actionLink}>
+                            {action.actionLabel}
+                            <ExternalLink className="ml-1 size-3" />
+                          </Link>
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 bg-white/90 text-xs"
-                        asChild
-                      >
-                        <Link href={action.actionLink}>
-                          {action.actionLabel}
-                          <ExternalLink className="ml-1 size-3" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              ))
+                    </AlertDescription>
+                  </Alert>
+                );
+              })
             )}
           </CardContent>
         </Card>

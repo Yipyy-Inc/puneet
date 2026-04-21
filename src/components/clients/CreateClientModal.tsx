@@ -42,7 +42,6 @@ import {
   Upload,
   FileImage,
   Clock,
-  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePetAge } from "@/lib/pet-utils";
@@ -51,6 +50,7 @@ import {
   getCustomerLanguageLabel,
   getEnabledCustomerLanguageOptions,
 } from "@/lib/language-settings";
+import { vaccinationRules } from "@/data/settings";
 
 // ========================================
 // Types
@@ -99,9 +99,17 @@ const EMPTY_PET: PetForm = {
 interface VaccineEntry {
   name: string;
   expiryDate: string;
-  proofFile: File | null;
-  proofPreview: string;
   addLater: boolean;
+}
+
+interface ProofFileEntry {
+  file: File;
+  preview: string;
+}
+
+interface PetVaccineRecord {
+  vaccines: VaccineEntry[];
+  proofs: ProofFileEntry[];
 }
 
 interface ClientForm {
@@ -191,29 +199,22 @@ function isValidPhoneNumber(value: string): boolean {
   return digits >= PHONE_MIN_DIGITS && digits <= PHONE_MAX_DIGITS;
 }
 
-const DEFAULT_VACCINES: VaccineEntry[] = [
-  {
-    name: "Rabies",
-    expiryDate: "",
-    proofFile: null,
-    proofPreview: "",
-    addLater: false,
-  },
-  {
-    name: "DHPP",
-    expiryDate: "",
-    proofFile: null,
-    proofPreview: "",
-    addLater: false,
-  },
-  {
-    name: "Bordetella",
-    expiryDate: "",
-    proofFile: null,
-    proofPreview: "",
-    addLater: false,
-  },
-];
+function getRequiredVaccinesForSpecies(species: string): VaccineEntry[] {
+  return vaccinationRules
+    .filter((rule) => rule.species.toLowerCase() === species.toLowerCase())
+    .map((rule) => ({
+      name: rule.vaccineName,
+      expiryDate: "",
+      addLater: false,
+    }));
+}
+
+function createEmptyPetVaccineRecord(species: string): PetVaccineRecord {
+  return {
+    vaccines: getRequiredVaccinesForSpecies(species),
+    proofs: [],
+  };
+}
 
 const DEFAULT_AGREEMENTS = {
   terms: false,
@@ -249,291 +250,306 @@ function loadCreateClientDraft(): CreateClientDraft {
 // Vaccine Step (extracted to keep main component small)
 // ========================================
 
-function VaccineStep({
-  vaccines,
-  setVaccines,
+const PROOF_ACCEPTED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+  "application/pdf",
+];
+const PROOF_MAX_SIZE = 10 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function PetVaccineCard({
+  pet,
+  petIndex,
+  record,
+  updateRecord,
 }: {
-  vaccines: VaccineEntry[];
-  setVaccines: React.Dispatch<React.SetStateAction<VaccineEntry[]>>;
+  pet: PetForm;
+  petIndex: number;
+  record: PetVaccineRecord;
+  updateRecord: (
+    petIndex: number,
+    updater: (prev: PetVaccineRecord) => PetVaccineRecord,
+  ) => void;
 }) {
-  const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleProofUpload = (index: number, file: File) => {
-    const validTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/jpg",
-      "application/pdf",
-    ];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please upload a PDF or image file (JPG, PNG)");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
-      return;
-    }
+  const updateVaccine = (i: number, patch: Partial<VaccineEntry>) => {
+    updateRecord(petIndex, (prev) => ({
+      ...prev,
+      vaccines: prev.vaccines.map((v, idx) =>
+        idx === i ? { ...v, ...patch } : v,
+      ),
+    }));
+  };
 
-    const isImage = file.type.startsWith("image/");
-    if (isImage) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setVaccines((prev) =>
-          prev.map((v, i) =>
-            i === index
-              ? {
-                  ...v,
-                  proofFile: file,
-                  proofPreview: e.target?.result as string,
-                  addLater: false,
-                }
-              : v,
-          ),
+  const handleProofUpload = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const valid: File[] = [];
+    for (const file of Array.from(files)) {
+      if (!PROOF_ACCEPTED_TYPES.includes(file.type)) {
+        toast.error(
+          `${file.name}: Please upload a PDF or image file (JPG, PNG)`,
         );
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setVaccines((prev) =>
-        prev.map((v, i) =>
-          i === index
-            ? { ...v, proofFile: file, proofPreview: "", addLater: false }
-            : v,
-        ),
-      );
+        continue;
+      }
+      if (file.size > PROOF_MAX_SIZE) {
+        toast.error(`${file.name}: File size must be less than 10MB`);
+        continue;
+      }
+      valid.push(file);
     }
+
+    valid.forEach((file) => {
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const preview = (e.target?.result as string) ?? "";
+          updateRecord(petIndex, (prev) => ({
+            ...prev,
+            proofs: [...prev.proofs, { file, preview }],
+          }));
+        };
+        reader.readAsDataURL(file);
+      } else {
+        updateRecord(petIndex, (prev) => ({
+          ...prev,
+          proofs: [...prev.proofs, { file, preview: "" }],
+        }));
+      }
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removeProof = (index: number) => {
-    setVaccines((prev) =>
-      prev.map((v, i) =>
-        i === index ? { ...v, proofFile: null, proofPreview: "" } : v,
-      ),
+  const removeProof = (i: number) => {
+    updateRecord(petIndex, (prev) => ({
+      ...prev,
+      proofs: prev.proofs.filter((_, idx) => idx !== i),
+    }));
+  };
+
+  const speciesLabel = pet.type || "pet";
+
+  if (record.vaccines.length === 0) {
+    return (
+      <div className="rounded-lg border p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Syringe className="text-muted-foreground size-4" />
+          <p className="text-sm font-semibold">
+            {pet.name || `Pet ${petIndex + 1}`}
+          </p>
+          <Badge variant="outline" className="text-[10px] capitalize">
+            {speciesLabel}
+          </Badge>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          No vaccines configured for this animal type. The facility has not
+          set any vaccination requirements for {speciesLabel.toLowerCase()}s.
+        </p>
+      </div>
     );
-    const input = fileInputRefs.current[index];
-    if (input) input.value = "";
-  };
+  }
 
-  const toggleAddLater = (index: number) => {
-    setVaccines((prev) =>
-      prev.map((v, i) =>
-        i === index
-          ? {
-              ...v,
-              addLater: !v.addLater,
-              proofFile: v.addLater ? v.proofFile : null,
-              proofPreview: v.addLater ? v.proofPreview : "",
-            }
-          : v,
-      ),
-    );
-  };
+  return (
+    <div className="rounded-lg border p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Syringe className="text-muted-foreground size-4" />
+        <p className="text-sm font-semibold">
+          {pet.name || `Pet ${petIndex + 1}`}
+        </p>
+        <Badge variant="outline" className="text-[10px] capitalize">
+          {speciesLabel}
+        </Badge>
+      </div>
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
+      <div className="space-y-2">
+        <Label className="text-muted-foreground text-xs">
+          Vaccine expiry dates
+        </Label>
+        {record.vaccines.map((v, i) => (
+          <div
+            key={`${v.name}-${i}`}
+            className={cn(
+              "grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded-md border p-2",
+              v.addLater && "border-dashed bg-muted/30",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium">{v.name}</p>
+              {v.addLater && (
+                <Badge
+                  variant="outline"
+                  className="text-muted-foreground border-dashed text-[10px]"
+                >
+                  <Clock className="mr-0.5 size-2.5" />
+                  Adding later
+                </Badge>
+              )}
+            </div>
+            {!v.addLater ? (
+              <DatePicker
+                value={v.expiryDate}
+                onValueChange={(next) =>
+                  updateVaccine(i, { expiryDate: next })
+                }
+                displayMode="dialog"
+                popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
+                calendarClassName="p-1"
+                showQuickPresets={false}
+                showManualInput={false}
+                placeholder="Expiry date"
+              />
+            ) : (
+              <span className="text-muted-foreground text-xs">—</span>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                updateVaccine(i, {
+                  addLater: !v.addLater,
+                  expiryDate: v.addLater ? v.expiryDate : "",
+                })
+              }
+              className={cn(
+                "rounded px-2 py-1 text-[11px] transition-colors",
+                v.addLater
+                  ? "text-primary hover:bg-primary/5 font-medium"
+                  : "text-muted-foreground hover:bg-muted/50",
+              )}
+            >
+              {v.addLater ? "Add now" : "Add later"}
+            </button>
+          </div>
+        ))}
+      </div>
 
+      <div className="mt-4">
+        <Label className="text-muted-foreground mb-1.5 block text-xs">
+          Proof of Vaccination
+        </Label>
+        <p className="text-muted-foreground mb-2 text-[11px]">
+          Upload one or more pages covering all vaccines above. JPG, PNG, or
+          PDF — max 10MB per file.
+        </p>
+
+        <label className="border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => handleProofUpload(e.target.files)}
+          />
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="bg-muted rounded-full p-2">
+              <Upload className="text-muted-foreground size-4" />
+            </div>
+            <p className="text-xs font-medium">
+              {record.proofs.length === 0
+                ? "Upload vaccine proof"
+                : "Add more pages"}
+            </p>
+            <p className="text-muted-foreground text-[10px]">
+              Select multiple files for multi-page documents
+            </p>
+          </div>
+        </label>
+
+        {record.proofs.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {record.proofs.map((p, i) => (
+              <div
+                key={`${p.file.name}-${i}`}
+                className="bg-muted/30 rounded-lg border p-2"
+              >
+                {p.preview ? (
+                  <div className="relative mb-1.5 overflow-hidden rounded-md">
+                    <img
+                      src={p.preview}
+                      alt={p.file.name}
+                      className="h-20 w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-muted mb-1.5 flex h-20 items-center justify-center rounded-md">
+                    <FileImage className="text-muted-foreground size-8 opacity-50" />
+                  </div>
+                )}
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[11px] font-medium">
+                      {p.file.name}
+                    </p>
+                    <p className="text-muted-foreground text-[10px]">
+                      {formatFileSize(p.file.size)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive h-5 w-5 shrink-0 p-0"
+                    onClick={() => removeProof(i)}
+                  >
+                    <X className="size-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            <div className="col-span-full flex items-center gap-1.5">
+              <Check className="size-3 text-emerald-600" />
+              <p className="text-muted-foreground text-[11px]">
+                {record.proofs.length} file
+                {record.proofs.length === 1 ? "" : "s"} ready — pending staff
+                verification
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VaccineStep({
+  pets,
+  petVaccines,
+  updatePetVaccineRecord,
+}: {
+  pets: PetForm[];
+  petVaccines: PetVaccineRecord[];
+  updatePetVaccineRecord: (
+    petIndex: number,
+    updater: (prev: PetVaccineRecord) => PetVaccineRecord,
+  ) => void;
+}) {
   return (
     <div className="animate-in fade-in space-y-4 py-2 duration-200">
       <p className="text-muted-foreground text-sm">
-        Vaccine information for{" "}
-        <span className="text-foreground font-medium">your pet</span>. Upload
-        proof of vaccination (photos of certificates) so staff can verify.
-        Bookings may be blocked until records are verified.
+        Enter the expiry date for each required vaccine and upload proof of
+        vaccination. You can upload multiple images or PDF pages — the
+        facility will verify them.
       </p>
 
-      {vaccines.map((v, i) => (
-        <div
-          key={`${v.name}-${i}`}
-          className={cn(
-            "rounded-lg border p-3 transition-colors",
-            v.addLater &&
-              "border-muted-foreground/30 bg-muted/30 border-dashed",
-          )}
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Syringe className="text-muted-foreground size-3.5" />
-              <p className="text-sm font-medium">{v.name}</p>
-            </div>
-            {v.proofFile && !v.addLater && (
-              <Badge
-                variant="secondary"
-                className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-              >
-                <Check className="mr-0.5 size-2.5" />
-                Uploaded
-              </Badge>
-            )}
-            {v.addLater && (
-              <Badge
-                variant="outline"
-                className="text-muted-foreground border-dashed text-[10px]"
-              >
-                <Clock className="mr-0.5 size-2.5" />
-                Adding later
-              </Badge>
-            )}
-          </div>
-
-          {!v.addLater && (
-            <>
-              <div className="grid grid-cols-1 gap-3">
-                <Field label="Expiry Date">
-                  <DatePicker
-                    value={v.expiryDate}
-                    onValueChange={(next) =>
-                      setVaccines((prev) =>
-                        prev.map((vv, ii) =>
-                          ii === i ? { ...vv, expiryDate: next } : vv,
-                        ),
-                      )
-                    }
-                    displayMode="dialog"
-                    popoverClassName="w-[296px] rounded-xl border-slate-200/90 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.55)]"
-                    calendarClassName="p-1"
-                    showQuickPresets={false}
-                    showManualInput={false}
-                    placeholder="Select date"
-                  />
-                </Field>
-              </div>
-
-              {/* Upload proof section */}
-              <div className="mt-3">
-                <Label className="text-muted-foreground mb-1.5 block text-xs">
-                  Proof of Vaccination
-                </Label>
-
-                {!v.proofFile ? (
-                  <label className="border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/50 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 transition-colors">
-                    <input
-                      ref={(el) => {
-                        fileInputRefs.current[i] = el;
-                      }}
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleProofUpload(i, file);
-                      }}
-                    />
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="bg-muted rounded-full p-2">
-                        <Upload className="text-muted-foreground size-4" />
-                      </div>
-                      <p className="text-xs font-medium">
-                        Upload vaccine certificate
-                      </p>
-                      <p className="text-muted-foreground text-[10px]">
-                        JPG, PNG, or PDF — max 10MB
-                      </p>
-                    </div>
-                  </label>
-                ) : (
-                  <div className="bg-muted/30 rounded-lg border p-2">
-                    {v.proofPreview ? (
-                      <div className="relative mb-2 overflow-hidden rounded-md">
-                        <img
-                          src={v.proofPreview}
-                          alt={`${v.name} proof`}
-                          className="h-32 w-full object-cover"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity hover:bg-black/30 hover:opacity-100">
-                          <Eye className="size-5 text-white" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-muted mb-2 flex h-20 items-center justify-center rounded-md">
-                        <FileImage className="text-muted-foreground size-8 opacity-50" />
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium">
-                          {v.proofFile.name}
-                        </p>
-                        <p className="text-muted-foreground text-[10px]">
-                          {formatFileSize(v.proofFile.size)} — Pending staff
-                          verification
-                        </p>
-                      </div>
-                      <div className="ml-2 flex shrink-0 items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => {
-                            fileInputRefs.current[i]?.click();
-                          }}
-                        >
-                          <Upload className="size-3" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive h-6 w-6 p-0"
-                          onClick={() => removeProof(i)}
-                        >
-                          <X className="size-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Add later toggle */}
-          <button
-            type="button"
-            onClick={() => toggleAddLater(i)}
-            className={cn(
-              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs transition-colors",
-              v.addLater
-                ? "text-primary hover:bg-primary/5 font-medium"
-                : "text-muted-foreground hover:bg-muted/50",
-            )}
-          >
-            {v.addLater ? (
-              <>
-                <Upload className="size-3" />
-                Add now instead
-              </>
-            ) : (
-              <>
-                <Clock className="size-3" />
-                I&apos;ll add this later
-              </>
-            )}
-          </button>
-        </div>
+      {pets.map((pet, i) => (
+        <PetVaccineCard
+          key={`${pet.name}-${i}`}
+          pet={pet}
+          petIndex={i}
+          record={
+            petVaccines[i] ?? createEmptyPetVaccineRecord(pet.type)
+          }
+          updateRecord={updatePetVaccineRecord}
+        />
       ))}
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() =>
-          setVaccines([
-            ...vaccines,
-            {
-              name: "Other",
-              expiryDate: "",
-              proofFile: null,
-              proofPreview: "",
-              addLater: false,
-            },
-          ])
-        }
-      >
-        <Plus className="mr-2 size-3" />
-        Add Vaccine
-      </Button>
 
       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
         <AlertTriangle className="mb-1 inline size-3" /> Vaccination records can
@@ -668,10 +684,24 @@ export function CreateClientModal({
   });
   const [pets, setPets] = useState<PetForm[]>(initialDraft.pets ?? []);
 
-  // Step 4: Vaccines
-  const [vaccines, setVaccines] = useState<VaccineEntry[]>(
-    DEFAULT_VACCINES.map((vaccine) => ({ ...vaccine })),
-  );
+  // Step 4: Vaccines — one record per pet, scoped to species requirements.
+  // Records are created lazily: the VaccineStep falls back to
+  // createEmptyPetVaccineRecord(pet.type) for any pet without a stored record.
+  const [petVaccines, setPetVaccines] = useState<PetVaccineRecord[]>([]);
+
+  const updatePetVaccineRecord = (
+    petIndex: number,
+    updater: (prev: PetVaccineRecord) => PetVaccineRecord,
+  ) => {
+    setPetVaccines((prev) => {
+      const next = [...prev];
+      const current =
+        next[petIndex] ??
+        createEmptyPetVaccineRecord(pets[petIndex]?.type ?? "Dog");
+      next[petIndex] = updater(current);
+      return next;
+    });
+  };
 
   // Step 5: Agreements
   const [agreements, setAgreements] = useState({ ...DEFAULT_AGREEMENTS });
@@ -842,7 +872,7 @@ export function CreateClientModal({
     setClient({ ...DEFAULT_CLIENT });
     setPetForm({ ...EMPTY_PET });
     setPets([]);
-    setVaccines(DEFAULT_VACCINES.map((vaccine) => ({ ...vaccine })));
+    setPetVaccines([]);
     setAgreements({ ...DEFAULT_AGREEMENTS });
     setErrors({});
   };
@@ -1401,7 +1431,11 @@ export function CreateClientModal({
 
         {/* ── Step 4: Vaccinations ── */}
         {step === 4 && (
-          <VaccineStep vaccines={vaccines} setVaccines={setVaccines} />
+          <VaccineStep
+            pets={pets}
+            petVaccines={petVaccines}
+            updatePetVaccineRecord={updatePetVaccineRecord}
+          />
         )}
 
         {/* ── Step 5: Agreements ── */}
@@ -1589,49 +1623,85 @@ export function CreateClientModal({
                   Edit
                 </Button>
               </div>
-              {vaccines.filter((v) => v.expiryDate || v.proofFile || v.addLater)
-                .length > 0 ? (
-                vaccines.map((v) => {
-                  if (!v.expiryDate && !v.proofFile && !v.addLater) return null;
+              {pets.length === 0 ? (
+                <p className="text-muted-foreground text-xs italic">
+                  No pets added yet
+                </p>
+              ) : (
+                pets.map((pet, petIdx) => {
+                  const record = petVaccines[petIdx];
+                  const vaccines = record?.vaccines ?? [];
+                  const proofs = record?.proofs ?? [];
+                  const hasAny =
+                    vaccines.some((v) => v.expiryDate || v.addLater) ||
+                    proofs.length > 0;
+
                   return (
                     <div
-                      key={v.name}
-                      className="flex items-center gap-2 py-0.5"
+                      key={`${pet.name}-${petIdx}`}
+                      className="border-muted mb-2 border-b pb-2 last:mb-0 last:border-b-0 last:pb-0"
                     >
-                      <span className="text-xs font-medium">{v.name}:</span>
-                      {v.addLater ? (
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-xs font-semibold">
+                          {pet.name || `Pet ${petIdx + 1}`}
+                        </span>
                         <Badge
                           variant="outline"
-                          className="text-muted-foreground border-dashed text-[10px]"
+                          className="text-[10px] capitalize"
                         >
-                          <Clock className="mr-0.5 size-2.5" />
-                          Adding later
+                          {pet.type}
                         </Badge>
+                        {proofs.length > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+                          >
+                            <FileImage className="mr-0.5 size-2.5" />
+                            {proofs.length} proof file
+                            {proofs.length === 1 ? "" : "s"}
+                          </Badge>
+                        )}
+                      </div>
+                      {vaccines.length === 0 ? (
+                        <p className="text-muted-foreground text-xs italic">
+                          No vaccines configured for this species
+                        </p>
+                      ) : !hasAny ? (
+                        <p className="text-muted-foreground text-xs italic">
+                          No vaccines recorded — can be added later
+                        </p>
                       ) : (
-                        <>
-                          {v.expiryDate && (
-                            <span className="text-muted-foreground text-xs">
-                              Expires {v.expiryDate}
+                        vaccines.map((v) => (
+                          <div
+                            key={v.name}
+                            className="flex items-center gap-2 py-0.5"
+                          >
+                            <span className="text-xs font-medium">
+                              {v.name}:
                             </span>
-                          )}
-                          {v.proofFile && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
-                            >
-                              <FileImage className="mr-0.5 size-2.5" />
-                              Proof uploaded
-                            </Badge>
-                          )}
-                        </>
+                            {v.addLater ? (
+                              <Badge
+                                variant="outline"
+                                className="text-muted-foreground border-dashed text-[10px]"
+                              >
+                                <Clock className="mr-0.5 size-2.5" />
+                                Adding later
+                              </Badge>
+                            ) : v.expiryDate ? (
+                              <span className="text-muted-foreground text-xs">
+                                Expires {v.expiryDate}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs italic">
+                                Not set
+                              </span>
+                            )}
+                          </div>
+                        ))
                       )}
                     </div>
                   );
                 })
-              ) : (
-                <p className="text-muted-foreground text-xs italic">
-                  No vaccines recorded — can be added later
-                </p>
               )}
             </div>
 

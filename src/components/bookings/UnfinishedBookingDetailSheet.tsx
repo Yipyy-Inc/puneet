@@ -15,6 +15,8 @@ import {
   RefreshCw,
   SendHorizonal,
   X,
+  Link as LinkIcon,
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import type {
@@ -237,6 +239,42 @@ export function UnfinishedBookingDetailSheet({
               <p className="text-muted-foreground mt-1.5 text-[10px] tracking-wide uppercase">
                 Abandoned at step
               </p>
+            </div>
+
+            {/* Customer recovery link — what lands in the email */}
+            <div className="bg-muted/20 rounded-xl border px-4 py-3.5">
+              <div className="mb-2 flex items-center gap-1.5">
+                <LinkIcon className="text-muted-foreground size-3.5" />
+                <p className="text-sm font-medium">Customer recovery link</p>
+              </div>
+              <p className="text-muted-foreground mb-2 text-xs">
+                This is the link the customer receives in the recovery email.
+                Clicking it opens the wizard with their session restored.
+              </p>
+              <div className="bg-background flex items-center gap-2 rounded-md border px-2.5 py-1.5">
+                <code className="text-muted-foreground flex-1 truncate font-mono text-xs">
+                  /customer/bookings/new?resumeBooking={booking.id}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => {
+                    const link = `${
+                      typeof window !== "undefined"
+                        ? window.location.origin
+                        : ""
+                    }/customer/bookings/new?resumeBooking=${booking.id}`;
+                    if (typeof navigator !== "undefined") {
+                      void navigator.clipboard?.writeText(link);
+                    }
+                    toast.success("Recovery link copied");
+                  }}
+                  aria-label="Copy recovery link"
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              </div>
             </div>
 
             {/* Actions */}

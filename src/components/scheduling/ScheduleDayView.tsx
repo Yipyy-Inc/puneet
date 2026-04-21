@@ -98,6 +98,7 @@ export interface ScheduleDayViewProps {
   holidayRates: HolidayRate[];
   onShiftClick: (shift: ScheduleShift) => void;
   onCellClick: (employeeId: string | undefined, date: string) => void;
+  onContextMenu?: (e: React.MouseEvent, shift: ScheduleShift) => void;
 }
 
 export function ScheduleDayView({
@@ -109,6 +110,7 @@ export function ScheduleDayView({
   holidayRates,
   onShiftClick,
   onCellClick,
+  onContextMenu,
 }: ScheduleDayViewProps) {
   const dateStr = formatDateStr(currentDate);
   const todayFlag = isToday(currentDate);
@@ -365,6 +367,7 @@ export function ScheduleDayView({
                     positionMap={positionMap}
                     onShiftClick={onShiftClick}
                     onEmptyClick={() => onCellClick(employee.id, dateStr)}
+                    onContextMenu={onContextMenu}
                   />
                 )}
               </div>
@@ -401,6 +404,7 @@ export function ScheduleDayView({
                 positionMap={positionMap}
                 onShiftClick={onShiftClick}
                 onEmptyClick={() => onCellClick(undefined, dateStr)}
+                onContextMenu={onContextMenu}
                 isOpen
               />
             </div>
@@ -447,12 +451,14 @@ function TimelineRow({
   positionMap,
   onShiftClick,
   onEmptyClick,
+  onContextMenu,
   isOpen = false,
 }: {
   shifts: ScheduleShift[];
   positionMap: Map<string, Position>;
   onShiftClick: (shift: ScheduleShift) => void;
   onEmptyClick: () => void;
+  onContextMenu?: (e: React.MouseEvent, shift: ScheduleShift) => void;
   isOpen?: boolean;
 }) {
   return (
@@ -488,6 +494,9 @@ function TimelineRow({
           shift={shift}
           position={positionMap.get(shift.positionId)}
           onClick={() => onShiftClick(shift)}
+          onContextMenu={
+            onContextMenu ? (e) => onContextMenu(e, shift) : undefined
+          }
           isOpen={isOpen}
         />
       ))}
@@ -508,11 +517,13 @@ function ShiftBar({
   shift,
   position,
   onClick,
+  onContextMenu,
   isOpen,
 }: {
   shift: ScheduleShift;
   position: Position | undefined;
   onClick: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   isOpen?: boolean;
 }) {
   const start = timeToHour(shift.startTime);
@@ -539,6 +550,12 @@ function ShiftBar({
             e.stopPropagation();
             onClick();
           }}
+          onContextMenu={(e) => {
+            if (onContextMenu) {
+              e.stopPropagation();
+              onContextMenu(e);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.stopPropagation();
@@ -556,38 +573,43 @@ function ShiftBar({
             marginLeft: "2px",
             background: isDraft
               ? `repeating-linear-gradient(135deg, ${color}18 0px, ${color}18 6px, ${color}0a 6px, ${color}0a 12px)`
-              : `linear-gradient(135deg, ${color}28 0%, ${color}14 100%)`,
-            borderColor: isDraft ? `${color}80` : `${color}55`,
-            boxShadow: isDraft ? "none" : `0 1px 8px ${color}1a`,
+              : `linear-gradient(135deg, ${color}cc 0%, ${color}80 100%)`,
+            borderColor: isDraft ? `${color}80` : color,
+            boxShadow: isDraft ? "none" : `0 1px 8px ${color}33`,
           }}
         >
           {/* Left color accent bar */}
           <div
             className="absolute top-0 bottom-0 left-0 w-1"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: isDraft ? color : "rgba(255,255,255,0.9)" }}
           />
 
           <div className="flex h-full items-center gap-2 px-3 pl-4">
             <div className="min-w-0 flex-1">
               <p
                 className="truncate text-[12px] leading-tight font-semibold"
-                style={{ color }}
+                style={{ color: isDraft ? color : "#ffffff" }}
               >
                 {position?.name ?? "Shift"}
               </p>
-              <p className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[10px] tabular-nums">
+              <p
+                className={cn(
+                  "mt-0.5 flex items-center gap-1 truncate text-[10px] tabular-nums",
+                  isDraft ? "text-muted-foreground" : "text-white/90",
+                )}
+              >
                 <Clock className="size-2.5" />
                 {shift.startTime} – {shift.endTime}
               </p>
             </div>
 
-            {/* Status chip — Draft (dashed) vs Published (solid check) */}
+            {/* Status chip — Draft (amber dashed) vs Published (white-on-solid) */}
             <span
               className={cn(
                 "ml-auto flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold tracking-wider uppercase shadow-sm",
                 isDraft
                   ? "border-amber-300/70 bg-amber-50 text-amber-700 dark:border-amber-600/50 dark:bg-amber-950/40 dark:text-amber-300"
-                  : "border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-600/50 dark:bg-emerald-950/40 dark:text-emerald-300",
+                  : "border-white/50 bg-white/25 text-white backdrop-blur-sm",
               )}
             >
               <StatusIcon className="size-2.5" />

@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnablementScopeSection } from "./EnablementScopeSection";
 import { TimingRemindersSection } from "./TimingRemindersSection";
 import { FormTemplateSection } from "./FormTemplateSection";
+import { FeesAndMessagingSection } from "./FeesAndMessagingSection";
 import type {
   YipyyGoConfig,
   YipyyGoAddOnsApproval,
@@ -197,10 +198,11 @@ export function YipyyGoSettings({
 
           {/* Configuration Tabs */}
           <Tabs defaultValue="enablement" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="enablement">Enablement & Scope</TabsTrigger>
               <TabsTrigger value="timing">Timing & Reminders</TabsTrigger>
               <TabsTrigger value="template">Form Template</TabsTrigger>
+              <TabsTrigger value="fees">Fees & Messaging</TabsTrigger>
             </TabsList>
 
             <TabsContent value="enablement" className="space-y-4">
@@ -219,6 +221,13 @@ export function YipyyGoSettings({
 
             <TabsContent value="template" className="space-y-4">
               <FormTemplateSection
+                config={localConfig}
+                onConfigChange={handleConfigUpdate}
+              />
+            </TabsContent>
+
+            <TabsContent value="fees" className="space-y-4">
+              <FeesAndMessagingSection
                 config={localConfig}
                 onConfigChange={handleConfigUpdate}
               />

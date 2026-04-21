@@ -421,6 +421,7 @@ export type PetSizeClass = z.infer<typeof petSizeClassSchema>;
 export const vaccinationRuleSchema = z.object({
   id: z.string(),
   vaccineName: z.string(),
+  species: z.string(),
   required: z.boolean(),
   expiryWarningDays: z.number(),
   applicableServices: z.array(z.string()),
@@ -503,6 +504,32 @@ export const tipTierConfigSchema = z.object({
 });
 export type TipTierConfig = z.infer<typeof tipTierConfigSchema>;
 
+export const tipReminderConfigSchema = z.object({
+  enabled: z.boolean(),
+  /** Delay (hours) after check-out before the reminder is sent */
+  delayHours: z.number(),
+  channels: z.object({
+    email: z.boolean(),
+    sms: z.boolean(),
+    push: z.boolean(),
+  }),
+  subject: z.string(),
+  messageHeadline: z.string(),
+  messageBody: z.string(),
+  /** Attach report card to the reminder when available */
+  includeReportCard: z.boolean(),
+});
+export type TipReminderConfig = z.infer<typeof tipReminderConfigSchema>;
+
+export const tipReportCardPromptSchema = z.object({
+  enabled: z.boolean(),
+  headline: z.string(),
+  subcopy: z.string(),
+  /** Show the prompt only when the pet received a happy rating */
+  onlyOnPositiveFeedback: z.boolean(),
+});
+export type TipReportCardPrompt = z.infer<typeof tipReportCardPromptSchema>;
+
 export const tipConfigSchema = z.object({
   enabled: z.boolean(),
   mode: z.enum(["general", "smart"]),
@@ -512,6 +539,10 @@ export const tipConfigSchema = z.object({
     belowThreshold: tipTierConfigSchema,
     aboveThreshold: tipTierConfigSchema,
   }),
+  /** Post-stay tip reminder (sent after check-out) */
+  reminder: tipReminderConfigSchema.optional(),
+  /** Controls the tip ask attached to automated report cards */
+  reportCardPrompt: tipReportCardPromptSchema.optional(),
 });
 export type TipConfig = z.infer<typeof tipConfigSchema>;
 
@@ -813,6 +844,36 @@ export const reportCardConfigSchema = z.object({
 export type ReportCardConfig = z.infer<typeof reportCardConfigSchema>;
 
 // ============================================================================
+// Early Checkout Policy
+// ============================================================================
+
+export const earlyCheckoutPolicyEnum = z.enum([
+  "none",
+  "full_refund",
+  "partial_refund",
+  "credit",
+  "fee",
+]);
+export type EarlyCheckoutPolicy = z.infer<typeof earlyCheckoutPolicyEnum>;
+
+export const earlyCheckoutPolicySchema = z.object({
+  enabled: z.boolean(),
+  policy: earlyCheckoutPolicyEnum,
+  /** For "partial_refund": percent (0-100) of unused value refunded */
+  refundPercent: z.number().optional(),
+  /** For "fee": flat dollar amount or percentage of unused value */
+  feeType: z.enum(["flat", "percentage"]).optional(),
+  feeAmount: z.number().optional(),
+  /** For "credit": days until store credit expires (0 = never) */
+  creditExpiresDays: z.number().optional(),
+  /** Plain-language note shown at checkout and on the invoice */
+  customerNote: z.string().optional(),
+});
+export type EarlyCheckoutPolicyConfig = z.infer<
+  typeof earlyCheckoutPolicySchema
+>;
+
+// ============================================================================
 // Module Config
 // ============================================================================
 
@@ -837,6 +898,7 @@ export const moduleConfigSchema = z.object({
         belongings: z.enum(["required", "optional", "disabled"]),
       })
       .optional(),
+    earlyCheckout: earlyCheckoutPolicySchema.optional(),
   }),
   status: z.object({
     disabled: z.boolean(),

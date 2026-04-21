@@ -281,13 +281,11 @@ export default function CustomerPetDetailPage({
   };
 
   const handleAddVaccination = async (
-    vaccination: Omit<(typeof vaccinationRecords)[0], "id">,
+    vaccinations: Array<Omit<(typeof vaccinationRecords)[0], "id">>,
   ) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success(
-      `${vaccination.vaccineName} record uploaded! It will be reviewed by the facility.`,
-    );
+    if (vaccinations.length === 0) return;
     router.refresh();
   };
 
@@ -1659,6 +1657,7 @@ export default function CustomerPetDetailPage({
           onOpenChange={setVaccinationModalOpen}
           petId={pet.id}
           petName={pet.name}
+          petSpecies={pet.type}
           onSave={handleAddVaccination}
         />
       </div>

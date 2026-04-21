@@ -66,6 +66,7 @@ export function BookingsBoard() {
     switch (tab) {
       case "scheduled":
         return "check-in" as const;
+      case "checked-in":
       case "going-home":
         return "check-out" as const;
       default:

@@ -6,7 +6,10 @@ import {
   membershipPlans,
   memberships,
   prepaidCredits,
+  servicePackages,
+  customerPackagePurchases,
 } from "@/data/services-pricing";
+import { bookings } from "@/data/bookings";
 import {
   Card,
   CardContent,
@@ -24,35 +27,82 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Package, Crown, CreditCard, Check, X } from "lucide-react";
+import { Package, CreditCard, Check } from "lucide-react";
 import { toast } from "sonner";
+import { ActiveMembershipCard } from "./packages/ActiveMembershipCard";
+import { ChangeMembershipDialog } from "./packages/ChangeMembershipDialog";
+import { CancelMembershipDialog } from "./packages/CancelMembershipDialog";
+import { PurchasedPackageCard } from "./packages/PurchasedPackageCard";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = "15";
 
+const formatCurrency = (n: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(n);
+
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
 export function PackagesTab() {
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
+
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
-  const availablePlans = useMemo(() => {
-    return membershipPlans.filter((plan) => plan.isActive);
-  }, []);
+  // Active-membership flows
+  const [changeDialog, setChangeDialog] = useState<{
+    open: boolean;
+    direction: "upgrade" | "downgrade";
+    membershipId: string | null;
+  }>({ open: false, direction: "upgrade", membershipId: null });
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean;
+    membershipId: string | null;
+  }>({ open: false, membershipId: null });
 
-  const customerMemberships = useMemo(() => {
-    return memberships.filter((m) => m.customerId === MOCK_CUSTOMER_ID);
-  }, []);
+  const availablePlans = useMemo(
+    () => membershipPlans.filter((plan) => plan.isActive),
+    [],
+  );
 
-  const customerPrepaidCredits = useMemo(() => {
-    return prepaidCredits.filter((c) => c.customerId === MOCK_CUSTOMER_ID);
-  }, []);
+  const customerMemberships = useMemo(
+    () => memberships.filter((m) => m.customerId === MOCK_CUSTOMER_ID),
+    [],
+  );
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
+  const customerPrepaidCredits = useMemo(
+    () => prepaidCredits.filter((c) => c.customerId === MOCK_CUSTOMER_ID),
+    [],
+  );
+
+  const customerPackages = useMemo(
+    () =>
+      customerPackagePurchases.filter((p) => p.customerId === MOCK_CUSTOMER_ID),
+    [],
+  );
+
+  const getBooking = (id: number) => bookings.find((b) => b.id === id);
+
+  const changeMembership = changeDialog.membershipId
+    ? customerMemberships.find((m) => m.id === changeDialog.membershipId)
+    : null;
+  const changePlan = changeMembership
+    ? membershipPlans.find((p) => p.id === changeMembership.planId)
+    : undefined;
+
+  const cancelMembership = cancelDialog.membershipId
+    ? customerMemberships.find((m) => m.id === cancelDialog.membershipId)
+    : null;
+  const cancelPlan = cancelMembership
+    ? membershipPlans.find((p) => p.id === cancelMembership.planId)
+    : undefined;
 
   const handlePurchasePlan = (planId: string) => {
     setSelectedPlan(planId);
@@ -60,35 +110,9 @@ export function PackagesTab() {
   };
 
   const handleConfirmPurchase = () => {
-    // TODO: Integrate with payment processing
     toast.success("Membership purchased successfully!");
     setIsPurchaseModalOpen(false);
     setSelectedPlan(null);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return (
-          <Badge variant="default" className="bg-green-500">
-            Active
-          </Badge>
-        );
-      case "paused":
-        return <Badge variant="secondary">Paused</Badge>;
-      case "cancelled":
-        return <Badge variant="outline">Cancelled</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
   };
 
   return (
@@ -101,78 +125,82 @@ export function PackagesTab() {
               Your Active Memberships
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {customerMemberships.map((membership) => (
-                <Card key={membership.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Crown className="size-5 text-yellow-500" />
-                          {membership.planName}
-                        </CardTitle>
-                        <CardDescription>
-                          {membership.billingCycle} billing
-                        </CardDescription>
-                      </div>
-                      {getStatusBadge(membership.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Monthly Price:
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(membership.monthlyPrice)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Credits Remaining:
-                      </span>
-                      <span className="font-semibold">
-                        {membership.creditsRemaining} /{" "}
-                        {membership.creditsTotal}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Discount:</span>
-                      <span className="font-semibold text-green-600">
-                        {membership.discountPercentage}%
-                      </span>
-                    </div>
-                    {membership.nextBillingDate && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Next Renewal:
-                        </span>
-                        <span>{formatDate(membership.nextBillingDate)}</span>
-                      </div>
-                    )}
-                    <div className="text-muted-foreground space-y-1 border-t pt-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        {membership.autoRenew ? (
-                          <>
-                            <Check className="size-3 text-green-500" />
-                            Auto-renewal enabled
-                          </>
-                        ) : (
-                          <>
-                            <X className="text-muted-foreground size-3" />
-                            Auto-renewal disabled
-                          </>
-                        )}
-                      </div>
-                      <p>
-                        Pause / cancel rules are defined by your facility.
-                        Typically, changes to memberships apply to the next
-                        billing cycle and may require notice (e.g., 7–14 days
-                        before renewal).
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {customerMemberships.map((membership) => {
+                const plan = membershipPlans.find(
+                  (p) => p.id === membership.planId,
+                );
+                return (
+                  <ActiveMembershipCard
+                    key={membership.id}
+                    membership={membership}
+                    plan={plan}
+                    onUpgrade={() =>
+                      setChangeDialog({
+                        open: true,
+                        direction: "upgrade",
+                        membershipId: membership.id,
+                      })
+                    }
+                    onDowngrade={() =>
+                      setChangeDialog({
+                        open: true,
+                        direction: "downgrade",
+                        membershipId: membership.id,
+                      })
+                    }
+                    onPause={() =>
+                      toast.info("Pause request submitted", {
+                        description:
+                          "Your facility will confirm and apply the pause on your next billing cycle.",
+                      })
+                    }
+                    onCancel={() =>
+                      setCancelDialog({
+                        open: true,
+                        membershipId: membership.id,
+                      })
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Purchased Packages — pass-level breakdown */}
+        {customerPackages.length > 0 && (
+          <div>
+            <h2 className="mb-4 text-2xl font-semibold">Your Packages</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {customerPackages.map((purchase) => {
+                const pkg = servicePackages.find(
+                  (p) => p.id === purchase.packageId,
+                );
+                return (
+                  <PurchasedPackageCard
+                    key={purchase.id}
+                    purchase={purchase}
+                    pkg={pkg}
+                    getBooking={getBooking}
+                    bookingLinkPrefix="/customer/bookings"
+                    onRequestExtension={() =>
+                      toast.success("Extension request submitted", {
+                        description:
+                          "Your facility will review and confirm shortly.",
+                      })
+                    }
+                    onRequestTransfer={() =>
+                      toast.info("Contact your facility to transfer passes")
+                    }
+                    onRequestRefund={() =>
+                      toast.success("Refund request submitted", {
+                        description:
+                          "Unused passes will be refunded per the package policy.",
+                      })
+                    }
+                  />
+                );
+              })}
             </div>
           </div>
         )}
@@ -338,6 +366,51 @@ export function PackagesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Upgrade / Downgrade dialog */}
+      {changeMembership && (
+        <ChangeMembershipDialog
+          open={changeDialog.open}
+          onOpenChange={(v) =>
+            setChangeDialog((prev) => ({ ...prev, open: v }))
+          }
+          direction={changeDialog.direction}
+          membership={changeMembership}
+          currentPlan={changePlan}
+          allPlans={availablePlans}
+          onConfirm={(newPlanId) => {
+            const newPlan = availablePlans.find((p) => p.id === newPlanId);
+            toast.success(
+              `${changeDialog.direction === "upgrade" ? "Upgrade" : "Downgrade"} submitted`,
+              {
+                description: `Switched to ${newPlan?.name}. ${
+                  changeDialog.direction === "upgrade"
+                    ? "New perks are active now."
+                    : "Takes effect on your next billing cycle."
+                }`,
+              },
+            );
+          }}
+        />
+      )}
+
+      {/* Cancel dialog */}
+      {cancelMembership && (
+        <CancelMembershipDialog
+          open={cancelDialog.open}
+          onOpenChange={(v) =>
+            setCancelDialog((prev) => ({ ...prev, open: v }))
+          }
+          membership={cancelMembership}
+          plan={cancelPlan}
+          onConfirm={() => {
+            toast.success("Cancellation scheduled", {
+              description:
+                "We've emailed you a confirmation with details about your refund and access.",
+            });
+          }}
+        />
+      )}
     </>
   );
 }

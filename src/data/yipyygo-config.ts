@@ -20,6 +20,11 @@ import type {
   FormTemplateConfig,
   YipyyGoAddOnsApproval,
   YipyyGoConfig,
+  MedicationFeeConfig,
+  MedicationFeeBilling,
+  TipPopupConfig,
+  TipPopupPreset,
+  ConfirmationEmailConfig,
 } from "@/types/yipyygo";
 
 export type {
@@ -36,6 +41,11 @@ export type {
   FormTemplateConfig,
   YipyyGoAddOnsApproval,
   YipyyGoConfig,
+  MedicationFeeConfig,
+  MedicationFeeBilling,
+  TipPopupConfig,
+  TipPopupPreset,
+  ConfirmationEmailConfig,
 };
 
 // ============================================================================
@@ -109,11 +119,45 @@ export const defaultFormTemplate: FormTemplateConfig = {
   features: {
     photoUploads: true,
     addOnsSection: true,
-    tipSection: false,
+    tipSection: true,
+    contactInfoSection: true,
+    petDetailsSection: true,
+    bookingDetailsSection: true,
+    belongingsPhotoRequired: true,
   },
   multiPetBehavior: "one_form_per_pet",
   addOnsScope: "booking",
   globalCustomQuestions: [],
+};
+
+export const defaultMedicationFeeConfig: MedicationFeeConfig = {
+  enabled: false,
+  amount: 0,
+  billing: "per_day",
+  label: "Medication administration fee",
+  description: "",
+};
+
+export const defaultTipPopupConfig: TipPopupConfig = {
+  enabled: true,
+  title: "Leave a tip for the team?",
+  message:
+    "Our team loves caring for your pet. If you'd like to leave a tip, it goes directly to the staff looking after them.",
+  appliesTo: "stay_total",
+  allowCustomAmount: true,
+  allowSkip: true,
+  presets: [
+    { id: "tip-10", label: "10%", type: "percentage", value: 10 },
+    { id: "tip-15", label: "15%", type: "percentage", value: 15 },
+    { id: "tip-20", label: "20%", type: "percentage", value: 20 },
+  ],
+};
+
+export const defaultConfirmationEmailConfig: ConfirmationEmailConfig = {
+  enabled: true,
+  subject: "Thank you for completing your Express Check-in",
+  message:
+    "Thank you for completing your Express Check-in. We're excited to meet {petName} on {date}!",
 };
 
 export const defaultYipyyGoConfig: Omit<
@@ -123,6 +167,9 @@ export const defaultYipyyGoConfig: Omit<
   enabled: false,
   addOnsApproval: "staff_approval",
   notifyStaffEmailOnSubmit: false,
+  medicationFee: defaultMedicationFeeConfig,
+  tipPopup: defaultTipPopupConfig,
+  confirmationEmail: defaultConfirmationEmailConfig,
   serviceConfigs: [
     {
       serviceType: "daycare",
@@ -215,6 +262,24 @@ const mockYipyyGoConfigs: YipyyGoConfig[] = [
     enabled: true,
     addOnsApproval: "staff_approval",
     notifyStaffEmailOnSubmit: false,
+    medicationFee: {
+      enabled: true,
+      amount: 5,
+      billing: "per_day",
+      label: "Medication administration fee",
+      description:
+        "Applied daily when our team administers medication during the stay.",
+    },
+    tipPopup: {
+      ...defaultTipPopupConfig,
+      message:
+        "Our team at Doggieville truly loves caring for your pup. If you'd like to leave a tip to show appreciation, it goes 100% to the staff.",
+    },
+    confirmationEmail: {
+      ...defaultConfirmationEmailConfig,
+      message:
+        "Thank you for completing your Express Check-in! We're excited to meet {petName} on {date}. If anything changes, just reply to this email.",
+    },
     serviceConfigs: [
       { serviceType: "daycare", enabled: true, requirement: "optional" },
       { serviceType: "boarding", enabled: true, requirement: "optional" },

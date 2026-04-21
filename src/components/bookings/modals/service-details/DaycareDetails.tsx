@@ -428,41 +428,60 @@ function DaycareSectionAssignmentStep({
     indigo: "bg-indigo-500",
     slate: "bg-slate-400",
   };
-  const COLOR_BORDER: Record<string, string> = {
-    amber: "border-l-amber-400",
-    violet: "border-l-violet-400",
-    blue: "border-l-blue-400",
-    emerald: "border-l-emerald-400",
-    rose: "border-l-rose-400",
-    orange: "border-l-orange-400",
-    indigo: "border-l-indigo-400",
-    slate: "border-l-slate-400",
+  const COLOR_DOT: Record<string, string> = {
+    amber: "bg-amber-500",
+    violet: "bg-violet-500",
+    blue: "bg-blue-500",
+    emerald: "bg-emerald-500",
+    rose: "bg-rose-500",
+    orange: "bg-orange-500",
+    indigo: "bg-indigo-500",
+    slate: "bg-slate-500",
   };
   const COLOR_BADGE: Record<string, string> = {
-    amber: "bg-amber-100 text-amber-800",
-    violet: "bg-violet-100 text-violet-800",
-    blue: "bg-blue-100 text-blue-800",
-    emerald: "bg-emerald-100 text-emerald-800",
-    rose: "bg-rose-100 text-rose-800",
-    orange: "bg-orange-100 text-orange-800",
-    indigo: "bg-indigo-100 text-indigo-800",
-    slate: "bg-slate-100 text-slate-800",
+    amber: "bg-amber-50 text-amber-800 ring-amber-200/60",
+    violet: "bg-violet-50 text-violet-800 ring-violet-200/60",
+    blue: "bg-blue-50 text-blue-800 ring-blue-200/60",
+    emerald: "bg-emerald-50 text-emerald-800 ring-emerald-200/60",
+    rose: "bg-rose-50 text-rose-800 ring-rose-200/60",
+    orange: "bg-orange-50 text-orange-800 ring-orange-200/60",
+    indigo: "bg-indigo-50 text-indigo-800 ring-indigo-200/60",
+    slate: "bg-slate-50 text-slate-800 ring-slate-200/60",
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-base font-semibold">Section Assignment</h3>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Select a pet, then click a section — or drag &amp; drop pets into
-          sections. The system will auto-assign on booking creation.
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-start gap-3">
+        <div className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <PawPrint className="text-primary size-5" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold tracking-tight">
+            Section Assignment
+          </h3>
+          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+            Drag a pet onto a section, or click to assign. The system
+            auto-matches by eligibility &amp; capacity on booking creation.
+          </p>
+        </div>
       </div>
 
       {/* Unassigned pets */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Unassigned Pets</Label>
-        <div className="bg-muted/20 flex min-h-14 flex-wrap gap-2 rounded-xl border border-dashed p-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            Unassigned Pets
+          </Label>
+          <span className="text-muted-foreground text-[11px] tabular-nums">
+            {
+              selectedPets.filter(
+                (p) => !roomAssignments.find((a) => a.petId === p.id),
+              ).length
+            }{" "}
+            of {selectedPets.length}
+          </span>
+        </div>
+        <div className="from-muted/40 to-muted/10 flex min-h-16 flex-wrap items-center gap-2 rounded-2xl bg-gradient-to-br p-3 ring-1 ring-inset ring-border/40">
           {selectedPets
             .filter((pet) => !roomAssignments.find((a) => a.petId === pet.id))
             .map((pet) => (
@@ -478,33 +497,48 @@ function DaycareSectionAssignmentStep({
                   setSelectedPet(selectedPet?.id === pet.id ? null : pet)
                 }
                 className={cn(
-                  "bg-background flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-all select-none",
+                  "bg-card flex cursor-grab items-center gap-2 rounded-full px-3 py-1.5 shadow-xs ring-1 transition-all select-none active:cursor-grabbing",
                   selectedPet?.id === pet.id
-                    ? "border-transparent bg-primary/5 shadow-sm"
-                    : "border-border hover:border-primary/50",
+                    ? "bg-primary text-primary-foreground ring-primary shadow-md"
+                    : "ring-border/60 hover:-translate-y-0.5 hover:shadow-md hover:ring-primary/40",
                 )}
               >
-                <div className="bg-primary/10 text-primary flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                <div
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                    selectedPet?.id === pet.id
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-primary/10 text-primary",
+                  )}
+                >
                   {pet.name[0]}
                 </div>
                 <span className="text-sm font-medium">{pet.name}</span>
-                <span className="text-muted-foreground text-xs">
-                  ({pet.type}, {pet.weight} lbs)
+                <span
+                  className={cn(
+                    "text-xs",
+                    selectedPet?.id === pet.id
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {pet.type} · {pet.weight}lb
                 </span>
               </div>
             ))}
           {selectedPets.filter(
             (p) => !roomAssignments.find((a) => a.petId === p.id),
           ).length === 0 && (
-            <p className="text-muted-foreground py-1 text-sm">
-              All pets assigned ✓
+            <p className="text-muted-foreground flex items-center gap-1.5 px-1 text-sm">
+              <Check className="size-3.5 text-emerald-500" />
+              All pets assigned
             </p>
           )}
         </div>
       </div>
 
       {/* Play areas → sections */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {daycarePlayAreas
           .filter((area) => area.isActive)
           .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -515,20 +549,19 @@ function DaycareSectionAssignmentStep({
             if (areaSections.length === 0) return null;
 
             return (
-              <div key={area.id} className="space-y-2">
-                <p className="flex items-center gap-2 text-sm font-semibold">
-                  <span className="bg-muted inline-flex size-5 items-center justify-center rounded-sm text-[10px]">
-                    🌳
-                  </span>
-                  {area.name}
+              <div key={area.id} className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <h4 className="text-sm font-semibold tracking-tight">
+                    {area.name}
+                  </h4>
                   {area.description && (
-                    <span className="text-muted-foreground text-xs font-normal">
-                      — {area.description}
+                    <span className="text-muted-foreground text-xs">
+                      {area.description}
                     </span>
                   )}
-                </p>
+                </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {areaSections
                     .sort((a, b) => a.sortOrder - b.sortOrder)
                     .map((section) => {
@@ -598,39 +631,72 @@ function DaycareSectionAssignmentStep({
                               assignPetToSection(petToAssign, section.id);
                           }}
                           className={cn(
-                            "group border-border bg-card relative overflow-hidden rounded-xl border border-l-4 transition-all duration-200 select-none",
-                            COLOR_BORDER[section.color],
+                            "group bg-card relative overflow-hidden rounded-2xl ring-1 transition-all duration-300 select-none",
                             isDisabled
-                              ? "cursor-not-allowed opacity-60"
-                              : "cursor-pointer hover:-translate-y-0.5 hover:shadow-md",
-                            isDragOver && "border-primary shadow-md",
-                            hasAssigned && "border-primary/50 shadow-md",
-                            showInvite && "border-primary/40 border-dashed",
+                              ? "cursor-not-allowed opacity-60 ring-border/50"
+                              : "ring-border/60 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:ring-border",
+                            isDragOver &&
+                              "ring-2 ring-primary shadow-2xl scale-[1.02]",
+                            hasAssigned &&
+                              "ring-2 ring-primary/70 shadow-lg",
+                            showInvite && "ring-primary/40 ring-dashed",
                           )}
                         >
-                          {section.imageUrl && (
-                            <div className="relative h-24 w-full overflow-hidden">
-                              <Image
-                                src={section.imageUrl}
-                                alt={section.name}
-                                fill
-                                className="object-cover"
-                                unoptimized
+                          {/* Image header with gradient overlay */}
+                          <div className="relative h-28 w-full overflow-hidden">
+                            {section.imageUrl ? (
+                              <>
+                                <Image
+                                  src={section.imageUrl}
+                                  alt={section.name}
+                                  fill
+                                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                  unoptimized
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                              </>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "size-full bg-gradient-to-br",
+                                  section.color === "amber" &&
+                                    "from-amber-100 to-amber-300",
+                                  section.color === "violet" &&
+                                    "from-violet-100 to-violet-300",
+                                  section.color === "blue" &&
+                                    "from-blue-100 to-blue-300",
+                                  section.color === "emerald" &&
+                                    "from-emerald-100 to-emerald-300",
+                                  section.color === "rose" &&
+                                    "from-rose-100 to-rose-300",
+                                  section.color === "orange" &&
+                                    "from-orange-100 to-orange-300",
+                                  section.color === "indigo" &&
+                                    "from-indigo-100 to-indigo-300",
+                                  section.color === "slate" &&
+                                    "from-slate-100 to-slate-300",
+                                )}
                               />
-                              <div className="from-card absolute inset-x-0 bottom-0 bg-linear-to-t to-transparent p-2 pt-6">
-                                <p className="text-sm font-semibold">
-                                  {section.name}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="space-y-2 p-3">
-                            {!section.imageUrl && (
-                              <p className="text-sm font-semibold">
-                                {section.name}
-                              </p>
                             )}
+                            {/* Color dot (top-right) — subtle brand accent */}
+                            <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 rounded-full bg-white/85 px-2 py-1 shadow-xs backdrop-blur-md">
+                              <span
+                                className={cn(
+                                  "size-1.5 rounded-full",
+                                  COLOR_DOT[section.color],
+                                )}
+                              />
+                              <span className="text-[10px] font-semibold text-slate-700">
+                                {area.name}
+                              </span>
+                            </div>
+                            {/* Title over image */}
+                            <p className="absolute bottom-2 left-3 text-sm font-semibold text-white drop-shadow-md">
+                              {section.name}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2.5 p-3.5">
                             {section.description && (
                               <p className="text-muted-foreground line-clamp-1 text-xs">
                                 {section.description}
@@ -639,7 +705,7 @@ function DaycareSectionAssignmentStep({
 
                             {/* Rules chips */}
                             {avail?.eligibilityMessage && !eligible ? (
-                              <p className="text-[10px] font-medium text-amber-600">
+                              <p className="rounded-md bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200/60">
                                 {avail.eligibilityMessage}
                               </p>
                             ) : (
@@ -652,7 +718,7 @@ function DaycareSectionAssignmentStep({
                                       <span
                                         key={rule.id}
                                         className={cn(
-                                          "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                          "rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
                                           COLOR_BADGE[section.color],
                                         )}
                                       >
@@ -670,19 +736,37 @@ function DaycareSectionAssignmentStep({
                             )}
 
                             {/* Capacity bar */}
-                            <div className="space-y-1">
-                              <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                            <div className="space-y-1.5 pt-0.5">
+                              <div className="bg-muted/80 h-1.5 overflow-hidden rounded-full">
                                 <div
                                   className={cn(
-                                    "h-full rounded-full transition-all",
-                                    COLOR_BAR[section.color],
+                                    "h-full rounded-full bg-gradient-to-r transition-all duration-500",
+                                    section.color === "amber" &&
+                                      "from-amber-300 to-amber-500",
+                                    section.color === "violet" &&
+                                      "from-violet-400 to-violet-600",
+                                    section.color === "blue" &&
+                                      "from-blue-400 to-blue-600",
+                                    section.color === "emerald" &&
+                                      "from-emerald-400 to-emerald-600",
+                                    section.color === "rose" &&
+                                      "from-rose-400 to-rose-600",
+                                    section.color === "orange" &&
+                                      "from-orange-400 to-orange-600",
+                                    section.color === "indigo" &&
+                                      "from-indigo-400 to-indigo-600",
+                                    section.color === "slate" &&
+                                      "from-slate-400 to-slate-600",
+                                    !COLOR_BAR[section.color] &&
+                                      COLOR_BAR.slate,
                                   )}
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
                               <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-muted-foreground">
-                                  {section.capacity - remaining} used
+                                <span className="text-muted-foreground tabular-nums">
+                                  {section.capacity - remaining} of{" "}
+                                  {section.capacity} used
                                 </span>
                                 <span
                                   className={cn(
@@ -694,20 +778,18 @@ function DaycareSectionAssignmentStep({
                                         : "text-emerald-600",
                                   )}
                                 >
-                                  {isFull
-                                    ? "Full"
-                                    : `${remaining} / ${section.capacity} open`}
+                                  {isFull ? "Full" : `${remaining} open`}
                                 </span>
                               </div>
                             </div>
 
                             {/* Assigned pets */}
                             {hasAssigned && (
-                              <div className="flex flex-wrap gap-1 pt-1">
+                              <div className="flex flex-wrap gap-1 border-t border-border/50 pt-2.5">
                                 {assignedPets.map((pet) => (
                                   <span
                                     key={pet.id}
-                                    className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-md py-0.5 pr-2 pl-1 text-[11px] font-medium"
+                                    className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full py-0.5 pr-2 pl-1 text-[11px] font-medium ring-1 ring-inset ring-primary/20"
                                   >
                                     <span className="bg-primary/20 flex size-4 items-center justify-center rounded-full text-[9px] font-bold">
                                       {pet.name[0]}
@@ -723,7 +805,7 @@ function DaycareSectionAssignmentStep({
                                           ),
                                         );
                                       }}
-                                      className="hover:text-destructive ml-0.5 transition-colors"
+                                      className="hover:text-destructive ml-0.5 text-sm leading-none transition-colors"
                                     >
                                       ×
                                     </button>
@@ -734,7 +816,7 @@ function DaycareSectionAssignmentStep({
 
                             {/* Full / blocked overlays */}
                             {isFull && !hasAssigned && (
-                              <p className="text-destructive text-[10px] font-semibold">
+                              <p className="text-destructive flex items-center gap-1 text-[10px] font-semibold">
                                 Section full — waitlist only
                               </p>
                             )}

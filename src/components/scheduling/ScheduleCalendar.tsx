@@ -10,6 +10,10 @@ import {
   ShiftContextMenu,
   type ContextMenuState,
 } from "./ScheduleCalendarHelpers";
+import {
+  MoveCopyConfirmDialog,
+  type PendingDrop,
+} from "./MoveCopyConfirmDialog";
 import type {
   ScheduleShift,
   ScheduleEmployee,
@@ -53,6 +57,7 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
   const [assigningShift, setAssigningShift] = useState<ScheduleShift | null>(
     null,
   );
+  const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, shift: ScheduleShift) => {
@@ -70,13 +75,43 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
       if (!shiftId) return;
       setDraggedShiftId(null);
       setDragOverCell(null);
-      if (e.altKey) {
-        props.onCopyShift(shiftId, employeeId, dateStr);
-      } else {
-        props.onMoveShift(shiftId, employeeId, dateStr);
-      }
+      const shift = props.shifts.find((s) => s.id === shiftId);
+      if (!shift) return;
+      // No-op drop on the exact same cell.
+      if (shift.employeeId === employeeId && shift.date === dateStr) return;
+      setPendingDrop({
+        shiftId,
+        targetEmployeeId: employeeId,
+        targetDate: dateStr,
+        sourceEmployeeId: shift.employeeId,
+        sourceDate: shift.date,
+        positionId: shift.positionId,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+      });
     },
-    [props],
+    [props.shifts],
+  );
+
+  const handleConfirmDrop = useCallback(
+    (action: "move" | "copy") => {
+      if (!pendingDrop) return;
+      if (action === "move") {
+        props.onMoveShift(
+          pendingDrop.shiftId,
+          pendingDrop.targetEmployeeId,
+          pendingDrop.targetDate,
+        );
+      } else {
+        props.onCopyShift(
+          pendingDrop.shiftId,
+          pendingDrop.targetEmployeeId,
+          pendingDrop.targetDate,
+        );
+      }
+      setPendingDrop(null);
+    },
+    [pendingDrop, props],
   );
 
   return (
@@ -91,6 +126,7 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
           holidayRates={props.holidayRates}
           onShiftClick={props.onShiftClick}
           onCellClick={props.onCellClick}
+          onContextMenu={handleContextMenu}
         />
       ) : props.viewMode === "month" ? (
         <ScheduleMonthView
@@ -102,6 +138,7 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
           holidayRates={props.holidayRates}
           onShiftClick={props.onShiftClick}
           onCellClick={props.onCellClick}
+          onContextMenu={handleContextMenu}
         />
       ) : (
         <ScheduleGridView
@@ -155,6 +192,14 @@ export function ScheduleCalendar(props: ScheduleCalendarProps) {
         employees={props.employees}
         positions={props.positions}
         onAssign={props.onAssignShift}
+      />
+
+      <MoveCopyConfirmDialog
+        pending={pendingDrop}
+        employees={props.employees}
+        positions={props.positions}
+        onConfirm={handleConfirmDrop}
+        onCancel={() => setPendingDrop(null)}
       />
     </TooltipProvider>
   );

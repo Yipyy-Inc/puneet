@@ -49,8 +49,17 @@ import {
   type PromoCode,
   type ServiceCategory,
 } from "@/data/services-pricing";
+import { cn } from "@/lib/utils";
 
 type PromoWithRecord = PromoCode & Record<string, unknown>;
+
+const CATEGORY_CHIP: Record<ServiceCategory, string> = {
+  boarding: "border-violet-200 bg-violet-50/80 text-violet-700",
+  daycare: "border-sky-200 bg-sky-50/80 text-sky-700",
+  grooming: "border-rose-200 bg-rose-50/80 text-rose-700",
+  training: "border-amber-200 bg-amber-50/80 text-amber-700",
+  retail: "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+};
 
 export default function PromoCodesPage() {
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -174,7 +183,10 @@ export default function PromoCodesPage() {
       defaultVisible: true,
       render: (item: PromoWithRecord) => (
         <div className="flex items-center gap-2">
-          <code className="bg-muted rounded-sm px-2 py-1 font-mono text-sm font-bold">
+          <div className="flex size-9 items-center justify-center rounded-full bg-fuchsia-50 ring-2 ring-fuchsia-100">
+            <Ticket className="size-4 text-fuchsia-600" />
+          </div>
+          <code className="rounded-md border border-fuchsia-200 bg-fuchsia-50/80 px-2 py-1 font-mono text-sm font-bold text-fuchsia-700">
             {item.code as string}
           </code>
           <Button
@@ -187,9 +199,9 @@ export default function PromoCodesPage() {
             }}
           >
             {copiedCode === item.code ? (
-              <CheckCircle className="size-3 text-green-500" />
+              <CheckCircle className="size-3 text-emerald-500" />
             ) : (
-              <Copy className="size-3" />
+              <Copy className="text-muted-foreground size-3" />
             )}
           </Button>
         </div>
@@ -200,11 +212,13 @@ export default function PromoCodesPage() {
       label: "Name",
       defaultVisible: true,
       render: (item: PromoWithRecord) => (
-        <div>
-          <div className="font-medium">{item.name as string}</div>
-          <div className="text-muted-foreground max-w-[200px] truncate text-xs">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-slate-800">
+            {item.name as string}
+          </p>
+          <p className="text-muted-foreground mt-0.5 max-w-[220px] truncate text-xs">
             {item.description as string}
-          </div>
+          </p>
         </div>
       ),
     },
@@ -213,14 +227,29 @@ export default function PromoCodesPage() {
       label: "Discount",
       icon: Percent,
       defaultVisible: true,
-      render: (item: PromoWithRecord) => (
-        <Badge variant="secondary">
-          {(item.discountType as string) === "percentage"
-            ? `${item.discountValue}%`
-            : `$${item.discountValue}`}{" "}
-          off
-        </Badge>
-      ),
+      render: (item: PromoWithRecord) => {
+        const isPercentage = (item.discountType as string) === "percentage";
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] font-semibold",
+              isPercentage
+                ? "border-rose-200 bg-rose-50/80 text-rose-700"
+                : "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+            )}
+          >
+            {isPercentage ? (
+              <Percent className="size-3" />
+            ) : (
+              <DollarSign className="size-3" />
+            )}
+            {isPercentage
+              ? `${item.discountValue}% off`
+              : `$${item.discountValue} off`}
+          </Badge>
+        );
+      },
     },
     {
       key: "usedCount",
@@ -230,16 +259,29 @@ export default function PromoCodesPage() {
       render: (item: PromoWithRecord) => {
         const used = item.usedCount as number;
         const limit = item.usageLimit as number | undefined;
-        if (!limit) return <span>{used} used</span>;
-        const percentage = (used / limit) * 100;
-        return (
-          <div className="space-y-1">
-            <span>
-              {used} / {limit}
+        if (!limit) {
+          return (
+            <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
+              <Users className="size-3.5 text-sky-500" />
+              {used} used
             </span>
-            <div className="bg-muted h-1.5 w-16 rounded-full">
+          );
+        }
+        const percentage = (used / limit) * 100;
+        const barColor =
+          percentage >= 90
+            ? "bg-rose-500"
+            : percentage >= 60
+              ? "bg-amber-500"
+              : "bg-emerald-500";
+        return (
+          <div className="space-y-1.5">
+            <span className="text-sm font-medium text-slate-700">
+              {used} <span className="text-muted-foreground">/ {limit}</span>
+            </span>
+            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="bg-primary h-full rounded-full"
+                className={cn("h-full rounded-full transition-all", barColor)}
                 style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>
@@ -253,10 +295,15 @@ export default function PromoCodesPage() {
       icon: Calendar,
       defaultVisible: true,
       render: (item: PromoWithRecord) => (
-        <div className="text-sm">
-          <div>{item.startDate as string}</div>
-          <div className="text-muted-foreground">
-            to {item.endDate as string}
+        <div className="inline-flex items-start gap-1.5 text-xs">
+          <Calendar className="mt-0.5 size-3.5 text-indigo-500" />
+          <div>
+            <div className="font-medium text-slate-700">
+              {item.startDate as string}
+            </div>
+            <div className="text-muted-foreground">
+              to {item.endDate as string}
+            </div>
           </div>
         </div>
       ),
@@ -267,19 +314,34 @@ export default function PromoCodesPage() {
       defaultVisible: true,
       render: (item: PromoWithRecord) => {
         const categories = item.applicableCategories as ServiceCategory[];
-        if (categories.length === 0)
-          return <Badge variant="outline">All</Badge>;
+        if (categories.length === 0) {
+          return (
+            <Badge
+              variant="outline"
+              className="border-slate-200 bg-slate-50 text-[11px] font-medium text-slate-600"
+            >
+              All
+            </Badge>
+          );
+        }
         return (
           <div className="flex flex-wrap gap-1">
             {categories.slice(0, 2).map((cat) => (
-              <Badge key={cat} variant="outline" className="text-xs capitalize">
+              <Badge
+                key={cat}
+                variant="outline"
+                className={cn(
+                  "text-[11px] font-medium capitalize",
+                  CATEGORY_CHIP[cat],
+                )}
+              >
                 {cat}
               </Badge>
             ))}
             {categories.length > 2 && (
-              <Badge variant="outline" className="text-xs">
+              <span className="text-muted-foreground px-1 text-xs">
                 +{categories.length - 2}
-              </Badge>
+              </span>
             )}
           </div>
         );
@@ -297,10 +359,63 @@ export default function PromoCodesPage() {
         const usageLimit = item.usageLimit as number | undefined;
         const isExhausted = usageLimit && usedCount >= usageLimit;
 
-        if (!isActive) return <Badge variant="outline">Inactive</Badge>;
-        if (isExpired) return <Badge variant="destructive">Expired</Badge>;
-        if (isExhausted) return <Badge variant="secondary">Exhausted</Badge>;
-        return <Badge variant="default">Active</Badge>;
+        const chipClass =
+          "inline-flex items-center gap-1.5 text-[11px] font-medium";
+
+        if (!isActive) {
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                chipClass,
+                "border-slate-200 bg-slate-50 text-slate-600",
+              )}
+            >
+              <span className="size-1.5 rounded-full bg-slate-400" />
+              Inactive
+            </Badge>
+          );
+        }
+        if (isExpired) {
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                chipClass,
+                "border-rose-200 bg-rose-50/80 text-rose-700",
+              )}
+            >
+              <span className="size-1.5 rounded-full bg-rose-500" />
+              Expired
+            </Badge>
+          );
+        }
+        if (isExhausted) {
+          return (
+            <Badge
+              variant="outline"
+              className={cn(
+                chipClass,
+                "border-amber-200 bg-amber-50/80 text-amber-700",
+              )}
+            >
+              <span className="size-1.5 rounded-full bg-amber-500" />
+              Exhausted
+            </Badge>
+          );
+        }
+        return (
+          <Badge
+            variant="outline"
+            className={cn(
+              chipClass,
+              "border-emerald-200 bg-emerald-50/80 text-emerald-700",
+            )}
+          >
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            Active
+          </Badge>
+        );
       },
     },
   ];
@@ -336,13 +451,13 @@ export default function PromoCodesPage() {
   return (
     <div className="space-y-6 pt-4">
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-fuchsia-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Promo Codes
             </CardTitle>
-            <Ticket className="text-muted-foreground size-4" />
+            <Ticket className="size-4 text-fuchsia-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{promoCodes.length}</div>
@@ -351,24 +466,24 @@ export default function PromoCodesPage() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-sky-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Redemptions
             </CardTitle>
-            <Users className="text-muted-foreground size-4" />
+            <Users className="size-4 text-sky-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalRedemptions}</div>
             <p className="text-muted-foreground text-xs">All time</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-emerald-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Avg. Redemption Rate
             </CardTitle>
-            <TrendingUp className="text-muted-foreground size-4" />
+            <TrendingUp className="size-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -377,12 +492,12 @@ export default function PromoCodesPage() {
             <p className="text-muted-foreground text-xs">Of limited codes</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border border-slate-200/80 bg-linear-to-br from-white to-amber-50/60 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               First-Time Only
             </CardTitle>
-            <DollarSign className="text-muted-foreground size-4" />
+            <DollarSign className="size-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -393,52 +508,73 @@ export default function PromoCodesPage() {
         </Card>
       </div>
 
-      {/* Header with Add Button */}
-      <div className="flex items-center justify-end">
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 size-4" />
-          Create Promo Code
-        </Button>
-      </div>
-
-      {/* Data Table */}
-      <DataTable
-        data={promoCodes.map((p) => ({ ...p }) as PromoWithRecord)}
-        columns={columns}
-        filters={filters}
-        searchKey={"code" as keyof PromoWithRecord}
-        searchPlaceholder="Search promo codes..."
-        actions={(item: PromoWithRecord) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => handleCopyCode(item.code as string)}
-              >
-                <Copy className="mr-2 size-4" />
-                Copy Code
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleEdit(item as unknown as PromoCode)}
-              >
-                <Edit className="mr-2 size-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleDeleteClick(item as unknown as PromoCode)}
-                className="text-destructive"
-              >
-                <Trash2 className="mr-2 size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      />
+      {/* Promo Codes Directory */}
+      <Card className="border border-slate-200/80 bg-white/95 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-base">Promo Codes</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Showing {promoCodes.length} codes · {activePromos} active
+              </p>
+            </div>
+            <Button size="sm" className="shadow-sm" onClick={handleAddNew}>
+              <Plus className="mr-2 size-4" />
+              Create Promo Code
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="relative rounded-xl border border-slate-200/80 bg-linear-to-br from-fuchsia-50/50 via-white to-sky-50/50 p-2.5">
+            <div className="overflow-hidden rounded-lg border border-white/90 bg-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+              <div className="[&_tbody_td]:py-3 [&_tbody_td]:align-middle [&_tbody_tr]:transition-colors [&_tbody_tr]:duration-200 [&_thead_th]:bg-slate-50/90 [&_thead_th]:text-[11px] [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-slate-500 [&_thead_th]:uppercase">
+                <DataTable
+                  data={promoCodes.map((p) => ({ ...p }) as PromoWithRecord)}
+                  columns={columns}
+                  filters={filters}
+                  searchKey={"code" as keyof PromoWithRecord}
+                  searchPlaceholder="Search promo codes..."
+                  rowClassName={() =>
+                    "border-b border-slate-100/80 bg-white/95 [&>td]:py-3"
+                  }
+                  actions={(item: PromoWithRecord) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleCopyCode(item.code as string)}
+                        >
+                          <Copy className="mr-2 size-4" />
+                          Copy Code
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(item as unknown as PromoCode)}
+                        >
+                          <Edit className="mr-2 size-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleDeleteClick(item as unknown as PromoCode)
+                          }
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 size-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Modal */}
       <Dialog open={isAddEditModalOpen} onOpenChange={setIsAddEditModalOpen}>

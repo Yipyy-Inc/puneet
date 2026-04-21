@@ -65,7 +65,7 @@ const tabs = [
   },
   {
     name: "Settings",
-    href: "/facility/dashboard/settings?section=boarding",
+    href: "/facility/dashboard/services/boarding/settings",
     icon: Settings,
   },
 ];

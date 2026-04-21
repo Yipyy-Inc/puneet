@@ -41,6 +41,8 @@ export const daycareSections: DaycareSection[] = [
     isActive: true,
     sortOrder: 1,
     color: "emerald",
+    imageUrl:
+      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-is-1",
@@ -68,6 +70,8 @@ export const daycareSections: DaycareSection[] = [
     isActive: true,
     sortOrder: 2,
     color: "blue",
+    imageUrl:
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-im-1",
@@ -102,6 +106,8 @@ export const daycareSections: DaycareSection[] = [
     isActive: true,
     sortOrder: 3,
     color: "amber",
+    imageUrl:
+      "https://images.unsplash.com/photo-1552053831-71594a27632d?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-il-1",
@@ -131,6 +137,8 @@ export const daycareSections: DaycareSection[] = [
     isActive: true,
     sortOrder: 1,
     color: "orange",
+    imageUrl:
+      "https://images.unsplash.com/photo-1534361960057-19889db9621e?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-om-1",
@@ -151,6 +159,8 @@ export const daycareSections: DaycareSection[] = [
     isActive: true,
     sortOrder: 2,
     color: "violet",
+    imageUrl:
+      "https://images.unsplash.com/photo-1546527868-ccb7ee7dfa6a?w=800&h=480&fit=crop",
     rules: [
       {
         id: "rule-oa-1",

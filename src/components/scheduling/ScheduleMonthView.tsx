@@ -32,6 +32,7 @@ export interface ScheduleMonthViewProps {
   holidayRates: HolidayRate[];
   onShiftClick: (shift: ScheduleShift) => void;
   onCellClick: (employeeId: string | undefined, date: string) => void;
+  onContextMenu?: (e: React.MouseEvent, shift: ScheduleShift) => void;
 }
 
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -45,6 +46,7 @@ export function ScheduleMonthView({
   holidayRates,
   onShiftClick,
   onCellClick,
+  onContextMenu,
 }: ScheduleMonthViewProps) {
   const dates = useMemo(
     () => getDatesForView(currentDate, "month"),
@@ -192,6 +194,12 @@ export function ScheduleMonthView({
                       e.stopPropagation();
                       onShiftClick(openShifts[0]);
                     }}
+                    onContextMenu={(e) => {
+                      if (onContextMenu) {
+                        e.stopPropagation();
+                        onContextMenu(e, openShifts[0]);
+                      }
+                    }}
                     className="flex items-center gap-1 rounded-md border border-dashed border-amber-400/70 bg-amber-50/70 px-1.5 py-1 text-left transition-colors hover:bg-amber-100/80 dark:bg-amber-950/20"
                   >
                     <UserX className="size-3 shrink-0 text-amber-600" />
@@ -217,26 +225,40 @@ export function ScheduleMonthView({
                         e.stopPropagation();
                         onShiftClick(shift);
                       }}
+                      onContextMenu={(e) => {
+                        if (onContextMenu) {
+                          e.stopPropagation();
+                          onContextMenu(e, shift);
+                        }
+                      }}
                       className={cn(
                         "group/pill flex items-center gap-1.5 rounded-md border px-1.5 py-1 text-left transition-all hover:-translate-y-px hover:shadow-sm",
                         isDraft && "border-dashed",
                       )}
                       style={{
-                        backgroundColor: `${color}14`,
-                        borderColor: `${color}40`,
+                        background: isDraft
+                          ? `repeating-linear-gradient(135deg, ${color}1a 0px, ${color}1a 4px, ${color}08 4px, ${color}08 8px)`
+                          : `linear-gradient(135deg, ${color}cc 0%, ${color}80 100%)`,
+                        borderColor: isDraft ? `${color}80` : color,
+                        boxShadow: isDraft ? undefined : `0 1px 4px ${color}33`,
                       }}
                     >
                       <span
                         className="size-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: color }}
+                        style={{ backgroundColor: isDraft ? color : "#ffffff" }}
                       />
                       <span
                         className="truncate text-[10px] font-semibold"
-                        style={{ color }}
+                        style={{ color: isDraft ? color : "#ffffff" }}
                       >
                         {emp?.initials ?? "?"}
                       </span>
-                      <span className="ml-auto truncate text-[10px] opacity-80">
+                      <span
+                        className={cn(
+                          "ml-auto truncate text-[10px] tabular-nums",
+                          isDraft ? "opacity-80" : "text-white/90",
+                        )}
+                      >
                         {shift.startTime.slice(0, 5)}
                       </span>
                     </button>

@@ -1,14 +1,14 @@
 "use client";
 
 import { Fragment, useMemo } from "react";
-import { UserX, Star } from "lucide-react";
+import { UserX, Star, Sigma } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { isHoliday } from "@/lib/scheduling-utils";
+import { isHoliday, computeShiftHours } from "@/lib/scheduling-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ShiftPill, TimeOffCell } from "./ScheduleCalendarPills";
 import {
@@ -99,6 +99,29 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
     () => shifts.some((s) => !s.employeeId),
     [shifts],
   );
+
+  const dailyTotals = useMemo(() => {
+    const map = new Map<string, number>();
+    dates.forEach((d) => map.set(formatDateStr(d), 0));
+    shifts.forEach((s) => {
+      if (!s.employeeId) return;
+      if (!map.has(s.date)) return;
+      map.set(
+        s.date,
+        (map.get(s.date) ?? 0) +
+          computeShiftHours(s.startTime, s.endTime, s.breakMinutes),
+      );
+    });
+    return map;
+  }, [shifts, dates]);
+
+  const grandTotalHours = useMemo(() => {
+    let sum = 0;
+    dailyTotals.forEach((v) => {
+      sum += v;
+    });
+    return sum;
+  }, [dailyTotals]);
 
   const isCompact = viewMode === "2weeks";
   const empColWidth = isCompact ? 220 : 240;
@@ -305,7 +328,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
         {/* ─── Open shifts row (anchored at the bottom) ───── */}
         {hasOpenShifts && (
           <Fragment>
-            <div className="border-border/50 sticky bottom-0 z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
+            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center gap-3 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-r from-amber-50 via-amber-50/70 to-amber-50/40 px-4 py-3 backdrop-blur-md dark:border-amber-700/40 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-amber-950/10">
               <div className="flex size-10 items-center justify-center rounded-full border border-dashed border-amber-400 bg-white shadow-sm dark:bg-amber-950/30">
                 <UserX className="size-4 text-amber-600" />
               </div>
@@ -325,7 +348,7 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 <div
                   key={`open-${dateStr}`}
                   className={cn(
-                    "group/open-cell border-border/50 sticky bottom-0 z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
+                    "group/open-cell border-border/50 sticky bottom-[52px] z-20 flex min-h-[60px] cursor-pointer flex-col gap-1 border-t-2 border-r border-b border-dashed border-amber-300 bg-gradient-to-b from-amber-50/70 to-amber-50/30 p-1.5 backdrop-blur-md transition-colors hover:from-amber-100/80 hover:to-amber-100/40 dark:border-amber-700/40 dark:from-amber-950/30 dark:to-amber-950/10 dark:hover:from-amber-900/30",
                     isToday(date) &&
                       "from-indigo-50/70 to-amber-50/30 dark:from-indigo-950/30",
                   )}
@@ -363,11 +386,69 @@ export function ScheduleGridView(props: ScheduleGridViewProps) {
                 </div>
               );
             })}
-            <div className="border-border/50 sticky bottom-0 z-20 flex items-center justify-center border-t-2 border-b border-l border-dashed border-amber-300 bg-amber-50/40 px-2 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/10">
+            <div className="border-border/50 sticky bottom-[52px] z-20 flex items-center justify-center border-t-2 border-b border-l border-dashed border-amber-300 bg-amber-50/40 px-2 backdrop-blur-md dark:border-amber-700/40 dark:bg-amber-950/10">
               <span className="text-muted-foreground text-xs">—</span>
             </div>
           </Fragment>
         )}
+
+        {/* ─── Daily totals row (anchored at the bottom) ───── */}
+        <div className="border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center gap-2 border-t-2 border-r bg-slate-50/95 px-4 backdrop-blur-md dark:bg-slate-900/80">
+          <div className="bg-background flex size-7 items-center justify-center rounded-full border shadow-sm">
+            <Sigma className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold tracking-wide uppercase">
+              Daily Total
+            </p>
+            <p className="text-muted-foreground truncate text-[10px]">
+              All employees combined
+            </p>
+          </div>
+        </div>
+        {dates.map((date, i) => {
+          const dateStr = formatDateStr(date);
+          const dayHours = dailyTotals.get(dateStr) ?? 0;
+          const todayFlag = isToday(date);
+          const weekend = isWeekend(date);
+          return (
+            <div
+              key={`total-${i}`}
+              className={cn(
+                "border-border/60 sticky bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-r bg-slate-50/95 backdrop-blur-md dark:bg-slate-900/80",
+                weekend &&
+                  "bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(248,250,252,0.95)_6px,rgba(248,250,252,0.95)_12px)] dark:bg-[repeating-linear-gradient(135deg,rgba(148,163,184,0.10)_0px,rgba(148,163,184,0.10)_6px,rgba(15,23,42,0.8)_6px,rgba(15,23,42,0.8)_12px)]",
+                todayFlag &&
+                  "bg-indigo-50/80 dark:bg-indigo-950/30",
+              )}
+            >
+              <span
+                className={cn(
+                  "text-sm font-semibold tabular-nums",
+                  dayHours === 0
+                    ? "text-muted-foreground/50"
+                    : todayFlag
+                      ? "text-indigo-700 dark:text-indigo-300"
+                      : "text-foreground",
+                )}
+              >
+                {dayHours === 0 ? "—" : `${dayHours.toFixed(1)}h`}
+              </span>
+            </div>
+          );
+        })}
+        <div className="border-border/60 sticky right-0 bottom-0 z-30 flex h-[52px] items-center justify-center border-t-2 border-b border-l bg-indigo-50/80 px-2 backdrop-blur-md dark:bg-indigo-950/30">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-default rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-bold text-white shadow-sm tabular-nums dark:bg-indigo-500">
+                {grandTotalHours.toFixed(1)}h
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="text-xs">
+              Total employee hours this period
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );

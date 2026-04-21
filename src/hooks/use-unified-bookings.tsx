@@ -26,6 +26,17 @@ import type { CustomServiceModule } from "@/types/facility";
 
 export type UnifiedStatus = "scheduled" | "checked-in" | "checked-out";
 
+export interface EarlyCheckoutAdjustment {
+  unusedNights: number;
+  unusedValue: number;
+  policy: "none" | "full_refund" | "partial_refund" | "credit" | "fee";
+  refundAmount: number;
+  creditAmount: number;
+  feeAmount: number;
+  creditExpiresDays?: number;
+  customerNote?: string;
+}
+
 export type BookingSource =
   | "boarding"
   | "daycare"
@@ -79,7 +90,15 @@ export interface UnifiedBookingsContextValue {
     expectedToday: number;
     byService: Record<string, number>;
   };
-  updateStatus: (bookingId: string, next: UnifiedStatus) => void;
+  updateStatus: (
+    bookingId: string,
+    next: UnifiedStatus,
+    options?: {
+      timestamp?: string;
+      noShow?: boolean;
+      earlyCheckout?: EarlyCheckoutAdjustment;
+    },
+  ) => void;
 }
 
 const PET_IMAGE_MAP: Record<number, string> = {
@@ -430,10 +449,20 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   }, [bookings]);
 
   const updateStatus = useCallback(
-    (bookingId: string, next: UnifiedStatus) => {
+    (
+      bookingId: string,
+      next: UnifiedStatus,
+      options?: {
+        timestamp?: string;
+        noShow?: boolean;
+        earlyCheckout?: EarlyCheckoutAdjustment;
+      },
+    ) => {
       const target = bookings.find((b) => b.id === bookingId);
       if (!target) return;
-      const now = new Date().toISOString();
+      const now = options?.timestamp ?? new Date().toISOString();
+      const isNoShow = options?.noShow === true;
+      const earlyCheckout = options?.earlyCheckout;
 
       switch (target.source) {
         case "boarding":
@@ -447,6 +476,9 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
                       next === "checked-in" ? now : g.actualCheckIn,
                     actualCheckOut:
                       next === "checked-out" ? now : g.actualCheckOut,
+                    ...(next === "checked-out" && earlyCheckout
+                      ? { earlyCheckoutAdjustment: earlyCheckout }
+                      : {}),
                   }
                 : g,
             ),
@@ -531,15 +563,29 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
           break;
       }
 
-      const verb =
-        next === "checked-in"
+      const verb = isNoShow
+        ? "Marked No-Show"
+        : next === "checked-in"
           ? "Checked In"
           : next === "checked-out"
-            ? "Checked Out"
+            ? earlyCheckout && earlyCheckout.unusedNights > 0
+              ? "Early Checkout"
+              : "Checked Out"
             : "Reset to Scheduled";
-      toast.success(`${target.petName} — ${verb}`, {
-        description: `${target.serviceLabel}`,
-      });
+      let description = target.serviceLabel;
+      if (earlyCheckout && earlyCheckout.unusedNights > 0) {
+        const parts: string[] = [
+          `${earlyCheckout.unusedNights} night${earlyCheckout.unusedNights > 1 ? "s" : ""} unused`,
+        ];
+        if (earlyCheckout.refundAmount > 0)
+          parts.push(`refund $${earlyCheckout.refundAmount.toFixed(2)}`);
+        if (earlyCheckout.creditAmount > 0)
+          parts.push(`credit $${earlyCheckout.creditAmount.toFixed(2)}`);
+        if (earlyCheckout.feeAmount > 0)
+          parts.push(`fee $${earlyCheckout.feeAmount.toFixed(2)}`);
+        description = `${target.serviceLabel} · ${parts.join(" · ")}`;
+      }
+      toast.success(`${target.petName} — ${verb}`, { description });
     },
     [bookings],
   );

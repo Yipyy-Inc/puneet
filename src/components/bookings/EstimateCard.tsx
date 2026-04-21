@@ -5,6 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Send,
   CheckCircle2,
   XCircle,
@@ -14,8 +20,6 @@ import {
   ArrowRight,
   Trash2,
   FileText,
-  ChevronDown,
-  ChevronUp,
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -86,7 +90,7 @@ export function EstimateCard({
   onDelete,
   onDuplicate,
 }: EstimateCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
   const config = STATUS_CONFIG[estimate.status];
   const StatusIcon = config.icon;
   const isActionable =
@@ -96,10 +100,22 @@ export function EstimateCard({
   const expiryDays = estimate.expiresAt ? daysUntil(estimate.expiresAt) : null;
 
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+    <>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => setOpen(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen(true);
+        }
+      }}
+      className="cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none"
+    >
       <CardContent className="p-0">
         {/* Header strip */}
-        <div className="flex items-center justify-between border-b px-5 py-3.5">
+        <div className="flex items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-3">
             <div
               className={`flex size-9 items-center justify-center rounded-xl ${
@@ -200,26 +216,55 @@ export function EstimateCard({
                 </p>
               )}
             </div>
-
-            {/* Expand toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              onClick={() => setExpanded(!expanded)}
-            >
-              {expanded ? (
-                <ChevronUp className="size-4" />
-              ) : (
-                <ChevronDown className="size-4" />
-              )}
-            </Button>
           </div>
         </div>
+      </CardContent>
+    </Card>
 
-        {/* Expanded detail */}
-        {expanded && (
-          <div className="space-y-4 bg-slate-50/50 px-5 py-4">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span>{estimate.clientName}</span>
+            <Badge className={`text-[10px] ${config.color}`}>
+              {config.label}
+            </Badge>
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              <FileText className="size-2.5" />
+              Estimate {estimate.estimateId}
+            </Badge>
+            {estimate.status === "converted" &&
+              estimate.convertedBookingId && (
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <ArrowRight className="size-2.5" />
+                  Booking #{estimate.convertedBookingId}
+                </Badge>
+              )}
+          </DialogTitle>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+            <span className="flex items-center gap-1">
+              <CalendarDays className="size-3" />
+              {formatDate(estimate.startDate)}
+              {estimate.startDate !== estimate.endDate &&
+                ` — ${formatDate(estimate.endDate)}`}
+            </span>
+            <span>·</span>
+            <span className="flex items-center gap-1">
+              <PawPrint className="size-3" />
+              {estimate.petNames.join(", ")}
+            </span>
+            <span>·</span>
+            <span className="capitalize">{estimate.service}</span>
+            {estimate.serviceType && (
+              <>
+                <span>·</span>
+                <span>{estimate.serviceType}</span>
+              </>
+            )}
+          </div>
+        </DialogHeader>
+
+        <div className="space-y-4">
             {/* Line items */}
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
@@ -413,9 +458,9 @@ export function EstimateCard({
                 )}
               </div>
             )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

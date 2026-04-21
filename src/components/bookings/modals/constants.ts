@@ -414,8 +414,8 @@ export const GROOMING_PACKAGES: GroomingPackage[] = [
 ];
 
 export const STEPS: Step[] = [
-  { id: "service", title: "Service", description: "Choose service" },
   { id: "client-pet", title: "Client & Pet", description: "Select or create" },
+  { id: "service", title: "Service", description: "Choose service" },
   { id: "details", title: "Details", description: "Service info" },
   { id: "confirm", title: "Confirm", description: "Review booking" },
 ];

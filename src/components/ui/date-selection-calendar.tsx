@@ -1101,7 +1101,7 @@ export function DateSelectionCalendar({
                           onDateTimesChange?.(newTimes);
                         }}
                         onApply={() => {}}
-                        step={30}
+                        step={5}
                       />
                       <p className="text-muted-foreground text-[10px]">
                         Same times for all days in range
@@ -1166,7 +1166,7 @@ export function DateSelectionCalendar({
                           onDateTimesChange?.(newTimes);
                         }}
                         onApply={() => {}}
-                        step={30}
+                        step={5}
                       />
                     </div>
                   )}
@@ -1251,7 +1251,7 @@ export function DateSelectionCalendar({
                                       onDateTimesChange?.(updatedTimes);
                                     }
                                   }}
-                                  step={30}
+                                  step={5}
                                 />
                               </>
                             )}
