@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,18 +27,76 @@ import {
   Sparkles,
   AlertTriangle,
   RefreshCw,
+  CheckCircle2,
+  ClipboardCheck,
+  FileText,
+  Heart,
+  PawPrint,
+  ShieldCheck,
+  Zap,
+  XCircle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { SendEvaluationResultModal } from "@/components/evaluations/SendEvaluationResultModal";
 import type { EvaluationResultCardData } from "@/components/evaluations/EvaluationResultCard";
 import { useSettings } from "@/hooks/use-settings";
 import { useAiSummary } from "@/hooks/use-ai-summary";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { businessProfile } from "@/data/settings";
+import { cn } from "@/lib/utils";
 
 // ── Dynamic form state ───────────────────────────────────────────────
 
 type Answers = Record<string, unknown>;
-type EvaluationResult = "pass" | "fail" | "";
+type EvaluationResult =
+  | "approved"
+  | "approved_with_restrictions"
+  | "needs_re_evaluation"
+  | "not_approved"
+  | "";
+
+const EVALUATION_RESULTS: Array<{
+  value: Exclude<EvaluationResult, "">;
+  label: string;
+  description: string;
+  status: "passed" | "failed";
+}> = [
+  {
+    value: "approved",
+    label: "Approved",
+    description: "Pet is cleared for selected services.",
+    status: "passed",
+  },
+  {
+    value: "approved_with_restrictions",
+    label: "Approved with restrictions",
+    description: "Pet may attend with service limits or staff notes.",
+    status: "passed",
+  },
+  {
+    value: "needs_re_evaluation",
+    label: "Needs re-evaluation",
+    description: "Pet needs another evaluation before approval.",
+    status: "failed",
+  },
+  {
+    value: "not_approved",
+    label: "Not approved",
+    description: "Pet is not approved for the requested program.",
+    status: "failed",
+  },
+];
+
+const DENIAL_REASONS = [
+  { value: "dog_reactivity", label: "Reactive toward dogs" },
+  { value: "human_reactivity", label: "Reactive toward people" },
+  { value: "resource_guarding", label: "Resource guarding" },
+  { value: "high_anxiety", label: "High anxiety or stress" },
+  { value: "rough_play", label: "Unsafe or overly rough play" },
+  { value: "health_or_vaccine", label: "Health or vaccine concern" },
+  { value: "needs_training", label: "Needs training before approval" },
+  { value: "other", label: "Other" },
+];
 
 interface FormState {
   answers: Answers;
@@ -45,6 +104,11 @@ interface FormState {
   behaviorCodes: string[];
   internalComments: string;
   evaluationResult: EvaluationResult;
+  denialReason: string;
+  denialNotes: string;
+  evaluatedAt?: string;
+  evaluatedBy?: string;
+  evaluatedById?: string;
   approvedServices: {
     daycare: boolean;
     boarding: boolean;
@@ -67,8 +131,28 @@ function makeDefaultState(): FormState {
     behaviorCodes: [],
     internalComments: "",
     evaluationResult: "",
+    denialReason: "",
+    denialNotes: "",
     approvedServices: { ...defaultApprovedServices },
   };
+}
+
+function getResultConfig(result: EvaluationResult) {
+  return EVALUATION_RESULTS.find((option) => option.value === result);
+}
+
+function isPassingResult(result: EvaluationResult) {
+  return getResultConfig(result)?.status === "passed";
+}
+
+function getDenialReasonLabel(reason: string) {
+  return DENIAL_REASONS.find((option) => option.value === reason)?.label;
+}
+
+function renderSectionIcon(sectionId: string) {
+  if (sectionId.includes("temperament")) return <Heart className="size-5" />;
+  if (sectionId.includes("play")) return <Zap className="size-5" />;
+  return <FileText className="size-5" />;
 }
 
 function storageKey(evaluationId: string) {
@@ -128,11 +212,15 @@ function TagInput({
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((t) => (
-            <Badge key={t} variant="secondary" className="gap-1">
+            <Badge
+              key={t}
+              variant="secondary"
+              className="gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm"
+            >
               {t}
               <button
                 type="button"
-                className="ml-1"
+                className="hover:bg-muted ml-1 rounded-full p-0.5 transition-colors"
                 onClick={() => onChange(value.filter((x) => x !== t))}
                 aria-label={`Remove ${t}`}
               >
@@ -162,11 +250,18 @@ function QuestionField({
   onNoteChange: (val: string) => void;
 }) {
   const strVal = typeof value === "string" ? value : "";
+  const choiceClass = (selected: boolean) =>
+    cn(
+      "group flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-3 text-sm transition-all",
+      selected
+        ? "border-sky-300 bg-sky-50 text-sky-800 shadow-sm ring-2 ring-sky-100"
+        : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-sky-200 hover:bg-sky-50/50 hover:shadow-sm",
+    );
 
   return (
-    <div className="space-y-2">
+    <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-center gap-1.5">
-        <Label>
+        <Label className="text-sm font-semibold text-slate-800">
           {question.label}
           {question.required && (
             <span className="text-destructive ml-0.5">*</span>
@@ -186,15 +281,15 @@ function QuestionField({
         <RadioGroup
           value={strVal}
           onValueChange={(v) => onChange(v)}
-          className="grid grid-cols-2 gap-3"
+          className="mt-3 grid grid-cols-2 gap-3"
         >
-          <label className="flex items-center gap-2 rounded-md border p-3">
+          <label className={choiceClass(strVal === "yes")}>
             <RadioGroupItem value="yes" />
-            Yes
+            <span className="font-medium">Yes</span>
           </label>
-          <label className="flex items-center gap-2 rounded-md border p-3">
+          <label className={choiceClass(strVal === "no")}>
             <RadioGroupItem value="no" />
-            No
+            <span className="font-medium">No</span>
           </label>
         </RadioGroup>
       )}
@@ -203,16 +298,19 @@ function QuestionField({
         <RadioGroup
           value={strVal}
           onValueChange={(v) => onChange(v)}
-          className="grid grid-cols-3 gap-3"
+          className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3"
         >
           {(["low", "mid", "high"] as const).map((level) => (
-            <label
-              key={level}
-              className="flex items-center gap-2 rounded-md border p-3"
-            >
+            <label key={level} className={choiceClass(strVal === level)}>
               <RadioGroupItem value={level} />
-              {question.scaleLabels?.[level] ??
-                (level === "low" ? "Low" : level === "mid" ? "Medium" : "High")}
+              <span className="font-medium">
+                {question.scaleLabels?.[level] ??
+                  (level === "low"
+                    ? "Low"
+                    : level === "mid"
+                      ? "Medium"
+                      : "High")}
+              </span>
             </label>
           ))}
         </RadioGroup>
@@ -220,7 +318,7 @@ function QuestionField({
 
       {question.type === "single_select" && (
         <Select value={strVal} onValueChange={(v) => onChange(v)}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="mt-3 w-full rounded-xl border-slate-200 bg-slate-50/70">
             <SelectValue
               placeholder={`Select ${question.label.toLowerCase()}`}
             />
@@ -236,13 +334,18 @@ function QuestionField({
       )}
 
       {question.type === "multi_select" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {(question.options ?? []).map((opt) => {
             const selected = Array.isArray(value) && value.includes(opt);
             return (
               <label
                 key={opt}
-                className="flex items-center gap-2 rounded-md border px-3 py-2"
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm transition-all",
+                  selected
+                    ? "border-sky-300 bg-sky-50 text-sky-800 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/50",
+                )}
               >
                 <Checkbox
                   checked={selected}
@@ -267,7 +370,7 @@ function QuestionField({
           value={strVal}
           onChange={(e) => onChange(e.target.value)}
           placeholder={question.placeholder ?? ""}
-          className="min-h-20"
+          className="mt-3 min-h-24 rounded-xl border-slate-200 bg-slate-50/70"
         />
       )}
 
@@ -279,6 +382,7 @@ function QuestionField({
             onChange(e.target.value ? parseFloat(e.target.value) : "")
           }
           placeholder={question.placeholder ?? ""}
+          className="mt-3 rounded-xl border-slate-200 bg-slate-50/70"
         />
       )}
 
@@ -287,7 +391,7 @@ function QuestionField({
           placeholder="Optional notes..."
           value={noteValue}
           onChange={(e) => onNoteChange(e.target.value)}
-          className="min-h-16 text-sm"
+          className="mt-3 min-h-16 rounded-xl border-slate-200 bg-slate-50/70 text-sm"
         />
       )}
     </div>
@@ -310,7 +414,7 @@ function SectionBlock({
   onNote: (questionId: string, val: string) => void;
 }) {
   // Layout: pair yes/no and scale questions side-by-side
-  const pairable = ["yes_no", "scale"];
+  const pairable = ["yes_no", "scale", "single_select"];
   const rows: EvalQuestion[][] = [];
   let i = 0;
   while (i < section.questions.length) {
@@ -326,31 +430,42 @@ function SectionBlock({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <p className="text-sm font-semibold">{section.title}</p>
-        {section.description && (
-          <p className="text-muted-foreground text-xs">{section.description}</p>
-        )}
-      </div>
-      {rows.map((row, ri) => (
-        <div
-          key={ri}
-          className={`grid gap-6 ${row.length === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}
-        >
-          {row.map((q) => (
-            <QuestionField
-              key={q.id}
-              question={q}
-              value={answers[q.id]}
-              noteValue={answerNotes[q.id] ?? ""}
-              onChange={(val) => onAnswer(q.id, val)}
-              onNoteChange={(val) => onNote(q.id, val)}
-            />
-          ))}
+    <section className="overflow-hidden rounded-3xl border border-slate-200/80 bg-linear-to-br from-white via-slate-50/70 to-sky-50/50 shadow-sm">
+      <div className="flex items-center gap-3 border-b border-slate-200/70 bg-white/80 px-5 py-4">
+        <div className="flex size-10 items-center justify-center rounded-2xl bg-linear-to-br from-sky-500 to-cyan-500 text-white shadow-sm shadow-sky-500/20">
+          {renderSectionIcon(section.id)}
         </div>
-      ))}
-    </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-900">
+            {section.title}
+          </p>
+          {section.description && (
+            <p className="text-muted-foreground text-xs">
+              {section.description}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="space-y-4 p-4 md:p-5">
+        {rows.map((row, ri) => (
+          <div
+            key={ri}
+            className={`grid gap-4 ${row.length === 2 ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}
+          >
+            {row.map((q) => (
+              <QuestionField
+                key={q.id}
+                question={q}
+                value={answers[q.id]}
+                noteValue={answerNotes[q.id] ?? ""}
+                onChange={(val) => onAnswer(q.id, val)}
+                onNoteChange={(val) => onNote(q.id, val)}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -361,18 +476,23 @@ export function StaffEvaluationFormModal({
   onOpenChange,
   evaluation,
   petName,
+  petImage,
   ownerName = "Pet Owner",
   evaluatorName,
+  onEvaluationSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   evaluation: Evaluation;
   petName: string;
+  petImage?: string;
   ownerName?: string;
   evaluatorName?: string;
+  onEvaluationSaved?: (evaluation: Evaluation) => void;
 }) {
   const { evaluationReportCard, evaluationFormTemplate: template } =
     useSettings();
+  const { user } = useCurrentUser();
   const key = useMemo(() => storageKey(evaluation.id), [evaluation.id]);
 
   const loadForm = (k: string): FormState => {
@@ -417,37 +537,86 @@ export function StaffEvaluationFormModal({
   const requiredQuestions = template.sections.flatMap((s) =>
     s.questions.filter((q) => q.required),
   );
-  const allRequiredAnswered = requiredQuestions.every((q) => {
+  const requiredAnsweredCount = requiredQuestions.filter((q) => {
     const v = form.answers[q.id];
     if (v === undefined || v === "" || v === null) return false;
     if (Array.isArray(v) && v.length === 0) return false;
     return true;
-  });
+  }).length;
+  const allRequiredAnswered =
+    requiredQuestions.length > 0 &&
+    requiredAnsweredCount === requiredQuestions.length;
+  const requiredProgress =
+    requiredQuestions.length > 0
+      ? Math.round((requiredAnsweredCount / requiredQuestions.length) * 100)
+      : 100;
+
+  const resultConfig = getResultConfig(form.evaluationResult);
+  const passingResult = isPassingResult(form.evaluationResult);
+  const denialReasonSelected = form.denialReason.trim().length > 0;
+  const servicesSelected =
+    form.approvedServices.daycare ||
+    form.approvedServices.boarding ||
+    form.approvedServices.customApproved.length > 0;
 
   const canSave =
     allRequiredAnswered &&
     form.evaluationResult !== "" &&
-    (form.evaluationResult === "fail" ||
-      form.approvedServices.daycare ||
-      form.approvedServices.boarding ||
-      form.approvedServices.customApproved.length > 0);
+    (passingResult ? servicesSelected : denialReasonSelected);
 
   const save = () => {
     if (!form.evaluationResult) {
-      setResultError("Please select Pass or Fail before saving.");
+      setResultError("Please select an evaluation result before saving.");
       return;
     }
-    if (
-      form.evaluationResult === "pass" &&
-      !form.approvedServices.daycare &&
-      !form.approvedServices.boarding &&
-      form.approvedServices.customApproved.length === 0
-    ) {
+
+    if (passingResult && !servicesSelected) {
       setResultError("Please select at least one service approval.");
       return;
     }
+
+    if (!passingResult && !denialReasonSelected) {
+      setResultError("Please select a reason before saving this result.");
+      return;
+    }
+
     setResultError("");
-    localStorage.setItem(key, JSON.stringify(form));
+    const evaluatedAt = new Date().toISOString();
+    const evaluatedBy = evaluatorName ?? user.name;
+    const denialReasonLabel = getDenialReasonLabel(form.denialReason);
+    const savedForm: FormState = {
+      ...form,
+      evaluatedAt,
+      evaluatedBy,
+      evaluatedById: user.id,
+    };
+    const savedEvaluation: Evaluation = {
+      ...evaluation,
+      status: resultConfig?.status ?? "pending",
+      evaluatedAt,
+      evaluatedBy,
+      evaluatedById: user.id,
+      resultType: form.evaluationResult || undefined,
+      resultLabel: resultConfig?.label,
+      denialReason: passingResult ? undefined : form.denialReason,
+      denialReasonLabel: passingResult ? undefined : denialReasonLabel,
+      denialNotes: passingResult ? undefined : form.denialNotes.trim(),
+      notes: passingResult
+        ? ((form.answers.temperament_notes as string | undefined) ??
+          form.internalComments)
+        : form.denialNotes.trim(),
+      approvedServices: passingResult
+        ? form.approvedServices
+        : { ...defaultApprovedServices },
+    };
+
+    localStorage.setItem(key, JSON.stringify(savedForm));
+    localStorage.setItem(
+      `staff-evaluation-record:${evaluation.id}`,
+      JSON.stringify(savedEvaluation),
+    );
+    setForm(savedForm);
+    onEvaluationSaved?.(savedEvaluation);
     setSaved(true);
   };
 
@@ -467,9 +636,12 @@ export function StaffEvaluationFormModal({
     petName,
     ownerName,
     facilityName: "PawCare Facility",
-    evaluatorName,
-    evaluationDate: new Date().toISOString(),
-    result: form.evaluationResult as "pass" | "fail",
+    evaluatorName: form.evaluatedBy ?? evaluatorName ?? user.name,
+    evaluationDate: form.evaluatedAt ?? new Date().toISOString(),
+    result: passingResult ? "pass" : "fail",
+    resultLabel: resultConfig?.label,
+    denialReason: getDenialReasonLabel(form.denialReason),
+    denialNotes: form.denialNotes,
     dogFriendly:
       form.answers.dog_friendly === "yes" || form.answers.dog_friendly === "no"
         ? (form.answers.dog_friendly as "yes" | "no")
@@ -503,10 +675,12 @@ export function StaffEvaluationFormModal({
     behaviorTags:
       form.behaviorCodes.length > 0 ? form.behaviorCodes : undefined,
     staffNotes:
-      typeof form.answers.temperament_notes === "string" &&
-      form.answers.temperament_notes
-        ? form.answers.temperament_notes
-        : undefined,
+      !passingResult && form.denialNotes
+        ? form.denialNotes
+        : typeof form.answers.temperament_notes === "string" &&
+            form.answers.temperament_notes
+          ? form.answers.temperament_notes
+          : undefined,
     approvedServices: {
       daycare: form.approvedServices.daycare,
       boarding: form.approvedServices.boarding,
@@ -521,9 +695,80 @@ export function StaffEvaluationFormModal({
       description={`Evaluation ID: ${evaluation.id}`}
       open={open}
       onOpenChange={onOpenChange}
-      size="lg"
+      size="xl"
     >
       <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-linear-to-br from-white via-sky-50/70 to-emerald-50/60 p-5 shadow-sm">
+          <div className="pointer-events-none absolute -top-20 -right-16 size-52 rounded-full bg-sky-200/35 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-16 size-56 rounded-full bg-emerald-200/30 blur-3xl" />
+          <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              {petImage ? (
+                <div className="relative size-16 shrink-0 overflow-hidden rounded-3xl border-4 border-white bg-white shadow-md ring-1 ring-slate-200/70">
+                  <Image
+                    src={petImage}
+                    alt={petName}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex size-16 shrink-0 items-center justify-center rounded-3xl bg-white shadow-md ring-1 ring-slate-200/70">
+                  <PawPrint className="size-8 text-sky-500" />
+                </div>
+              )}
+              <div>
+                <Badge className="mb-2 rounded-full border-sky-200 bg-sky-50 text-[10px] tracking-wide text-sky-700 uppercase hover:bg-sky-50">
+                  Live temperament assessment
+                </Badge>
+                <h3 className="text-2xl font-semibold tracking-tight text-slate-950">
+                  {petName}
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  Owner: {ownerName} · Evaluator:{" "}
+                  {form.evaluatedBy ?? evaluatorName ?? user.name}
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-2 text-xs sm:grid-cols-2 md:w-80">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-muted-foreground">Required answers</p>
+                  <Badge
+                    className={cn(
+                      "rounded-full text-[10px]",
+                      allRequiredAnswered
+                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                        : "bg-amber-100 text-amber-700 hover:bg-amber-100",
+                    )}
+                  >
+                    {allRequiredAnswered ? "Complete" : "In progress"}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-lg font-semibold text-slate-950">
+                  {requiredAnsweredCount}/{requiredQuestions.length || 0}
+                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all",
+                      allRequiredAnswered ? "bg-emerald-500" : "bg-amber-400",
+                    )}
+                    style={{ width: `${requiredProgress}%` }}
+                  />
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-sm backdrop-blur-sm">
+                <p className="text-muted-foreground">Result</p>
+                <p className="mt-1 text-lg font-semibold text-slate-950">
+                  {resultConfig?.label ?? "Pending"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ── Dynamic sections from template ── */}
         {template.sections.map((section) => (
           <SectionBlock
@@ -538,9 +783,21 @@ export function StaffEvaluationFormModal({
 
         {/* ── Behavior codes ── */}
         {template.behaviorCodes.length > 0 && (
-          <div className="space-y-2">
-            <Label>Behavior Codes</Label>
-            <div className="flex flex-wrap gap-2">
+          <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-slate-200/70 bg-linear-to-r from-white to-amber-50/70 px-5 py-4">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-amber-100">
+                <ClipboardCheck className="size-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Behavior Codes
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Quick tags that help the care team recognize patterns later.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 p-4">
               {template.behaviorCodes.map((code) => {
                 const selected = form.behaviorCodes.includes(code.label);
                 return (
@@ -555,10 +812,10 @@ export function StaffEvaluationFormModal({
                           : [...p.behaviorCodes, code.label],
                       }))
                     }
-                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm ${
                       selected
                         ? "border-transparent text-white shadow-sm"
-                        : "hover:bg-muted"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                     style={
                       selected ? { backgroundColor: code.color } : undefined
@@ -582,10 +839,22 @@ export function StaffEvaluationFormModal({
 
         {/* ── Internal notes ── */}
         {template.internalNotesEnabled && (
-          <div className="space-y-2">
-            <Label>Internal staff comments (not shared with customer)</Label>
+          <div className="rounded-3xl border border-slate-200/80 bg-linear-to-br from-white to-slate-50/80 p-5 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
+                <FileText className="size-5" />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold text-slate-900">
+                  Internal staff comments
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Private context for staff only, not shared with the customer.
+                </p>
+              </div>
+            </div>
             <Textarea
-              className="min-h-28"
+              className="min-h-28 rounded-2xl border-slate-200 bg-white/90"
               value={form.internalComments}
               onChange={(e) =>
                 setForm((p) => ({ ...p, internalComments: e.target.value }))
@@ -596,57 +865,108 @@ export function StaffEvaluationFormModal({
         )}
 
         {/* ── Evaluation Result (always shown) ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Evaluation Result</CardTitle>
+        <Card className="overflow-hidden rounded-3xl border-slate-200/80 bg-white shadow-sm">
+          <CardHeader className="border-b border-slate-200/70 bg-linear-to-r from-white via-emerald-50/40 to-sky-50/60 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-emerald-500 to-sky-500 text-white shadow-sm">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Evaluation Result</CardTitle>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Choose the final outcome, approvals, and any required
+                  follow-up.
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5 p-5">
             <div className="space-y-2">
-              <Label>Result</Label>
+              <Label className="text-sm font-semibold text-slate-900">
+                Result
+              </Label>
               <RadioGroup
                 value={form.evaluationResult}
                 onValueChange={(v) => {
                   const next = v as EvaluationResult;
                   setResultError("");
+                  const isPassing = isPassingResult(next);
                   setForm((p) => {
-                    if (next === "fail") {
+                    if (!isPassing) {
                       return {
                         ...p,
                         evaluationResult: next,
                         approvedServices: { ...defaultApprovedServices },
                       };
                     }
-                    return { ...p, evaluationResult: next };
+                    return {
+                      ...p,
+                      evaluationResult: next,
+                      denialReason: "",
+                      denialNotes: "",
+                    };
                   });
                 }}
-                className="grid grid-cols-2 gap-3"
+                className="grid grid-cols-1 gap-3 md:grid-cols-2"
               >
-                <label className="flex items-center gap-2 rounded-md border p-3">
-                  <RadioGroupItem value="pass" />
-                  Pass
-                </label>
-                <label className="flex items-center gap-2 rounded-md border p-3">
-                  <RadioGroupItem value="fail" />
-                  Fail
-                </label>
+                {EVALUATION_RESULTS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      "relative flex cursor-pointer items-start gap-3 overflow-hidden rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+                      form.evaluationResult === option.value
+                        ? option.status === "passed"
+                          ? "border-emerald-300 bg-emerald-50 shadow-sm ring-2 ring-emerald-100"
+                          : "border-red-300 bg-red-50 shadow-sm ring-2 ring-red-100"
+                        : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/40",
+                    )}
+                  >
+                    <RadioGroupItem value={option.value} className="mt-0.5" />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">
+                        {option.label}
+                      </span>
+                      <span className="text-muted-foreground block text-xs">
+                        {option.description}
+                      </span>
+                    </span>
+                    <span className="absolute top-3 right-3">
+                      {option.status === "passed" ? (
+                        <CheckCircle2 className="size-4 text-emerald-500" />
+                      ) : (
+                        <XCircle className="size-4 text-red-500" />
+                      )}
+                    </span>
+                  </label>
+                ))}
               </RadioGroup>
               {resultError && (
-                <p className="text-destructive text-sm" role="alert">
+                <p
+                  className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                  role="alert"
+                >
                   {resultError}
                 </p>
               )}
             </div>
 
             <div
-              data-disabled={form.evaluationResult === "fail"}
-              className="space-y-3 data-[disabled=true]:opacity-50"
+              data-disabled={!passingResult}
+              className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 data-[disabled=true]:border-slate-200 data-[disabled=true]:bg-slate-50/80 data-[disabled=true]:opacity-60"
             >
-              <Label>Service approvals</Label>
+              <div>
+                <Label className="text-sm font-semibold text-slate-900">
+                  Service approvals
+                </Label>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Select the services this pet can book after evaluation.
+                </p>
+              </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <label className="flex items-center gap-2 rounded-md border p-3">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
                   <Checkbox
                     checked={form.approvedServices.daycare}
-                    disabled={form.evaluationResult !== "pass"}
+                    disabled={!passingResult}
                     onCheckedChange={(checked) =>
                       setForm((p) => ({
                         ...p,
@@ -659,10 +979,10 @@ export function StaffEvaluationFormModal({
                   />
                   Daycare
                 </label>
-                <label className="flex items-center gap-2 rounded-md border p-3">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
                   <Checkbox
                     checked={form.approvedServices.boarding}
-                    disabled={form.evaluationResult !== "pass"}
+                    disabled={!passingResult}
                     onCheckedChange={(checked) =>
                       setForm((p) => ({
                         ...p,
@@ -675,13 +995,13 @@ export function StaffEvaluationFormModal({
                   />
                   Boarding
                 </label>
-                <label className="flex items-center gap-2 rounded-md border p-3">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-white p-3 text-sm font-medium shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
                   <Checkbox
                     checked={
                       form.approvedServices.daycare &&
                       form.approvedServices.boarding
                     }
-                    disabled={form.evaluationResult !== "pass"}
+                    disabled={!passingResult}
                     onCheckedChange={(checked) =>
                       setForm((p) => ({
                         ...p,
@@ -712,7 +1032,7 @@ export function StaffEvaluationFormModal({
                   }))
                 }
                 placeholder="e.g. grooming, training"
-                disabled={form.evaluationResult !== "pass"}
+                disabled={!passingResult}
               />
 
               <TagInput
@@ -730,20 +1050,87 @@ export function StaffEvaluationFormModal({
                   }))
                 }
                 placeholder="e.g. grooming, training"
-                disabled={form.evaluationResult !== "pass"}
+                disabled={!passingResult}
               />
             </div>
+
+            {!passingResult && form.evaluationResult && (
+              <div className="space-y-4 rounded-2xl border border-red-200 bg-linear-to-br from-red-50 via-white to-amber-50/60 p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 items-center justify-center rounded-2xl bg-red-100">
+                    <AlertTriangle className="size-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      Follow-up details required
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Document why the pet was denied or needs another
+                      evaluation.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Reason for denial or re-evaluation</Label>
+                  <Select
+                    value={form.denialReason}
+                    onValueChange={(value) =>
+                      setForm((p) => ({ ...p, denialReason: value }))
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl bg-white">
+                      <SelectValue placeholder="Select a reason" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DENIAL_REASONS.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Evaluator notes</Label>
+                  <Textarea
+                    value={form.denialNotes}
+                    onChange={(e) =>
+                      setForm((p) => ({
+                        ...p,
+                        denialNotes: e.target.value,
+                      }))
+                    }
+                    placeholder="Add clear notes about what was observed, risk level, and recommended next steps..."
+                    className="min-h-28 rounded-xl bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {saved && form.evaluatedAt && (
+              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+                <CheckCircle2 className="size-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">Evaluation recorded</p>
+                  <p>
+                    Recorded by{" "}
+                    <span className="font-medium">{form.evaluatedBy}</span> on{" "}
+                    {new Date(form.evaluatedAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* AI Summary Panel — shown after saving, before sending */}
         {saved && evaluationReportCard.enabled && (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-violet-200/80 bg-white shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between border-b bg-slate-50 px-5 py-3">
+            <div className="flex items-center justify-between border-b border-violet-100 bg-linear-to-r from-violet-50 via-white to-sky-50 px-5 py-4">
               <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center rounded-lg bg-violet-100">
-                  <Sparkles className="size-4 text-violet-600" />
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
+                  <Sparkles className="size-5" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-800">
@@ -780,9 +1167,9 @@ export function StaffEvaluationFormModal({
               <div className="p-5">
                 {/* Generate button — empty state */}
                 {!ai.summary && !ai.isGenerating && (
-                  <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 py-10">
-                    <div className="flex size-12 items-center justify-center rounded-full bg-violet-50">
-                      <Sparkles className="size-5 text-violet-500" />
+                  <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-violet-200 bg-linear-to-br from-violet-50/80 to-white py-10">
+                    <div className="flex size-14 items-center justify-center rounded-3xl bg-white shadow-sm">
+                      <Sparkles className="size-6 text-violet-500" />
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-medium text-slate-700">
@@ -801,9 +1188,13 @@ export function StaffEvaluationFormModal({
                           petName,
                           petBreed: "Mixed",
                           facilityName: businessProfile.businessName,
-                          evaluatorName,
-                          evaluationDate: new Date().toISOString(),
-                          result: form.evaluationResult,
+                          evaluatorName: cardData.evaluatorName,
+                          evaluationDate: cardData.evaluationDate,
+                          result: cardData.result,
+                          resultType: form.evaluationResult,
+                          resultLabel: cardData.resultLabel,
+                          denialReason: cardData.denialReason,
+                          denialNotes: form.denialNotes,
                           temperament: {
                             dogFriendly: form.answers.dog_friendly === "yes",
                             humanFriendly:
@@ -819,7 +1210,10 @@ export function StaffEvaluationFormModal({
                           playGroup: cardData.playGroup || "",
                           behaviorTags: form.behaviorCodes,
                           staffNotes:
-                            (form.answers.temperament_notes as string) || "",
+                            cardData.staffNotes ||
+                            (form.answers.temperament_notes as string) ||
+                            "",
+                          evaluatorNotes: form.internalComments,
                           approvedServices: [
                             ...(form.approvedServices.daycare
                               ? ["Daycare"]
@@ -841,7 +1235,7 @@ export function StaffEvaluationFormModal({
 
                 {/* Loading skeleton */}
                 {ai.isGenerating && (
-                  <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-5">
+                  <div className="space-y-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-5">
                     <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-200" />
                     <div className="h-4 w-full animate-pulse rounded-full bg-slate-200" />
                     <div className="h-4 w-5/6 animate-pulse rounded-full bg-slate-200" />
@@ -872,14 +1266,14 @@ export function StaffEvaluationFormModal({
                         Regenerate
                       </Button>
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-inner">
                       <textarea
                         value={ai.summary}
                         onChange={(e) => ai.setSummary(e.target.value)}
                         className="min-h-[280px] w-full resize-y border-0 bg-transparent text-sm/7 text-slate-700 outline-none"
                       />
                     </div>
-                    <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
+                    <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
                       <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />
                       <p className="text-[11px] text-amber-700">
                         AI-generated — review and edit before sending to the pet
@@ -897,7 +1291,7 @@ export function StaffEvaluationFormModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="sticky bottom-0 z-10 -mx-2 flex justify-end gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-lg shadow-slate-900/5 backdrop-blur-sm">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {saved ? "Close" : "Cancel"}
           </Button>
@@ -918,6 +1312,7 @@ export function StaffEvaluationFormModal({
             </>
           ) : (
             <Button onClick={save} disabled={!canSave}>
+              <ShieldCheck className="mr-2 size-4" />
               Save Evaluation Form
             </Button>
           )}

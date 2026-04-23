@@ -163,26 +163,25 @@ export function BookingCard({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={handleOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleOpen();
+        }
+      }}
       className={cn(
-        "group relative flex h-full items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
+        "group relative flex h-full cursor-pointer items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
         "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
       data-status={booking.status}
     >
-      {/* Clickable info region — opens the booking overview */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleOpen}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleOpen();
-          }
-        }}
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+      {/* Info region — layout only, click handled by outer card */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <Link
           href={petHref}
           onClick={(e) => e.stopPropagation()}

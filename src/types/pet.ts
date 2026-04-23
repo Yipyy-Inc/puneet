@@ -16,6 +16,13 @@ export const evaluationValidityTypeEnum = z.enum([
   "EXPIRES_AFTER_INACTIVITY",
 ]);
 
+export const evaluationResultTypeEnum = z.enum([
+  "approved",
+  "approved_with_restrictions",
+  "needs_re_evaluation",
+  "not_approved",
+]);
+
 export const approvedServicesSchema = z.object({
   daycare: z.boolean().optional(),
   boarding: z.boolean().optional(),
@@ -29,6 +36,12 @@ export const evaluationSchema = z.object({
   status: evaluationStatusEnum,
   evaluatedAt: z.string().optional(),
   evaluatedBy: z.string().optional(),
+  evaluatedById: z.string().optional(),
+  resultType: evaluationResultTypeEnum.optional(),
+  resultLabel: z.string().optional(),
+  denialReason: z.string().optional(),
+  denialReasonLabel: z.string().optional(),
+  denialNotes: z.string().optional(),
   notes: z.string().optional(),
   validityType: evaluationValidityTypeEnum.optional(),
   lastActivityAt: z.string().optional(),
