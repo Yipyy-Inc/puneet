@@ -1007,7 +1007,7 @@ ${
                       {pets.length === 1 ? "Pet" : `Pets (${pets.length})`}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-2 pt-4 pb-4">
+                  <CardContent className="flex flex-col gap-2 pt-4 pb-4">
                     {pets.map((p) => (
                       <div
                         key={p.id}
