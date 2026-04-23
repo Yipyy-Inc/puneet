@@ -164,7 +164,7 @@ export function BookingCard({
   return (
     <div
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
+        "group relative flex h-full items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all",
         "hover:border-border hover:shadow-sm",
         "data-[status=checked-out]:opacity-80",
       )}

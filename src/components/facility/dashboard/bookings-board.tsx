@@ -135,7 +135,7 @@ function BookingList({ items, empty, primaryAction }: BookingListProps) {
     );
   }
   return (
-    <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
       {items.map((b) => (
         <BookingCard key={b.id} booking={b} primaryAction={primaryAction} />
       ))}
