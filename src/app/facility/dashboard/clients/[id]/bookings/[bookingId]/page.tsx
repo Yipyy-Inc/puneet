@@ -46,7 +46,7 @@ import { invoiceHeaderHtml } from "@/lib/invoice-header";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { InvoicePanel } from "@/components/bookings/InvoicePanel";
 import { BookingNotes } from "@/components/bookings/BookingNotes";
-import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
+import { BookingModal } from "@/components/bookings/modals/BookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
 import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
@@ -73,7 +73,7 @@ import { BelongingsSection } from "@/components/bookings/BelongingsSection";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { formatBookingRef } from "@/lib/booking-id";
 import { facilityBookingFlowConfig } from "@/data/settings";
-import type { InvoiceLineItem } from "@/types/booking";
+import type { InvoiceLineItem, ExtraService } from "@/types/booking";
 import {
   daycareConfig,
   boardingConfig,
@@ -1470,12 +1470,35 @@ ${
           />
         )}
 
-        {/* Modals */}
-        <EditBookingModal
-          booking={booking}
+        {/* Edit Booking Wizard — pre-filled with current booking details */}
+        <BookingModal
           open={editOpen}
           onOpenChange={setEditOpen}
-          onSave={(u) => {
+          clients={clients}
+          facilityId={booking.facilityId}
+          facilityName={facility?.name ?? ""}
+          editMode
+          preSelectedClientId={booking.clientId}
+          preSelectedPetId={
+            Array.isArray(booking.petId) ? booking.petId[0] : booking.petId
+          }
+          preSelectedService={booking.service}
+          preSelectedStartDate={booking.startDate}
+          preSelectedEndDate={booking.endDate}
+          preSelectedCheckInTime={booking.checkInTime}
+          preSelectedCheckOutTime={booking.checkOutTime}
+          preSelectedRoomId={booking.unitAssignment ?? undefined}
+          preSelectedDaycareSectionId={booking.sectionId ?? undefined}
+          preSelectedDaycareDates={booking.daycareSelectedDates}
+          preSelectedExtraServices={
+            (booking.extraServices?.filter(
+              (s): s is ExtraService => typeof s !== "string",
+            ) ?? [])
+          }
+          preSelectedFeedingSchedule={booking.feedingSchedule}
+          preSelectedMedications={booking.medications}
+          preSelectedSpecialRequests={booking.specialRequests}
+          onCreateBooking={() => {
             setEditOpen(false);
             toast.success(`${bookingRef} updated`);
           }}

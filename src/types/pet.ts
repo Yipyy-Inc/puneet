@@ -107,6 +107,7 @@ export const vaccinationStatusEnum = z.enum([
   "pending_review",
   "approved",
   "rejected",
+  "exception",
 ]);
 
 export const vaccinationRecordSchema = z.object({
@@ -126,6 +127,7 @@ export const vaccinationRecordSchema = z.object({
   reviewedById: z.number().optional(),
   reviewedAt: z.string().optional(),
   rejectionReason: z.string().optional(),
+  exceptionReason: z.string().optional(),
 });
 
 export type VaccinationRecord = z.infer<typeof vaccinationRecordSchema>;

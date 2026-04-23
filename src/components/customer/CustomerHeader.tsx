@@ -5,6 +5,7 @@ import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { FacilitySwitcher } from "./FacilitySwitcher";
 import { QuickBookButton } from "./QuickBookButton";
 import { ContactFacilityButton } from "./ContactFacilityButton";
+import { CallFacilityButton } from "./CallFacilityButton";
 import { CustomerNotifications } from "./CustomerNotifications";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
   CreditCard,
   Building2,
   Shield,
+  Package,
 } from "lucide-react";
 import { useTransition } from "react";
 import { setUserRole } from "@/lib/role-utils";
@@ -121,11 +123,22 @@ export function CustomerHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Buy Packages / Memberships */}
+        <Button variant="outline" className="gap-2 hidden sm:flex" asChild>
+          <Link href="/customer/packages">
+            <Package className="size-4" />
+            <span>Packages</span>
+          </Link>
+        </Button>
+
         {/* Quick Book Button */}
         <QuickBookButton />
 
         {/* Notifications Center */}
         <CustomerNotifications />
+
+        {/* Call Facility Button */}
+        <CallFacilityButton />
 
         {/* Contact Facility Button */}
         <ContactFacilityButton />

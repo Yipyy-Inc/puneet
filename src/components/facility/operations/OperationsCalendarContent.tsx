@@ -119,7 +119,7 @@ export function OperationsCalendarContent({
             </div>
           </div>
         ) : (
-          <div className="animate-in slide-in-from-bottom-4 fade-in fill-mode-both min-h-[400px] bg-white/60 p-4 pt-6 duration-500 sm:p-6 lg:p-8">
+          <div className="animate-in slide-in-from-bottom-4 fade-in fill-mode-both min-h-[400px] bg-white/60 p-3 duration-500 sm:p-4">
             {axisMode === "resource" &&
             view !== "day-list" &&
             view !== "week-list" &&

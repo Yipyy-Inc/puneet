@@ -111,7 +111,6 @@ import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import {
   locations,
-  vaccinationRules,
   paymentGateways,
   taxRates,
   currencySettings,
@@ -119,6 +118,10 @@ import {
   auditLog,
   reportCardSectionMeta,
 } from "@/data/settings";
+import {
+  getVaccinationRules,
+  syncVaccinationRules,
+} from "@/data/vaccination-rules";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import type {
   ReportCardSectionId,
@@ -1491,11 +1494,17 @@ const VACCINE_SERVICE_OPTIONS = [
 
 function VaccinationRequirementsCard() {
   const [species, setSpecies] = useState<string>("Dog");
-  const [rules, setRules] = useState(() =>
-    vaccinationRules.map((r) => ({ ...r })),
-  );
+  const [rules, setRules] = useState(() => getVaccinationRules());
+  const [savedRules, setSavedRules] = useState(() => getVaccinationRules());
   const [newName, setNewName] = useState("");
   const [newExpiry, setNewExpiry] = useState(30);
+
+  const isDirty = JSON.stringify(rules) !== JSON.stringify(savedRules);
+
+  const handleSave = () => {
+    syncVaccinationRules(rules);
+    setSavedRules([...rules]);
+  };
 
   const filtered = rules.filter(
     (r) => r.species.toLowerCase() === species.toLowerCase(),
@@ -1553,11 +1562,21 @@ function VaccinationRequirementsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vaccination Requirements</CardTitle>
-        <p className="text-muted-foreground text-sm">
-          Configure which vaccines are required for each animal type. Customers
-          will only be asked to provide the vaccines you define here.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Vaccination Requirements</CardTitle>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Configure which vaccines are required for each animal type.
+              Customers will be asked to provide these vaccines and staff will
+              verify them before booking.
+            </p>
+          </div>
+          {isDirty && (
+            <Button size="sm" onClick={handleSave}>
+              Save changes
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Tabs value={species} onValueChange={setSpecies}>

@@ -356,6 +356,26 @@ export function notifyFacilityStaffYipyyGoSubmitted(params: {
   }
 }
 
+/** Notify facility staff when a customer uploads vaccination records for review. */
+export function notifyFacilityStaffVaccinationUploaded(params: {
+  facilityId: number;
+  clientId: number;
+  clientName: string;
+  petName: string;
+  vaccineCount: number;
+}): void {
+  const { facilityId, clientId, clientName, petName, vaccineCount } = params;
+  addFacilityNotification({
+    type: "vaccination_uploaded",
+    title: "Vaccination records uploaded",
+    message: `${clientName} uploaded ${vaccineCount} vaccine record${vaccineCount === 1 ? "" : "s"} for ${petName} — pending review`,
+    facilityId,
+    category: "customers",
+    link: `/facility/dashboard/clients/${clientId}/vaccinations`,
+    meta: { petName },
+  });
+}
+
 const formsNotify = facilityConfig.notifications?.forms?.staff;
 
 /** Notify staff when a form submission is received. Respects config: newSubmission, redFlagAnswers, hasFileUpload. */

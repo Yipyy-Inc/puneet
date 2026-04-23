@@ -112,6 +112,8 @@ export interface NewBookingModalProps {
   bookingRequestMessage?: string;
   /** When true, opens the wizard in estimate mode instead of booking mode. */
   estimateMode?: boolean;
+  /** When true, opens the wizard in edit mode — hides service/client-pet steps and changes labels. */
+  editMode?: boolean;
 }
 
 interface EstimatePricingSnapshot {
@@ -197,6 +199,7 @@ export function BookingModal({
   isCustomerMode = false,
   bookingRequestMessage,
   estimateMode = false,
+  editMode = false,
 }: NewBookingModalProps) {
   const {
     daycare,
@@ -335,14 +338,19 @@ export function BookingModal({
   >({});
 
   // Step management
+  // In edit mode, hide both client-pet and service steps — user can only edit
+  // dates, room, add-ons, and feeding/medication details.
   const displayedSteps = STEPS.filter(
     (step) =>
-      !(step.id === "client-pet" && preSelectedClientId && preSelectedPetId),
+      !(step.id === "client-pet" && (editMode || (preSelectedClientId && preSelectedPetId))) &&
+      !(step.id === "service" && editMode),
   );
   // Wizard now runs client-pet → service → details → confirm. When both client
   // and pet are preselected, client-pet is filtered out and we start at service
   // (or details, when a service is also preselected).
   const initialStepIndex = (() => {
+    // Edit mode always starts at the details step (first step after filtering)
+    if (editMode) return 0;
     if (preSelectedClientId && preSelectedPetId && preSelectedService) {
       return Math.max(
         0,
@@ -2134,7 +2142,7 @@ export function BookingModal({
     >
       <DialogContent className="flex h-dvh w-full max-w-none flex-col overflow-hidden rounded-none border-0 p-0 sm:h-[90vh] sm:w-[95vw] sm:rounded-lg sm:border lg:min-w-[1024px] xl:min-w-[1200px] [&>button]:hidden">
         <DialogTitle className="sr-only">
-          {isEstimateMode ? "New Estimate" : "New Booking"}
+          {editMode ? "Edit Booking" : isEstimateMode ? "New Estimate" : "New Booking"}
         </DialogTitle>
         <div className="flex min-h-0 flex-1">
           {/* Side Navigation Tabs */}
@@ -2143,7 +2151,7 @@ export function BookingModal({
             <div className="bg-background shrink-0 border-b p-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Plus className="size-5" />
-                {(() => {
+                {editMode ? "Edit Booking" : (() => {
                   const preSelectedClient = clients.find(
                     (c) => c.id === preSelectedClientId,
                   );
@@ -2164,7 +2172,7 @@ export function BookingModal({
                 })()}
               </h2>
               <p className="text-muted-foreground mt-1 text-sm">
-                {(() => {
+                {editMode ? "Update dates, room, and add-ons" : (() => {
                   const preSelectedClient = clients.find(
                     (c) => c.id === preSelectedClientId,
                   );
@@ -2892,13 +2900,15 @@ export function BookingModal({
                           : ""
                       }
                     >
-                      {isEstimateMode
-                        ? "Create Estimate"
-                        : isCustomerMode
-                          ? "Request Booking"
-                          : approvalRequired
-                            ? "Submit Request"
-                            : "Create Booking"}
+                      {editMode
+                        ? "Save Changes"
+                        : isEstimateMode
+                          ? "Create Estimate"
+                          : isCustomerMode
+                            ? "Request Booking"
+                            : approvalRequired
+                              ? "Submit Request"
+                              : "Create Booking"}
                     </Button>
                   )}
                 </div>
@@ -2913,11 +2923,12 @@ export function BookingModal({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Discard this {isEstimateMode ? "estimate" : "booking"}?
+              {editMode ? "Discard changes?" : `Discard this ${isEstimateMode ? "estimate" : "booking"}?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              All information you&apos;ve entered will be lost. This action
-              cannot be undone.
+              {editMode
+                ? "All unsaved changes will be lost."
+                : "All information you've entered will be lost. This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2929,7 +2940,7 @@ export function BookingModal({
                 onOpenChange(false);
               }}
             >
-              Discard {isEstimateMode ? "estimate" : "booking"}
+              {editMode ? "Discard changes" : `Discard ${isEstimateMode ? "estimate" : "booking"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

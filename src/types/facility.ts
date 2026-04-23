@@ -118,6 +118,7 @@ export const facilityNotificationTypeEnum = z.enum([
   "session_update",
   "customer_registered",
   "customer_message",
+  "vaccination_uploaded",
   "incident",
   "info",
   "warning",

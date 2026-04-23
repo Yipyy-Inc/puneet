@@ -24,12 +24,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { vaccinationRules } from "@/data/settings";
+import { getVaccinationRules } from "@/data/vaccination-rules";
 import type { VaccinationRecord } from "@/data/pet-data";
 
 interface VaccineEntryInput {
   name: string;
   expiryDate: string;
+  required?: boolean;
 }
 
 interface ProofFileEntry {
@@ -82,9 +83,9 @@ export function AddVaccinationModal({
 
   useEffect(() => {
     if (!open) return;
-    const required = vaccinationRules
+    const required = getVaccinationRules()
       .filter((r) => r.species.toLowerCase() === petSpecies.toLowerCase())
-      .map((r) => ({ name: r.vaccineName, expiryDate: "" }));
+      .map((r) => ({ name: r.vaccineName, expiryDate: "", required: r.required }));
     setVaccines(required);
     setProofs([]);
     setNotes("");
@@ -210,6 +211,11 @@ export function AddVaccinationModal({
                   <div className="flex items-center gap-2">
                     <Syringe className="text-muted-foreground size-3.5" />
                     <p className="text-sm font-medium">{v.name}</p>
+                    {v.required === false && (
+                      <span className="text-muted-foreground rounded-full border px-2 py-0.5 text-[10px]">
+                        Optional
+                      </span>
+                    )}
                   </div>
                   <DatePicker
                     value={v.expiryDate}

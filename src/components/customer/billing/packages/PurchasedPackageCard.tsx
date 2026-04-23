@@ -49,9 +49,11 @@ interface Props {
   bookingLinkPrefix: string;
   /** Show the "Book with pass" CTA (customer view) — hidden on facility view */
   showBookingCta?: boolean;
-  onRequestExtension: () => void;
-  onRequestTransfer: () => void;
-  onRequestRefund: () => void;
+  /** Show facility-only actions: extend validity, transfer, refund */
+  showFacilityActions?: boolean;
+  onRequestExtension?: () => void;
+  onRequestTransfer?: () => void;
+  onRequestRefund?: () => void;
 }
 
 const formatDate = (iso: string) =>
@@ -71,6 +73,7 @@ export function PurchasedPackageCard({
   getBooking,
   bookingLinkPrefix,
   showBookingCta = true,
+  showFacilityActions = false,
   onRequestExtension,
   onRequestTransfer,
   onRequestRefund,
@@ -88,24 +91,28 @@ export function PurchasedPackageCard({
   const available = purchase.passes.filter(
     (p) => p.status === "available",
   ).length;
-  const consumedPct = ((used + refunded + expired) / purchase.totalPasses) * 100;
+  const consumedPct = Math.round(((used + refunded + expired) / purchase.totalPasses) * 100);
 
   const daysLeft = daysUntilFrom(purchase.expiresAt, nowMs);
   const purchasedMs = new Date(purchase.purchaseDate).getTime();
   const expiresMs = new Date(purchase.expiresAt).getTime();
   const totalMs = Math.max(1, expiresMs - purchasedMs);
   const remainingMs = expiresMs - nowMs;
-  const validityPct = Math.max(0, Math.min(100, (remainingMs / totalMs) * 100));
+  const validityPct = Math.round(Math.max(0, Math.min(100, (remainingMs / totalMs) * 100)));
 
   const isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
   const isExpired = daysLeft <= 0 && available > 0;
 
   const passesDisplay = useMemo(() => {
-    return purchase.passes.map((pass) => {
-      const booking = pass.bookingId ? getBooking(pass.bookingId) : undefined;
-      return { pass, booking };
-    });
+    return purchase.passes
+      .filter((p) => p.status !== "available")
+      .map((pass) => {
+        const booking = pass.bookingId ? getBooking(pass.bookingId) : undefined;
+        return { pass, booking };
+      });
   }, [purchase.passes, getBooking]);
+
+  const usedCount = used + refunded + expired;
 
   return (
     <Card className={isExpired ? "border-red-300" : ""}>
@@ -182,34 +189,36 @@ export function PurchasedPackageCard({
           />
         </div>
 
-        {/* Pass breakdown — collapsible */}
-        <Collapsible open={expanded} onOpenChange={setExpanded}>
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="hover:bg-muted/30 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors"
-            >
-              <span className="font-medium">
-                View all {purchase.totalPasses} passes
-              </span>
-              <ChevronDown
-                className={`size-4 transition-transform ${
-                  expanded ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2 space-y-1.5">
-            {passesDisplay.map(({ pass, booking }) => (
-              <PassRow
-                key={pass.passNumber}
-                pass={pass}
-                booking={booking}
-                bookingLinkPrefix={bookingLinkPrefix}
-              />
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Pass breakdown — collapsible, only shows used/refunded/expired passes */}
+        {usedCount > 0 && (
+          <Collapsible open={expanded} onOpenChange={setExpanded}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="hover:bg-muted/30 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors"
+              >
+                <span className="font-medium">
+                  View {usedCount} used pass{usedCount === 1 ? "" : "es"}
+                </span>
+                <ChevronDown
+                  className={`size-4 transition-transform ${
+                    expanded ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-1.5">
+              {passesDisplay.map(({ pass, booking }) => (
+                <PassRow
+                  key={pass.passNumber}
+                  pass={pass}
+                  booking={booking}
+                  bookingLinkPrefix={bookingLinkPrefix}
+                />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Adjustments history */}
         {purchase.adjustments && purchase.adjustments.length > 0 && (
@@ -246,7 +255,7 @@ export function PurchasedPackageCard({
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-1">
-          {policy.allowExtension && available > 0 && (
+          {showFacilityActions && policy.allowExtension && available > 0 && (
             <Button
               size="sm"
               variant="outline"
@@ -262,7 +271,7 @@ export function PurchasedPackageCard({
               )}
             </Button>
           )}
-          {policy.allowTransfer && available > 0 && (
+          {showFacilityActions && policy.allowTransfer && available > 0 && (
             <Button
               size="sm"
               variant="outline"
@@ -273,7 +282,7 @@ export function PurchasedPackageCard({
               Transfer
             </Button>
           )}
-          {policy.allowRefundUnused && available > 0 && (
+          {showFacilityActions && policy.allowRefundUnused && available > 0 && (
             <Button
               size="sm"
               variant="outline"

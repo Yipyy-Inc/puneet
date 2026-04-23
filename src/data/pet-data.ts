@@ -214,6 +214,10 @@ export const vaccinationRecords: VaccinationRecord[] = [
     documentUrl: "/documents/vaccinations/buddy-rabies-2025.pdf",
     reminderSent: false,
     notes: "No adverse reactions",
+    status: "approved" as const,
+    reviewedBy: "Sarah (Staff)",
+    reviewedById: 1,
+    reviewedAt: "2026-01-10T09:30:00Z",
   },
   {
     id: "vacc-002",
@@ -226,6 +230,10 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinaryClinic: "Happy Paws Veterinary Clinic",
     documentUrl: "/documents/vaccinations/buddy-dhpp-2025.pdf",
     reminderSent: false,
+    status: "approved" as const,
+    reviewedBy: "Sarah (Staff)",
+    reviewedById: 1,
+    reviewedAt: "2026-01-10T09:30:00Z",
   },
   {
     id: "vacc-003",
@@ -238,6 +246,7 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinaryClinic: "Happy Paws Veterinary Clinic",
     reminderSent: false,
     notes: "6-month booster",
+    status: "pending_review" as const,
   },
   {
     id: "vacc-004",
@@ -274,6 +283,7 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinaryClinic: "PetCare Veterinary Hospital",
     documentUrl: "/documents/vaccinations/max-rabies-2024.pdf",
     reminderSent: false,
+    status: "pending_review" as const,
   },
   {
     id: "vacc-007",
@@ -285,6 +295,7 @@ export const vaccinationRecords: VaccinationRecord[] = [
     veterinarianName: "Dr. Sarah Williams",
     veterinaryClinic: "PetCare Veterinary Hospital",
     reminderSent: false,
+    status: "pending_review" as const,
   },
   {
     id: "vacc-008",
