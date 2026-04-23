@@ -938,7 +938,7 @@ ${
         <div className="grid gap-5 lg:grid-cols-5">
           {/* Left — 3 cols */}
           <div className="space-y-5 lg:col-span-3">
-            {/* Booking Details + Pet — side by side */}
+            {/* Booking Details + Pets */}
             <div className="grid gap-5 md:grid-cols-2">
               {/* Details */}
               <Card className="overflow-hidden">
@@ -1007,147 +1007,76 @@ ${
                       {pets.length === 1 ? "Pet" : `Pets (${pets.length})`}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-5 pb-4">
-                    <div
-                      className={cn(
-                        "grid gap-3",
-                        pets.length === 1 && "grid-cols-1",
-                        pets.length === 2 && "grid-cols-1 sm:grid-cols-2",
-                        pets.length === 3 && "grid-cols-1 sm:grid-cols-3",
-                        pets.length >= 4 && "grid-cols-1 sm:grid-cols-2",
-                      )}
-                    >
-                      {pets.map((p) => {
-                        // 4+ pets: compact horizontal card. 1-3: centered vertical.
-                        const compact = pets.length >= 4;
-                        const photoSize =
-                          pets.length <= 2
-                            ? "size-20"
-                            : pets.length === 3
-                              ? "size-16"
-                              : "size-12";
+                  <CardContent className="grid gap-2 pt-4 pb-4 sm:grid-cols-2">
+                    {pets.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card p-3 transition-all hover:border-border hover:shadow-sm"
+                      >
+                        <Link
+                          href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
+                          className="relative block size-12 shrink-0"
+                        >
+                          {p.imageUrl ? (
+                            <div className="size-12 overflow-hidden rounded-2xl ring-2 ring-background">
+                              <img
+                                src={p.imageUrl}
+                                alt={p.name}
+                                className="size-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl font-bold ring-2 ring-background">
+                              {p.name.charAt(0)}
+                            </div>
+                          )}
+                        </Link>
 
-                        return (
-                          <div
-                            key={p.id}
-                            className={cn(
-                              pets.length === 1
-                                ? "flex flex-col items-center"
-                                : compact
-                                  ? "bg-muted/10 flex items-start gap-3 rounded-xl border p-3"
-                                  : "bg-muted/10 flex flex-col items-center rounded-xl border p-4",
-                            )}
-                          >
-                            {/* Photo */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <Link
                               href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
-                              className="group relative shrink-0"
+                              className="text-sm font-semibold leading-none hover:underline"
                             >
-                              {p.imageUrl ? (
-                                <img
-                                  src={p.imageUrl}
-                                  alt={p.name}
-                                  className={cn(
-                                    photoSize,
-                                    "rounded-full object-cover shadow-md ring-[3px] ring-white transition-transform group-hover:scale-105",
-                                  )}
-                                />
-                              ) : (
-                                <div
-                                  className={cn(
-                                    photoSize,
-                                    "bg-primary/10 text-primary flex items-center justify-center rounded-full font-bold shadow-md ring-[3px] ring-white",
-                                    compact ? "text-sm" : "text-xl",
-                                  )}
-                                >
-                                  {p.name.charAt(0)}
-                                </div>
-                              )}
+                              {p.name}
                             </Link>
-
-                            {/* Info */}
-                            <div
-                              className={cn(
-                                compact
-                                  ? "min-w-0 flex-1"
-                                  : "mt-2.5 flex flex-col items-center",
+                            <TagList
+                              entityType="pet"
+                              entityId={p.id}
+                              compact
+                              maxVisible={2}
+                            />
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                            {p.breed} · {p.type} · {getPetAgeDisplay(p)} ·{" "}
+                            {p.weight} lbs
+                            {p.sex && (
+                              <>
+                                {" · "}
+                                <span className="capitalize">{p.sex}</span>
+                              </>
+                            )}
+                          </p>
+                          {((p.allergies && p.allergies !== "None") ||
+                            (p.specialNeeds && p.specialNeeds !== "None")) && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {p.allergies && p.allergies !== "None" && (
+                                <span className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">
+                                  <ShieldCheck className="size-2.5 shrink-0" />
+                                  {p.allergies}
+                                </span>
                               )}
-                            >
-                              <Link
-                                href={`/facility/dashboard/clients/${clientId}/pets/${p.id}`}
-                                className="hover:text-primary text-sm font-bold transition-colors"
-                              >
-                                {p.name}
-                              </Link>
-                              <p
-                                className={cn(
-                                  "text-muted-foreground mt-0.5",
-                                  compact
-                                    ? "text-[11px]"
-                                    : "text-center text-xs",
-                                )}
-                              >
-                                {p.breed} · {p.type}
-                              </p>
-                              <p
-                                className={cn(
-                                  "text-muted-foreground",
-                                  compact
-                                    ? "text-[10px]"
-                                    : "text-center text-[11px]",
-                                )}
-                              >
-                                {getPetAgeDisplay(p)} · {p.weight} lbs
-                                {p.sex && (
-                                  <>
-                                    {" · "}
-                                    <span className="capitalize">{p.sex}</span>
-                                  </>
-                                )}
-                              </p>
-
-                              {/* Tags */}
-                              <div
-                                className={cn(
-                                  "mt-1.5",
-                                  !compact && "flex justify-center",
-                                )}
-                              >
-                                <TagList
-                                  entityType="pet"
-                                  entityId={p.id}
-                                  compact
-                                  maxVisible={compact ? 2 : 3}
-                                />
-                              </div>
-
-                              {/* Alerts */}
-                              {((p.allergies && p.allergies !== "None") ||
-                                (p.specialNeeds &&
-                                  p.specialNeeds !== "None")) && (
-                                <div className="mt-1.5 space-y-1">
-                                  {p.allergies && p.allergies !== "None" && (
-                                    <div className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[10px] text-red-700">
-                                      <ShieldCheck className="size-3 shrink-0" />
-                                      <span>
-                                        <strong>Allergy:</strong> {p.allergies}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {p.specialNeeds &&
-                                    p.specialNeeds !== "None" && (
-                                      <div className="flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] text-blue-700">
-                                        <AlertTriangle className="size-3 shrink-0" />
-                                        <span>{p.specialNeeds}</span>
-                                      </div>
-                                    )}
-                                </div>
+                              {p.specialNeeds && p.specialNeeds !== "None" && (
+                                <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
+                                  <AlertTriangle className="size-2.5 shrink-0" />
+                                  {p.specialNeeds}
+                                </span>
                               )}
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </CardContent>
                 </Card>
               )}

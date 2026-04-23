@@ -37,6 +37,7 @@ import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ServiceStep, ClientPetStep, DetailsStep, ConfirmStep } from "./steps";
+import { TipWizardContent } from "./steps/TipWizardContent";
 import {
   STEPS,
   DAYCARE_SUB_STEPS,
@@ -507,6 +508,7 @@ export function BookingModal({
     preSelectedNotificationSMS ?? initDefaults.sms,
   );
   const [tipAmount, setTipAmount] = useState(0);
+  const [showingTipStep, setShowingTipStep] = useState(false);
   const [includesEvaluation, setIncludesEvaluation] = useState(false);
 
   // Get current sub-steps based on selected service (estimate mode now includes feeding/medication for fee calculation)
@@ -1097,8 +1099,25 @@ export function BookingModal({
       }
     }
 
+    // Evaluation fee — charged per pet that still needs an evaluation
+    let evaluationFeeTotal = 0;
+    if (includesEvaluation && evaluationConfig.price > 0) {
+      const petsNeedingEval = pricingPets.filter((pet) => {
+        const p = pet as { evaluations?: Array<{ status: string; isExpired?: boolean }> };
+        return !p.evaluations?.some(
+          (e) => e.status === "passed" && e.isExpired !== true,
+        );
+      });
+      const evalCount = Math.max(petsNeedingEval.length, 1);
+      evaluationFeeTotal = evaluationConfig.price * evalCount;
+      serviceFeeItems.push({
+        label: `${evaluationConfig.internalName ?? "Evaluation"} Fee (×${evalCount})`,
+        amount: evaluationFeeTotal,
+      });
+    }
+
     const subtotal =
-      pricingComputation.total + medicationFeeTotal + feedingFeeTotal;
+      pricingComputation.total + medicationFeeTotal + feedingFeeTotal + evaluationFeeTotal;
     const taxRate = isEstimateMode ? estimateTaxRate : 0;
     const taxAmount = subtotal * taxRate;
     const total = subtotal + taxAmount;
@@ -1115,6 +1134,7 @@ export function BookingModal({
       effectiveExtraServices: pricingComputation.extraServices,
       medicationFeeTotal,
       feedingFeeTotal,
+      evaluationFeeTotal,
       serviceFeeItems,
     };
   }, [
@@ -1147,6 +1167,7 @@ export function BookingModal({
     estimateTaxRate,
     medications,
     feedingSchedule,
+    includesEvaluation,
   ]);
 
   // Check if service requires evaluation
@@ -1243,6 +1264,12 @@ export function BookingModal({
   ]);
 
   const handleNext = () => {
+    // Tip step is showing — dismiss it and proceed to confirm
+    if (showingTipStep) {
+      setShowingTipStep(false);
+      return;
+    }
+
     const currentStepId = displayedSteps[currentStep]?.id;
     // Handle sub-steps for daycare/boarding on details step
     if (
@@ -1258,15 +1285,46 @@ export function BookingModal({
     }
     if (currentStep < displayedSteps.length - 1) {
       const nextStep = currentStep + 1;
+      const nextStepId = displayedSteps[nextStep]?.id;
       setCurrentStep(nextStep);
       setCurrentSubStep(0);
       setHighestStepReached((prev) => Math.max(prev, nextStep));
+      // Show tip step before confirm when tip is enabled
+      if (nextStepId === "confirm" && tipConfig?.enabled && !isEstimateMode) {
+        setShowingTipStep(true);
+      }
     }
   };
 
   const handlePrevious = () => {
+    // Tip step is showing — go back to the previous step (details)
+    if (showingTipStep) {
+      setShowingTipStep(false);
+      const prevStep = currentStep - 1;
+      const prevStepId = displayedSteps[prevStep]?.id;
+      setCurrentStep(prevStep);
+      if (
+        prevStepId === "details" &&
+        (selectedService === "daycare" ||
+          selectedService === "boarding" ||
+          selectedService === "evaluation")
+      ) {
+        setCurrentSubStep(currentSubSteps.length - 1);
+      } else {
+        setCurrentSubStep(0);
+      }
+      return;
+    }
+
     const currentStepId = displayedSteps[currentStep]?.id;
     const prevStepId = displayedSteps[currentStep - 1]?.id;
+
+    // From confirm, go back to tip step instead of jumping straight to details
+    if (currentStepId === "confirm" && tipConfig?.enabled && !isEstimateMode) {
+      setShowingTipStep(true);
+      return;
+    }
+
     // Handle sub-steps for daycare/boarding on details step
     if (
       currentStepId === "details" &&
@@ -2239,6 +2297,7 @@ export function BookingModal({
                           if (canClickStep) {
                             setCurrentStep(idx);
                             setCurrentSubStep(0);
+                            setShowingTipStep(false);
                           }
                         }}
                         onKeyDown={(e) => {
@@ -2249,6 +2308,7 @@ export function BookingModal({
                             e.preventDefault();
                             setCurrentStep(idx);
                             setCurrentSubStep(0);
+                            setShowingTipStep(false);
                           }
                         }}
                         className={cn(
@@ -2414,48 +2474,6 @@ export function BookingModal({
               </div>
             </ScrollArea>
 
-            {/* Price Summary at Bottom */}
-            <div className="bg-background shrink-0 border-t px-4 py-3">
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-sm font-semibold">
-                  <span>
-                    {isEstimateMode ? "Estimated Total" : "Total Price"}
-                  </span>
-                  <span>
-                    $
-                    {(
-                      calculatePrice.total + (isEstimateMode ? 0 : tipAmount)
-                    ).toFixed(2)}
-                  </span>
-                </div>
-                {calculatePrice.medicationFeeTotal > 0 && (
-                  <div className="text-muted-foreground flex justify-between text-xs">
-                    <span>Medication fees</span>
-                    <span>
-                      +${calculatePrice.medicationFeeTotal.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-                {calculatePrice.feedingFeeTotal > 0 && (
-                  <div className="text-muted-foreground flex justify-between text-xs">
-                    <span>Feeding fee</span>
-                    <span>+${calculatePrice.feedingFeeTotal.toFixed(2)}</span>
-                  </div>
-                )}
-                {tipAmount > 0 && (
-                  <div className="text-muted-foreground flex justify-between text-xs">
-                    <span>Incl. tip</span>
-                    <span>+${tipAmount.toFixed(2)}</span>
-                  </div>
-                )}
-                {isEstimateMode && calculatePrice.taxAmount > 0 && (
-                  <div className="text-muted-foreground flex justify-between text-xs">
-                    <span>Incl. tax</span>
-                    <span>+${calculatePrice.taxAmount.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Main Content Area */}
@@ -2485,7 +2503,9 @@ export function BookingModal({
                 </span>
               </div>
               <h2 className="text-lg font-semibold">
-                {displayedSteps[currentStep]?.title}
+                {showingTipStep
+                  ? "Show Your Appreciation"
+                  : displayedSteps[currentStep]?.title}
               </h2>
               {displayedSteps[currentStep]?.id === "details" &&
                 (selectedService === "daycare" ||
@@ -2496,6 +2516,26 @@ export function BookingModal({
                   </p>
                 )}
             </div>
+            {showingTipStep && tipConfig?.enabled ? (
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <TipWizardContent
+                  tipConfig={tipConfig}
+                  subtotal={
+                    calculatePrice.subtotal ??
+                    calculatePrice.total - (calculatePrice.taxAmount ?? 0)
+                  }
+                  tipAmount={tipAmount}
+                  onTipChange={setTipAmount}
+                  petName={selectedPets[0]?.name}
+                  serviceLabel={
+                    selectedService
+                      ? (configs[selectedService as keyof typeof configs]
+                          ?.clientFacingName ?? selectedService)
+                      : undefined
+                  }
+                />
+              </div>
+            ) : (
             <ScrollArea ref={scrollAreaRef} className="min-h-0 flex-1">
               <div className="p-6">
                 {displayedSteps[currentStep]?.id === "service" && (
@@ -2578,8 +2618,8 @@ export function BookingModal({
                   />
                 )}
 
-                {/* Include Evaluation toggle — shown on confirm step for non-evaluation services */}
-                {displayedSteps[currentStep]?.id === "confirm" &&
+                {/* Include Evaluation toggle — facility side only, confirm step, non-evaluation services */}
+                {!isCustomerMode && !showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
                   selectedService !== "evaluation" &&
                   !(isEstimateMode && estimateCreated) && (
                     <div className="mx-1 mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
@@ -2631,7 +2671,7 @@ export function BookingModal({
                 )}
 
                 {/* Estimate success state */}
-                {displayedSteps[currentStep]?.id === "confirm" &&
+                {!showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
                   isEstimateMode &&
                   estimateCreated && (
                     <div className="flex flex-col items-center px-6 py-12 text-center">
@@ -2753,7 +2793,7 @@ export function BookingModal({
                     </div>
                   )}
 
-                {displayedSteps[currentStep]?.id === "confirm" &&
+                {!showingTipStep && displayedSteps[currentStep]?.id === "confirm" &&
                   !(isEstimateMode && estimateCreated) &&
                   !(isCustomerMode && bookingRequested) && (
                     <ConfirmStep
@@ -2775,6 +2815,16 @@ export function BookingModal({
                       extraServices={calculatePrice.effectiveExtraServices}
                       addOnsCatalog={storedAddOns}
                       calculatePrice={calculatePrice}
+                      facilityTaxes={
+                        facilityTaxConfig?.taxes
+                          .filter(
+                            (t) =>
+                              t.enabled &&
+                              (t.appliesTo === "all" ||
+                                t.appliesTo === "services_only"),
+                          )
+                          .map((t) => ({ name: t.name, rate: t.rate }))
+                      }
                       notificationEmail={notificationEmail}
                       setNotificationEmail={setNotificationEmail}
                       notificationSMS={notificationSMS}
@@ -2790,6 +2840,7 @@ export function BookingModal({
                   )}
               </div>
             </ScrollArea>
+            )}
 
             {/* Navigation Buttons */}
             {!(isEstimateMode && estimateCreated) && !(isCustomerMode && bookingRequested) && (
@@ -2817,7 +2868,7 @@ export function BookingModal({
                   >
                     Cancel
                   </Button>
-                  {currentStep < displayedSteps.length - 1 ? (
+                  {currentStep < displayedSteps.length - 1 || showingTipStep ? (
                     <Button
                       type="button"
                       onClick={handleNext}
@@ -2828,7 +2879,7 @@ export function BookingModal({
                           : ""
                       }
                     >
-                      Next
+                      {showingTipStep ? "Continue to Review" : "Next"}
                     </Button>
                   ) : (
                     <Button

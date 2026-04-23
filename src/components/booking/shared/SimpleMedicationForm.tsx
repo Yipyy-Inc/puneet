@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ import {
   HandHeart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { facilityConfig } from "@/data/facility-config";
 import type {
   MedicationItem,
@@ -104,6 +106,17 @@ export function SimpleMedicationForm({
     MED_FEES.adminFee.enabled &&
     (!serviceType ||
       MED_FEES.adminFee.applicableServices.includes(serviceType));
+
+  // Tracks which medication indices have a pending custom-time picker open
+  const pendingCustomValue = useRef<Record<number, string>>({});
+  const [pendingCustomKeys, setPendingCustomKeys] = useState<Set<number>>(
+    new Set(),
+  );
+  // Separate state to drive trigger-button display (ref alone won't re-render)
+  const [pendingCustomTime, setPendingCustomTime] = useState<
+    Record<number, string>
+  >({});
+
   const updateMed = (index: number, patch: Partial<MedicationItem>) => {
     const next = [...medications];
     next[index] = { ...next[index], ...patch };
@@ -413,19 +426,12 @@ export function SimpleMedicationForm({
                       .map((t) => (
                         <div
                           key={t}
-                          className="flex items-center gap-1 rounded-lg border-2 border-violet-400 bg-violet-50 px-2 py-1"
+                          className="flex items-center gap-1 rounded-lg border-2 border-violet-400 bg-violet-50 px-2.5 py-1.5"
                         >
-                          <input
-                            type="time"
-                            value={t}
-                            onChange={(e) => {
-                              const next = item.times.map((existing) =>
-                                existing === t ? e.target.value : existing,
-                              );
-                              updateMed(index, { times: next });
-                            }}
-                            className="h-5 border-0 bg-transparent text-xs text-violet-700"
-                          />
+                          <Clock className="size-3 shrink-0 text-violet-500" />
+                          <span className="text-xs font-medium text-violet-700">
+                            {fmtTime(t)}
+                          </span>
                           <button
                             type="button"
                             onClick={() =>
@@ -433,24 +439,69 @@ export function SimpleMedicationForm({
                                 times: item.times.filter((x) => x !== t),
                               })
                             }
-                            className="text-violet-400 hover:text-violet-700"
+                            className="ml-0.5 text-violet-400 hover:text-violet-700"
                           >
                             <X className="size-3" />
                           </button>
                         </div>
                       ))}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        updateMed(index, {
-                          times: [...item.times, "09:00"],
-                        })
-                      }
-                      className="flex items-center gap-1 rounded-lg border-2 border-dashed border-slate-200 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600"
-                    >
-                      <Plus className="size-3" />
-                      Custom time
-                    </button>
+                    {pendingCustomKeys.has(index) && (
+                      <TimePickerLux
+                        value={pendingCustomTime[index] || undefined}
+                        onValueChange={(t) => {
+                          pendingCustomValue.current[index] = t;
+                          setPendingCustomTime((prev) => ({
+                            ...prev,
+                            [index]: t,
+                          }));
+                        }}
+                        onOpenChange={(isOpen) => {
+                          if (!isOpen) {
+                            const t = pendingCustomValue.current[index];
+                            if (t) {
+                              updateMed(index, {
+                                times: [...item.times, t],
+                              });
+                            }
+                            delete pendingCustomValue.current[index];
+                            setPendingCustomTime((prev) => {
+                              const next = { ...prev };
+                              delete next[index];
+                              return next;
+                            });
+                            setPendingCustomKeys((prev) => {
+                              const next = new Set(prev);
+                              next.delete(index);
+                              return next;
+                            });
+                          }
+                        }}
+                        defaultOpen={true}
+                        stepMinutes={15}
+                        displayMode="popover"
+                        className="h-7 min-w-[110px] text-xs"
+                        placeholder="Pick a time"
+                      />
+                    )}
+                    {!pendingCustomKeys.has(index) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          pendingCustomValue.current[index] = "";
+                          setPendingCustomTime((prev) => ({
+                            ...prev,
+                            [index]: "",
+                          }));
+                          setPendingCustomKeys(
+                            (prev) => new Set([...prev, index]),
+                          );
+                        }}
+                        className="flex items-center gap-1 rounded-lg border-2 border-dashed border-slate-200 px-2.5 py-1.5 text-xs text-slate-400 transition-colors hover:border-slate-300 hover:text-slate-600"
+                      >
+                        <Plus className="size-3" />
+                        Custom time
+                      </button>
+                    )}
                   </div>
                 </div>
 

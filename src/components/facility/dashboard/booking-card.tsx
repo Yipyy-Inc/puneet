@@ -7,8 +7,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   Bed,
-  Clock,
   GraduationCap,
+  Home,
   LogIn,
   LogOut,
   PawPrint,
@@ -17,7 +17,6 @@ import {
   Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { TagList } from "@/components/shared/TagList";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { cn } from "@/lib/utils";
@@ -204,6 +203,11 @@ export function BookingCard({
               <PawPrint className="size-5" />
             </div>
           )}
+          {booking.isGoingHomeToday && booking.status === "checked-in" && (
+            <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-violet-500 ring-2 ring-background">
+              <Home className="size-2.5 text-white" />
+            </span>
+          )}
         </Link>
 
         <div className="min-w-0 flex-1 space-y-1">
@@ -216,12 +220,6 @@ export function BookingCard({
               {booking.petName}
             </Link>
             <ServiceBadge booking={booking} />
-            {booking.isGoingHomeToday && booking.status === "checked-in" && (
-              <Badge className="border-violet-200 bg-violet-100 text-violet-700 dark:border-violet-900/40 dark:bg-violet-900/30 dark:text-violet-300">
-                <Clock className="mr-1 size-3" />
-                Going home today
-              </Badge>
-            )}
             <TagList
               entityType="pet"
               entityId={booking.petId}

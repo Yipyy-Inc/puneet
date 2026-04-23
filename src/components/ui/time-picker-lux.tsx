@@ -38,6 +38,7 @@ export interface TimePickerLuxProps {
   id?: string;
   value?: HH_MM;
   onValueChange: (next: HH_MM) => void;
+  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
@@ -45,6 +46,7 @@ export interface TimePickerLuxProps {
   min?: HH_MM;
   max?: HH_MM;
   displayMode?: "popover" | "dialog";
+  defaultOpen?: boolean;
 }
 
 function toMinutes(time: HH_MM | undefined | null) {
@@ -69,6 +71,7 @@ export function TimePickerLux({
   id,
   value,
   onValueChange,
+  onOpenChange: onOpenChangeProp,
   disabled,
   placeholder = "Select time",
   className,
@@ -76,8 +79,14 @@ export function TimePickerLux({
   min,
   max,
   displayMode = "dialog",
+  defaultOpen = false,
 }: TimePickerLuxProps) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen);
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    onOpenChangeProp?.(next);
+  };
 
   const parsed = parseTime(value);
   const currentHour12 = parsed
@@ -282,7 +291,7 @@ export function TimePickerLux({
           variant="outline"
           size="sm"
           className="h-7 border-slate-200 bg-white text-xs"
-          onClick={() => setOpen(false)}
+          onClick={() => handleOpenChange(false)}
         >
           Done
         </Button>
@@ -292,7 +301,7 @@ export function TimePickerLux({
 
   if (displayMode === "dialog") {
     return (
-      <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+      <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
         <DialogPrimitive.Trigger asChild>{triggerButton}</DialogPrimitive.Trigger>
 
         <DialogPrimitive.Portal>
@@ -331,7 +340,7 @@ export function TimePickerLux({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
       <PopoverContent
         align="start"
