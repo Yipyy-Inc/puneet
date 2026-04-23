@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Image from "next/image";
 import {
   PawPrint,
   CalendarDays,
@@ -63,7 +64,6 @@ function formatAddonUnit(addon: ServiceAddOn): string {
       return `/${addon.unitLabel || "hr"}`;
   }
 }
-import { TipPromptDialog } from "@/components/bookings/TipPromptDialog";
 import type { Pet } from "@/types/pet";
 import type { Client } from "@/types/client";
 import { SERVICE_CATEGORIES } from "../constants";
@@ -113,6 +113,8 @@ interface ConfirmStepProps {
   tipConfig: TipConfig;
   tipAmount: number;
   onTipChange: (amount: number) => void;
+  /** Individual tax lines from the facility's tax config (for per-tax breakdown) */
+  facilityTaxes?: Array<{ name: string; rate: number }>;
   /** Jump to a specific wizard step (index) + optional sub-step */
   onEditStep?: (stepIndex: number, subStep?: number) => void;
 }
@@ -224,6 +226,7 @@ export function ConfirmStep({
   setNotificationEmail,
   notificationSMS,
   setNotificationSMS,
+  facilityTaxes,
   tipConfig,
   tipAmount,
   onTipChange,
@@ -245,7 +248,6 @@ export function ConfirmStep({
   const [signedIds, setSignedIds] = useState<Set<string>>(
     () => new Set(waiverSignatures.map((s) => s.waiverId)),
   );
-  const [tipDialogOpen, setTipDialogOpen] = useState(false);
   const pendingWaivers = digitalWaivers.filter(
     (w) =>
       w.isActive &&
@@ -339,7 +341,12 @@ export function ConfirmStep({
       )}
 
       {/* ── Client & Pets ───────────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div
+        className={cn(
+          "grid gap-3",
+          selectedPets.length === 1 && "sm:grid-cols-2",
+        )}
+      >
         <div className="rounded-2xl border p-4">
           <SectionHeader
             icon={User}
@@ -365,21 +372,62 @@ export function ConfirmStep({
             label={`Pet${selectedPets.length > 1 ? "s" : ""}`}
             onEdit={onEditStep ? () => onEditStep(clientPetStepIdx) : undefined}
           />
-          <div className="flex flex-wrap gap-2">
-            {selectedPets.map((pet) => (
-              <div key={pet.id} className="flex items-center gap-1.5">
-                <span className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-[10px] font-bold">
-                  {pet.name[0]}
-                </span>
-                <div>
-                  <p className="text-sm/tight font-semibold">{pet.name}</p>
-                  <p className="text-muted-foreground text-[10px]">
-                    {pet.type} · {pet.breed}
-                  </p>
+          {selectedPets.length === 1 ? (
+            <div className="flex items-center gap-2.5">
+              {selectedPets[0].imageUrl ? (
+                <Image
+                  src={selectedPets[0].imageUrl}
+                  alt={selectedPets[0].name}
+                  width={40}
+                  height={40}
+                  className="size-10 shrink-0 rounded-xl object-cover ring-2 ring-background"
+                />
+              ) : (
+                <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+                  <PawPrint className="size-4" />
                 </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold leading-none">
+                  {selectedPets[0].name}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-[11px]">
+                  {selectedPets[0].type} · {selectedPets[0].breed}
+                </p>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {selectedPets.map((pet) => (
+                <div
+                  key={pet.id}
+                  className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5"
+                >
+                  {pet.imageUrl ? (
+                    <Image
+                      src={pet.imageUrl}
+                      alt={pet.name}
+                      width={40}
+                      height={40}
+                      className="size-10 shrink-0 rounded-xl object-cover ring-2 ring-background"
+                    />
+                  ) : (
+                    <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl ring-2 ring-background">
+                      <PawPrint className="size-4" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-none">
+                      {pet.name}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-[11px]">
+                      {pet.type} · {pet.breed}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -800,85 +848,21 @@ export function ConfirmStep({
         </div>
       </div>
 
-      {/* ── Tip appreciation CTA ─────────────────────────────────── */}
-      {tipConfig.enabled && (
-        <>
-          <button
-            type="button"
-            onClick={() => setTipDialogOpen(true)}
-            className={cn(
-              "group relative w-full overflow-hidden rounded-2xl border-2 p-4 text-left transition-all",
-              tipAmount > 0
-                ? "border-primary/50 bg-primary/5"
-                : "border-primary/20 from-primary/5 via-primary/[0.03] hover:border-primary/40 hover:from-primary/10 bg-gradient-to-br to-transparent",
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "flex size-11 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
-                  tipAmount > 0
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-primary/15 text-primary",
-                )}
-              >
-                <Heart
-                  className={cn(
-                    "size-5",
-                    tipAmount > 0 && "fill-current",
-                  )}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                {tipAmount > 0 ? (
-                  <>
-                    <p className="text-sm font-semibold">
-                      Tip added · ${tipAmount.toFixed(2)}
-                    </p>
-                    <p className="text-muted-foreground text-[12px]">
-                      Thank you — 100% goes to the care team. Tap to change.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold">
-                      Show appreciation for the care team
-                    </p>
-                    <p className="text-muted-foreground text-[12px]">
-                      {selectedPets[0]?.name
-                        ? `${selectedPets[0].name} will be in great hands —`
-                        : "Your pet will be in great hands —"}{" "}
-                      leave a tip to thank them. Most customers do.
-                    </p>
-                  </>
-                )}
-              </div>
-              <div
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold",
-                  tipAmount > 0
-                    ? "bg-primary/10 text-primary"
-                    : "bg-primary text-primary-foreground",
-                )}
-              >
-                {tipAmount > 0 ? "Edit" : "Add tip"}
-              </div>
-            </div>
-          </button>
-          <TipPromptDialog
-            open={tipDialogOpen}
-            onOpenChange={setTipDialogOpen}
-            tipConfig={tipConfig}
-            subtotal={
-              calculatePrice.subtotal ??
-              calculatePrice.total - (calculatePrice.taxAmount ?? 0)
-            }
-            tipAmount={tipAmount}
-            onTipChange={onTipChange}
-            petName={selectedPets[0]?.name}
-            serviceLabel={serviceInfo?.name}
-          />
-        </>
+      {/* Tip amount summary — shown when a tip was added in the tip step */}
+      {tipConfig.enabled && tipAmount > 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <Heart className="size-5 fill-current" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              Tip added · ${tipAmount.toFixed(2)}
+            </p>
+            <p className="text-muted-foreground text-[12px]">
+              100% goes to the care team — thank you!
+            </p>
+          </div>
+        </div>
       )}
 
       {/* ── Pending Waivers ───────────────────────────────────── */}
@@ -1035,16 +1019,42 @@ export function ConfirmStep({
                 </span>
               </div>
             ))}
-          {(calculatePrice.taxAmount ?? 0) > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Tax ({((calculatePrice.taxRate ?? 0) * 100).toFixed(2)}%)
-              </span>
-              <span className="font-[tabular-nums] font-medium">
-                +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
-              </span>
-            </div>
-          )}
+          {(calculatePrice.taxAmount ?? 0) > 0 &&
+            (facilityTaxes && facilityTaxes.length > 0
+              ? facilityTaxes.map((tax, i) => {
+                  const base =
+                    calculatePrice.subtotal ??
+                    calculatePrice.total - (calculatePrice.taxAmount ?? 0);
+                  const taxAmt = base * tax.rate;
+                  const pct = parseFloat((tax.rate * 100).toFixed(4));
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        {tax.name} ({pct}%)
+                      </span>
+                      <span className="font-[tabular-nums] font-medium">
+                        +${taxAmt.toFixed(2)}
+                      </span>
+                    </div>
+                  );
+                })
+              : (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Tax (
+                      {parseFloat(
+                        ((calculatePrice.taxRate ?? 0) * 100).toFixed(4),
+                      )}
+                      %)
+                    </span>
+                    <span className="font-[tabular-nums] font-medium">
+                      +${(calculatePrice.taxAmount ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
           {tipAmount > 0 && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground flex items-center gap-1">

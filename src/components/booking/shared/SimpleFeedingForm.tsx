@@ -21,6 +21,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { facilityConfig } from "@/data/facility-config";
 import type { FeedingScheduleItem, FoodUnit } from "@/types/booking";
 
@@ -389,18 +390,17 @@ export function SimpleFeedingForm({
                       <span className="shrink-0 rounded-md bg-orange-100 px-2 py-1 text-[11px] font-semibold text-orange-700">
                         {occ.label}
                       </span>
-                      <input
-                        type="time"
+                      <TimePickerLux
                         value={occ.time}
-                        onChange={(e) => {
+                        onValueChange={(t) => {
                           const next = item.occasions.map((o) =>
-                            o.id === occ.id
-                              ? { ...o, time: e.target.value }
-                              : o,
+                            o.id === occ.id ? { ...o, time: t } : o,
                           );
                           saveItem({ ...item, occasions: next });
                         }}
-                        className="border-border h-7 rounded-md border px-2 text-xs"
+                        stepMinutes={15}
+                        displayMode="popover"
+                        className="h-7 min-w-[110px] text-xs"
                       />
                     </div>
                     <Button

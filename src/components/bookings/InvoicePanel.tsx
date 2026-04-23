@@ -354,9 +354,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             ? invoice.taxes.map((tax, i) => (
                 <div key={i} className="flex justify-between">
                   <span className="text-muted-foreground">
-                    {tax.name} (
-                    {(tax.rate * 100).toFixed(tax.rate < 0.1 ? 1 : 3)}
-                    %)
+                    {tax.name} ({parseFloat((tax.rate * 100).toFixed(4))}%)
                   </span>
                   <span className="font-[tabular-nums]">
                     ${fmt(tax.amount)}
@@ -366,7 +364,7 @@ export function InvoicePanel({ invoice }: { invoice: Invoice }) {
             : invoice.taxAmount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Tax ({(invoice.taxRate * 100).toFixed(1)}%)
+                    Tax ({parseFloat((invoice.taxRate * 100).toFixed(4))}%)
                   </span>
                   <span className="font-[tabular-nums]">
                     ${fmt(invoice.taxAmount)}
