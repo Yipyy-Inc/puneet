@@ -726,6 +726,7 @@ export default function ClientOverviewPage({
                     getBooking={(bid) => bookings.find((b) => b.id === bid)}
                     bookingLinkPrefix={`/facility/dashboard/clients/${id}/bookings`}
                     showBookingCta={false}
+                    showFacilityActions={true}
                     onRequestExtension={() =>
                       toast.success(
                         "Extension applied on behalf of the customer",

@@ -47,6 +47,7 @@ import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { toast } from "sonner";
 import { AddVaccinationModal } from "@/components/customer/AddVaccinationModal";
 import { facilityConfig } from "@/data/facility-config";
+import { notifyFacilityStaffVaccinationUploaded } from "@/data/facility-notifications";
 import { PhotoAlbums } from "@/components/customer/PhotoAlbums";
 import { PetComplianceChecklist } from "@/components/customer/PetComplianceChecklist";
 import { careInstructions, type CareInstructions } from "@/data/pet-data";
@@ -281,11 +282,18 @@ export default function CustomerPetDetailPage({
   };
 
   const handleAddVaccination = async (
-    vaccinations: Array<Omit<(typeof vaccinationRecords)[0], "id">>,
+    newVaccinations: Array<Omit<(typeof vaccinationRecords)[0], "id">>,
   ) => {
     // TODO: Replace with actual API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    if (vaccinations.length === 0) return;
+    if (newVaccinations.length === 0) return;
+    notifyFacilityStaffVaccinationUploaded({
+      facilityId: facilityId,
+      clientId: MOCK_CUSTOMER_ID,
+      clientName: customer ? customer.name : "Customer",
+      petName: pet.name,
+      vaccineCount: newVaccinations.length,
+    });
     router.refresh();
   };
 
@@ -721,23 +729,34 @@ export default function CustomerPetDetailPage({
       key: "status",
       label: "Status",
       render: (vaccination) => {
-        if (!vaccination.status || vaccination.status === "approved") {
-          return <Badge variant="default">Approved</Badge>;
+        if (vaccination.status === "approved") {
+          return <Badge className="bg-emerald-600 hover:bg-emerald-700">Approved</Badge>;
         }
-        if (vaccination.status === "pending_review") {
+        if (!vaccination.status || vaccination.status === "pending_review") {
           return <Badge variant="secondary">Pending Review</Badge>;
         }
         if (vaccination.status === "rejected") {
           return (
-            <div className="flex items-center gap-2">
+            <div className="space-y-0.5">
               <Badge variant="destructive">Rejected</Badge>
               {vaccination.rejectionReason && (
-                <span
-                  className="text-muted-foreground text-xs"
-                  title={vaccination.rejectionReason}
-                >
-                  <AlertTriangle className="size-3" />
-                </span>
+                <p className="text-muted-foreground text-[11px]">
+                  {vaccination.rejectionReason}
+                </p>
+              )}
+            </div>
+          );
+        }
+        if (vaccination.status === "exception") {
+          return (
+            <div className="space-y-0.5">
+              <Badge className="border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-200">
+                Exception
+              </Badge>
+              {vaccination.exceptionReason && (
+                <p className="text-muted-foreground text-[11px]">
+                  {vaccination.exceptionReason}
+                </p>
               )}
             </div>
           );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useCustomerFacility } from "@/hooks/use-customer-facility";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -11,6 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,6 +33,10 @@ import {
   PawPrint,
   GraduationCap,
   Building2,
+  Clock,
+  ArrowRight,
+  Home,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { clients } from "@/data/clients";
@@ -40,6 +49,10 @@ import { getYipyyGoDisplayStatus } from "@/data/yipyygo-forms";
 import { clientCommunications } from "@/data/communications";
 import { reportCards } from "@/data/pet-data";
 import { customerLoyaltyData, loyaltySettings } from "@/data/marketing";
+import {
+  getUnfinishedBookingsForCustomer,
+  ABANDONMENT_STEP_LABELS,
+} from "@/data/unfinished-bookings";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
@@ -47,6 +60,7 @@ const MOCK_CUSTOMER_ID = 15;
 export default function CustomerDashboardPage() {
   const { selectedFacility } = useCustomerFacility();
   const isMounted = useHydrated();
+  const [unfinishedOpen, setUnfinishedOpen] = useState(false);
 
   // Get customer data
   const customer = useMemo(
@@ -175,6 +189,15 @@ export default function CustomerDashboardPage() {
       progressPercentage: Math.min(100, Math.max(0, progressPercentage)),
     };
   }, []);
+
+  // Get unfinished bookings for this customer + facility
+  const unfinishedBookings = useMemo(() => {
+    if (!selectedFacility) return [];
+    return getUnfinishedBookingsForCustomer(MOCK_CUSTOMER_ID).filter(
+      (ub) =>
+        ub.facilityId === selectedFacility.id && ub.status !== "recovered",
+    );
+  }, [selectedFacility]);
 
   // Check for urgent actions
   const urgentActions = useMemo(() => {
@@ -402,7 +425,7 @@ export default function CustomerDashboardPage() {
       case "daycare":
         return Dog;
       case "boarding":
-        return Calendar;
+        return Home;
       case "training":
         return GraduationCap;
       default:
@@ -427,6 +450,94 @@ export default function CustomerDashboardPage() {
         <div className="absolute top-1/3 left-0 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-7xl space-y-6">
+        {/* Unfinished Bookings Dropdown */}
+        {unfinishedBookings.length > 0 && (
+          <Collapsible open={unfinishedOpen} onOpenChange={setUnfinishedOpen}>
+            <div className="overflow-hidden rounded-2xl border border-amber-300/70 bg-amber-50/90 shadow-md shadow-amber-100/60 backdrop-blur-sm dark:border-amber-700 dark:bg-amber-950/30">
+              <CollapsibleTrigger className="flex w-full items-center justify-between px-5 py-3.5 text-left">
+                <div className="flex items-center gap-2.5">
+                  <Clock className="size-4 shrink-0 text-amber-600" />
+                  <span className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                    You have unfinished bookings — pick up where you left off
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+                    {unfinishedBookings.length}
+                  </span>
+                </div>
+                <ChevronDown
+                  className="size-4 shrink-0 text-amber-600 transition-transform duration-200"
+                  data-open={unfinishedOpen || undefined}
+                  style={{
+                    transform: unfinishedOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="divide-y divide-amber-100 border-t border-amber-200 dark:divide-amber-900 dark:border-amber-800">
+                  {unfinishedBookings.slice(0, 3).map((ub) => {
+                    const ServiceIcon = getServiceIcon(ub.service ?? "");
+                    const stepInfo = ABANDONMENT_STEP_LABELS[ub.abandonmentStep];
+                    return (
+                      <div
+                        key={ub.id}
+                        className="flex items-center gap-4 px-5 py-3.5"
+                      >
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-white dark:border-amber-800 dark:bg-amber-950/40">
+                          <ServiceIcon className="size-4 text-amber-600" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold capitalize text-amber-900 dark:text-amber-200">
+                            {ub.service ?? "Booking"}
+                            {ub.petName && (
+                              <span className="font-normal text-amber-700 dark:text-amber-400">
+                                {" "}
+                                · {ub.petName}
+                              </span>
+                            )}
+                          </p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-amber-200 dark:bg-amber-800">
+                              <div
+                                className="h-full rounded-full bg-amber-500"
+                                style={{ width: `${stepInfo.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-amber-700 dark:text-amber-400">
+                              Stopped at {stepInfo.label}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          asChild
+                          size="sm"
+                          className="shrink-0 gap-1.5 bg-amber-500 text-white hover:bg-amber-600"
+                        >
+                          <Link
+                            href={`/customer/bookings/new?resumeBooking=${ub.id}`}
+                          >
+                            Resume
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  {unfinishedBookings.length > 3 && (
+                    <div className="px-5 py-2.5 text-center">
+                      <Link
+                        href="/customer/bookings?tab=unfinished"
+                        className="text-xs font-medium text-amber-700 hover:text-amber-900 dark:text-amber-400"
+                      >
+                        +{unfinishedBookings.length - 3} more →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+        )}
+
         {/* Header */}
         <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/75 p-5 shadow-lg shadow-slate-200/60 backdrop-blur-sm md:p-6">
           <div className="bg-primary/10 pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full blur-2xl" />

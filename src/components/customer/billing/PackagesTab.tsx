@@ -183,21 +183,6 @@ export function PackagesTab() {
                     pkg={pkg}
                     getBooking={getBooking}
                     bookingLinkPrefix="/customer/bookings"
-                    onRequestExtension={() =>
-                      toast.success("Extension request submitted", {
-                        description:
-                          "Your facility will review and confirm shortly.",
-                      })
-                    }
-                    onRequestTransfer={() =>
-                      toast.info("Contact your facility to transfer passes")
-                    }
-                    onRequestRefund={() =>
-                      toast.success("Refund request submitted", {
-                        description:
-                          "Unused passes will be refunded per the package policy.",
-                      })
-                    }
                   />
                 );
               })}

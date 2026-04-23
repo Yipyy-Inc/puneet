@@ -155,8 +155,8 @@ export function EventChip({
           )}
           className={cn(
             "group relative block w-full rounded-xl border px-2.5 py-2 text-left",
-            "transition-all duration-200 hover:scale-[1.015] active:scale-[0.98]",
-            "cursor-pointer overflow-hidden",
+            "transition-all duration-150 hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-none",
+            "cursor-pointer",
             event.isSubEvent && "ml-3 border-dashed opacity-80",
             isCancelledBooking && "opacity-50",
           )}
@@ -474,7 +474,7 @@ export function DayTimeline({
               })}
             </div>
             <div
-              className="relative space-y-1.5 p-2"
+              className="relative space-y-1.5 p-2 pr-3"
               style={{ minHeight: slotHeight }}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
@@ -532,7 +532,11 @@ export function DayColumns({
   const today = new Date();
 
   return (
-    <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-7">
+    <div className="overflow-x-auto">
+    <div
+      className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7"
+      style={{ minWidth: days.length >= 7 ? "630px" : undefined }}
+    >
       {days.map((day) => {
         const dayEvents = getEventsForDay(events, day);
         const visibleEvents = dayEvents.slice(0, visibleLimit);
@@ -637,6 +641,7 @@ export function DayColumns({
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

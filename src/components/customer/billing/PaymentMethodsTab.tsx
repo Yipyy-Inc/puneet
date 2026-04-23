@@ -22,18 +22,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CreditCard, Plus, Trash2, Check, AlertCircle } from "lucide-react";
+import { CreditCard, Plus, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 // Mock customer ID - TODO: Get from auth context
 const MOCK_CUSTOMER_ID = 15;
-// Mock flag - in production this would come from memberships / packages
-const HAS_AUTOPAY_MEMBERSHIP = true;
 
 export function PaymentMethodsTab() {
   const { selectedFacility: _selectedFacility } = useCustomerFacility();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const customerPaymentMethods = useMemo(() => {
@@ -140,18 +137,6 @@ export function PaymentMethodsTab() {
     }, 800);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this payment method?")) {
-      return;
-    }
-
-    setIsDeleting(id);
-    // TODO: Call API to delete payment method
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    toast.success("Payment method removed");
-    setIsDeleting(null);
-  };
-
   const handleSetDefault = async (_id: string) => {
     // TODO: Call API to set as default
     toast.success("Default payment method updated");
@@ -189,10 +174,6 @@ export function PaymentMethodsTab() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {customerPaymentMethods.map((method) => {
-            const isOnlyCard = customerPaymentMethods.length === 1;
-            const disableRemove =
-              HAS_AUTOPAY_MEMBERSHIP && isOnlyCard && method.isDefault;
-
             return (
               <Card key={method.id}>
                 <CardHeader>
@@ -237,53 +218,17 @@ export function PaymentMethodsTab() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      {!method.isDefault && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSetDefault(method.id)}
-                        >
-                          Set as Default
-                        </Button>
-                      )}
-                      {isCardExpired(method) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setIsAddModalOpen(true);
-                            setFormData((prev) => ({
-                              ...prev,
-                              cardholderName:
-                                method.cardholderName || prev.cardholderName,
-                            }));
-                          }}
-                        >
-                          Update Card
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(method.id)}
-                        disabled={isDeleting === method.id || disableRemove}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="mr-1 size-4" />
-                        {isDeleting === method.id ? "Removing..." : "Remove"}
-                      </Button>
-                    </div>
-                    {disableRemove && (
-                      <p className="text-muted-foreground text-xs">
-                        You can’t remove your only card while an auto-pay
-                        membership is active. Please add another card first.
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
+                {!method.isDefault && (
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSetDefault(method.id)}
+                    >
+                      Set as Default
+                    </Button>
+                  </CardContent>
+                )}
               </Card>
             );
           })}
