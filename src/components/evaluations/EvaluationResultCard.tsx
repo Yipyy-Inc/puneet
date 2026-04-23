@@ -30,6 +30,9 @@ export interface EvaluationResultCardData {
   evaluatorName?: string;
   evaluationDate?: string;
   result: "pass" | "fail";
+  resultLabel?: string;
+  denialReason?: string;
+  denialNotes?: string;
   // Temperament
   dogFriendly?: "yes" | "no";
   humanFriendly?: "yes" | "no";
@@ -95,6 +98,7 @@ export function EvaluationResultCard({
   className,
 }: EvaluationResultCardProps) {
   const passed = data.result === "pass";
+  const resultLabel = data.resultLabel ?? (passed ? "Passed" : "Not Approved");
   const hasBranding = !!brandConfig;
 
   const approvedList = [
@@ -150,7 +154,7 @@ export function EvaluationResultCard({
                 ) : (
                   <XCircle className="size-4" />
                 )}
-                {passed ? "Passed" : "Not Approved"}
+                {resultLabel}
               </div>
             </div>
           </div>
@@ -192,7 +196,7 @@ export function EvaluationResultCard({
               ) : (
                 <XCircle className="size-4" />
               )}
-              {passed ? "Passed" : "Not Approved"}
+              {resultLabel}
             </div>
           </div>
         )}
@@ -234,6 +238,32 @@ export function EvaluationResultCard({
             {passed ? config.passMessage : config.failMessage}
           </p>
         </div>
+
+        {!passed && (data.denialReason || data.denialNotes) && (
+          <div className="py-4">
+            <div className="mb-2 flex items-center gap-1.5">
+              <XCircle className="text-muted-foreground size-3.5" />
+              <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                Review Outcome
+              </p>
+            </div>
+            <div className="space-y-2 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
+              {data.denialReason && (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">Reason</span>
+                  <span className="font-medium text-rose-700">
+                    {data.denialReason}
+                  </span>
+                </div>
+              )}
+              {data.denialNotes && (
+                <p className="text-sm/relaxed text-gray-700">
+                  {data.denialNotes}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Temperament */}
         {config.showTemperament && (

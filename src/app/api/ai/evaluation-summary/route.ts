@@ -9,6 +9,10 @@ interface EvaluationInput {
   evaluatorName: string;
   evaluationDate: string;
   result: "pass" | "fail";
+  resultType?: string;
+  resultLabel?: string;
+  denialReason?: string;
+  denialNotes?: string;
   temperament: {
     dogFriendly: boolean;
     humanFriendly: boolean;
@@ -20,6 +24,7 @@ interface EvaluationInput {
   playGroup?: string;
   behaviorTags: string[];
   staffNotes: string;
+  evaluatorNotes?: string;
   approvedServices: string[];
   answers: Record<string, unknown>;
 }
@@ -44,7 +49,7 @@ export async function POST(req: NextRequest) {
 - Breed: ${input.petBreed}
 ${input.petAge ? `- Age: ${input.petAge}` : ""}
 
-**Evaluation Result:** ${input.result === "pass" ? "PASSED" : "DID NOT PASS"}
+**Evaluation Result:** ${input.resultLabel || (input.result === "pass" ? "PASSED" : "DID NOT PASS")}
 **Evaluated by:** ${input.evaluatorName} at ${input.facilityName}
 **Date:** ${input.evaluationDate}
 
@@ -59,6 +64,9 @@ ${input.petAge ? `- Age: ${input.petAge}` : ""}
 **Recommended Play Group:** ${input.playGroup || "Not assigned"}
 **Behavior Tags:** ${input.behaviorTags.join(", ") || "None"}
 **Staff Notes:** ${input.staffNotes || "No notes"}
+**Denial/Re-evaluation Reason:** ${input.denialReason || "None"}
+**Denial/Re-evaluation Notes:** ${input.denialNotes || "None"}
+**Internal Evaluator Notes:** ${input.evaluatorNotes || "None"}
 **Services Approved For:** ${input.approvedServices.join(", ") || "None"}
 
 **Additional Answers:** ${JSON.stringify(input.answers)}
@@ -67,8 +75,8 @@ Write the summary in these sections:
 1. **Opening** (1-2 sentences): A warm greeting addressing the pet by name. Set a positive, professional tone.
 2. **Temperament Summary** (2-3 sentences): Describe the pet's personality based on the temperament data. Use friendly language — translate "dog-friendly: true, energy: high" into something like "Buddy showed wonderful social skills with other dogs and brought high energy to every interaction."
 3. **Play & Social Profile** (1-2 sentences): Describe their play style and which group they'd fit best with.
-4. **Key Observations** (2-3 sentences): Expand on the staff notes and behavior tags into natural prose. Highlight positive traits. If the pet didn't pass, frame concerns diplomatically and constructively.
-5. **Next Steps** (1-2 sentences): What the owner can expect next. If passed, mention the services unlocked. If not passed, suggest what might help (more socialization, training, etc.).
+4. **Key Observations** (2-3 sentences): Expand on the staff notes, denial/re-evaluation reason, and behavior tags into natural prose. Highlight positive traits where appropriate. If the pet didn't pass or needs re-evaluation, frame concerns diplomatically and constructively.
+5. **Next Steps** (1-2 sentences): What the owner can expect next. If passed, mention the services unlocked. If approved with restrictions, clearly mention that staff will follow the noted restrictions. If not passed or re-evaluation is needed, suggest what might help (more socialization, training, health follow-up, or another evaluation).
 
 Keep the total under 200 words. Be warm, professional, and reassuring. Avoid clinical language. Write as if you're a caring staff member who genuinely enjoyed meeting the pet. Do NOT use emojis. Do NOT use markdown formatting — output plain text with section labels on their own lines.`;
 

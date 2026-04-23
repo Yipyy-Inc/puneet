@@ -62,9 +62,11 @@ export function SendEvaluationResultModal({
   };
 
   const passed = cardData.result === "pass";
+  const resultLabel =
+    cardData.resultLabel ?? (passed ? "PASSED" : "NOT APPROVED");
   const agreementText = `I, the undersigned evaluator, confirm that I have conducted a thorough behavioral evaluation of ${cardData.petName} on ${cardData.evaluationDate ? new Date(cardData.evaluationDate).toLocaleDateString() : "today's date"}.
 
-I certify that the evaluation result (${passed ? "PASSED" : "NOT APPROVED"}) accurately reflects my professional assessment of this pet's temperament, behavior, and suitability for the approved services.
+I certify that the evaluation result (${resultLabel}) accurately reflects my professional assessment of this pet's temperament, behavior, and suitability for the approved services.
 
 This signature serves as official verification that the evaluation was performed following facility protocols and that all observations documented are accurate to the best of my knowledge.`;
 

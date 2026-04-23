@@ -902,6 +902,28 @@ ${
               </Button>
             )}
 
+            {/* Undo Checkout — reverts completed booking back to confirmed */}
+            {booking.status === "completed" && !isCancelled && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() =>
+                  toast.success(
+                    "Checkout undone — status reverted to Confirmed",
+                    {
+                      description: isPaid
+                        ? "Payment is already recorded — issue a refund separately if needed."
+                        : undefined,
+                    },
+                  )
+                }
+              >
+                <RotateCcw className="size-3.5" />
+                Undo Checkout
+              </Button>
+            )}
+
             {!isCancelled && booking.status !== "completed" && (
               <>
                 {/* No-Show with deposit forfeit */}
