@@ -74,7 +74,7 @@ function ServiceBadge({ booking }: { booking: UnifiedBooking }) {
   return (
     <span
       data-color={booking.serviceColor}
-      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
+      className="inline-flex h-5 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-medium"
       style={{
         color: booking.serviceColor,
         borderColor: `${booking.serviceColor}40`,
@@ -210,11 +210,11 @@ export function BookingCard({
         </Link>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-1.5 overflow-hidden">
             <Link
               href={petHref}
               onClick={(e) => e.stopPropagation()}
-              className="text-sm font-semibold leading-none hover:underline"
+              className="min-w-0 truncate text-sm font-semibold leading-none hover:underline"
             >
               {booking.petName}
             </Link>
@@ -223,7 +223,8 @@ export function BookingCard({
               entityType="pet"
               entityId={booking.petId}
               compact
-              maxVisible={2}
+              maxVisible={1}
+              className="shrink-0 flex-nowrap"
             />
           </div>
           <p className="text-muted-foreground line-clamp-1 text-xs">
