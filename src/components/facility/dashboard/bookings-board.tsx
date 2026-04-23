@@ -41,7 +41,7 @@ export function BookingsBoard() {
       case "scheduled":
         return queryScoped.filter((b) => b.status === "scheduled");
       case "checked-in":
-        return queryScoped.filter((b) => b.status === "checked-in");
+        return queryScoped.filter((b) => b.status === "checked-in" && !b.isGoingHomeToday);
       case "going-home":
         return queryScoped.filter((b) => b.isGoingHomeToday && b.status === "checked-in");
       case "checked-out":
@@ -67,6 +67,7 @@ export function BookingsBoard() {
       case "scheduled":
         return "check-in" as const;
       case "checked-in":
+        return "none" as const;
       case "going-home":
         return "check-out" as const;
       default:

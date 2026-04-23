@@ -35,11 +35,16 @@ export function getBookingOverviewHref({
 }: BookingLookupInput): string | null {
   const serviceKey = normalize(service);
 
-  const candidates = bookings.filter((booking) => {
+  let candidates = bookings.filter((booking) => {
     const petMatch = hasPet(booking.petId, petId);
     const clientMatch = clientId ? booking.clientId === clientId : true;
     return petMatch && clientMatch;
   });
+
+  // Fallback: petId-only when ownerIds differ between data sources
+  if (candidates.length === 0) {
+    candidates = bookings.filter((booking) => hasPet(booking.petId, petId));
+  }
 
   if (candidates.length === 0) return null;
 

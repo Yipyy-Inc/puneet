@@ -78,7 +78,7 @@ export function TagList({
               type="button"
               aria-label={`Show ${overflow.length} more tags`}
               className={cn(
-                `border-border bg-muted text-muted-foreground hover:bg-accent inline-flex items-center rounded-full border font-medium transition-colors`,
+                `border-border bg-muted text-muted-foreground hover:bg-accent inline-flex shrink-0 items-center rounded-full border font-medium transition-colors`,
                 size === "sm" ? "h-5 px-1.5 text-[10px]" : "h-6 px-2 text-xs",
               )}
             >

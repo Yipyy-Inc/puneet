@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DynamicIcon } from "@/components/ui/DynamicIcon";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -54,8 +55,10 @@ interface CheckOutDialogProps {
   booking: UnifiedBooking;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isEarlyCheckout?: boolean;
   onConfirm: (options: {
     timestamp: string;
+    reason?: string;
     earlyCheckout?: EarlyCheckoutAdjustment;
   }) => void;
 }
@@ -214,6 +217,7 @@ export function CheckOutDialog({
   booking,
   open,
   onOpenChange,
+  isEarlyCheckout = false,
   onConfirm,
 }: CheckOutDialogProps) {
   const settings = useSettings();
@@ -223,6 +227,7 @@ export function CheckOutDialog({
   const todayIso = useMemo(() => toIsoDateString(new Date()), []);
   const [date, setDate] = useState<string>(todayIso);
   const [time, setTime] = useState(() => toTimeInputValue(null));
+  const [reason, setReason] = useState("");
 
   const petImage = useMemo(() => getPetImage(booking.petId), [booking.petId]);
   const Icon = BUILTIN_ICONS[booking.serviceKey];
@@ -267,11 +272,13 @@ export function CheckOutDialog({
   const handleConfirm = () => {
     onConfirm({
       timestamp: checkoutIso,
+      reason: isEarlyCheckout ? reason : undefined,
       earlyCheckout: adjustment ?? undefined,
     });
     onOpenChange(false);
     setDate(todayIso);
     setTime(toTimeInputValue(null));
+    setReason("");
   };
 
   return (
@@ -280,7 +287,7 @@ export function CheckOutDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <LogOut className="size-4" />
-            Check Out
+            {isEarlyCheckout ? "Early Checkout" : "Check Out"}
             <span className="text-muted-foreground font-normal">
               #{booking.rawId}
             </span>
@@ -379,6 +386,21 @@ export function CheckOutDialog({
             </div>
           </div>
 
+          {isEarlyCheckout && (
+            <div className="grid gap-2">
+              <Label htmlFor="early-checkout-reason" className="text-sm font-medium">
+                Reason
+              </Label>
+              <Textarea
+                id="early-checkout-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="e.g. Owner returning early from trip, pet not adjusting well…"
+                className="h-20 resize-none text-sm"
+              />
+            </div>
+          )}
+
           {adjustment && adjustment.unusedNights > 0 && (
             <EarlyCheckoutSummary
               adjustment={adjustment}
@@ -393,16 +415,20 @@ export function CheckOutDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!!earlyCheckoutDisabled}
+            disabled={!!earlyCheckoutDisabled || (isEarlyCheckout && !reason.trim())}
             className={cn(
               "gap-1",
-              "bg-violet-600 text-white hover:bg-violet-700",
+              isEarlyCheckout
+                ? "bg-amber-600 text-white hover:bg-amber-700"
+                : "bg-violet-600 text-white hover:bg-violet-700",
             )}
           >
             <LogOut className="size-3.5" />
-            {adjustment && adjustment.unusedNights > 0
+            {isEarlyCheckout
               ? "Confirm Early Checkout"
-              : "Check Out"}
+              : adjustment && adjustment.unusedNights > 0
+                ? "Confirm Early Checkout"
+                : "Check Out"}
           </Button>
         </DialogFooter>
       </DialogContent>

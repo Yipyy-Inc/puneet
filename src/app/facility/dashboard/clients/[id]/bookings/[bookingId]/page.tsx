@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   HandCoins,
   ShoppingBag,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +49,8 @@ import { BookingNotes } from "@/components/bookings/BookingNotes";
 import { EditBookingModal } from "@/components/bookings/modals/EditBookingModal";
 import { ProcessPaymentModal } from "@/components/bookings/modals/ProcessPaymentModal";
 import { CancelBookingModal } from "@/components/bookings/modals/CancelBookingModal";
+import { CheckOutDialog } from "@/components/facility/dashboard/check-out-dialog";
+import type { UnifiedBooking } from "@/hooks/use-unified-bookings";
 import { TagList } from "@/components/shared/TagList";
 import { PageAuditTrail } from "@/components/shared/PageAuditTrail";
 import { PaymentCheckoutFlow } from "@/components/bookings/PaymentCheckoutFlow";
@@ -181,6 +184,34 @@ export default function ClientBookingDetailPage({
   const nights = booking
     ? nightsBetween(booking.startDate, booking.endDate)
     : 0;
+
+  const unifiedForEarlyCheckout = useMemo<UnifiedBooking | null>(() => {
+    if (!booking || !pet) return null;
+    const svc = booking.service.toLowerCase();
+    return {
+      id: `booking-${booking.id}`,
+      rawId: String(booking.id),
+      source: svc as UnifiedBooking["source"],
+      serviceKey: svc,
+      serviceLabel: booking.service,
+      serviceColor: "#6366f1",
+      serviceIcon: "bed",
+      petId: pet.id,
+      petName: pet.name,
+      petBreed: pet.breed ?? "",
+      ownerId: client?.id,
+      ownerName: client?.name ?? "",
+      ownerPhone: client?.phone ?? "",
+      status: "checked-in",
+      scheduledStart: booking.startDate + "T12:00:00.000Z",
+      actualStart: null,
+      scheduledEnd: booking.endDate + "T12:00:00.000Z",
+      actualEnd: null,
+      isGoingHomeToday: false,
+      price: booking.totalCost,
+      totalNights: nights,
+    };
+  }, [booking, pet, client, nights]);
   const isCancelled = booking?.status === "cancelled";
   const isDeclined = booking?.status === "declined";
   const isEstimateSent = booking?.status === "estimate_sent";
@@ -278,6 +309,7 @@ export default function ClientBookingDetailPage({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [earlyCheckoutOpen, setEarlyCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [estimateOpen, setEstimateOpen] = useState(false);
@@ -755,6 +787,22 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                 Mark as Ready
               </Button>
             )}
+
+            {/* Early Checkout — boarding only, active bookings */}
+            {booking.service.toLowerCase() === "boarding" &&
+              !isCancelled &&
+              booking.status !== "completed" &&
+              unifiedForEarlyCheckout && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 border-amber-300 text-xs text-amber-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                  onClick={() => setEarlyCheckoutOpen(true)}
+                >
+                  <LogOut className="size-3.5" />
+                  Early Checkout
+                </Button>
+              )}
 
             {/* Checkout — for open/completed bookings */}
             {!isPaid && !isCancelled && (
@@ -1450,6 +1498,19 @@ ${
             toast.success(`${bookingRef} cancelled: ${r}`);
           }}
         />
+        {unifiedForEarlyCheckout && (
+          <CheckOutDialog
+            booking={unifiedForEarlyCheckout}
+            open={earlyCheckoutOpen}
+            onOpenChange={setEarlyCheckoutOpen}
+            isEarlyCheckout
+            onConfirm={({ timestamp, reason }) => {
+              toast.success(
+                `Early checkout recorded for ${bookingRef}${reason ? ` · "${reason}"` : ""}`,
+              );
+            }}
+          />
+        )}
         <PaymentCheckoutFlow
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
