@@ -11,6 +11,7 @@ interface ScheduleStatsProps {
   pendingTimeOff: number;
   pendingSwaps: number;
   overtimeAlerts: number;
+  canViewPayRates?: boolean;
 }
 
 interface StatPillProps {
@@ -48,6 +49,7 @@ export function ScheduleStats({
   laborCost,
   pendingTimeOff,
   pendingSwaps,
+  canViewPayRates = true,
 }: ScheduleStatsProps) {
   return (
     <div className="grid min-w-0 grid-cols-2 gap-2 px-6 pb-2 sm:grid-cols-4">
@@ -57,21 +59,25 @@ export function ScheduleStats({
         value={`${scheduledToday}/${totalEmployees}`}
         accent="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400"
       />
-      <StatPill
-        icon={Clock}
-        label="Scheduled"
-        value={`${totalHoursThisWeek.toFixed(0)}h`}
-        accent="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
-      />
-      <StatPill
-        icon={DollarSign}
-        label="Labor cost"
-        value={`$${laborCost.toLocaleString("en-US", {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        })}`}
-        accent="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
-      />
+      {canViewPayRates && (
+        <StatPill
+          icon={Clock}
+          label="Scheduled"
+          value={`${totalHoursThisWeek.toFixed(0)}h`}
+          accent="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400"
+        />
+      )}
+      {canViewPayRates && (
+        <StatPill
+          icon={DollarSign}
+          label="Labor cost"
+          value={`$${laborCost.toLocaleString("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })}`}
+          accent="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400"
+        />
+      )}
       <StatPill
         icon={CalendarOff}
         label="Pending"

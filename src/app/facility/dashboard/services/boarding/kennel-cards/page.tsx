@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { QRCodeSVG } from "qrcode.react";
 import {
   CreditCard,
   Printer,
@@ -28,20 +29,95 @@ import {
   AlertTriangle,
   Pill,
   Utensils,
-  QrCode,
   User,
   RefreshCw,
+  Tag,
+  SkipForward,
 } from "lucide-react";
 import {
   getCurrentGuests,
   BoardingGuest,
   KennelCardData,
 } from "@/data/boarding";
+import { PrintKennelCardsModal } from "@/components/facility/boarding/kennel-card-print";
+
+// ── Check-In Print Prompt ─────────────────────────────────────────────────────
+
+function CheckInPrintPrompt({
+  guest,
+  open,
+  onClose,
+  onPrint,
+}: {
+  guest: BoardingGuest | null;
+  open: boolean;
+  onClose: () => void;
+  onPrint: (format: "kennel" | "door") => void;
+}) {
+  if (!guest) return null;
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PawPrint className="size-5 text-primary" />
+            Card ready — print now?
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-xl border bg-muted/40 p-3">
+            <p className="font-semibold">{guest.petName}</p>
+            <p className="text-muted-foreground text-sm">
+              {guest.kennelName} · {guest.petBreed}
+            </p>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Which card format would you like to print at check-in?
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => onPrint("kennel")}
+              className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-primary/40 bg-primary/5 p-4 text-sm font-medium transition-colors hover:border-primary hover:bg-primary/10"
+            >
+              <CreditCard className="size-8 text-primary" />
+              Kennel Card
+              <span className="text-muted-foreground text-xs font-normal">
+                Full info · A5
+              </span>
+            </button>
+            <button
+              onClick={() => onPrint("door")}
+              className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-border p-4 text-sm font-medium transition-colors hover:border-primary hover:bg-primary/5"
+            >
+              <Tag className="size-8 text-muted-foreground" />
+              Door Card
+              <span className="text-muted-foreground text-xs font-normal">
+                Compact · badge
+              </span>
+            </button>
+          </div>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={onClose}
+          >
+            <SkipForward className="mr-2 size-4" />
+            Skip printing
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function KennelCardsPage() {
   const currentGuests = getCurrentGuests();
   const [selectedGuestId, setSelectedGuestId] = useState<string>("");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printSingleId, setPrintSingleId] = useState<string | null>(null);
+  const [printInitialFormat, setPrintInitialFormat] = useState<"kennel" | "door">("kennel");
+  const [checkInPromptGuest, setCheckInPromptGuest] = useState<BoardingGuest | null>(null);
   const [generatedCards, setGeneratedCards] = useState<
     Map<string, KennelCardData>
   >(new Map());
@@ -85,12 +161,29 @@ export default function KennelCardsPage() {
     };
   };
 
-  const handleGenerateCard = () => {
-    if (!selectedGuest) return;
+  const handleGenerateCard = (guestOverride?: BoardingGuest) => {
+    const guest = guestOverride ?? selectedGuest;
+    if (!guest) return;
 
-    const card = generateKennelCard(selectedGuest);
-    setGeneratedCards(new Map(generatedCards.set(selectedGuest.id, card)));
-    setIsPreviewOpen(true);
+    const isFirstGeneration = !generatedCards.has(guest.id);
+    const card = generateKennelCard(guest);
+    setGeneratedCards(new Map(generatedCards.set(guest.id, card)));
+
+    if (isFirstGeneration) {
+      // Show check-in print prompt instead of immediately opening preview
+      setCheckInPromptGuest(guest);
+    } else {
+      setSelectedGuestId(guest.id);
+      setIsPreviewOpen(true);
+    }
+  };
+
+  const handleCheckInPrint = (format: "kennel" | "door") => {
+    if (!checkInPromptGuest) return;
+    setPrintInitialFormat(format);
+    setPrintSingleId(checkInPromptGuest.id);
+    setCheckInPromptGuest(null);
+    setPrintModalOpen(true);
   };
 
   const handleRegenerateCard = (guestId: string) => {
@@ -101,8 +194,10 @@ export default function KennelCardsPage() {
     setGeneratedCards(new Map(generatedCards.set(guestId, card)));
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = (guestId?: string, format: "kennel" | "door" = "kennel") => {
+    setPrintInitialFormat(format);
+    setPrintSingleId(guestId ?? null);
+    setPrintModalOpen(true);
   };
 
   const formatDate = (dateStr: string) => {
@@ -122,10 +217,20 @@ export default function KennelCardsPage() {
       {/* Generator Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-            <CreditCard className="size-5" />
-            Generate Kennel Card
-          </CardTitle>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <CreditCard className="size-5" />
+              Generate Kennel Card
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePrint()}
+            >
+              <Printer className="mr-2 size-4" />
+              Print All
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap items-end gap-4">
@@ -150,7 +255,7 @@ export default function KennelCardsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleGenerateCard} disabled={!selectedGuestId}>
+            <Button onClick={() => handleGenerateCard()} disabled={!selectedGuestId}>
               <CreditCard className="mr-2 size-4" />
               Generate Card
             </Button>
@@ -263,10 +368,7 @@ export default function KennelCardsPage() {
                         <Button
                           size="sm"
                           className="flex-1"
-                          onClick={() => {
-                            setSelectedGuestId(guest.id);
-                            handleGenerateCard();
-                          }}
+                          onClick={() => handleGenerateCard(guest)}
                         >
                           <CreditCard className="mr-1 size-4" />
                           Generate
@@ -328,8 +430,12 @@ export default function KennelCardsPage() {
                     <p className="text-lg font-bold">
                       {selectedGuest.kennelName}
                     </p>
-                    <div className="mt-2 flex h-16 w-16 items-center justify-center rounded-sm bg-gray-200">
-                      <QrCode className="size-10 text-gray-500" />
+                    <div className="mt-2">
+                      <QRCodeSVG
+                        value={`https://care.doggieville.ca/${selectedGuest.id}`}
+                        size={64}
+                        level="M"
+                      />
                     </div>
                   </div>
                 </div>
@@ -472,7 +578,10 @@ export default function KennelCardsPage() {
                 >
                   Close
                 </Button>
-                <Button className="flex-1" onClick={handlePrint}>
+                <Button
+                  className="flex-1"
+                  onClick={() => handlePrint(selectedGuest.id)}
+                >
                   <Printer className="mr-2 size-4" />
                   Print Card
                 </Button>
@@ -482,24 +591,23 @@ export default function KennelCardsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Print Styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print\\:border-solid,
-          .print\\:border-solid * {
-            visibility: visible;
-          }
-          .print\\:border-solid {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
+      <CheckInPrintPrompt
+        guest={checkInPromptGuest}
+        open={!!checkInPromptGuest}
+        onClose={() => setCheckInPromptGuest(null)}
+        onPrint={handleCheckInPrint}
+      />
+
+      <PrintKennelCardsModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        initialFormat={printInitialFormat}
+        guests={
+          printSingleId
+            ? currentGuests.filter((g) => g.id === printSingleId)
+            : currentGuests
         }
-      `}</style>
+      />
     </div>
   );
 }

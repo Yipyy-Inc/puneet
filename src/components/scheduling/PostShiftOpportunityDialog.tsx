@@ -66,6 +66,7 @@ interface Props {
   employees: ScheduleEmployee[];
   onPost: (opp: ShiftOpportunity) => void;
   defaultDepartmentId?: string;
+  canViewPayRates?: boolean;
 }
 
 interface PostForm {
@@ -110,6 +111,7 @@ export function PostShiftOpportunityDialog({
   employees,
   onPost,
   defaultDepartmentId,
+  canViewPayRates = true,
 }: Props) {
   const [form, setForm] = useState<PostForm>(emptyForm);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -266,7 +268,7 @@ export function PostShiftOpportunityDialog({
                             style={{ backgroundColor: p.color }}
                           />
                           {p.name}
-                          {p.hourlyRate && (
+                          {canViewPayRates && p.hourlyRate && (
                             <span className="text-muted-foreground">
                               ${p.hourlyRate}/hr
                             </span>

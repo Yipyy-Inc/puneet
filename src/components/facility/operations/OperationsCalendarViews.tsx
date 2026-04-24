@@ -157,7 +157,7 @@ export function EventChip({
             "group relative block w-full rounded-xl border px-2.5 py-2 text-left",
             "transition-all duration-150 hover:-translate-y-px hover:shadow-md active:translate-y-0 active:shadow-none",
             "cursor-pointer",
-            event.isSubEvent && "ml-3 border-dashed opacity-80",
+            event.isSubEvent && "border-dashed opacity-75",
             isCancelledBooking && "opacity-50",
           )}
         >
@@ -474,7 +474,7 @@ export function DayTimeline({
               })}
             </div>
             <div
-              className="relative space-y-1.5 p-2 pr-3"
+              className="relative flex flex-col gap-1.5 p-2 pr-3"
               style={{ minHeight: slotHeight }}
               onClick={(e) => {
                 const target = e.target as HTMLElement;
@@ -532,11 +532,11 @@ export function DayColumns({
   const today = new Date();
 
   return (
-    <div className="overflow-x-auto">
-    <div
-      className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7"
-      style={{ minWidth: days.length >= 7 ? "630px" : undefined }}
-    >
+    <div className="w-full overflow-x-auto">
+      <div
+        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7"
+        style={{ minWidth: days.length >= 7 ? "630px" : undefined }}
+      >
       {days.map((day) => {
         const dayEvents = getEventsForDay(events, day);
         const visibleEvents = dayEvents.slice(0, visibleLimit);
@@ -609,7 +609,7 @@ export function DayColumns({
 
             {/* Events area */}
             <div
-              className="flex-1 space-y-1.5 p-2"
+              className="flex flex-1 flex-col gap-1.5 p-2"
               onClick={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest("[data-calendar-event-chip]")) return;
@@ -641,7 +641,7 @@ export function DayColumns({
           </div>
         );
       })}
-    </div>
+      </div>
     </div>
   );
 }
@@ -716,7 +716,7 @@ export function ResourceColumnsView({
               </div>
             )}
             <div
-              className="flex-1 space-y-1.5 p-2"
+              className="flex flex-1 flex-col gap-1.5 p-2"
               onClick={(e) => {
                 const target = e.target as HTMLElement;
                 if (target.closest("[data-calendar-event-chip]")) return;
@@ -781,7 +781,7 @@ export function ListView({
                 })}
               </h3>
             </div>
-            <div className="space-y-1.5 p-3">
+            <div className="flex flex-col gap-1.5 p-3">
               {dayEvents.map((ev) => (
                 <EventChip
                   key={ev.id}

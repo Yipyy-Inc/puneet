@@ -71,6 +71,8 @@ interface AddShiftDialogProps {
     SchedulingSettings,
     "overtimeThresholdWeekly" | "minTimeBetweenShifts" | "maxConsecutiveDays"
   >;
+  /** When false, hourly rate badges are hidden (employees without payroll access). */
+  canViewPayRates?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ export function AddShiftDialog({
   availabilities,
   timeOffRequests,
   schedulingSettings,
+  canViewPayRates = true,
 }: AddShiftDialogProps) {
   const isEditing = !!editingShift;
 
@@ -303,7 +306,7 @@ export function AddShiftDialog({
                             style={{ backgroundColor: pos.color }}
                           />
                           {pos.name}
-                          {pos.hourlyRate && (
+                          {canViewPayRates && pos.hourlyRate && (
                             <Badge
                               variant="secondary"
                               className="ml-1 text-[10px]"

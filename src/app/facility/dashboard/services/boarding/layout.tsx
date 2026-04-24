@@ -20,6 +20,7 @@ import {
   Settings,
   FileText,
   Building2,
+  UtensilsCrossed,
 } from "lucide-react";
 
 const tabs = [
@@ -44,9 +45,14 @@ const tabs = [
     icon: DollarSign,
   },
   {
-    name: "Care Sheets",
-    href: "/facility/dashboard/services/boarding/care-sheets",
+    name: "Journals",
+    href: "/facility/dashboard/services/boarding/journals",
     icon: ClipboardList,
+  },
+  {
+    name: "Feeding",
+    href: "/facility/dashboard/services/boarding/feeding",
+    icon: UtensilsCrossed,
   },
   {
     name: "Kennel Cards",

@@ -56,7 +56,10 @@ export type Permission =
   | "attendance.view"
   | "attendance.edit"
   | "messaging.broadcast"
-  | "messaging.send";
+  | "messaging.send"
+  | "payroll.view"
+  | "boarding.feeding.view"
+  | "boarding.feeding.manage";
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   owner: [
@@ -86,6 +89,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "attendance.edit",
     "messaging.broadcast",
     "messaging.send",
+    "payroll.view",
+    "boarding.feeding.view",
+    "boarding.feeding.manage",
   ],
   general_manager: [
     "schedule.view",
@@ -111,6 +117,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "attendance.edit",
     "messaging.broadcast",
     "messaging.send",
+    "payroll.view",
+    "boarding.feeding.view",
+    "boarding.feeding.manage",
   ],
   department_manager: [
     "schedule.view",
@@ -128,6 +137,9 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "report.view",
     "attendance.view",
     "messaging.send",
+    "payroll.view",
+    "boarding.feeding.view",
+    "boarding.feeding.manage",
   ],
   supervisor: [
     "schedule.view",
@@ -137,6 +149,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "employee.view",
     "attendance.view",
     "messaging.send",
+    "boarding.feeding.view",
   ],
   employee: ["schedule.view", "employee.view"],
 };
