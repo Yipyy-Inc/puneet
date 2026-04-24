@@ -51,6 +51,21 @@ export type { KennelStatus } from "@/types/base";
 export type { PetSize } from "@/types/base";
 
 // ============================================================================
+// Medication Frequency Rule
+// ============================================================================
+
+export const medFrequencyRuleSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("daily") }),
+  z.object({ type: z.literal("every_other_day"), startDayOfStay: z.number().optional() }),
+  z.object({ type: z.literal("every_n_days"), n: z.number(), startDayOfStay: z.number().optional() }),
+  z.object({ type: z.literal("specific_days"), daysOfWeek: z.array(z.number()) }),
+  z.object({ type: z.literal("first_n_days"), days: z.number() }),
+  z.object({ type: z.literal("last_n_days"), days: z.number() }),
+  z.object({ type: z.literal("as_needed") }),
+]);
+export type MedFrequencyRule = z.infer<typeof medFrequencyRuleSchema>;
+
+// ============================================================================
 // Medication Schedule (boarding-specific, not the same as lib/types.ts meds)
 // ============================================================================
 
@@ -62,9 +77,74 @@ export const medicationScheduleSchema = z.object({
   times: z.array(z.string()),
   instructions: z.string(),
   requiresPhotoProof: z.boolean(),
+  frequencyRule: medFrequencyRuleSchema.optional(),
 });
 
 export type MedicationSchedule = z.infer<typeof medicationScheduleSchema>;
+
+// ============================================================================
+// Post-Surgery Info & Heat Cycle Info (optional per-guest care flags)
+// ============================================================================
+
+export const postSurgeryInfoSchema = z.object({
+  procedureType: z.string(),
+  surgeryDate: z.string(),
+  vetInstructions: z.string(),
+  monitoringIntervalHours: z.number().default(3),
+});
+export type PostSurgeryInfo = z.infer<typeof postSurgeryInfoSchema>;
+
+export const heatCycleInfoSchema = z.object({
+  startDate: z.string(),
+  dayNumber: z.number(),
+  notes: z.string().optional(),
+});
+export type HeatCycleInfo = z.infer<typeof heatCycleInfoSchema>;
+
+// ============================================================================
+// Facility Feeding Configuration
+// ============================================================================
+
+export const feedingSlotSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  time: z.string(),
+  enabled: z.boolean(),
+  sortOrder: z.number(),
+});
+export type FeedingSlot = z.infer<typeof feedingSlotSchema>;
+
+export const facilityFeedingConfigSchema = z.object({
+  slots: z.array(feedingSlotSchema),
+  showMedicationsInChecklist: z.boolean(),
+  matchWindowMinutes: z.number().default(90),
+});
+export type FacilityFeedingConfig = z.infer<typeof facilityFeedingConfigSchema>;
+
+// ============================================================================
+// Add-on Schedule
+// ============================================================================
+
+export const addonTypeEnum = z.enum([
+  "play_session",
+  "group_play",
+  "nature_walk",
+  "grooming",
+  "training",
+  "cuddle_time",
+  "spa",
+]);
+export type AddonType = z.infer<typeof addonTypeEnum>;
+
+export const addonScheduleSchema = z.object({
+  id: z.string(),
+  addonType: addonTypeEnum,
+  name: z.string(),
+  scheduledTime: z.string(),
+  durationMinutes: z.number(),
+  notes: z.string().optional(),
+});
+export type AddonSchedule = z.infer<typeof addonScheduleSchema>;
 
 // ============================================================================
 // Boarding Guest
@@ -103,6 +183,10 @@ export const boardingGuestSchema = z
     feedingTimes: z.array(z.string()),
     feedingAmount: z.string(),
     medications: z.array(medicationScheduleSchema),
+    addOns: z.array(addonScheduleSchema).optional(),
+    postSurgery: postSurgeryInfoSchema.optional(),
+    heatCycle: heatCycleInfoSchema.optional(),
+    tags: z.array(z.string()).optional(),
     notes: z.string(),
     createdAt: z.string(),
     includesEvaluation: z.boolean().optional(),

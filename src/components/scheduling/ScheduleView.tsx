@@ -82,7 +82,8 @@ const schedulingSettings = {
 };
 
 export function ScheduleView() {
-  const { user } = useCurrentUser();
+  const { user, can } = useCurrentUser();
+  const canViewPayRates = can("payroll.view");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [selectedDepartment, setSelectedDepartment] = useState<Department>(
@@ -608,6 +609,7 @@ export function ScheduleView() {
         pendingTimeOff={pendingTimeOff}
         pendingSwaps={pendingSwaps}
         overtimeAlerts={0}
+        canViewPayRates={canViewPayRates}
       />
 
       <div className="bg-muted/20 min-w-0 space-y-2 border-t px-4 py-2">
@@ -675,6 +677,7 @@ export function ScheduleView() {
         availabilities={employeeAvailabilities}
         timeOffRequests={enhancedTimeOffRequests}
         schedulingSettings={schedulingSettings}
+        canViewPayRates={canViewPayRates}
       />
 
       <TimeClock
@@ -696,6 +699,7 @@ export function ScheduleView() {
         positions={allPositions}
         employees={scheduleEmployees}
         defaultDepartmentId={selectedDepartment.id}
+        canViewPayRates={canViewPayRates}
         onPost={(opp) => {
           setShiftOpportunities((prev) => [opp, ...prev]);
           // Add an unassigned draft shift so it shows in the calendar
