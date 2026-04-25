@@ -158,7 +158,7 @@ export function MessageCenter({
 
   return (
     <div
-      className="flex h-[calc(100vh-120px)] gap-3"
+      className="flex h-full w-full gap-3"
       style={{
         fontFamily: "var(--font-inter), system-ui, sans-serif",
         letterSpacing: "-0.01em",

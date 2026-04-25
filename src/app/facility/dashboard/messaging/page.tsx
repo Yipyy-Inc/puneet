@@ -1,7 +1,11 @@
 "use client";
 
-import { MessageCenter } from "@/components/messaging/MessageCenter";
+import { CommunicationHub } from "@/components/messaging/CommunicationHub";
 
 export default function FacilityMessagingPage() {
-  return <MessageCenter />;
+  return (
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden">
+      <CommunicationHub />
+    </div>
+  );
 }
