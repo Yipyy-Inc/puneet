@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Plus,
@@ -12,6 +13,10 @@ import {
   Smartphone,
   ChevronRight,
   RefreshCw,
+  Star,
+  StarOff,
+  AlertTriangle,
+  Clock,
 } from "lucide-react";
 import {
   Popover,
@@ -21,8 +26,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Message } from "@/types/communications";
+import type { ThreadMeta } from "@/types/messaging";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { threadMeta as defaultThreadMeta } from "@/data/messaging";
 import { useFacilityRole } from "@/hooks/use-facility-role";
 import { getCustomerLanguageLabel } from "@/lib/language-settings";
 
@@ -38,9 +45,7 @@ const credits = (facility as Record<string, unknown>)?.smsCredits as
       autoReloadAmount: number;
     }
   | undefined;
-const smsTotal = credits
-  ? credits.monthlyAllowance + (credits.purchased ?? 0)
-  : 0;
+const smsTotal = credits ? credits.monthlyAllowance + (credits.purchased ?? 0) : 0;
 const smsRemaining = credits ? smsTotal - credits.used : 0;
 
 const SMS_PACKAGES = [
@@ -49,6 +54,30 @@ const SMS_PACKAGES = [
   { amount: 1000, price: 35 },
   { amount: 5000, price: 150 },
 ];
+
+const TAG_STYLES: Record<string, string> = {
+  vip: "bg-amber-100 text-amber-700 border-amber-200",
+  new_lead: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  overdue_payment: "bg-red-100 text-red-700 border-red-200",
+  boarding_now: "bg-blue-100 text-blue-700 border-blue-200",
+  high_priority: "bg-orange-100 text-orange-700 border-orange-200",
+  needs_follow_up: "bg-violet-100 text-violet-700 border-violet-200",
+  vaccine_expired: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  complaint: "bg-rose-100 text-rose-700 border-rose-200",
+  upsell_opportunity: "bg-teal-100 text-teal-700 border-teal-200",
+};
+
+const TAG_LABELS: Record<string, string> = {
+  vip: "VIP",
+  new_lead: "New Lead",
+  overdue_payment: "Overdue",
+  boarding_now: "Boarding",
+  high_priority: "High Priority",
+  needs_follow_up: "Follow-up",
+  vaccine_expired: "Vaccine Exp.",
+  complaint: "Complaint",
+  upsell_opportunity: "Upsell",
+};
 
 export interface Thread {
   threadId: string;
@@ -59,6 +88,7 @@ export interface Thread {
   unreadCount: number;
   channels: string[];
   isPlaceholder?: boolean;
+  meta?: ThreadMeta;
 }
 
 const COLORS = [
@@ -100,7 +130,18 @@ function relTime(iso: string): string {
   });
 }
 
-type Filter = "all" | "unread" | "sms" | "email" | "chat";
+type Filter = "all" | "unread" | "sms" | "email" | "chat" | "starred" | "high_priority" | "follow_up";
+
+const FILTER_ITEMS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "unread", label: "Unread" },
+  { key: "starred", label: "Starred" },
+  { key: "high_priority", label: "Priority" },
+  { key: "follow_up", label: "Follow-up" },
+  { key: "chat", label: "Chat" },
+  { key: "email", label: "Email" },
+  { key: "sms", label: "SMS" },
+];
 
 export function ContactList({
   messages,
@@ -117,12 +158,14 @@ export function ContactList({
 }) {
   const isCustomerMode = mode === "customer";
   const { role } = useFacilityRole();
-  const canPurchase =
-    !isCustomerMode && (role === "owner" || role === "manager");
+  const canPurchase = !isCustomerMode && (role === "owner" || role === "manager");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [compose, setCompose] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const [starredIds, setStarredIds] = useState<Set<string>>(
+    () => new Set(defaultThreadMeta.filter((m) => m.starred).map((m) => m.threadId)),
+  );
 
   const clientResults = useMemo(() => {
     if (!clientSearch.trim()) return clients.slice(0, 10);
@@ -141,23 +184,18 @@ export function ContactList({
       const tid = msg.threadId ?? msg.id;
       const existing = map.get(tid);
 
-      const customer = msg.clientId
-        ? clients.find((c) => c.id === msg.clientId)
-        : null;
-      const facility = msg.clientId
-        ? facilities.find((f) => f.id === msg.clientId)
-        : null;
+      const customer = msg.clientId ? clients.find((c) => c.id === msg.clientId) : null;
+      const facilityItem = msg.clientId ? facilities.find((f) => f.id === msg.clientId) : null;
       const counterpartyName = isCustomerMode
-        ? (facility?.name ?? msg.from)
+        ? (facilityItem?.name ?? msg.from)
         : (customer?.name ?? msg.from);
       const shouldCountUnread = isCustomerMode
         ? !msg.hasRead && msg.direction === "inbound"
         : !msg.hasRead;
 
-      if (
-        !existing ||
-        new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)
-      ) {
+      const meta = defaultThreadMeta.find((m) => m.threadId === tid);
+
+      if (!existing || new Date(msg.timestamp) > new Date(existing.lastMessage.timestamp)) {
         const ch = new Set(existing?.channels ?? []);
         ch.add(msg.type);
         map.set(tid, {
@@ -166,14 +204,12 @@ export function ContactList({
           clientName: counterpartyName,
           clientImage: isCustomerMode
             ? undefined
-            : ((customer as Record<string, unknown>)?.imageUrl as
-                | string
-                | undefined),
+            : ((customer as Record<string, unknown>)?.imageUrl as string | undefined),
           lastMessage: msg,
-          unreadCount:
-            (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
+          unreadCount: (existing?.unreadCount ?? 0) + (shouldCountUnread ? 1 : 0),
           channels: [...ch],
           isPlaceholder: false,
+          meta,
         });
       } else {
         existing.channels = [...new Set([...existing.channels, msg.type])];
@@ -181,25 +217,19 @@ export function ContactList({
       }
     }
 
-    if (
-      isCustomerMode &&
-      customerFacilityIds &&
-      customerFacilityIds.length > 0
-    ) {
-      const existingFacilityIds = new Set(
-        [...map.values()].map((thread) => thread.clientId),
-      );
+    if (isCustomerMode && customerFacilityIds && customerFacilityIds.length > 0) {
+      const existingFacilityIds = new Set([...map.values()].map((thread) => thread.clientId));
 
       for (const facilityId of customerFacilityIds) {
         if (existingFacilityIds.has(facilityId)) continue;
 
-        const facility = facilities.find((entry) => entry.id === facilityId);
-        if (!facility) continue;
+        const facilityItem = facilities.find((entry) => entry.id === facilityId);
+        if (!facilityItem) continue;
 
         map.set(`facility-${facilityId}`, {
           threadId: `facility-${facilityId}`,
           clientId: facilityId,
-          clientName: facility.name,
+          clientName: facilityItem.name,
           clientImage: undefined,
           unreadCount: 0,
           channels: [],
@@ -208,7 +238,7 @@ export function ContactList({
             id: `placeholder-${facilityId}`,
             type: "in-app",
             direction: "inbound",
-            from: facility.name,
+            from: facilityItem.name,
             to: "You",
             body: "No messages yet",
             status: "delivered",
@@ -222,13 +252,8 @@ export function ContactList({
     }
 
     return [...map.values()].sort((a, b) => {
-      const aTime = a.isPlaceholder
-        ? 0
-        : new Date(a.lastMessage.timestamp).getTime();
-      const bTime = b.isPlaceholder
-        ? 0
-        : new Date(b.lastMessage.timestamp).getTime();
-
+      const aTime = a.isPlaceholder ? 0 : new Date(a.lastMessage.timestamp).getTime();
+      const bTime = b.isPlaceholder ? 0 : new Date(b.lastMessage.timestamp).getTime();
       if (bTime !== aTime) return bTime - aTime;
       return a.clientName.localeCompare(b.clientName);
     });
@@ -238,10 +263,13 @@ export function ContactList({
     let list = threads;
     if (filter === "unread") list = list.filter((t) => t.unreadCount > 0);
     if (filter === "sms") list = list.filter((t) => t.channels.includes("sms"));
-    if (filter === "email")
-      list = list.filter((t) => t.channels.includes("email"));
-    if (filter === "chat")
-      list = list.filter((t) => t.channels.includes("in-app"));
+    if (filter === "email") list = list.filter((t) => t.channels.includes("email"));
+    if (filter === "chat") list = list.filter((t) => t.channels.includes("in-app"));
+    if (filter === "starred") list = list.filter((t) => starredIds.has(t.threadId));
+    if (filter === "high_priority")
+      list = list.filter((t) => t.meta?.tags.includes("high_priority"));
+    if (filter === "follow_up")
+      list = list.filter((t) => t.meta?.tags.includes("needs_follow_up") || t.meta?.status === "follow_up");
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -251,17 +279,27 @@ export function ContactList({
       );
     }
     return list;
-  }, [threads, filter, search]);
+  }, [threads, filter, search, starredIds]);
 
   const customerCanSwitchFacilities = isCustomerMode && threads.length > 1;
   const showSearch = !isCustomerMode || compose || customerCanSwitchFacilities;
   const showFilters = !compose && !isCustomerMode;
 
+  const toggleStar = (threadId: string, e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(threadId)) next.delete(threadId);
+      else next.add(threadId);
+      return next;
+    });
+  };
+
   return (
     <div className="flex h-full w-80 shrink-0 flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
-        <h1 className="text-xl font-bold text-slate-900">Messages</h1>
+        <h1 className="text-xl font-bold text-slate-900">Inbox</h1>
         {!isCustomerMode && (
           <Button
             size="icon"
@@ -288,9 +326,7 @@ export function ContactList({
               <Smartphone className="size-3.5 text-slate-400" />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-medium text-slate-500">
-                    SMS Credits
-                  </span>
+                  <span className="text-[10px] font-medium text-slate-500">SMS Credits</span>
                   <span
                     className={cn(
                       "text-[10px] font-bold tabular-nums",
@@ -308,39 +344,23 @@ export function ContactList({
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
-                      smsRemaining > 500
-                        ? "bg-blue-500"
-                        : smsRemaining > 100
-                          ? "bg-amber-500"
-                          : "bg-red-500",
+                      smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
                     )}
-                    style={{
-                      width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
-                    }}
+                    style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
                   />
                 </div>
               </div>
               <ChevronRight className="size-3 text-slate-300" />
             </button>
           </PopoverTrigger>
-          <PopoverContent
-            align="start"
-            className="w-64 rounded-xl border-slate-200 p-0 shadow-lg"
-          >
-            {/* Balance */}
+          <PopoverContent align="start" className="w-64 rounded-xl border-slate-200 p-0 shadow-lg">
             <div className="px-4 pt-3.5 pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500">
-                  SMS Balance
-                </span>
+                <span className="text-[11px] font-semibold text-slate-500">SMS Balance</span>
                 <span
                   className={cn(
                     "text-lg leading-none font-bold tabular-nums",
-                    smsRemaining > 500
-                      ? "text-blue-600"
-                      : smsRemaining > 100
-                        ? "text-amber-600"
-                        : "text-red-500",
+                    smsRemaining > 500 ? "text-blue-600" : smsRemaining > 100 ? "text-amber-600" : "text-red-500",
                   )}
                 >
                   {smsRemaining.toLocaleString()}
@@ -350,15 +370,9 @@ export function ContactList({
                 <div
                   className={cn(
                     "h-full rounded-full",
-                    smsRemaining > 500
-                      ? "bg-blue-500"
-                      : smsRemaining > 100
-                        ? "bg-amber-500"
-                        : "bg-red-500",
+                    smsRemaining > 500 ? "bg-blue-500" : smsRemaining > 100 ? "bg-amber-500" : "bg-red-500",
                   )}
-                  style={{
-                    width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%`,
-                  }}
+                  style={{ width: `${Math.min(100, (smsRemaining / smsTotal) * 100)}%` }}
                 />
               </div>
               <div className="mt-1.5 flex gap-3 text-[10px] text-slate-400">
@@ -371,19 +385,14 @@ export function ContactList({
               {credits.autoReload && (
                 <div className="mt-2 flex items-center gap-1.5">
                   <RefreshCw className="size-2.5 text-blue-400" />
-                  <span className="text-[10px] text-blue-500">
-                    Auto-reload on
-                  </span>
+                  <span className="text-[10px] text-blue-500">Auto-reload on</span>
                 </div>
               )}
             </div>
 
-            {/* Packages — owner/manager only */}
             {canPurchase && (
               <div className="border-t border-slate-100 px-4 pt-2.5 pb-3">
-                <p className="mb-2 text-[11px] font-semibold text-slate-500">
-                  Buy More Credits
-                </p>
+                <p className="mb-2 text-[11px] font-semibold text-slate-500">Buy More Credits</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {SMS_PACKAGES.map((pkg) => {
                     const perSms = ((pkg.price / pkg.amount) * 100).toFixed(1);
@@ -392,26 +401,18 @@ export function ContactList({
                         key={pkg.amount}
                         type="button"
                         onClick={() =>
-                          toast.success(
-                            `${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`,
-                          )
+                          toast.success(`${pkg.amount.toLocaleString()} credits purchased — $${pkg.price}`)
                         }
                         className="group flex flex-col items-center rounded-lg border border-slate-100 bg-slate-50/50 px-2 py-2 transition-all hover:border-blue-200 hover:bg-blue-50"
                       >
                         <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
-                          {pkg.amount >= 1000
-                            ? `${pkg.amount / 1000}K`
-                            : pkg.amount}
+                          {pkg.amount >= 1000 ? `${pkg.amount / 1000}K` : pkg.amount}
                         </span>
-                        <span className="text-[9px] text-slate-400">
-                          credits
-                        </span>
+                        <span className="text-[9px] text-slate-400">credits</span>
                         <span className="mt-1 rounded-full bg-blue-50 px-2 py-px text-[10px] font-semibold text-blue-600 group-hover:bg-blue-100">
                           ${pkg.price}
                         </span>
-                        <span className="mt-0.5 text-[9px] text-slate-400">
-                          {perSms}¢/sms
-                        </span>
+                        <span className="mt-0.5 text-[9px] text-slate-400">{perSms}¢/sms</span>
                       </button>
                     );
                   })}
@@ -433,14 +434,10 @@ export function ContactList({
                   ? "Search clients..."
                   : isCustomerMode
                     ? "Search facilities..."
-                    : "Search messages..."
+                    : "Search by name, phone, email..."
               }
               value={compose ? clientSearch : search}
-              onChange={(e) =>
-                compose
-                  ? setClientSearch(e.target.value)
-                  : setSearch(e.target.value)
-              }
+              onChange={(e) => (compose ? setClientSearch(e.target.value) : setSearch(e.target.value))}
               className="h-9 rounded-full border-slate-200 bg-slate-50 pl-9 text-sm"
               autoFocus={compose}
             />
@@ -450,21 +447,13 @@ export function ContactList({
 
       {/* Filters */}
       {showFilters && (
-        <div className="flex gap-1 px-4 pb-2">
-          {(
-            [
-              { key: "all" as Filter, label: "All" },
-              { key: "chat" as Filter, label: "Chat" },
-              { key: "email" as Filter, label: "Email" },
-              { key: "sms" as Filter, label: "SMS" },
-              { key: "unread" as Filter, label: "Unread" },
-            ] as const
-          ).map((f) => (
+        <div className="flex gap-1 overflow-x-auto px-4 pb-2 scrollbar-none">
+          {FILTER_ITEMS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "rounded-full px-3 py-1 text-[11px] font-semibold transition-all",
+                "shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold transition-all",
                 filter === f.key
                   ? "bg-slate-900 text-white"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200",
@@ -484,9 +473,7 @@ export function ContactList({
               key={client.id}
               onClick={() => {
                 const existing = threads.find((t) => t.clientId === client.id);
-                onSelectThread(
-                  existing ? existing.threadId : `new-${client.id}`,
-                );
+                onSelectThread(existing ? existing.threadId : `new-${client.id}`);
                 setCompose(false);
               }}
               className="flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors hover:bg-slate-50"
@@ -500,12 +487,8 @@ export function ContactList({
                 {initials(client.name)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-800">
-                  {client.name}
-                </p>
-                <p className="truncate text-xs text-slate-400">
-                  {client.email}
-                </p>
+                <p className="text-sm font-semibold text-slate-800">{client.name}</p>
+                <p className="truncate text-xs text-slate-400">{client.email}</p>
               </div>
             </button>
           ))}
@@ -523,36 +506,36 @@ export function ContactList({
           ) : (
             filtered.map((thread) => {
               const sel = selectedThreadId === thread.threadId;
-              const failed =
-                !thread.isPlaceholder && thread.lastMessage.status === "failed";
-              const threadClient = !isCustomerMode
-                ? clients.find((client) => client.id === thread.clientId)
-                : null;
+              const failed = !thread.isPlaceholder && thread.lastMessage.status === "failed";
+              const isStarred = starredIds.has(thread.threadId);
+              const threadClient = !isCustomerMode ? clients.find((c) => c.id === thread.clientId) : null;
               const preferredLanguageLabel = threadClient?.preferredLanguage
                 ? getCustomerLanguageLabel(threadClient.preferredLanguage)
                 : null;
+              const visibleTags = (thread.meta?.tags ?? []).slice(0, 2);
+              const status = thread.meta?.status;
 
               return (
                 <button
                   key={thread.threadId}
                   onClick={() => onSelectThread(thread.threadId)}
                   className={cn(
-                    "flex w-full items-center gap-3 px-5 py-3 text-left transition-all",
+                    "flex w-full items-start gap-3 px-4 py-3 text-left transition-all",
                     sel ? "bg-slate-100" : "hover:bg-slate-50",
                   )}
                 >
                   {/* Avatar */}
-                  <div className="relative shrink-0">
+                  <div className="relative mt-0.5 shrink-0">
                     {thread.clientImage ? (
                       <img
                         src={thread.clientImage}
                         alt=""
-                        className="size-12 rounded-full object-cover"
+                        className="size-11 rounded-full object-cover"
                       />
                     ) : (
                       <div
                         className={cn(
-                          "flex size-12 items-center justify-center rounded-full text-sm font-bold text-white",
+                          "flex size-11 items-center justify-center rounded-full text-sm font-bold text-white",
                           avatarColor(thread.clientName),
                         )}
                       >
@@ -560,13 +543,13 @@ export function ContactList({
                       </div>
                     )}
                     {thread.unreadCount > 0 && (
-                      <div className="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-white bg-emerald-500" />
+                      <div className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white bg-emerald-500" />
                     )}
                   </div>
 
                   {/* Content */}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span
                           className={cn(
@@ -584,19 +567,42 @@ export function ContactList({
                           </span>
                         )}
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 text-[10px]",
-                          thread.unreadCount > 0
-                            ? "font-semibold text-slate-900"
-                            : "text-slate-400",
+                      <div className="flex shrink-0 items-center gap-1">
+                        {isStarred && (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => toggleStar(thread.threadId, e)}
+                            onKeyDown={(e) => e.key === "Enter" && toggleStar(thread.threadId, e)}
+                            className="text-amber-400 hover:text-amber-500 cursor-pointer"
+                            title="Unstar"
+                          >
+                            <Star className="size-3 fill-current" />
+                          </div>
                         )}
-                      >
-                        {thread.isPlaceholder
-                          ? "new"
-                          : relTime(thread.lastMessage.timestamp)}
-                      </span>
+                        {!isStarred && sel && (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => toggleStar(thread.threadId, e)}
+                            onKeyDown={(e) => e.key === "Enter" && toggleStar(thread.threadId, e)}
+                            className="text-slate-300 hover:text-amber-400 cursor-pointer"
+                            title="Star"
+                          >
+                            <StarOff className="size-3" />
+                          </div>
+                        )}
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            thread.unreadCount > 0 ? "font-semibold text-slate-900" : "text-slate-400",
+                          )}
+                        >
+                          {thread.isPlaceholder ? "new" : relTime(thread.lastMessage.timestamp)}
+                        </span>
+                      </div>
                     </div>
+
                     <div className="mt-0.5 flex items-center justify-between gap-2">
                       {failed ? (
                         <span className="flex items-center gap-1 text-xs text-red-500">
@@ -607,16 +613,11 @@ export function ContactList({
                         <span
                           className={cn(
                             "truncate text-xs",
-                            thread.unreadCount > 0
-                              ? "text-slate-600"
-                              : "text-slate-400",
+                            thread.unreadCount > 0 ? "text-slate-600" : "text-slate-400",
                           )}
                         >
-                          {thread.lastMessage.direction === "outbound" &&
-                            "You: "}
-                          {thread.isPlaceholder
-                            ? "No messages yet"
-                            : thread.lastMessage.body}
+                          {thread.lastMessage.direction === "outbound" && "You: "}
+                          {thread.isPlaceholder ? "No messages yet" : thread.lastMessage.body}
                         </span>
                       )}
                       {thread.unreadCount > 0 && (
@@ -625,6 +626,35 @@ export function ContactList({
                         </span>
                       )}
                     </div>
+
+                    {/* Tags row */}
+                    {(visibleTags.length > 0 || status === "follow_up" || status === "pending_client") && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {status === "follow_up" && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700">
+                            <Clock className="size-2.5" />
+                            Follow-up
+                          </span>
+                        )}
+                        {status === "pending_client" && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                            <AlertTriangle className="size-2.5" />
+                            Pending
+                          </span>
+                        )}
+                        {visibleTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className={cn(
+                              "rounded-full border px-1.5 py-0.5 text-[9px] font-semibold",
+                              TAG_STYLES[tag] ?? "bg-slate-100 text-slate-600 border-slate-200",
+                            )}
+                          >
+                            {TAG_LABELS[tag] ?? tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </button>
               );
