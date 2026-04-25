@@ -4,8 +4,6 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import {
   Inbox,
-  Megaphone,
-  Zap,
   BarChart3,
   Settings,
   Smartphone,
@@ -15,8 +13,6 @@ import { cn } from "@/lib/utils";
 import { MessageCenter } from "./MessageCenter";
 import { facilities } from "@/data/facilities";
 
-const CampaignsView = dynamic(() => import("./CampaignsView").then((m) => m.CampaignsView));
-const AutomationsView = dynamic(() => import("./AutomationsView").then((m) => m.AutomationsView));
 const MessagingAnalyticsView = dynamic(() =>
   import("./MessagingAnalyticsView").then((m) => m.MessagingAnalyticsView),
 );
@@ -24,7 +20,7 @@ const MessagingSettingsView = dynamic(() =>
   import("./MessagingSettingsView").then((m) => m.MessagingSettingsView),
 );
 
-type HubTab = "inbox" | "campaigns" | "automations" | "analytics" | "settings";
+type HubTab = "inbox" | "analytics" | "settings";
 
 const facility = facilities.find((f) => f.id === 11);
 const credits = (facility as Record<string, unknown>)?.smsCredits as
@@ -36,8 +32,6 @@ const smsLow = credits ? smsRemaining / smsTotal < 0.1 : false;
 
 const NAV_ITEMS: { key: HubTab; label: string; icon: typeof Inbox }[] = [
   { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "campaigns", label: "Campaigns", icon: Megaphone },
-  { key: "automations", label: "Automations", icon: Zap },
   { key: "analytics", label: "Analytics", icon: BarChart3 },
   { key: "settings", label: "Settings", icon: Settings },
 ];
@@ -88,16 +82,6 @@ export function CommunicationHub() {
         {tab === "inbox" && (
           <div className="flex min-h-0 w-full flex-1 overflow-hidden p-4">
             <MessageCenter mode="facility" />
-          </div>
-        )}
-        {tab === "campaigns" && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <CampaignsView />
-          </div>
-        )}
-        {tab === "automations" && (
-          <div className="flex-1 overflow-y-auto p-6">
-            <AutomationsView />
           </div>
         )}
         {tab === "analytics" && (
