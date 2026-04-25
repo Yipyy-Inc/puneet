@@ -46,6 +46,7 @@ export interface MenuSection {
 
 export interface GenericSidebarProps {
   header?: React.ReactNode;
+  locationSelector?: React.ReactNode;
   menuSections: MenuSection[];
   footer?: React.ReactNode;
   onLogout?: () => void;
@@ -53,6 +54,7 @@ export interface GenericSidebarProps {
 
 export function GenericSidebar({
   header,
+  locationSelector,
   menuSections,
   footer,
   onLogout,
@@ -151,8 +153,12 @@ export function GenericSidebar({
                 <SidebarTrigger />
               </div>
             </div>
+            {/* Location Selector */}
+            {locationSelector && (
+              <div className="mt-2.5">{locationSelector}</div>
+            )}
             {/* Search Input */}
-            <div className="relative mt-3">
+            <div className="relative mt-2.5">
               <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <SidebarInput
                 type="text"

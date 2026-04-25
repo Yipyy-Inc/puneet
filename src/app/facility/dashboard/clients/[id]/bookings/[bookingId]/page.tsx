@@ -28,6 +28,7 @@ import {
   HandCoins,
   ShoppingBag,
   LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,9 @@ import { DepositChargeModal } from "@/components/bookings/DepositChargeModal";
 import { SendEstimateModal } from "@/components/bookings/SendEstimateModal";
 import { RefundModal } from "@/components/bookings/RefundModal";
 import { AddRetailItemModal } from "@/components/bookings/AddRetailItemModal";
+import { BookingTransferModal } from "@/components/bookings/modals/BookingTransferModal";
+import { getLocationsByFacility } from "@/data/locations";
+import { useLocationContext } from "@/hooks/use-location-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getPetAgeDisplay } from "@/lib/pet-utils";
@@ -308,6 +312,8 @@ export default function ClientBookingDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const { locations } = useLocationContext();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [earlyCheckoutOpen, setEarlyCheckoutOpen] = useState(false);
   const [tipSplitOpen, setTipSplitOpen] = useState(false);
@@ -830,6 +836,19 @@ ${(inv?.tipTotal ?? 0) > 0 ? `<div class="row sub"><span>Tip</span><span>$${(inv
                   Finish Without Payment
                 </Button>
               </>
+            )}
+
+            {/* Transfer — multi-location */}
+            {locations.length > 1 && !isCancelled && booking.status !== "completed" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setTransferOpen(true)}
+              >
+                <ArrowLeftRight className="size-3.5" />
+                Transfer
+              </Button>
             )}
 
             <div className="flex-1" />
@@ -1520,6 +1539,19 @@ ${
             setCancelOpen(false);
             toast.success(`${bookingRef} cancelled: ${r}`);
           }}
+        />
+        <BookingTransferModal
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+          bookingId={booking.id}
+          currentLocationId={locations[0]?.id ?? "loc-dv-main"}
+          service={booking.service}
+          basePrice={booking.basePrice}
+          petName={pet?.name ?? "Pet"}
+          clientName={client.name}
+          startDate={booking.startDate}
+          endDate={booking.endDate}
+          locations={locations}
         />
         {unifiedForEarlyCheckout && (
           <CheckOutDialog

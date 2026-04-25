@@ -34,17 +34,23 @@ import {
   ClipboardCheck,
   LayoutTemplate,
   Plus,
+  Globe,
+  GitCompare,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import { GenericSidebar, MenuSection } from "@/components/ui/generic-sidebar";
 import { facilities } from "@/data/facilities";
 import { useCustomServices } from "@/hooks/use-custom-services";
 import { resolveIcon } from "@/lib/service-registry";
+import { LocationContextSelector } from "@/components/hq/LocationContextSelector";
+import { useLocationContext } from "@/hooks/use-location-context";
 
 export function FacilitySidebar() {
   const isMounted = useHydrated();
   const { activeModules } = useCustomServices();
   const sidebarModules = isMounted ? activeModules : [];
+  const { isMultiLocation } = useLocationContext();
 
   // Show all menu items since permission system is removed
   const filteredMenuSections = useMemo((): MenuSection[] => {
@@ -340,11 +346,50 @@ export function FacilitySidebar() {
           },
         ],
       },
+      ...(isMultiLocation
+        ? [
+            {
+              label: "HQ",
+              items: [
+                {
+                  title: "HQ Overview",
+                  url: "/facility/hq/overview",
+                  icon: Globe,
+                  disabled: false,
+                },
+                {
+                  title: "Compare Locations",
+                  url: "/facility/hq/comparison",
+                  icon: GitCompare,
+                  disabled: false,
+                },
+                {
+                  title: "Staff Pool",
+                  url: "/facility/hq/staff",
+                  icon: Users,
+                  disabled: false,
+                },
+                {
+                  title: "Transfer History",
+                  url: "/facility/hq/transfers",
+                  icon: ArrowLeftRight,
+                  disabled: false,
+                },
+                {
+                  title: "HQ Settings",
+                  url: "/facility/hq/settings",
+                  icon: Settings,
+                  disabled: false,
+                },
+              ],
+            } satisfies MenuSection,
+          ]
+        : []),
     ];
 
     // Since permission system is removed, always show all items
     return allMenuSections;
-  }, [sidebarModules]);
+  }, [sidebarModules, isMultiLocation]);
 
   const handleLogout = () => {
     // TODO: Implement logout logic
@@ -391,6 +436,7 @@ export function FacilitySidebar() {
           </div>
         </div>
       }
+      locationSelector={<LocationContextSelector />}
       menuSections={filteredMenuSections}
       onLogout={handleLogout}
     />

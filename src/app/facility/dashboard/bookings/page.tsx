@@ -38,6 +38,9 @@ import { YipyyGoStatusBadge } from "@/components/yipyygo/YipyyGoStatusBadge";
 import { TagList } from "@/components/shared/TagList";
 import { getTagsByType, getNoteCount } from "@/data/tags-notes";
 import { BookingDateRangeFilter } from "@/components/bookings/BookingDateRangeFilter";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { deriveLocationId, getLocationById } from "@/data/locations";
+import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 const calculateTaskCount = (booking: Booking): number => {
   let count = 0;
 
@@ -154,6 +157,7 @@ export default function FacilityBookingsPage() {
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
   const { setRequests: setBookingRequests } = useBookingRequestsStore();
+  const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
 
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings as Booking[],
@@ -162,6 +166,13 @@ export default function FacilityBookingsPage() {
   const facilityBookings = bookings.filter(
     (booking) => booking.facilityId === facilityId,
   );
+
+  const locationBookings =
+    isMultiLocation && !isHQView && currentLocationId
+      ? facilityBookings.filter(
+          (b) => deriveLocationId(b.id) === currentLocationId,
+        )
+      : facilityBookings;
 
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
@@ -225,30 +236,30 @@ export default function FacilityBookingsPage() {
   }
 
   // Filter bookings by tab
-  const allBookings = facilityBookings;
-  const todayBookings = facilityBookings.filter((b) => isToday(b.startDate));
-  const upcomingBookings = facilityBookings.filter(
+  const allBookings = locationBookings;
+  const todayBookings = locationBookings.filter((b) => isToday(b.startDate));
+  const upcomingBookings = locationBookings.filter(
     (b) => isUpcoming(b.startDate) && b.status !== "cancelled",
   );
-  const pastBookings = facilityBookings.filter((b) => isPast(b.startDate));
-  const pendingBookings = facilityBookings.filter(
+  const pastBookings = locationBookings.filter((b) => isPast(b.startDate));
+  const pendingBookings = locationBookings.filter(
     (b) => b.status === "pending",
   );
 
   // Calculate stats
-  const totalBookings = facilityBookings.length;
-  const completedBookings = facilityBookings.filter(
+  const totalBookings = locationBookings.length;
+  const completedBookings = locationBookings.filter(
     (b) => b.status === "completed",
   ).length;
-  const totalRevenue = facilityBookings
+  const totalRevenue = locationBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((sum, b) => sum + b.totalCost, 0);
-  const pendingRevenue = facilityBookings
+  const pendingRevenue = locationBookings
     .filter((b) => b.paymentStatus === "pending")
     .reduce((sum, b) => sum + b.totalCost, 0);
 
   // Revenue by service
-  const revenueByService = facilityBookings
+  const revenueByService = locationBookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce(
       (acc, b) => {
@@ -280,6 +291,29 @@ export default function FacilityBookingsPage() {
         <span className="font-mono text-sm">#{booking.id}</span>
       ),
     },
+    ...(isMultiLocation && isHQView
+      ? [
+          {
+            key: "location",
+            label: "Location",
+            icon: CircleDot,
+            defaultVisible: true,
+            render: (booking: (typeof bookings)[number]) => {
+              const loc = getLocationById(deriveLocationId(booking.id));
+              if (!loc) return <span className="text-muted-foreground text-xs">—</span>;
+              return (
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="size-2 rounded-full"
+                    style={{ backgroundColor: loc.color }}
+                  />
+                  <span className="text-xs font-medium">{loc.shortCode}</span>
+                </div>
+              );
+            },
+          } as ColumnDef<(typeof bookings)[number]>,
+        ]
+      : []),
     {
       key: "client",
       label: "Client",
@@ -716,6 +750,7 @@ export default function FacilityBookingsPage() {
           <h2 className="text-2xl font-semibold tracking-tight">Bookings</h2>
           <p className="text-muted-foreground text-sm">{facility.name}</p>
         </div>
+        <LocationFilterBanner />
         <div className="flex flex-wrap items-center gap-2">
           <BookingDateRangeFilter
             rangeStart={filterStart}
