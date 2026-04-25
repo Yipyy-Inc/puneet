@@ -11,9 +11,9 @@ import { DataTable } from "@/components/ui/data-table";
 import type { ColumnDef } from "@/components/ui/data-table";
 import {
   Phone, PhoneCall, PhoneOff, PhoneIncoming, PhoneOutgoing,
-  Voicemail, Play, AlertCircle, Settings, Plus, Zap,
+  Voicemail, Play, AlertCircle, Settings, Plus,
   BarChart3, Radio, Search, Download, PhoneForwarded,
-  Clock, User, CheckCircle2, Pause, RefreshCw,
+  Clock, CheckCircle2, Pause, RefreshCw,
 } from "lucide-react";
 import { callLogs, routingRules } from "@/data/communications-hub";
 import { CallDetailsModal } from "@/components/communications/CallDetailsModal";
@@ -24,14 +24,12 @@ import { IVRBuilder } from "@/components/calling/IVRBuilder";
 import { CallAnalyticsDashboard } from "@/components/calling/CallAnalyticsDashboard";
 import { CallingSettingsPanel } from "@/components/calling/CallingSettingsPanel";
 import { VoicemailInbox } from "@/components/calling/VoicemailInbox";
-import { AICallSummaryModal } from "@/components/calling/AICallSummaryModal";
 import {
   mockIncomingCall, mockUnknownIncomingCall, mockActiveCall,
   callQueue, ivrConfig, voicemailGreetings,
-  aiCallSummaries, defaultCallingSettings, callAnalytics, missedCallTasks,
+  defaultCallingSettings, callAnalytics, missedCallTasks,
 } from "@/data/calling";
 import type { ActiveCall } from "@/types/calling";
-import type { AICallSummary } from "@/types/calling";
 
 // ─── helpers ────────────────────────────────────────────────
 function formatDuration(s: number) {
@@ -242,9 +240,7 @@ function DialerTab() {
 export default function CallingPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showRoutingModal, setShowRoutingModal] = useState(false);
-  const [showAISummary, setShowAISummary] = useState(false);
   const [selectedCall, setSelectedCall] = useState<(typeof callLogs)[0] | null>(null);
-  const [selectedSummary, setSelectedSummary] = useState<AICallSummary | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [incomingCall, setIncomingCall] = useState<ActiveCall | null>(null);
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
@@ -311,15 +307,6 @@ export default function CallingPage() {
       },
     },
     {
-      accessorKey: "aiHandled",
-      header: "Handled By",
-      cell: ({ row }) => (
-        <Badge variant={row.original.aiHandled ? "default" : "outline"}>
-          {row.original.aiHandled ? <><Zap className="mr-1 inline size-3" />AI</> : <><User className="mr-1 inline size-3" />Staff</>}
-        </Badge>
-      ),
-    },
-    {
       accessorKey: "timestamp",
       header: "Time",
       cell: ({ row }) => {
@@ -343,15 +330,6 @@ export default function CallingPage() {
             <Button variant="ghost" size="sm" title="Play Recording"
               onClick={() => alert(`Playing recording from ${row.original.from}…`)}>
               <Play className="size-4" />
-            </Button>
-          )}
-          {aiCallSummaries.find((s) => s.callId === row.original.id) && (
-            <Button variant="ghost" size="sm" title="AI Summary"
-              onClick={() => {
-                setSelectedSummary(aiCallSummaries.find((s) => s.callId === row.original.id)!);
-                setShowAISummary(true);
-              }}>
-              <Zap className="size-4 text-primary" />
             </Button>
           )}
           <Button variant="ghost" size="sm" title="View Details"
@@ -413,11 +391,7 @@ export default function CallingPage() {
       {activeCall && (
         <ActiveCallPanel
           call={activeCall}
-          onEnd={() => {
-            setActiveCall(null);
-            const summary = aiCallSummaries[0];
-            if (summary) { setSelectedSummary(summary); setShowAISummary(true); }
-          }}
+          onEnd={() => setActiveCall(null)}
           onTransfer={() => alert("Transfer UI coming soon…")}
         />
       )}
@@ -547,10 +521,9 @@ export default function CallingPage() {
                 </div>
               </CardContent>
             </Card>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               {[
                 { label: "Total Calls", value: filteredCalls.length, sub: "This month" },
-                { label: "AI Handled", value: filteredCalls.filter((c) => c.aiHandled).length, sub: `${filteredCalls.length > 0 ? Math.round((filteredCalls.filter((c) => c.aiHandled).length / filteredCalls.length) * 100) : 0}% of total` },
                 { label: "Avg Duration", value: `${filteredCalls.length > 0 ? Math.floor(filteredCalls.reduce((s, c) => s + c.duration, 0) / filteredCalls.length / 60) : 0}m`, sub: "Per call" },
                 { label: "With Recordings", value: filteredCalls.filter((c) => c.recordingUrl).length, sub: "Available" },
               ].map(({ label, value, sub }) => (
@@ -647,18 +620,6 @@ export default function CallingPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showAISummary} onOpenChange={setShowAISummary}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          {selectedSummary && (
-            <AICallSummaryModal
-              summary={selectedSummary}
-              clientName={selectedCall?.clientName}
-              onSave={(s) => { alert("Summary saved to client profile!"); setSelectedSummary(s); }}
-              onClose={() => { setShowAISummary(false); setSelectedSummary(null); }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

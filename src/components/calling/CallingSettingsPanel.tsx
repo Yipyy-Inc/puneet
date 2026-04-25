@@ -30,6 +30,7 @@ import {
   MapPin,
   Shuffle,
 } from "lucide-react";
+import { TimePickerLux } from "@/components/ui/time-picker-lux";
 import { cn } from "@/lib/utils";
 import type { CallingSettings, DispatchMode } from "@/types/calling";
 
@@ -242,12 +243,12 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
         </CardContent>
       </Card>
 
-      {/* Recording & AI */}
+      {/* Recording */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Mic className="size-4 text-red-500" />
-            Recording &amp; AI
+            Recording
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -274,16 +275,6 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <Label>AI Call Summary</Label>
-                <p className="text-xs text-muted-foreground">Generate sentiment, upsells &amp; follow-up tasks post-call</p>
-              </div>
-              <Switch
-                checked={settings.aiSummaryEnabled}
-                onCheckedChange={(v) => update("aiSummaryEnabled", v)}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
                 <Label>Compliance Notice</Label>
                 <p className="text-xs text-muted-foreground">Play "This call may be recorded" greeting</p>
               </div>
@@ -293,23 +284,18 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
               />
             </div>
           </div>
-          <div>
-            <Label className="mb-2 block text-sm">Recording Retention</Label>
-            <Select
-              value={settings.recordingStorage}
-              onValueChange={(v) =>
-                update("recordingStorage", v as CallingSettings["recordingStorage"])
-              }
-            >
-              <SelectTrigger className="max-w-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="30_days">30 days — Basic plan</SelectItem>
-                <SelectItem value="90_days">90 days — Pro plan</SelectItem>
-                <SelectItem value="unlimited">Unlimited — Enterprise plan</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium">Recording Retention</p>
+              <p className="text-xs text-muted-foreground">Determined by your subscription plan</p>
+            </div>
+            <Badge variant="secondary" className="shrink-0">
+              {settings.recordingStorage === "30_days"
+                ? "30 days — Basic"
+                : settings.recordingStorage === "90_days"
+                  ? "90 days — Pro"
+                  : "Unlimited — Enterprise"}
+            </Badge>
           </div>
         </CardContent>
       </Card>
@@ -376,18 +362,19 @@ export function CallingSettingsPanel({ settings: initial }: CallingSettingsPanel
                   </span>
                   {h.enabled ? (
                     <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        className="h-8 w-28 text-sm"
+                      <TimePickerLux
                         value={h.open}
-                        onChange={(e) => updateHours(day, "open", e.target.value)}
+                        onValueChange={(v) => updateHours(day, "open", v)}
+                        displayMode="popover"
+                        stepMinutes={15}
                       />
                       <span className="text-muted-foreground">—</span>
-                      <Input
-                        type="time"
-                        className="h-8 w-28 text-sm"
+                      <TimePickerLux
                         value={h.close}
-                        onChange={(e) => updateHours(day, "close", e.target.value)}
+                        onValueChange={(v) => updateHours(day, "close", v)}
+                        displayMode="popover"
+                        stepMinutes={15}
+                        min={h.open}
                       />
                     </div>
                   ) : (

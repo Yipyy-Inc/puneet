@@ -22,6 +22,7 @@ import {
   Star,
   AlertTriangle,
   UserX,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActiveCall } from "@/types/calling";
@@ -66,9 +67,10 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
   const timer = useCallTimer(call.startTime);
 
   return (
-    <div className="fixed right-0 top-0 z-40 flex h-full w-[320px] flex-col border-l bg-background shadow-2xl">
+    <div className="fixed right-0 top-16 bottom-0 z-50 flex w-[300px] flex-col border-l bg-background shadow-2xl">
+
       {/* Recording bar */}
-      <div className="flex shrink-0 items-center justify-center gap-2 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-600">
+      <div className="flex shrink-0 items-center justify-center gap-2 bg-red-500/10 px-4 py-1.5 text-xs font-semibold text-red-600">
         <span className="relative flex size-2">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-400 opacity-75" />
           <span className="relative inline-flex size-2 rounded-full bg-red-500" />
@@ -79,23 +81,32 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
       {/* Client header */}
       <div className="shrink-0 border-b bg-muted/30 p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="size-12 border-2 border-green-400/60 ring-2 ring-green-400/20">
-            <AvatarFallback className="bg-primary/10 font-bold text-primary">
+          <Avatar className="size-11 border-2 border-green-400/60 ring-2 ring-green-400/20">
+            <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">
               {call.clientName
                 ? call.clientName.split(" ").map((n) => n[0]).join("")
                 : "?"}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-bold">
-              {call.clientName ?? "Unknown Caller"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate font-bold leading-tight">
+                {call.clientName ?? "Unknown Caller"}
+              </p>
+              <button
+                className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                title="View client profile"
+                onClick={() => alert("Opening client profile…")}
+              >
+                <ExternalLink className="size-3.5" />
+              </button>
+            </div>
             <p className="font-mono text-xs text-muted-foreground">{call.from}</p>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1.5 flex items-center gap-2">
               <Badge
                 variant={onHold ? "secondary" : "default"}
                 className={cn(
-                  "gap-1 text-xs",
+                  "gap-1 px-2 py-0 text-[11px]",
                   !onHold && "bg-green-600 hover:bg-green-700",
                 )}
               >
@@ -111,7 +122,7 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
 
         {/* Tags */}
         {call.tags && call.tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1">
             {call.tags.map((tag) => {
               const cfg = tagConfig[tag];
               if (!cfg) return null;
@@ -119,7 +130,7 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
                 <span
                   key={tag}
                   className={cn(
-                    "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                    "flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
                     cfg.color,
                   )}
                 >
@@ -136,57 +147,58 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
         )}
       </div>
 
-      {/* Context info */}
-      <div className="shrink-0 space-y-2 border-b p-4">
-        {call.pets && call.pets.length > 0 && (
-          <div className="flex items-start gap-2 text-sm">
-            <Dog className="mt-0.5 size-4 shrink-0 text-amber-500" />
-            <div>
-              <p className="font-semibold">
-                {call.pets.map((p) => p.name).join(", ")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {call.pets.map((p) => p.breed).join(" · ")}
-              </p>
+      {/* Scrollable middle: context + notes */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Context info */}
+        <div className="space-y-2 border-b p-4">
+          {call.pets && call.pets.length > 0 && (
+            <div className="flex items-start gap-2 text-sm">
+              <Dog className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <div>
+                <p className="font-semibold leading-tight">
+                  {call.pets.map((p) => p.name).join(", ")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {call.pets.map((p) => p.breed).join(" · ")}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
-        {call.currentService && (
-          <div className="flex items-start gap-2 text-sm">
-            <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" />
-            <p className="text-sm">{call.currentService}</p>
-          </div>
-        )}
-        {call.upcomingAppointments !== undefined && call.upcomingAppointments > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
-            <span>{call.upcomingAppointments} upcoming appointment{call.upcomingAppointments > 1 ? "s" : ""}</span>
-          </div>
-        )}
-        {call.outstandingBalance !== undefined && call.outstandingBalance > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <DollarSign className="size-4 shrink-0 text-amber-500" />
-            <span className="font-semibold text-amber-600">
-              ${call.outstandingBalance.toFixed(2)} outstanding balance
-            </span>
-          </div>
-        )}
-      </div>
+          )}
+          {call.currentService && (
+            <div className="flex items-start gap-2 text-sm">
+              <CalendarDays className="mt-0.5 size-4 shrink-0 text-blue-500" />
+              <p>{call.currentService}</p>
+            </div>
+          )}
+          {call.upcomingAppointments !== undefined && call.upcomingAppointments > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+              <span>{call.upcomingAppointments} upcoming appointment{call.upcomingAppointments > 1 ? "s" : ""}</span>
+            </div>
+          )}
+          {call.outstandingBalance !== undefined && call.outstandingBalance > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="size-4 shrink-0 text-amber-500" />
+              <span className="font-semibold text-amber-600">
+                ${call.outstandingBalance.toFixed(2)} outstanding
+              </span>
+            </div>
+          )}
+        </div>
 
-      {/* Notes */}
-      <div className="flex flex-1 flex-col overflow-hidden p-4">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Call Notes
-        </p>
-        <Textarea
-          className="flex-1 resize-none text-sm"
-          placeholder="Type notes during the call… (auto-saved)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+        {/* Notes */}
+        <div className="p-4">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Call Notes
+          </p>
+          <Textarea
+            className="min-h-[100px] resize-none text-sm"
+            placeholder="Type notes during the call…"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
       </div>
-
-      <Separator />
 
       {/* DTMF Keypad */}
       {showKeypad && (
@@ -220,13 +232,16 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
         </div>
       )}
 
-      {/* Call controls */}
-      <div className="shrink-0 border-t p-4">
-        <div className="mb-3 grid grid-cols-4 gap-2">
+      <Separator />
+
+      {/* Call controls — always pinned at bottom */}
+      <div className="shrink-0 p-3 space-y-2">
+        {/* 4 secondary controls */}
+        <div className="grid grid-cols-4 gap-1.5">
           <button
             onClick={() => setMuted((m) => !m)}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-xl border p-2 text-xs font-medium transition-colors",
+              "flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-colors",
               muted
                 ? "border-red-200 bg-red-50 text-red-600"
                 : "border-border bg-background hover:bg-muted",
@@ -238,7 +253,7 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
           <button
             onClick={() => setOnHold((h) => !h)}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-xl border p-2 text-xs font-medium transition-colors",
+              "flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-colors",
               onHold
                 ? "border-amber-200 bg-amber-50 text-amber-600"
                 : "border-border bg-background hover:bg-muted",
@@ -250,7 +265,7 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
           <button
             onClick={() => setShowKeypad((k) => !k)}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-xl border p-2 text-xs font-medium transition-colors",
+              "flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-medium transition-colors",
               showKeypad
                 ? "border-primary/30 bg-primary/10 text-primary"
                 : "border-border bg-background hover:bg-muted",
@@ -261,29 +276,28 @@ export function ActiveCallPanel({ call, onEnd, onTransfer }: ActiveCallPanelProp
           </button>
           <button
             onClick={onTransfer}
-            className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-medium transition-colors hover:bg-muted"
+            className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-2 text-[11px] font-medium transition-colors hover:bg-muted"
           >
             <PhoneForwarded className="size-5" />
             Transfer
           </button>
         </div>
 
-        <div className="mb-2 grid grid-cols-2 gap-2">
-          <button className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-medium transition-colors hover:bg-muted">
-            <Users className="size-5" />
-            Add Staff
-          </button>
-          <button className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-2 text-xs font-medium transition-colors hover:bg-muted">
-            <PhoneForwarded className="size-5" />
-            Warm Transfer
-          </button>
-        </div>
+        {/* Add Staff */}
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background py-2 text-xs font-medium transition-colors hover:bg-muted"
+          onClick={() => alert("Adding staff to call…")}
+        >
+          <Users className="size-4" />
+          Add Staff to Call
+        </button>
 
+        {/* End Call */}
         <Button
-          className="h-12 w-full gap-2 bg-red-600 text-base font-semibold hover:bg-red-700"
+          className="h-11 w-full gap-2 bg-red-600 text-sm font-semibold hover:bg-red-700"
           onClick={onEnd}
         >
-          <Phone className="size-5 rotate-[135deg]" />
+          <Phone className="size-4 rotate-[135deg]" />
           End Call
         </Button>
       </div>

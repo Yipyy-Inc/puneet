@@ -119,12 +119,15 @@ export function KennelCardTemplate({
     <div className="w-[640px] bg-white p-6 font-sans text-black print:w-full">
       {/* Header */}
       <div className="flex items-start gap-4 border-b-2 border-gray-800 pb-4">
-        <div className="flex size-20 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-          <PawPrint className="size-10 text-gray-400" />
+        <div className="flex size-28 shrink-0 items-center justify-center rounded-xl bg-gray-100">
+          <PawPrint className="size-14 text-gray-400" />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-black leading-tight tracking-tight">
-            {guest.petName}
+            {guest.petName}{" "}
+            <span className="text-2xl font-semibold text-gray-400">
+              {guest.ownerName.split(" ").pop()}
+            </span>
           </h1>
           <p className="text-base text-gray-500">{guest.petBreed}</p>
           {options.showWeight && (
@@ -307,7 +310,7 @@ export function KennelCardTemplate({
       )}
 
       {/* Footer */}
-      <div className="mt-4 border-t pt-2 text-center text-[10px] text-gray-400">
+      <div suppressHydrationWarning className="mt-4 border-t pt-2 text-center text-[10px] text-gray-400">
         Doggieville MTL · Generated {new Date().toLocaleString()}
       </div>
     </div>
@@ -326,91 +329,102 @@ export function DoorCardTemplate({
   const behaviorTags = guest.tags ?? [];
 
   return (
-    <div className="w-[360px] rounded-2xl border-4 border-gray-800 bg-white p-5 font-sans text-black print:w-full">
-      {/* Kennel banner */}
-      <div className="mb-3 rounded-xl bg-gray-900 py-2 text-center text-white">
-        <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400">
-          Kennel
-        </p>
-        <p className="text-2xl font-black leading-tight">
-          {guest.kennelName.split(" - ")[0]}
-        </p>
-        {guest.kennelName.includes(" - ") && (
-          <p className="text-xs text-gray-400">
-            {guest.kennelName.split(" - ")[1]}
-          </p>
-        )}
-      </div>
-
-      {/* Pet identity */}
-      <div className="mb-3 text-center">
-        <h1 className="text-5xl font-black leading-none tracking-tight">
-          {guest.petName}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">{guest.petBreed}</p>
-        {options.showWeight && (
-          <p className="text-xs text-gray-400">
-            {guest.petSize.charAt(0).toUpperCase() + guest.petSize.slice(1)} ·{" "}
-            {guest.petWeight} lbs · {guest.petColor}
-          </p>
-        )}
-      </div>
-
-      {/* Dates */}
-      <div className="mb-3 flex items-center justify-center gap-2 rounded-lg bg-gray-100 py-1.5 text-sm">
-        <Calendar className="size-3.5 text-gray-500" />
-        <span className="font-semibold">{fmtDate(guest.checkInDate)}</span>
-        <span className="text-gray-400">→</span>
-        <span className="font-semibold">{fmtDate(guest.checkOutDate)}</span>
-      </div>
-
-      {/* Alert flags */}
-      <div className="mb-3 flex flex-wrap justify-center gap-1.5">
-        {guest.allergies.length > 0 && (
-          <span className="rounded-full border border-red-300 bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
-            ⚠ ALLERGIES
-          </span>
-        )}
-        {guest.medications.length > 0 && (
-          <span className="rounded-full border border-purple-300 bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">
-            💊 MEDS
-          </span>
-        )}
-        {guest.postSurgery && (
-          <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-700">
-            🏥 POST-SURGERY
-          </span>
-        )}
-        {guest.heatCycle && (
-          <span className="rounded-full border border-pink-300 bg-pink-100 px-2.5 py-1 text-xs font-bold text-pink-700">
-            🌡 HEAT CYCLE
-          </span>
-        )}
-      </div>
-
-      {/* Behavior tags */}
-      {options.showBehaviorTags && behaviorTags.length > 0 && (
-        <div className="mb-3 flex flex-wrap justify-center gap-0">
-          {behaviorTags.map((tag) => (
-            <PrintTag key={tag} tag={tag} />
-          ))}
+    <div className="w-[580px] rounded-2xl border-4 border-gray-800 bg-white font-sans text-black print:w-full">
+      <div className="flex">
+        {/* Left column — photo + kennel badge */}
+        <div className="flex w-44 shrink-0 flex-col items-center gap-3 border-r-4 border-gray-800 bg-gray-50 p-4">
+          <div className="flex size-32 items-center justify-center rounded-xl bg-gray-200">
+            <PawPrint className="size-16 text-gray-400" />
+          </div>
+          <div className="w-full rounded-xl bg-gray-900 py-2 text-center text-white">
+            <p className="text-[8px] font-semibold uppercase tracking-widest text-gray-400">
+              Kennel
+            </p>
+            <p className="text-xl font-black leading-tight">
+              {guest.kennelName.split(" - ")[0]}
+            </p>
+            {guest.kennelName.includes(" - ") && (
+              <p className="text-[10px] text-gray-400">
+                {guest.kennelName.split(" - ")[1]}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <QRCodeSVG value={`${QR_BASE}/${guest.id}`} size={72} level="M" />
+            <p className="text-[9px] text-gray-400">Scan for care sheet</p>
+          </div>
         </div>
-      )}
 
-      {/* Owner info */}
-      {(options.showOwnerName || options.showPhone) && (
-        <div className="mb-3 rounded-lg bg-gray-50 p-2 text-center text-xs text-gray-600">
-          {options.showOwnerName && (
-            <p className="font-semibold">{guest.ownerName}</p>
+        {/* Right column — info */}
+        <div className="flex flex-1 flex-col justify-between p-4">
+          {/* Pet identity */}
+          <div>
+            <h1 className="text-4xl font-black leading-none tracking-tight">
+              {guest.petName}{" "}
+              <span className="text-2xl font-semibold text-gray-400">
+                {guest.ownerName.split(" ").pop()}
+              </span>
+            </h1>
+            <p className="mt-0.5 text-sm text-gray-500">{guest.petBreed}</p>
+            {options.showWeight && (
+              <p className="text-xs text-gray-400">
+                {guest.petSize.charAt(0).toUpperCase() + guest.petSize.slice(1)}{" "}
+                · {guest.petWeight} lbs · {guest.petColor}
+              </p>
+            )}
+          </div>
+
+          {/* Dates */}
+          <div className="mt-3 flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-1.5 text-sm">
+            <Calendar className="size-3.5 text-gray-500" />
+            <span className="font-semibold">{fmtDate(guest.checkInDate)}</span>
+            <span className="text-gray-400">→</span>
+            <span className="font-semibold">{fmtDate(guest.checkOutDate)}</span>
+          </div>
+
+          {/* Alert flags */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {guest.allergies.length > 0 && (
+              <span className="rounded-full border border-red-300 bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
+                ⚠ ALLERGIES
+              </span>
+            )}
+            {guest.medications.length > 0 && (
+              <span className="rounded-full border border-purple-300 bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-700">
+                💊 MEDS
+              </span>
+            )}
+            {guest.postSurgery && (
+              <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-xs font-bold text-orange-700">
+                🏥 POST-SURGERY
+              </span>
+            )}
+            {guest.heatCycle && (
+              <span className="rounded-full border border-pink-300 bg-pink-100 px-2.5 py-1 text-xs font-bold text-pink-700">
+                🌡 HEAT CYCLE
+              </span>
+            )}
+          </div>
+
+          {/* Behavior tags */}
+          {options.showBehaviorTags && behaviorTags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-0">
+              {behaviorTags.map((tag) => (
+                <PrintTag key={tag} tag={tag} />
+              ))}
+            </div>
           )}
-          {options.showPhone && <p>{guest.ownerPhone}</p>}
-        </div>
-      )}
 
-      {/* QR code */}
-      <div className="flex flex-col items-center gap-1">
-        <QRCodeSVG value={`${QR_BASE}/${guest.id}`} size={96} level="M" />
-        <p className="text-[10px] text-gray-400">Scan for care sheet</p>
+          {/* Owner info */}
+          {(options.showOwnerName || options.showPhone) && (
+            <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1.5 text-xs text-gray-600">
+              {options.showOwnerName && (
+                <p className="font-semibold">{guest.ownerName}</p>
+              )}
+              {options.showPhone && <p>{guest.ownerPhone}</p>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -544,7 +558,7 @@ export function PrintKennelCardsModal({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Printer className="size-5" />
-              Print Kennel Cards
+              Print Boarding Sheets
             </DialogTitle>
           </DialogHeader>
 
@@ -559,7 +573,7 @@ export function PrintKennelCardsModal({
                   className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
                 >
                   <CreditCard className="size-4" />
-                  Kennel Card
+                  Boarding Sheet
                 </button>
                 <button
                   data-active={format === "door"}
@@ -567,7 +581,7 @@ export function PrintKennelCardsModal({
                   className="flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm transition-all data-[active=false]:border-border data-[active=false]:hover:bg-muted/50 data-[active=true]:border-primary data-[active=true]:bg-primary/5"
                 >
                   <Tag className="size-4" />
-                  Door Card
+                  Bin Label
                 </button>
               </div>
             </div>
