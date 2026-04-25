@@ -23,6 +23,8 @@ import {
   getCategoryMeta,
 } from "@/data/custom-services";
 import type { CustomServiceModule } from "@/types/facility";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { deriveLocationId } from "@/data/locations";
 
 export type UnifiedStatus = "scheduled" | "checked-in" | "checked-out";
 
@@ -315,6 +317,7 @@ function normalizeCustom(
 
 export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
   const { activeModules } = useCustomServices();
+  const { currentLocationId, isHQView } = useLocationContext();
 
   const [boardingState, setBoardingState] =
     useState<BoardingGuest[]>(boardingGuests);
@@ -413,6 +416,11 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
       const mod = moduleMap.get(c.moduleId);
       list.push(normalizeCustom(c, mod));
     }
+    if (!isHQView && currentLocationId) {
+      return list.filter(
+        (b) => deriveLocationId(b.rawId) === currentLocationId,
+      );
+    }
     return list;
   }, [
     boardingState,
@@ -421,6 +429,8 @@ export function UnifiedBookingsProvider({ children }: { children: ReactNode }) {
     trainingBookings,
     customState,
     moduleMap,
+    currentLocationId,
+    isHQView,
   ]);
 
   const counts = useMemo(() => {

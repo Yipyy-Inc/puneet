@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { clients } from "@/data/clients";
 import { facilities } from "@/data/facilities";
+import { useLocationContext } from "@/hooks/use-location-context";
+import { deriveLocationId } from "@/data/locations";
+import { LocationFilterBanner } from "@/components/hq/LocationFilterBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -166,6 +169,7 @@ export default function FacilityClientsPage() {
   const router = useRouter();
   const facilityId = 11;
   const facility = facilities.find((f) => f.id === facilityId);
+  const { currentLocationId, isHQView, isMultiLocation } = useLocationContext();
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const {
     filters,
@@ -192,6 +196,13 @@ export default function FacilityClientsPage() {
   const facilityClients = clientsData.filter(
     (client) => client.facility === facility.name,
   );
+
+  const locationClients =
+    isMultiLocation && !isHQView && currentLocationId
+      ? facilityClients.filter(
+          (c) => deriveLocationId(c.id) === currentLocationId,
+        )
+      : facilityClients;
 
   const handleCreateClient = (newClient: {
     name: string;
@@ -251,10 +262,10 @@ export default function FacilityClientsPage() {
     setClientsData([...clientsData, clientWithId]);
   };
 
-  const totalPets = facilityClients.reduce((sum, c) => sum + c.pets.length, 0);
+  const totalPets = locationClients.reduce((sum, c) => sum + c.pets.length, 0);
   const avgPetsPerClient =
-    facilityClients.length > 0
-      ? Math.round((totalPets / facilityClients.length) * 10) / 10
+    locationClients.length > 0
+      ? Math.round((totalPets / locationClients.length) * 10) / 10
       : 0;
 
   const columns: ColumnDef<(typeof clients)[number]>[] = [
@@ -386,8 +397,8 @@ export default function FacilityClientsPage() {
     },
   ];
 
-  const filteredClients = applyFilters(facilityClients);
-  const selectedClients = facilityClients.filter((client) =>
+  const filteredClients = applyFilters(locationClients);
+  const selectedClients = locationClients.filter((client) =>
     selectedIds.has(client.id),
   );
   const selectedClientsWithEmail = selectedClients.filter(
@@ -440,17 +451,18 @@ export default function FacilityClientsPage() {
     }
   };
 
-  const activeClientCount = facilityClients.filter(
+  const activeClientCount = locationClients.filter(
     (c) => c.status === "active",
   ).length;
   const inactiveClientCount = Math.max(
     0,
-    facilityClients.length - activeClientCount,
+    locationClients.length - activeClientCount,
   );
   const shouldShowFiltersPanel = filtersExpanded || activeCount > 0;
 
   return (
     <div className="flex-1 space-y-6 bg-linear-to-b from-slate-50/70 to-transparent p-4 pt-6 md:p-6">
+      <LocationFilterBanner />
       {/* Header */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-sm">
         <div className="pointer-events-none absolute -top-20 -right-16 h-48 w-48 rounded-full bg-sky-200/30 blur-3xl" />
@@ -474,7 +486,7 @@ export default function FacilityClientsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">
-                {facilityClients.length} total
+                {locationClients.length} total
               </Badge>
               <Badge className="bg-emerald-100 text-xs text-emerald-700 hover:bg-emerald-100">
                 {activeClientCount} active
@@ -490,7 +502,7 @@ export default function FacilityClientsPage() {
               variant="outline"
               size="sm"
               className="bg-white/90"
-              onClick={() => exportClientsToCSV(facilityClients)}
+              onClick={() => exportClientsToCSV(locationClients)}
             >
               <Download className="mr-2 size-4" />
               Export
@@ -515,7 +527,7 @@ export default function FacilityClientsPage() {
             <User className="size-4 text-sky-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{facilityClients.length}</div>
+            <div className="text-2xl font-bold">{locationClients.length}</div>
             <p className="text-muted-foreground text-xs">
               All registered clients
             </p>
@@ -595,7 +607,7 @@ export default function FacilityClientsPage() {
           <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
             <CardTitle className="text-base">Client Directory</CardTitle>
             <p className="text-muted-foreground text-xs">
-              Showing {filteredClients.length} of {facilityClients.length}{" "}
+              Showing {filteredClients.length} of {locationClients.length}{" "}
               clients
             </p>
           </div>
@@ -637,7 +649,7 @@ export default function FacilityClientsPage() {
                       onDeselect={() => setSelectedIds(new Set())}
                       onExport={() =>
                         exportClientsToCSV(
-                          facilityClients.filter((c) => selectedIds.has(c.id)),
+                          locationClients.filter((c) => selectedIds.has(c.id)),
                         )
                       }
                       onCreateEmailSegment={handleOpenCreateSegmentModal}

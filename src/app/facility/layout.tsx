@@ -19,6 +19,8 @@ import { TaskNotificationsPanel } from "@/components/tasks/TaskNotificationsPane
 import { CallingButton } from "@/components/layout/CallingButton";
 import { HeaderDropdown } from "@/components/layout/HeaderDropdown";
 import { FacilityMobileBottomNav } from "@/components/layout/FacilityMobileBottomNav";
+import { LocationContextProviderWrapper } from "@/components/providers/LocationContextProviderWrapper";
+import { LocationStatusBadge } from "@/components/hq/LocationStatusBadge";
 
 export default async function FacilityLayout({
   children,
@@ -35,6 +37,7 @@ export default async function FacilityLayout({
   }
 
   return (
+    <LocationContextProviderWrapper>
     <SettingsProviderWrapper>
       <BookingModalProviderWrapper>
         <SidebarProvider>
@@ -49,6 +52,7 @@ export default async function FacilityLayout({
                 />
               </div>
               <div className="flex items-center gap-2">
+                <LocationStatusBadge />
                 <div className="hidden items-center gap-1 sm:flex">
                   <CallingButton />
                   <TopBarIconsNext />
@@ -71,5 +75,6 @@ export default async function FacilityLayout({
         </SidebarProvider>
       </BookingModalProviderWrapper>
     </SettingsProviderWrapper>
+    </LocationContextProviderWrapper>
   );
 }

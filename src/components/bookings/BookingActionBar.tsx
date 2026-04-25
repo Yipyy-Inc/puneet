@@ -23,10 +23,12 @@ import {
   FileText,
   Tag as TagIcon,
   LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Booking } from "@/types/booking";
 import { EvaluationCheckoutAlert } from "@/components/evaluations/EvaluationCheckoutAlert";
+import { useLocationContext } from "@/hooks/use-location-context";
 
 interface BookingActionBarProps {
   booking: Booking;
@@ -35,6 +37,7 @@ interface BookingActionBarProps {
   onRefund?: () => void;
   onPayment?: () => void;
   onRecordEvaluation?: () => void;
+  onTransfer?: () => void;
 }
 
 export function BookingActionBar({
@@ -44,7 +47,9 @@ export function BookingActionBar({
   onRefund,
   onPayment,
   onRecordEvaluation,
+  onTransfer,
 }: BookingActionBarProps) {
+  const { isMultiLocation } = useLocationContext();
   const isActive =
     booking.status === "confirmed" || booking.status === "pending";
   const isCompleted = booking.status === "completed";
@@ -204,6 +209,22 @@ export function BookingActionBar({
           >
             <RotateCcw className="size-3.5" />
             Refund
+          </Button>
+        )}
+
+        {/* Transfer — multi-location only */}
+        {isMultiLocation && !isCancelled && isActive && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              if (onTransfer) onTransfer();
+              else toast.info("Transfer booking to another location");
+            }}
+          >
+            <ArrowLeftRight className="size-3.5" />
+            Transfer
           </Button>
         )}
 
