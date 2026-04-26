@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/StatCard";
+import Link from "next/link";
 import {
   Bed,
   Users,
@@ -18,6 +19,7 @@ import {
   AlertTriangle,
   Pill,
   Utensils,
+  BookOpen,
 } from "lucide-react";
 import {
   boardingGuests,
@@ -34,7 +36,7 @@ export default function BoardingDashboardPage() {
   const occupancyStats = getOccupancyStats();
 
   // Filter for today's arrivals and departures (using mock date for demo)
-  const today = "2024-03-10";
+  const today = "2026-04-26";
   const todayArrivals = guests.filter((g) => {
     const checkInDate = g.checkInDate.split("T")[0];
     return checkInDate === today && g.status === "scheduled";
@@ -440,16 +442,17 @@ export default function BoardingDashboardPage() {
 
                     <div className="mt-3 border-t pt-3">
                       <Button
+                        asChild
                         variant="outline"
                         size="sm"
                         className="w-full"
-                        onClick={() => {
-                          alert(
-                            `Guest Details:\n\nPet: ${guest.petName}\nBreed: ${guest.petBreed}\nOwner: ${guest.ownerName}\nPhone: ${guest.ownerPhone}\n\nKennel: ${guest.kennelName}\nPackage: ${guest.packageType}\nTotal Price: $${guest.totalPrice}\n\nMedications: ${guest.medications.length > 0 ? guest.medications.join(", ") : "None"}\nAllergies: ${guest.allergies.length > 0 ? guest.allergies.join(", ") : "None"}`,
-                          );
-                        }}
                       >
-                        View Details
+                        <Link
+                          href={`/facility/dashboard/services/boarding/journals?guest=${guest.id}&view=guest`}
+                        >
+                          <BookOpen className="mr-2 size-3.5" />
+                          View Journal
+                        </Link>
                       </Button>
                     </div>
                   </div>

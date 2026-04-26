@@ -45,7 +45,7 @@ const tabs = [
     icon: DollarSign,
   },
   {
-    name: "Journals",
+    name: "Daily Care",
     href: "/facility/dashboard/services/boarding/journals",
     icon: ClipboardList,
   },

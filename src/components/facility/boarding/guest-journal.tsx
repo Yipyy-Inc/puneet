@@ -4,15 +4,15 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  BookOpen,
+  ClipboardList,
   LayoutGrid,
-  User,
+  BookOpen,
   ShieldAlert,
   Printer,
 } from "lucide-react";
-import { getCurrentGuests } from "@/data/boarding";
+import { getCurrentGuests, facilityDailyCareConfig } from "@/data/boarding";
 import type { BoardingGuest, MedicationSchedule } from "@/data/boarding";
-import type { MedFrequencyRule } from "@/types/boarding";
+import type { MedFrequencyRule, FacilityDailyCareConfig } from "@/types/boarding";
 import { ShiftView } from "./shift-view";
 import { GuestTimelineView } from "./guest-view";
 import { ManagerView } from "./manager-view";
@@ -107,6 +107,7 @@ export type ScheduledTask = {
   guestId: string;
   petName: string;
   kennelName: string;
+  packageType?: string;
   petPhotoUrl?: string;
   taskType: "potty" | "feeding" | "medication" | "addon" | "care";
   subType?: string;
@@ -125,7 +126,8 @@ export type TaskExecution = {
   taskId: string;
   guestId: string;
   taskType: "potty" | "feeding" | "medication" | "addon" | "care";
-  executedAt: string;
+  date: string;       // ISO date "YYYY-MM-DD" — the calendar day this log belongs to
+  executedAt: string; // "HH:MM" — time within that day
   staffInitials: string;
   outcome: string;
   servedAt?: string;
@@ -158,18 +160,7 @@ export function getShiftForTime(time: string): ShiftType {
   return "evening";
 }
 
-const POTTY_ROUNDS: { time: string; label: string }[] = [
-  { time: "06:30", label: "Early Morning Round" },
-  { time: "12:00", label: "Midday Round" },
-  { time: "16:30", label: "Afternoon Round" },
-  { time: "21:00", label: "Evening Round" },
-];
-
-// ── Care module schedule constants ────────────────────────────────────────────
-
-const WATER_REFILL_TIMES = ["07:00", "14:00", "20:00"];
-const CRATE_CLEAN_TIMES = ["09:00"];
-const BEDDING_CHANGE_TIMES = ["08:30"];
+// Heat tracking still uses fixed times (tied to guest biology, not facility schedule)
 const HEAT_TRACKING_TIMES = ["07:30", "18:30"];
 
 function careTask(
@@ -186,6 +177,7 @@ function careTask(
     guestId: guest.id,
     petName: guest.petName,
     kennelName: guest.kennelName,
+    packageType: guest.packageType,
     petPhotoUrl: guest.petPhotoUrl,
     taskType: "care",
     subType,
@@ -244,8 +236,16 @@ export function generateScheduledTasks(
   guests: BoardingGuest[],
   careConfig?: CareModulesConfig,
   today: Date = new Date(),
+  dailyCareConfig: FacilityDailyCareConfig = facilityDailyCareConfig,
 ): ScheduledTask[] {
   const tasks: ScheduledTask[] = [];
+
+  // Derive potty rounds and care task times from the facility's daily care config
+  const enabledSteps = dailyCareConfig.steps.filter((s) => s.enabled);
+  const pottySteps = enabledSteps.filter((s) => s.taskType === "potty");
+  const waterRefillTimes = enabledSteps.filter((s) => s.taskType === "water_refill").map((s) => s.time);
+  const kennelCleanTimes = enabledSteps.filter((s) => s.taskType === "kennel_clean").map((s) => s.time);
+  const beddingChangeTimes = enabledSteps.filter((s) => s.taskType === "bedding_change").map((s) => s.time);
 
   for (const guest of guests) {
     const alertTags: string[] = [];
@@ -254,27 +254,28 @@ export function generateScheduledTasks(
     if (guest.postSurgery) alertTags.push("Post-Surgery");
     if (guest.heatCycle) alertTags.push("Heat Cycle");
 
-    // Use explicit tags from guest data; fall back to empty array
     const behaviorTags: string[] = guest.tags ?? [];
 
-    // Potty tasks
-    for (const round of POTTY_ROUNDS) {
+    // Potty tasks — one per configured potty step
+    for (const step of pottySteps) {
       tasks.push({
-        id: `potty-${guest.id}-${round.time}`,
+        id: `potty-${guest.id}-${step.time}`,
         guestId: guest.id,
         petName: guest.petName,
         kennelName: guest.kennelName,
+        packageType: guest.packageType,
         petPhotoUrl: guest.petPhotoUrl,
         taskType: "potty",
-        scheduledTime: round.time,
-        shift: getShiftForTime(round.time),
-        details: round.label,
+        subType: step.id,
+        scheduledTime: step.time,
+        shift: getShiftForTime(step.time),
+        details: step.name,
         behaviorTags,
         alertTags,
       });
     }
 
-    // Feeding tasks
+    // Feeding tasks — per guest feeding times
     for (const time of guest.feedingTimes) {
       const h = parseInt(time.split(":")[0], 10);
       const mealLabel =
@@ -289,6 +290,7 @@ export function generateScheduledTasks(
         guestId: guest.id,
         petName: guest.petName,
         kennelName: guest.kennelName,
+        packageType: guest.packageType,
         petPhotoUrl: guest.petPhotoUrl,
         taskType: "feeding",
         scheduledTime: time,
@@ -300,7 +302,7 @@ export function generateScheduledTasks(
       });
     }
 
-    // Medication tasks
+    // Medication tasks — per guest meds
     for (const med of guest.medications) {
       if (!shouldGiveMedToday(med, guest, today)) continue;
       const frequencyNote = med.frequencyRule
@@ -312,6 +314,7 @@ export function generateScheduledTasks(
           guestId: guest.id,
           petName: guest.petName,
           kennelName: guest.kennelName,
+          packageType: guest.packageType,
           petPhotoUrl: guest.petPhotoUrl,
           taskType: "medication",
           scheduledTime: time,
@@ -326,13 +329,14 @@ export function generateScheduledTasks(
       }
     }
 
-    // Add-on tasks
+    // Add-on tasks — per guest add-ons
     for (const addon of guest.addOns ?? []) {
       tasks.push({
         id: `addon-${guest.id}-${addon.id}`,
         guestId: guest.id,
         petName: guest.petName,
         kennelName: guest.kennelName,
+        packageType: guest.packageType,
         petPhotoUrl: guest.petPhotoUrl,
         taskType: "addon",
         subType: addon.addonType,
@@ -348,20 +352,20 @@ export function generateScheduledTasks(
       });
     }
 
-    // Care module tasks
+    // Care module tasks — times now driven by dailyCareConfig
     if (careConfig) {
       if (careConfig.waterRefill) {
-        for (const time of WATER_REFILL_TIMES) {
-          tasks.push(careTask(guest, "water_refill", time, "Water Refill", [`${guest.kennelName}`], behaviorTags, alertTags));
+        for (const time of waterRefillTimes) {
+          tasks.push(careTask(guest, "water_refill", time, "Water Refill", [guest.kennelName], behaviorTags, alertTags));
         }
       }
       if (careConfig.crateCleaning) {
-        for (const time of CRATE_CLEAN_TIMES) {
+        for (const time of kennelCleanTimes) {
           tasks.push(careTask(guest, "crate_clean", time, "Crate Cleaning", [guest.kennelName], behaviorTags, alertTags));
         }
       }
       if (careConfig.beddingChange) {
-        for (const time of BEDDING_CHANGE_TIMES) {
+        for (const time of beddingChangeTimes) {
           tasks.push(careTask(guest, "bedding_change", time, "Bedding Change", [guest.kennelName], behaviorTags, alertTags));
         }
       }
@@ -512,9 +516,55 @@ export function generateAlerts(
   return alerts;
 }
 
+// ── Historical mock executions (simulates past-day care logs for Buddy bg-001) ──
+// Task IDs match the pattern from generateScheduledTasks() using facilityDailyCareConfig.
+
+const MOCK_HISTORICAL_EXECUTIONS: TaskExecution[] = [
+  // ── Day 1 (2026-04-22) ─────────────────────────────────────────────────────
+  { id: "h-001", taskId: "potty-bg-001-06:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-22", executedAt: "06:35", staffInitials: "SJ", outcome: "both" },
+  { id: "h-002", taskId: "feed-bg-001-07:30",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-22", executedAt: "07:42", staffInitials: "SJ", outcome: "ate_all", servedAt: "07:35", notes: "Ate everything, very excited." },
+  { id: "h-003", taskId: "med-bg-001-med-001-08:00", guestId: "bg-001", taskType: "medication", date: "2026-04-22", executedAt: "08:05", staffInitials: "SJ", outcome: "administered", notes: "Given with breakfast, no issues." },
+  { id: "h-004", taskId: "addon-bg-001-addon-bg001-1", guestId: "bg-001", taskType: "addon", date: "2026-04-22", executedAt: "10:30", staffInitials: "MR", outcome: "completed", notes: "Played fetch for 30 min — loved it." },
+  { id: "h-005", taskId: "potty-bg-001-12:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-22", executedAt: "12:05", staffInitials: "MR", outcome: "pee" },
+  { id: "h-006", taskId: "potty-bg-001-15:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-22", executedAt: "15:10", staffInitials: "KL", outcome: "both" },
+  { id: "h-007", taskId: "feed-bg-001-18:00",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-22", executedAt: "18:12", staffInitials: "KL", outcome: "ate_all", servedAt: "18:03" },
+  { id: "h-008", taskId: "potty-bg-001-21:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-22", executedAt: "21:05", staffInitials: "KL", outcome: "pee" },
+  // ── Day 2 (2026-04-23) ─────────────────────────────────────────────────────
+  { id: "h-009", taskId: "potty-bg-001-06:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-23", executedAt: "06:28", staffInitials: "TR", outcome: "both" },
+  { id: "h-010", taskId: "feed-bg-001-07:30",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-23", executedAt: "07:50", staffInitials: "TR", outcome: "ate_all", servedAt: "07:38" },
+  { id: "h-011", taskId: "potty-bg-001-12:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-23", executedAt: "12:02", staffInitials: "TR", outcome: "poop" },
+  { id: "h-012", taskId: "addon-bg-001-addon-bg001-2", guestId: "bg-001", taskType: "addon", date: "2026-04-23", executedAt: "16:10", staffInitials: "SJ", outcome: "completed", notes: "Practiced sit and stay, doing great." },
+  { id: "h-013", taskId: "potty-bg-001-15:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-23", executedAt: "15:08", staffInitials: "SJ", outcome: "pee" },
+  { id: "h-014", taskId: "feed-bg-001-18:00",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-23", executedAt: "18:15", staffInitials: "SJ", outcome: "ate_half", servedAt: "18:06", notes: "Left about half — seemed less hungry." },
+  { id: "h-015", taskId: "potty-bg-001-21:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-23", executedAt: "21:12", staffInitials: "SJ", outcome: "pee" },
+  // ── Day 3 (2026-04-24) ─────────────────────────────────────────────────────
+  { id: "h-016", taskId: "potty-bg-001-06:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-24", executedAt: "06:33", staffInitials: "MR", outcome: "both" },
+  { id: "h-017", taskId: "feed-bg-001-07:30",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-24", executedAt: "07:45", staffInitials: "MR", outcome: "ate_all", servedAt: "07:37" },
+  { id: "h-018", taskId: "med-bg-001-med-001-08:00", guestId: "bg-001", taskType: "medication", date: "2026-04-24", executedAt: "08:08", staffInitials: "MR", outcome: "administered" },
+  { id: "h-019", taskId: "addon-bg-001-addon-bg001-1", guestId: "bg-001", taskType: "addon", date: "2026-04-24", executedAt: "10:15", staffInitials: "KL", outcome: "completed" },
+  { id: "h-020", taskId: "potty-bg-001-12:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-24", executedAt: "12:08", staffInitials: "KL", outcome: "pee" },
+  { id: "h-021", taskId: "potty-bg-001-15:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-24", executedAt: "15:05", staffInitials: "KL", outcome: "both" },
+  { id: "h-022", taskId: "feed-bg-001-18:00",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-24", executedAt: "18:09", staffInitials: "KL", outcome: "ate_all", servedAt: "18:02" },
+  { id: "h-023", taskId: "potty-bg-001-21:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-24", executedAt: "21:03", staffInitials: "KL", outcome: "pee" },
+  // ── Day 4 (2026-04-25) — refusal concern ──────────────────────────────────
+  { id: "h-024", taskId: "potty-bg-001-06:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-25", executedAt: "06:30", staffInitials: "TR", outcome: "pee" },
+  { id: "h-025", taskId: "feed-bg-001-07:30",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-25", executedAt: "07:52", staffInitials: "TR", outcome: "refused", servedAt: "07:40", notes: "Sniffed food, walked away. No signs of illness otherwise." },
+  { id: "h-026", taskId: "potty-bg-001-12:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-25", executedAt: "12:10", staffInitials: "SJ", outcome: "both" },
+  { id: "h-027", taskId: "potty-bg-001-15:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-25", executedAt: "15:12", staffInitials: "SJ", outcome: "pee" },
+  { id: "h-028", taskId: "feed-bg-001-18:00",  guestId: "bg-001", taskType: "feeding",  date: "2026-04-25", executedAt: "18:20", staffInitials: "SJ", outcome: "ate_half", servedAt: "18:05", notes: "Better than this morning — ate about half." },
+  { id: "h-029", taskId: "med-bg-001-med-001-08:00", guestId: "bg-001", taskType: "medication", date: "2026-04-25", executedAt: "08:10", staffInitials: "TR", outcome: "administered" },
+  { id: "h-030", taskId: "potty-bg-001-21:00", guestId: "bg-001", taskType: "potty",    date: "2026-04-25", executedAt: "21:08", staffInitials: "SJ", outcome: "pee" },
+];
+
 // ── GuestJournal ──────────────────────────────────────────────────────────────
 
-export function GuestJournal() {
+export function GuestJournal({
+  initialGuestId,
+  initialView,
+}: {
+  initialGuestId?: string;
+  initialView?: ViewMode;
+} = {}) {
   const currentGuests = useMemo(() => getCurrentGuests(), []);
 
   const [careConfig, setCareConfig] = useState<CareModulesConfig>(DEFAULT_CARE_MODULES);
@@ -525,12 +575,12 @@ export function GuestJournal() {
     [currentGuests, careConfig],
   );
 
-  const [executions, setExecutions] = useState<TaskExecution[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>("shift");
+  const [executions, setExecutions] = useState<TaskExecution[]>(MOCK_HISTORICAL_EXECUTIONS);
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView ?? "shift");
   const [activeShift, setActiveShift] = useState<ShiftType>("morning");
   const [printOpen, setPrintOpen] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState<string>(
-    currentGuests[0]?.id ?? "",
+    initialGuestId ?? currentGuests[0]?.id ?? "",
   );
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
@@ -556,12 +606,15 @@ export function GuestJournal() {
     [executions],
   );
 
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const isFeedingServed = useCallback(
     (taskId: string) =>
       executions.some(
         (e) =>
-          e.taskId === taskId && e.taskType === "feeding" && !!e.servedAt,
+          e.taskId === taskId && e.taskType === "feeding" && e.date === todayStr && !!e.servedAt,
       ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [executions],
   );
 
@@ -569,8 +622,9 @@ export function GuestJournal() {
     (taskId: string) =>
       executions.some(
         (e) =>
-          e.taskId === taskId && e.taskType === "feeding" && !!e.outcome,
+          e.taskId === taskId && e.taskType === "feeding" && e.date === todayStr && !!e.outcome,
       ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [executions],
   );
 
@@ -602,6 +656,7 @@ export function GuestJournal() {
       },
     ) => {
       const now = new Date().toTimeString().slice(0, 5);
+      const today = new Date().toISOString().split("T")[0];
 
       if (task.taskType === "feeding" && data.isServeStep) {
         setExecutions((prev) => [
@@ -611,6 +666,7 @@ export function GuestJournal() {
             taskId: task.id,
             guestId: task.guestId,
             taskType: "feeding",
+            date: today,
             executedAt: now,
             staffInitials: data.staffInitials,
             outcome: "",
@@ -624,7 +680,7 @@ export function GuestJournal() {
       if (task.taskType === "feeding") {
         setExecutions((prev) =>
           prev.map((e) =>
-            e.taskId === task.id && e.taskType === "feeding"
+            e.taskId === task.id && e.taskType === "feeding" && e.date === today
               ? { ...e, outcome: data.outcome, notes: data.notes, executedAt: now }
               : e,
           ),
@@ -637,6 +693,7 @@ export function GuestJournal() {
             taskId: task.id,
             guestId: task.guestId,
             taskType: task.taskType,
+            date: today,
             executedAt: now,
             staffInitials: data.staffInitials,
             outcome: data.outcome,
@@ -648,8 +705,7 @@ export function GuestJournal() {
 
       setLogModal({ open: false, task: null, feedingStep: null });
     },
-    // newId is stable (ref-based)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- newId is stable (ref-based)
     [],
   );
 
@@ -679,9 +735,9 @@ export function GuestJournal() {
   });
 
   const views = [
-    { id: "shift" as const, icon: LayoutGrid, label: "Shift Dashboard" },
-    { id: "guest" as const, icon: User, label: "Guest View" },
-    { id: "manager" as const, icon: ShieldAlert, label: "Manager Overview" },
+    { id: "shift" as const, icon: LayoutGrid, label: "By Shift" },
+    { id: "guest" as const, icon: BookOpen, label: "Guest Journals" },
+    { id: "manager" as const, icon: ShieldAlert, label: "Manager View" },
   ];
 
   return (
@@ -690,9 +746,9 @@ export function GuestJournal() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <BookOpen className="text-primary size-6" />
+            <ClipboardList className="text-primary size-6" />
             <h1 className="text-2xl font-bold tracking-tight">
-              Guest Journal
+              Daily Care List
             </h1>
           </div>
           <p className="text-muted-foreground mt-0.5 text-sm">
@@ -746,6 +802,7 @@ export function GuestJournal() {
             getExecForTask={getExecForTask}
             isFeedingServed={isFeedingServed}
             isFeedingComplete={isFeedingComplete}
+            dailyCareConfig={facilityDailyCareConfig}
           />
           <CareModulesPanel
             config={careConfig}

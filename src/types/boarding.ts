@@ -154,6 +154,7 @@ export const boardingGuestSchema = z
   .object({
     id: z.string(),
     petId: z.number(),
+    bookingId: z.string().optional(),
     petName: z.string(),
     petBreed: z.string(),
     petSize: petSizeEnum,
@@ -683,3 +684,32 @@ export const boardingBookingRequestSchema = z.object({
 export type BoardingBookingRequest = z.infer<
   typeof boardingBookingRequestSchema
 >;
+
+// ============================================================================
+// Daily Care Configuration (facility-configurable steps for Daily Care List)
+// ============================================================================
+
+export type DailyCareTaskType =
+  | "potty"
+  | "feeding"
+  | "medication"
+  | "addon"
+  | "water_refill"
+  | "kennel_clean"
+  | "bedding_change"
+  | "custom";
+
+export type DailyCareStep = {
+  id: string;
+  name: string;
+  time: string; // "HH:MM" 24h
+  taskType: DailyCareTaskType;
+  description?: string;
+  enabled: boolean;
+  sortOrder: number;
+};
+
+export type FacilityDailyCareConfig = {
+  steps: DailyCareStep[];
+  alertOverdueAfterMinutes: number;
+};

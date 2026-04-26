@@ -26,6 +26,7 @@ import { Save, Edit, X } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "@/hooks/use-settings";
 import { FeedingRoundSettings } from "@/components/facility/boarding/feeding-round-settings";
+import { DailyCareSettings } from "@/components/facility/boarding/daily-care-settings";
 import type {
   EarlyCheckoutPolicy,
   EarlyCheckoutPolicyConfig,
@@ -417,6 +418,9 @@ export default function BoardingSettingsPage() {
 
         {/* Feeding Rounds */}
         <FeedingRoundSettings />
+
+        {/* Daily Care Schedule */}
+        <DailyCareSettings />
 
         {/* Early Checkout Policy */}
         <Card id="early-checkout" className="md:col-span-2">

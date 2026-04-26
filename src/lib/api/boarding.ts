@@ -5,6 +5,7 @@ import {
   peakSurcharges,
   dailyCareSheets,
   boardingCapacity,
+  facilityDailyCareConfig,
 } from "@/data/boarding";
 import {
   BOARDING_ROOM_TYPES,
@@ -61,5 +62,9 @@ export const boardingQueries = {
   bookingRequests: () => ({
     queryKey: ["boarding", "booking-requests"] as const,
     queryFn: async () => BOARDING_BOOKING_REQUESTS,
+  }),
+  dailyCareConfig: () => ({
+    queryKey: ["boarding", "daily-care-config"] as const,
+    queryFn: async () => facilityDailyCareConfig,
   }),
 };
