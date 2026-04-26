@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ScheduledTask, TaskExecution, GuestAlert } from "./guest-journal";
 import type { BoardingGuest } from "@/data/boarding";
+import { RoomTypeBadge } from "./task-rows";
 
 type Props = {
   guests: BoardingGuest[];
@@ -95,6 +96,7 @@ function GuestStatusRow({
   const pottyTasks = guestTasks.filter((t) => t.taskType === "potty");
   const feedingTasks = guestTasks.filter((t) => t.taskType === "feeding");
   const medTasks = guestTasks.filter((t) => t.taskType === "medication");
+  const addonTasks = guestTasks.filter((t) => t.taskType === "addon");
 
   const pottyDone = pottyTasks.filter((t) =>
     guestExecs.some((e) => e.taskId === t.id),
@@ -107,6 +109,17 @@ function GuestStatusRow({
   const medDone = medTasks.filter((t) =>
     guestExecs.some((e) => e.taskId === t.id),
   ).length;
+  const addonDone = addonTasks.filter((t) =>
+    guestExecs.some((e) => e.taskId === t.id),
+  ).length;
+
+  // Specific incomplete tasks
+  const incompleteFeedingTasks = feedingTasks.filter(
+    (t) => !guestExecs.some((e) => e.taskId === t.id && e.taskType === "feeding" && !!e.outcome),
+  );
+  const incompleteMedTasks = medTasks.filter(
+    (t) => !guestExecs.some((e) => e.taskId === t.id),
+  );
 
   const hasRefusedMeal = guestExecs.some(
     (e) => e.taskType === "feeding" && e.outcome === "refused",
@@ -146,86 +159,121 @@ function GuestStatusRow({
   return (
     <div
       data-concern={guestAlerts.length > 0}
-      className="flex items-center gap-3 rounded-xl border p-3 transition-colors data-[concern=true]:border-red-200 data-[concern=true]:bg-red-50/40 dark:data-[concern=true]:border-red-800 dark:data-[concern=true]:bg-red-900/10"
+      className="rounded-xl border p-3 transition-colors data-[concern=true]:border-red-200 data-[concern=true]:bg-red-50/40 dark:data-[concern=true]:border-red-800 dark:data-[concern=true]:bg-red-900/10"
     >
-      {/* Avatar */}
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
-        {guest.petPhotoUrl ? (
-          <img
-            src={guest.petPhotoUrl}
-            alt={guest.petName}
-            className="size-10 rounded-full object-cover"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-          />
-        ) : (
-          <PawPrint className="size-4 text-muted-foreground" />
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="font-semibold text-sm">{guest.petName}</span>
-          <span className="text-muted-foreground text-xs">{guest.kennelName}</span>
-        </div>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <MiniStat
-            icon={Droplets}
-            done={pottyDone}
-            total={pottyTasks.length}
-            colorClass="text-blue-500"
-          />
-          <MiniStat
-            icon={Utensils}
-            done={feedingDone}
-            total={feedingTasks.length}
-            colorClass="text-green-500"
-          />
-          {medTasks.length > 0 && (
-            <MiniStat
-              icon={Pill}
-              done={medDone}
-              total={medTasks.length}
-              colorClass="text-purple-500"
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          {guest.petPhotoUrl ? (
+            <img
+              src={guest.petPhotoUrl}
+              alt={guest.petName}
+              className="size-10 rounded-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
             />
+          ) : (
+            <PawPrint className="size-4 text-muted-foreground" />
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="font-semibold text-sm">{guest.petName}</span>
+            <span className="text-muted-foreground text-xs">{guest.kennelName}</span>
+            <RoomTypeBadge packageType={guest.packageType} />
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <MiniStat
+              icon={Droplets}
+              done={pottyDone}
+              total={pottyTasks.length}
+              colorClass="text-blue-500"
+            />
+            <MiniStat
+              icon={Utensils}
+              done={feedingDone}
+              total={feedingTasks.length}
+              colorClass="text-green-500"
+            />
+            {medTasks.length > 0 && (
+              <MiniStat
+                icon={Pill}
+                done={medDone}
+                total={medTasks.length}
+                colorClass="text-purple-500"
+              />
+            )}
+            {addonTasks.length > 0 && (
+              <MiniStat
+                icon={CheckCircle}
+                done={addonDone}
+                total={addonTasks.length}
+                colorClass="text-amber-500"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Status / alerts */}
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          {guestAlerts.length > 0 ? (
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="mr-1 size-3" />
+              {guestAlerts.length} alert{guestAlerts.length > 1 ? "s" : ""}
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-green-400 text-green-700 text-xs dark:text-green-400"
+            >
+              <CheckCircle className="mr-1 size-3" />
+              All clear
+            </Badge>
+          )}
+          {hasRefusedMeal && (
+            <span className="text-xs text-red-600 dark:text-red-400">
+              Refused meal
+            </span>
+          )}
+          {hasMissedMed && (
+            <span className="text-xs text-red-600 dark:text-red-400">
+              Missed med
+            </span>
+          )}
+          {hasDigestiveIssue && (
+            <span className="text-xs text-orange-600 dark:text-orange-400">
+              Digestive issue
+            </span>
           )}
         </div>
       </div>
 
-      {/* Status / alerts */}
-      <div className="shrink-0 flex flex-col items-end gap-1">
-        {guestAlerts.length > 0 ? (
-          <Badge variant="destructive" className="text-xs">
-            <AlertTriangle className="mr-1 size-3" />
-            {guestAlerts.length} alert{guestAlerts.length > 1 ? "s" : ""}
-          </Badge>
-        ) : (
-          <Badge
-            variant="outline"
-            className="border-green-400 text-green-700 text-xs dark:text-green-400"
-          >
-            <CheckCircle className="mr-1 size-3" />
-            All clear
-          </Badge>
-        )}
-        {hasRefusedMeal && (
-          <span className="text-xs text-red-600 dark:text-red-400">
-            Refused meal
-          </span>
-        )}
-        {hasMissedMed && (
-          <span className="text-xs text-red-600 dark:text-red-400">
-            Missed med
-          </span>
-        )}
-        {hasDigestiveIssue && (
-          <span className="text-xs text-orange-600 dark:text-orange-400">
-            Digestive issue
-          </span>
-        )}
-      </div>
+      {/* Incomplete task detail — only shown when there are pending items */}
+      {(incompleteFeedingTasks.length > 0 || incompleteMedTasks.length > 0) && (
+        <div className="mt-2 flex flex-wrap gap-1 border-t pt-2">
+          {incompleteFeedingTasks.map((t) => (
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+            >
+              <Utensils className="size-2.5" />
+              {t.details} {t.scheduledTime}
+            </span>
+          ))}
+          {incompleteMedTasks.map((t) => (
+            <span
+              key={t.id}
+              className="inline-flex items-center gap-1 rounded-full border border-purple-300 bg-purple-50 px-2 py-0.5 text-xs text-purple-700 dark:border-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
+            >
+              <Pill className="size-2.5" />
+              {t.details} {t.scheduledTime}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

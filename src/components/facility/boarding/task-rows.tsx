@@ -18,6 +18,10 @@ import {
   Heart,
   Sparkles,
   Users,
+  SprayCan,
+  BedDouble,
+  Settings2,
+  Stethoscope,
 } from "lucide-react";
 import type { ScheduledTask, TaskExecution, GuestAlert } from "./guest-journal";
 
@@ -133,6 +137,22 @@ export function TagChip({ tag }: { tag: string }) {
   );
 }
 
+const ROOM_TIER_STYLES: Record<string, string> = {
+  Standard: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700",
+  Premium:  "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  Luxury:   "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700",
+};
+
+export function RoomTypeBadge({ packageType }: { packageType?: string }) {
+  if (!packageType) return null;
+  const tier = packageType.split(" ")[0] ?? packageType;
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${ROOM_TIER_STYLES[tier] ?? "bg-muted text-muted-foreground border-border"}`}>
+      {tier}
+    </span>
+  );
+}
+
 // ── Task Row Components ───────────────────────────────────────────────────────
 
 export function PottyTaskRow({
@@ -158,9 +178,10 @@ export function PottyTaskRow({
     >
       <PetAvatar petPhotoUrl={task.petPhotoUrl} petName={task.petName} />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="font-semibold">{task.petName}</span>
           <span className="text-muted-foreground text-sm">{task.kennelName}</span>
+          <RoomTypeBadge packageType={task.packageType} />
         </div>
         <div className="mt-1 flex flex-wrap gap-1">
           {[...task.alertTags, ...task.behaviorTags].map((tag) => (
@@ -220,9 +241,10 @@ export function FeedingTaskRow({
       <div className="flex items-start gap-3">
         <PetAvatar petPhotoUrl={task.petPhotoUrl} petName={task.petName} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="font-semibold">{task.petName}</span>
             <span className="text-muted-foreground text-sm">{task.kennelName}</span>
+            <RoomTypeBadge packageType={task.packageType} />
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <Clock className="size-3" />
               {task.scheduledTime}
@@ -300,9 +322,10 @@ export function MedicationTaskRow({
           <Pill className="size-5 text-purple-600 dark:text-purple-400" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2">
+          <div className="flex flex-wrap items-center gap-x-2">
             <span className="font-semibold">{task.petName}</span>
             <span className="text-muted-foreground text-sm">{task.kennelName}</span>
+            <RoomTypeBadge packageType={task.packageType} />
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <Clock className="size-3" />
               {task.scheduledTime}
@@ -436,9 +459,10 @@ export function AddonTaskRow({
     >
       <PetAvatar petPhotoUrl={task.petPhotoUrl} petName={task.petName} />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="font-semibold">{task.petName}</span>
           <span className="text-muted-foreground text-sm">{task.kennelName}</span>
+          <RoomTypeBadge packageType={task.packageType} />
         </div>
         <p className="mt-0.5 text-sm font-medium">{task.details}</p>
         {task.subDetails && (
@@ -456,6 +480,74 @@ export function AddonTaskRow({
         ) : (
           <Button size="sm" variant="outline" onClick={() => onLog(task)}>
             <cfg.Icon className={`mr-1.5 size-3.5 ${cfg.iconColor}`} />
+            {cfg.buttonLabel}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── CareTaskRow ───────────────────────────────────────────────────────────────
+
+const CARE_SUBTYPE_CFG: Record<
+  string,
+  { Icon: React.ElementType; color: string; label: string; buttonLabel: string }
+> = {
+  water_refill:    { Icon: Droplets,    color: "text-blue-500",   label: "Water Refill",    buttonLabel: "Log Refill" },
+  crate_clean:     { Icon: SprayCan,    color: "text-cyan-500",   label: "Crate Cleaning",  buttonLabel: "Log Clean" },
+  bedding_change:  { Icon: BedDouble,   color: "text-indigo-500", label: "Bedding Change",  buttonLabel: "Log Change" },
+  monitoring:      { Icon: Stethoscope, color: "text-amber-500",  label: "Monitoring",      buttonLabel: "Log Check" },
+  heat_tracking:   { Icon: Heart,       color: "text-pink-500",   label: "Heat Tracking",   buttonLabel: "Log Check" },
+};
+
+export function CareTaskRow({
+  task,
+  execution,
+  onLog,
+}: {
+  task: ScheduledTask;
+  execution?: TaskExecution;
+  onLog: (task: ScheduledTask) => void;
+}) {
+  const done = !!execution;
+  const outcomeInfo = done ? OUTCOME_LABELS[execution!.outcome] : null;
+  const cfg = CARE_SUBTYPE_CFG[task.subType ?? ""] ?? {
+    Icon: Settings2,
+    color: "text-muted-foreground",
+    label: task.details,
+    buttonLabel: "Log",
+  };
+  const Icon = cfg.Icon;
+
+  return (
+    <div
+      data-done={done}
+      className="flex items-center gap-3 rounded-xl border p-3 transition-colors data-[done=true]:border-green-200 data-[done=true]:bg-green-50/40 dark:data-[done=true]:border-green-800 dark:data-[done=true]:bg-green-900/10"
+    >
+      <PetAvatar petPhotoUrl={task.petPhotoUrl} petName={task.petName} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="font-semibold">{task.petName}</span>
+          <span className="text-muted-foreground text-sm">{task.kennelName}</span>
+          <RoomTypeBadge packageType={task.packageType} />
+        </div>
+        <p className="mt-0.5 text-sm font-medium">{task.details}</p>
+        {task.subDetails && task.subDetails.filter(Boolean).length > 0 && (
+          <p className="text-muted-foreground text-xs">{task.subDetails.filter(Boolean).join(" · ")}</p>
+        )}
+      </div>
+      <div className="shrink-0">
+        {done ? (
+          <div className="flex items-center gap-1.5">
+            <CheckCircle className="size-4 text-green-600" />
+            <span className={`text-sm font-medium ${outcomeInfo?.colorClass ?? "text-green-600"}`}>
+              {outcomeInfo?.label ?? "Done"}
+            </span>
+          </div>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => onLog(task)}>
+            <Icon className={`mr-1.5 size-3.5 ${cfg.color}`} />
             {cfg.buttonLabel}
           </Button>
         )}
